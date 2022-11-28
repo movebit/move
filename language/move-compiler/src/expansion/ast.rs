@@ -38,6 +38,7 @@ pub struct Program {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AttributeValue_ {
     Value(Value),
+    Module(ModuleIdent),
     ModuleAccess(ModuleAccess),
 }
 pub type AttributeValue = Spanned<AttributeValue_>;
@@ -592,7 +593,7 @@ impl AbilitySet {
         Ability_::Store,
         Ability_::Key,
     ];
-    /// Abilities for bool, u8, u64, u128, and address
+    /// Abilities for bool, u8, u16, u32, u64, u128, u256 and address
     pub const PRIMITIVES: [Ability_; 3] = [Ability_::Copy, Ability_::Drop, Ability_::Store];
     /// Abilities for &_ and &mut _
     pub const REFERENCES: [Ability_; 2] = [Ability_::Copy, Ability_::Drop];
@@ -859,6 +860,7 @@ impl AstDebug for AttributeValue_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
             AttributeValue_::Value(v) => v.ast_debug(w),
+            AttributeValue_::Module(m) => w.write(&format!("{}", m)),
             AttributeValue_::ModuleAccess(n) => n.ast_debug(w),
         }
     }

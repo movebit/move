@@ -22,7 +22,9 @@ use move_model::{
     },
     pragmas::INTRINSIC_TYPE_MAP,
     ty::{Type, TypeDisplayContext, TypeInstantiationDerivation, TypeUnificationAdapter, Variance},
-    well_known::{TYPE_INFO_MOVE, TYPE_INFO_SPEC, TYPE_NAME_MOVE, TYPE_NAME_SPEC},
+    well_known::{
+        TYPE_INFO_MOVE, TYPE_INFO_SPEC, TYPE_NAME_MOVE, TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT,
+    },
 };
 
 use crate::{
@@ -116,6 +118,17 @@ impl FunctionTargetProcessor for MonoAnalysisProcessor {
             let mname = module_env.get_full_name_str();
             let fname = decl.name.display(env.symbol_pool());
             writeln!(f, "spec fun {}::{} = {{", mname, fname)?;
+            for inst in insts {
+                writeln!(f, "  <{}>", display_inst(inst))?;
+            }
+            writeln!(f, "}}")?;
+        }
+        for (module, insts) in &info.native_inst {
+            writeln!(
+                f,
+                "module {} = {{",
+                env.get_module(*module).get_full_name_str()
+            )?;
             for inst in insts {
                 writeln!(f, "  <{}>", display_inst(inst))?;
             }
@@ -456,7 +469,10 @@ impl<'a> Analyzer<'a> {
                         module.get_name().name().display(self.env.symbol_pool()),
                         spec_fun.name.display(self.env.symbol_pool()),
                     );
-                    if qualified_name == TYPE_NAME_SPEC || qualified_name == TYPE_INFO_SPEC {
+                    if qualified_name == TYPE_NAME_SPEC
+                        || qualified_name == TYPE_INFO_SPEC
+                        || qualified_name == TYPE_SPEC_IS_STRUCT
+                    {
                         self.add_type(&actuals[0]);
                     }
                 }
