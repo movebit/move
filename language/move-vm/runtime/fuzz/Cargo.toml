@@ -9,6 +9,9 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
+arbitrary = "1.1.7"
+move-core-types = { path = "../../../move-core/types", features = ["fuzzing"] }
+move-binary-format = { path = "../../../move-binary-format", features = ["fuzzing"] }
 
 [dependencies.move-vm-runtime]
 path = ".."

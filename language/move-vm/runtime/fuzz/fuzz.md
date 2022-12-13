@@ -57,3 +57,7 @@ session对象有很多对外接口 execute_entry_function execute_script...
 code_unit覆盖率较高，因为这个fuzzing的是手工生成的module，
 module的基础结构是正确的，只是fuzzing代码部分，如果我们要测试vm的话，最多的测试可能就是我们有一个基本的module是合法的，(一个基本合法的函数？)
 只是去fuzzing某一个函数或者代码。
+
+### fuzzing然后修正字节码
+
+我们是否可以直接fuzzing整个CompiledModule，然后去修正一些明显的错误来提高覆盖率呢？？？？，这样看起来比较的简单。
