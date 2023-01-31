@@ -2,6 +2,9 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+// TODO the memory profiling not working,figure it out.
+// Sometimes I want run profiling on my local machine.
+#![allow(dead_code)]
 use anyhow::Result;
 use clap::Parser;
 use crossbeam::channel::{bounded, select};
@@ -13,29 +16,62 @@ use lsp_types::{
 };
 use std::{
     collections::BTreeMap,
-    path::Path,
-    sync::{Arc, Mutex},
-    thread,
+    path::{Path, PathBuf},
 };
 
+use log::{Level, Metadata, Record};
 use move_analyzer::{
-    completion::on_completion_request,
-    context::Context,
-    symbols,
-    vfs::{on_text_document_sync_notification, VirtualFileSystem},
+    completion::on_completion_request, context::Context, document_symbol, goto_definition, hover,
+    modules::Modules, references, test_code_len, utils::*,
 };
 use move_symbol_pool::Symbol;
 use url::Url;
+
+use jemalloc_ctl::{Access, AsName};
+use jemallocator;
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+const PROF_ACTIVE: &'static [u8] = b"prof.active\0";
+const PROF_DUMP: &'static [u8] = b"prof.dump\0";
+const PROFILE_OUTPUT: &'static [u8] = b"profile.out\0";
+
+fn set_memory_prof_active(active: bool) {
+    let name = PROF_ACTIVE.name();
+    name.write(active).expect("Should succeed to set prof");
+}
+
+struct SimpleLogger;
+impl log::Log for SimpleLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Error
+    }
+    fn log(&self, record: &Record) {
+        if self.enabled(record.metadata()) {
+            eprintln!("{} - {}", record.level(), record.args());
+        }
+    }
+    fn flush(&self) {}
+}
+const LOGGER: SimpleLogger = SimpleLogger;
+
+pub fn init_log() {
+    log::set_logger(&LOGGER)
+        .map(|()| log::set_max_level(log::LevelFilter::Error))
+        .unwrap()
+}
 
 #[derive(Parser)]
 #[clap(author, version, about)]
 struct Options {}
 
 fn main() {
+    // cpu_pprof(20);
+    // memory_pprof(20);
+
     // For now, move-analyzer only responds to options built-in to clap,
     // such as `--help` or `--version`.
     Options::parse();
-
+    init_log();
     // stdio is used to communicate Language Server Protocol requests and responses.
     // stderr is used for logging (and, when Visual Studio Code is used to communicate with this
     // server, it captures this output in a dedicated "output channel").
@@ -43,20 +79,19 @@ fn main() {
         .unwrap()
         .to_string_lossy()
         .to_string();
-    eprintln!(
+    log::error!(
         "Starting language server '{}' communicating via stdio...",
         exe
     );
 
     let (connection, io_threads) = Connection::stdio();
-    let symbols = Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols()));
     let mut context = Context {
+        modules: Modules::new(std::env::current_dir().unwrap()),
         connection,
-        files: VirtualFileSystem::default(),
-        symbols: symbols.clone(),
+        ref_caches: Default::default(),
     };
 
-    let (id, client_response) = context
+    let (id, _client_response) = context
         .connection
         .initialize_start()
         .expect("could not start connection initialization");
@@ -84,67 +119,37 @@ fn main() {
                 ),
             },
         )),
+
         selection_range_provider: None,
         hover_provider: Some(HoverProviderCapability::Simple(true)),
         // The server provides completions as a user is typing.
         completion_provider: Some(CompletionOptions {
-            resolve_provider: None,
-            // In Move, `foo::` and `foo.` should trigger completion suggestions for after
-            // the `:` or `.`
-            // (Trigger characters are just that: characters, such as `:`, and not sequences of
-            // characters, such as `::`. So when the language server encounters a completion
-            // request, it checks whether completions are being requested for `foo:`, and returns no
-            // completions in that case.)
-            trigger_characters: Some(vec![":".to_string(), ".".to_string()]),
+            resolve_provider: Some(true),
+            trigger_characters: Some({
+                let mut c = vec![":".to_string(), ".".to_string()];
+                for x in 'a'..='z' {
+                    c.push(String::from(x as char));
+                }
+                for x in 'A'..='Z' {
+                    c.push(String::from(x as char));
+                }
+                c.push(String::from("0"));
+                c
+            }),
             all_commit_characters: None,
             work_done_progress_options: WorkDoneProgressOptions {
                 work_done_progress: None,
             },
         }),
-        definition_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
-        type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(
-            symbols::DEFS_AND_REFS_SUPPORT,
-        )),
-        references_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
+        definition_provider: Some(OneOf::Left(true)),
+        type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
+        references_provider: Some(OneOf::Left(true)),
         document_symbol_provider: Some(OneOf::Left(true)),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
 
-    let (diag_sender, diag_receiver) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
-    let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
-    if symbols::DEFS_AND_REFS_SUPPORT {
-        let initialize_params: lsp_types::InitializeParams =
-            serde_json::from_value(client_response)
-                .expect("could not deserialize client capabilities");
-
-        symbolicator_runner = symbols::SymbolicatorRunner::new(symbols.clone(), diag_sender);
-
-        // If initialization information from the client contains a path to the directory being
-        // opened, try to initialize symbols before sending response to the client. Do not bother
-        // with diagnostics as they will be recomputed whenever the first source file is opened. The
-        // main reason for this is to enable unit tests that rely on the symbolication information
-        // to be available right after the client is initialized.
-        if let Some(uri) = initialize_params.root_uri {
-            if let Some(p) = symbols::SymbolicatorRunner::root_dir(&uri.to_file_path().unwrap()) {
-                // need to evaluate in a separate thread to allow for a larger stack size (needed on
-                // Windows)
-                thread::Builder::new()
-                    .stack_size(symbols::STACK_SIZE_BYTES)
-                    .spawn(move || {
-                        if let Ok((Some(new_symbols), _)) =
-                            symbols::Symbolicator::get_symbols(p.as_path())
-                        {
-                            let mut old_symbols = symbols.lock().unwrap();
-                            (*old_symbols).merge(new_symbols);
-                        }
-                    })
-                    .unwrap()
-                    .join()
-                    .unwrap();
-            }
-        }
-    };
+    let (_diag_sender, diag_receiver) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
 
     context
         .connection
@@ -171,7 +176,7 @@ fn main() {
                                         .connection
                                         .sender
                                         .send(lsp_server::Message::Notification(notification)) {
-                                            eprintln!("could not send diagnostics response: {:?}", err);
+                                            log::error!("could not send diagnostics response: {:?}", err);
                                         };
                                 }
                             },
@@ -187,17 +192,17 @@ fn main() {
                                     .connection
                                     .sender
                                     .send(lsp_server::Message::Notification(notification)) {
-                                        eprintln!("could not send compiler error response: {:?}", err);
+                                        log::error!("could not send compiler error response: {:?}", err);
                                     };
                             },
                         }
                     },
-                    Err(error) => eprintln!("symbolicator message error: {:?}", error),
+                    Err(error) => log::error!("symbolicator message error: {:?}", error),
                 }
             },
             recv(context.connection.receiver) -> message => {
                 match message {
-                    Ok(Message::Request(request)) => on_request(&context, &request),
+                    Ok(Message::Request(request)) => on_request(&mut context, &request),
                     Ok(Message::Response(response)) => on_response(&context, &response),
                     Ok(Message::Notification(notification)) => {
                         match notification.method.as_str() {
@@ -207,64 +212,124 @@ fn main() {
                                 // It ought to, especially once it begins processing requests that may
                                 // take a long time to respond to.
                             }
-                            _ => on_notification(&mut context, &symbolicator_runner, &notification),
+                            _ => on_notification(&mut context,   &notification),
                         }
                     }
-                    Err(error) => eprintln!("IDE message error: {:?}", error),
+                    Err(error) => log::error!("IDE message error: {:?}", error),
                 }
             }
         };
     }
-
     io_threads.join().expect("I/O threads could not finish");
-    symbolicator_runner.quit();
-    eprintln!("Shut down language server '{}'.", exe);
+    log::error!("Shut down language server '{}'.", exe);
 }
 
-fn on_request(context: &Context, request: &Request) {
+fn on_request(context: &mut Context, request: &Request) {
+    log::info!("receive method:{}", request.method.as_str());
     match request.method.as_str() {
-        lsp_types::request::Completion::METHOD => {
-            on_completion_request(context, request, &context.symbols.lock().unwrap())
-        }
+        lsp_types::request::Completion::METHOD => on_completion_request(context, request),
         lsp_types::request::GotoDefinition::METHOD => {
-            symbols::on_go_to_def_request(context, request, &context.symbols.lock().unwrap());
+            goto_definition::on_go_to_def_request(context, request);
         }
         lsp_types::request::GotoTypeDefinition::METHOD => {
-            symbols::on_go_to_type_def_request(context, request, &context.symbols.lock().unwrap());
+            goto_definition::on_go_to_type_def_request(context, request);
         }
         lsp_types::request::References::METHOD => {
-            symbols::on_references_request(context, request, &context.symbols.lock().unwrap());
+            references::on_references_request(context, request);
         }
         lsp_types::request::HoverRequest::METHOD => {
-            symbols::on_hover_request(context, request, &context.symbols.lock().unwrap());
+            hover::on_hover_request(context, request);
         }
         lsp_types::request::DocumentSymbolRequest::METHOD => {
-            symbols::on_document_symbol_request(context, request, &context.symbols.lock().unwrap());
+            document_symbol::on_document_symbol_request(context, request);
         }
-        _ => eprintln!("handle request '{}' from client", request.method),
+        "move/get_test_code_ens" => {
+            test_code_len::move_get_test_code_lens(context, request);
+        }
+        _ => log::error!("handle request '{}' from client", request.method),
     }
 }
 
 fn on_response(_context: &Context, _response: &Response) {
-    eprintln!("handle response from client");
+    log::error!("handle response from client");
 }
 
-fn on_notification(
-    context: &mut Context,
-    symbolicator_runner: &symbols::SymbolicatorRunner,
-    notification: &Notification,
-) {
+fn on_notification(context: &mut Context, notification: &Notification) {
     match notification.method.as_str() {
-        lsp_types::notification::DidOpenTextDocument::METHOD
-        | lsp_types::notification::DidChangeTextDocument::METHOD
-        | lsp_types::notification::DidSaveTextDocument::METHOD
-        | lsp_types::notification::DidCloseTextDocument::METHOD => {
-            on_text_document_sync_notification(
-                &mut context.files,
-                symbolicator_runner,
-                notification,
-            )
+        lsp_types::notification::DidSaveTextDocument::METHOD => {
+            use lsp_types::DidSaveTextDocumentParams;
+            let parameters =
+                serde_json::from_value::<DidSaveTextDocumentParams>(notification.params.clone())
+                    .expect("could not deserialize go-to-def request");
+            let fpath = parameters.text_document.uri.to_file_path().unwrap();
+            let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
+            let content = std::fs::read_to_string(fpath.as_path());
+            let content = match content {
+                Ok(x) => x,
+                Err(err) => {
+                    log::error!("read file failed,err:{:?}", err);
+                    return;
+                }
+            };
+            context.modules.update_defs(&fpath, content.as_str());
+            context.ref_caches.clear();
         }
-        _ => eprintln!("handle notification '{}' from client", notification.method),
+        lsp_types::notification::DidChangeTextDocument::METHOD => {
+            use lsp_types::DidChangeTextDocumentParams;
+            let parameters =
+                serde_json::from_value::<DidChangeTextDocumentParams>(notification.params.clone())
+                    .expect("could not deserialize go-to-def request");
+            let fpath = parameters.text_document.uri.to_file_path().unwrap();
+            let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
+            context.modules.update_defs(
+                &fpath,
+                parameters.content_changes.last().unwrap().text.as_str(),
+            );
+            context.ref_caches.clear();
+        }
+
+        lsp_types::notification::DidOpenTextDocument::METHOD
+        | lsp_types::notification::DidCloseTextDocument::METHOD => {
+            log::error!("handle notification '{}' from client", notification.method);
+        }
+        _ => log::error!("handle notification '{}' from client", notification.method),
     }
+}
+
+fn cpu_pprof(seconds: u64) {
+    use std::fs::File;
+    use std::time::Duration;
+    let guard = pprof::ProfilerGuardBuilder::default()
+        .frequency(1000)
+        .blocklist(&["libc", "libgcc", "pthread", "vdso"])
+        .build()
+        .unwrap();
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::new(seconds, 0));
+        match guard.report().build() {
+            Result::Ok(report) => {
+                let file = File::create("/Users/temp/.move-analyzer/flamegraph.svg").unwrap();
+                report.flamegraph(file).unwrap();
+            }
+            Result::Err(e) => {
+                log::error!("build report failed,err:{}", e);
+            }
+        };
+    });
+}
+
+fn memory_pprof(seconds: u64) {
+    use std::time::Duration;
+    std::thread::spawn(move || loop {
+        set_memory_prof_active(true);
+        std::thread::sleep(Duration::new(seconds, 0));
+        set_memory_prof_active(false);
+        dump_memory_profile();
+    });
+}
+
+fn dump_memory_profile() {
+    let name = PROF_DUMP.name();
+    name.write(PROFILE_OUTPUT)
+        .expect("Should succeed to dump profile")
 }

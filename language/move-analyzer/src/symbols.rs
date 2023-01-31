@@ -55,7 +55,6 @@ use anyhow::{anyhow, Result};
 use codespan_reporting::files::SimpleFiles;
 use crossbeam::channel::Sender;
 use derivative::*;
-use im::ordmap::OrdMap;
 use lsp_server::{Request, RequestId};
 use lsp_types::{
     request::GotoTypeDefinitionParams, Diagnostic, DocumentSymbol, DocumentSymbolParams,
@@ -622,7 +621,7 @@ impl Symbolicator {
             ..Default::default()
         };
 
-        eprintln!("symbolicating {:?}", pkg_path);
+        log::info!("symbolicating {:?}", pkg_path);
 
         // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
         // vector as the writer
