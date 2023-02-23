@@ -328,7 +328,6 @@ impl std::fmt::Display for ResolvedType {
             ResolvedType::Vec(ty) => {
                 write!(f, "vector<<{}>>", ty.as_ref())
             }
-
             ResolvedType::Range => {
                 write!(f, "range(n..m)")
             }

@@ -163,7 +163,7 @@ impl ItemFun {
                     return false;
                 }
             }
-            Visibility::Script(_) => return false,
+            Visibility::Script(_) => return true, // TODO script.
         }
         true
     }
@@ -210,7 +210,6 @@ impl std::fmt::Display for ItemFun {
 impl Item {
     ///   
     pub(crate) fn to_type(&self) -> Option<ResolvedType> {
-        // TODO maybe a parameter to decide return TParam or not.
         let x = match self {
             Item::TParam(name, ab) => ResolvedType::TParam(name.clone(), ab.clone()),
             Item::Struct(x) => ResolvedType::Struct(x.clone()),
