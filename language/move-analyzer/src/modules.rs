@@ -113,10 +113,7 @@ impl Project {
         }
         self.manifest_paths.push(manifest_path.clone());
         // if !manifest_path.has_root() {
-        eprintln!(
-            "load manifest file at {:?} not a root directory.",
-            &manifest_path
-        );
+        eprintln!("load manifest file at {:?}", &manifest_path);
         // }
         let manifest = match parse_move_manifest_from_file(&manifest_path) {
             std::result::Result::Ok(x) => x,

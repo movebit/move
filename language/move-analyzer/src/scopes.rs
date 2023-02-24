@@ -691,7 +691,7 @@ impl Scopes {
                                                     }
                                                 }
                                             }
-                                            ItemUse::Item(_) => todo!(),
+                                            ItemUse::Item(_) => {}
                                         }
                                     }
                                 }
