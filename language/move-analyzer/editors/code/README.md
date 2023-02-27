@@ -1,12 +1,3 @@
-# This a project modified from https://github.com/move-language/move,You need another version of move-analyzer.
-Install.
-
-~~~
-cargo install --git https://github.com/movebit/move move-analyzer --branch move-analyzer2
-~~~
-
-
-
 # move-analyzer
 
 Provides language support for the Move programming language.
@@ -35,14 +26,10 @@ The `move-analyzer` language server is a Rust program that is part of the
    is recommended for people who do not work on core Move.
    1. If you don't already have a Rust toolchain installed, you should install
       [Rustup](https://rustup.rs/), which will install the latest stable Rust toolchain.
-   2. Invoke `cargo install --git https://github.com/move-language/move move-analyzer` to install the
+   2. Invoke `cargo install --git https://github.com/movebit/move --branch move-analyzer2 move-analyzer ` to install the
       `move-analyzer` language server in your Cargo binary directory. On macOS and Linux, this is
       usually `~/.cargo/bin`. You'll want to make sure this location is in your `PATH` environment
-      variable. If you plan to use the language server with Move language flavors different from core Move,
-      you should specify an additional option to `cargo install` command as different Move flavors
-      may enforce different max length of the Move address type: `--features "address20"` option for Move
-      flavors requiring 20-byte long addresses (e.g., Sui Move) and `--features "address32"` option
-      for Move flavors requiring 32-byte long addresses (e.g., Aptos Move).
+      variable.
 
 To confirm that you've installed the language server program successfully, execute
 `move-analyzer --version` on the command line. You should see the output `move-analyzer 1.0.0`.
@@ -96,3 +83,5 @@ Move source file (a file with a `.move` file extension) and:
   - go to references
   - type on hover
   - outline view showing symbol tree for Move source files
+  - auto completion
+  - sui framework integration
