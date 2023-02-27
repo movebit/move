@@ -1,11 +1,11 @@
 {
-	"name": "move-analyzer",
+	"name": "sui-move-analyzer",
 	"displayName": "sui-move-analyzer",
 	"description": "A language server and basic grammar for the Sui Move programming language.",
 	"publisher": "MoveBit",
 	"icon": "images/move.png",
 	"license": "Apache-2.0",
-	"version": "0.0.11",
+	"version": "0.0.12",
 	"preview": true,
 	"homepage": "https://movebit.xyz",
 	"repository": {
