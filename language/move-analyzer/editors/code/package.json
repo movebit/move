@@ -1,5 +1,5 @@
 {
-	"name": "sui-move-analyzer",
+	"name": "move-analyzer",
 	"displayName": "sui-move-analyzer",
 	"description": "A language server and basic grammar for the Sui Move programming language.",
 	"publisher": "MoveBit",
