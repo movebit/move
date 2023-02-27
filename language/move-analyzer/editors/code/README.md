@@ -1,6 +1,6 @@
 # sui-move-analyzer
 
-## sui-move-analyzer Introduce
+## sui-move-analyzer Introduction
 The **sui-move-analyzer** is a Visual Studio Code plugin based on **move-analyzer** improved for **Move & Sui Move** by [MoveBit](https://movebit.xyz). Just now, we used this plugin in our dev member's daily work, and it's an alpha release.
 
 ## The changelogs are below:
