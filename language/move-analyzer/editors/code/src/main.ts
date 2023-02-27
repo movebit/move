@@ -287,6 +287,26 @@ export async function activate(
     sui_test.sendText('sui move test ' + name, true);
     sui_test.show(false);
   });
+  // Const tokenTypes = ['class', 'interface', 'enum', 'function', 'variable'];
+  // const tokenModifiers = ['declaration', 'documentation'];
+  // const legend = new vscode.SemanticTokensLegend(tokenTypes, tokenModifiers);
+  // const provider: vscode.DocumentSemanticTokensProvider = {
+  //   provideDocumentSemanticTokens(
+  //     document: vscode.TextDocument
+  //   ): vscode.ProviderResult<vscode.SemanticTokens> {
+  //     // analyze the document and return semantic tokens
+
+  //     const tokensBuilder = new vscode.SemanticTokensBuilder(legend);
+  //     // on line 1, characters 1-5 are a class declaration
+  //     tokensBuilder.push(
+  //       new vscode.Range(new vscode.Position(1, 1), new vscode.Position(1, 5)),
+  //       'class',
+  //       ['declaration']
+  //     );
+  //     return tokensBuilder.build();
+  //   }
+  // };
+  // vscode.languages.registerDocumentSemanticTokensProvider({ language: 'move', scheme: 'file' }, provider, legend);
   context.registerCommand('sui.create_project', async () => {
     let w = workSpaceDir();
     if (w === undefined) {

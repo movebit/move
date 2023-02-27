@@ -165,6 +165,15 @@ fn main() {
         code_lens_provider: Some(lsp_types::CodeLensOptions {
             resolve_provider: Some(true),
         }),
+        // semantic_tokens_provider: Some(
+        //     lsp_types::SemanticTokensServerCapabilities::SemanticTokensOptions(
+        //         lsp_types::SemanticTokensOptions {
+        //             range: Some(true),
+        //             full: None,
+        //             ..Default::default()
+        //         },
+        //     ),
+        // ),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");

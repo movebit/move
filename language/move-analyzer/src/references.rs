@@ -208,6 +208,9 @@ impl std::fmt::Display for Visitor {
     }
 }
 
+/// TODO
+/// Release version of move-analyzer run fast.
+/// consider remove this.
 #[derive(Default)]
 pub struct ReferencesCache {
     caches: HashMap<(bool, Loc), Vec<lsp_types::Location>>,

@@ -1,3 +1,12 @@
+# This a project modified from https://github.com/move-language/move,You need another version of move-analyzer.
+Install.
+
+~~~
+cargo install --git https://github.com/movebit/move move-analyzer --branch move-analyzer2
+~~~
+
+
+
 # move-analyzer
 
 Provides language support for the Move programming language.
