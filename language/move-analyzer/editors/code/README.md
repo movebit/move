@@ -1,13 +1,13 @@
 # sui-move-analyzer
 
 ## sui-move-analyzer Introduce
-The **sui-move-analyzer** is a Visual Studio Code plugin based on **move-analyzer** improved for **Sui Move** by MoveBit. Just now, we used this plugin in our dev member's daily work, and it's still under developing. We publish it to everybody for test. We'd like to let folks know what we're doing, and have a discussion with developers to improve sui-move-analyzer together.
+The **sui-move-analyzer** is a Visual Studio Code plugin based on **move-analyzer** improved for **Move & Sui Move** by [MoveBit](https://movebit.xyz). Just now, we used this plugin in our dev member's daily work, and it's an alpha release.
 
-## The changelog is below:
-* 1 Added semantic analysis to the Move language and Sui Move, and enhanced some features of the plug-in, such as go-to-definition, auto-completion, finding references, etc.;
-* 2 Added semantic analysis to MSL (Move Specification Language), supports features such as go-to-definition and auto-completion, and supports go-to-definition from MSL code to Move code;
-* 3 Integrated common Sui development commands into Command Palette, support Sui Code Snippets automatic completion (currently only init function);
-* 4 Support parallel development of multiple projects under the same directory;
+## The changelogs are below:
+* Added semantic analysis to the Move language and Sui Move, and enhanced some features of the plug-in, such as go-to-definition, auto-completion, finding references, etc.;
+* Added semantic analysis to MSL (Move Specification Language), supports features such as go-to-definition and auto-completion, and supports go-to-definition from MSL code to Move code;
+* Integrated common Sui development commands into Command Palette, support Sui Code Snippets automatic completion (currently only init function);
+* Support parallel development of multiple projects under the same directory;
 
 ## How to Install
 
@@ -33,7 +33,7 @@ The `sui-move-analyzer` language server is a Rust program that is part of the
       variable.
 
 To confirm that you've installed the language server program successfully, execute
-`move-analyzer --version` on the command line. You should see the output `move-analyzer 1.0.0`.
+`move-analyzer --version` on the command line. You should see the output `move-analyzer 1.1.0`.
 
 ### 2. Installing the sui-move-analyzer Visual Studio Code extension
 
@@ -54,7 +54,7 @@ bottom-right of your Visual Studio Code screen when opening a Move file, it mean
 `move-analyzer` executable could not be found in your `PATH`. You may try the following:
 
 1. Confirm that invoking `move-analyzer --version` in a command line terminal prints out
-   `move-analyzer 1.0.0`. If it doesn't, then retry the instructions in [step 1](./Step1). If it
+   `move-analyzer 1.0.0`. If it doesn't, then retry the instructions in **step 1**. If it
    does successfully print this output, try closing and re-opening the Visual Studio Code
    application, as it may not have picked up the update to your `PATH`.
 2. If you installed the `move-analyzer` executable to a different location that is outside of your
