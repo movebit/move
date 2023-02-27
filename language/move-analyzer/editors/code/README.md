@@ -26,7 +26,7 @@ The `move-analyzer` language server is a Rust program that is part of the
    is recommended for people who do not work on core Move.
    1. If you don't already have a Rust toolchain installed, you should install
       [Rustup](https://rustup.rs/), which will install the latest stable Rust toolchain.
-   2. Invoke `cargo install --git https://github.com/movebit/move --branch move-analyzer2 move-analyzer ` to install the
+   2. Invoke `cargo install --git https://github.com/movebit/move --branch move-analyzer2 move-analyzer && mv ~/.cargo/bin/move-analyzer ~/.cargo/bin/sui-move-analyzer` to install the
       `move-analyzer` language server in your Cargo binary directory. On macOS and Linux, this is
       usually `~/.cargo/bin`. You'll want to make sure this location is in your `PATH` environment
       variable.
