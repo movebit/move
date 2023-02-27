@@ -1,32 +1,33 @@
-# move-analyzer
+# sui-move-analyzer
 
-Provides language support for the Move programming language.
+## sui-move-analyzer Introduce
+The **sui-move-analyzer** is a Visual Studio Code plugin based on **move-analyzer** improved for **Sui Move** by MoveBit. Just now, we used this plugin in our dev member's daily work, and it's still under developing. We publish it to everybody for test. We'd like to let folks know what we're doing, and have a discussion with developers to improve sui-move-analyzer together.
 
-Currently, this means a basic grammar and language configuration for Move (`.move`) that enables
-syntax highlighting, commenting/uncommenting, simple context-unaware completion suggestions while
-typing, and other basic language features in Move files.
-
-For information about Move visit [the Move repository](https://github.com/move-language/move).
+## The changelog is below:
+* 1 Added semantic analysis to the Move language and Sui Move, and enhanced some features of the plug-in, such as go-to-definition, auto-completion, finding references, etc.;
+* 2 Added semantic analysis to MSL (Move Specification Language), supports features such as go-to-definition and auto-completion, and supports go-to-definition from MSL code to Move code;
+* 3 Integrated common Sui development commands into Command Palette, support Sui Code Snippets automatic completion (currently only init function);
+* 4 Support parallel development of multiple projects under the same directory;
 
 ## How to Install
 
-The move-analyzer Visual Studio Code extension works via two components: the extension itself and
-the `move-analyzer` language server.
+The sui-move-analyzer Visual Studio Code extension works via two components: the extension itself and
+the `sui-move-analyzer` language server.
 
-### 1. Installing the `move-analyzer` language server<span id="Step1">
+### 1. Installing the `sui-move-analyzer` language server<span id="Step1">
 
-The `move-analyzer` language server is a Rust program that is part of the
-[Move repository](https://github.com/move-language/move). It may be installed in one of two ways:
+The `sui-move-analyzer` language server is a Rust program that is part of the
+[Move repository](https://github.com/movebit/move). It may be installed in one of two ways:
 
-* Clone [the Move repository](https://github.com/move-language/move) yourself and build
-   `move-analyzer` from its source code, which is especially useful if you will work on core Move.
+* Clone [Move repository](https://github.com/movebit/move) yourself and build
+   `sui-move-analyzer` from its source code, which is especially useful if you will work on core Move.
    To do so, follow the instructions in the Move tutorial's
-   [Step 0: Installation](https://github.com/move-language/move/tree/main/language/documentation/tutorial#step-0-installation).
+   [Step 0: Installation](https://github.com/movebit/move/tree/main/language/documentation/tutorial#step-0-installation).
 * Use Rust's package manager `cargo` to install `move-analyzer` in your user's PATH. This
    is recommended for people who do not work on core Move.
    1. If you don't already have a Rust toolchain installed, you should install
       [Rustup](https://rustup.rs/), which will install the latest stable Rust toolchain.
-   2. Invoke `cargo install --git https://github.com/movebit/move --branch move-analyzer2 move-analyzer && mv ~/.cargo/bin/move-analyzer ~/.cargo/bin/sui-move-analyzer` to install the
+   2. Invoke `cargo install --git https://github.com/movebit/move --branch move-analyzer2 move-analyzer` to install the
       `move-analyzer` language server in your Cargo binary directory. On macOS and Linux, this is
       usually `~/.cargo/bin`. You'll want to make sure this location is in your `PATH` environment
       variable.
@@ -34,14 +35,14 @@ The `move-analyzer` language server is a Rust program that is part of the
 To confirm that you've installed the language server program successfully, execute
 `move-analyzer --version` on the command line. You should see the output `move-analyzer 1.0.0`.
 
-### 2. Installing the move-analyzer Visual Studio Code extension
+### 2. Installing the sui-move-analyzer Visual Studio Code extension
 
 1. Open a new window in any Visual Studio Code application version 1.55.2 or greater.
 2. Open the command palette (`⇧⌘P` on macOS, or use the menu item *View > Command Palette...*) and
    type **Extensions: Install Extensions**. This will open a panel named *Extensions* in the
    sidebar of your Visual Studio Code window.
-3. In the search bar labeled *Search Extensions in Marketplace*, type **move-analyzer**. The
-   move-analyzer extension should appear in the list below the search bar. Click **Install**.
+3. In the search bar labeled *Search Extensions in Marketplace*, type **sui-move-analyzer**. The
+   sui-move-analyzer extension should appear in the list below the search bar. Click **Install**.
 4. Open any file that ends in `.move`. Or to create a new file, click **Select a language**, and
    choose the **Move** language. As you type, you should see that keywords and types appear in
    different colors.
