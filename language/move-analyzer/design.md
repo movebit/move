@@ -219,10 +219,46 @@ We talk about the trait `AstProvider` provide the ability to visit some part of 
 
 Well `auto completion` is the case.
 
-When doing `auto completion` we consider The `Project`'s global items still the same except the one file we are editing.
+When doing `auto completion` we consider The `Project`'s global items remain the same except the one file we are editing.
 
+So the entry function `visit` take a `AstProvider` only visit the file we are editing.
 
+Next is simple.
 
+`auto completion` functionality become simple.
+If the auto completion location is a `Access`,That is the most case.
+
+For example
+~~~
+    Access::ExprAccessChain(chain, _, _) | Access::MacroCall(_, chain) => {
+        match &chain.value {
+            move_compiler::parser::ast::NameAccessChain_::One(x) => {
+                if self.match_loc(&x.loc, services) {
+                    // If location matches the position We want to do auto completion.
+                    // We just push all the const,variable,We can found in current scope.
+                    push_items(
+                        self,
+                        &scopes.collect_items(|x| match x {
+                            Item::Var(_, _)
+                            | Item::Parameter(_, _)
+                            | Item::Use(_)
+                            | Item::SpecSchema(_, _) => true,
+                            Item::Fun(_) => true,
+                            Item::Struct(_) => true,
+                            Item::Const(_) => true,
+                            Item::MoveBuildInFun(_) => true,
+                            Item::SpecBuildInFun(_) => true,
+                            Item::SpecConst(_) => true,
+                            _ => false,
+                        }),
+                    );
+                    // here we are auto-completion all address.
+                    let items = services.get_all_addrs(scopes);
+                    push_addr_spaces(self, &items, scopes);
+                }
+            }
+    }
+~~~
 
 ### syntax.rs
 Why we have `syntax.rs` in source tree?
@@ -241,13 +277,9 @@ It is very common user forget enter a `semicolon`.
 
 This is where the `syntax.rs` comming from.
 
-`syntax.rs` is copy from the official version and recover some error and etc...
+`syntax.rs` is copy from the official version and modified to recover some recoverable errors.
 
 especialy doing `auto completion` , The user's code  is always incomplete.
 
 
 ### Multi Project support.
-
-
-
-
