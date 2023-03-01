@@ -18,7 +18,7 @@ use std::vec;
 use std::{path::PathBuf, rc::Rc};
 
 impl Project {
-    pub fn visit_modules_or_tests(
+    pub fn visit_module(
         &self,
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
@@ -815,7 +815,7 @@ impl Project {
             .map(|x| x.clone())
             .collect();
         for m in manifests.iter() {
-            self.visit_modules_or_tests(
+            self.visit_module(
                 &self.scopes,
                 visitor,
                 ModulesAstProvider::new(self, m.clone(), SourcePackageLayout::Sources),
@@ -823,7 +823,7 @@ impl Project {
             if visitor.finished() {
                 return;
             }
-            self.visit_modules_or_tests(
+            self.visit_module(
                 &self.scopes,
                 visitor,
                 ModulesAstProvider::new(self, m.clone(), SourcePackageLayout::Tests),
@@ -878,7 +878,7 @@ impl Project {
     ) -> anyhow::Result<()> {
         log::info!("run visitor part for {} ", visitor);
         self.get_defs(filepath, |provider| {
-            self.visit_modules_or_tests(&self.scopes, visitor, provider.clone());
+            self.visit_module(&self.scopes, visitor, provider.clone());
             self.visit_scripts(&self.scopes, visitor, provider);
         })
     }
