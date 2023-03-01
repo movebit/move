@@ -14,7 +14,7 @@ variable,paramater,typeparameter,and ... are all items.
 
 Scope means some scope you can define variable,function,etc.
 
-For instance module is scope, and function is a scope too.
+For example module is scope, and function is a scope too.
 
 ~~~
 // module is scope,So you can define a function in it.
@@ -38,7 +38,7 @@ For instance module is scope, and function is a scope too.
 
 * pop out a frame when function returns.
 
-For instance.
+For example.
 ~~~
 fun some_fun() {
     
@@ -54,7 +54,7 @@ fun some_fun() {
 ~~~
 `addresses` are just Global `Scope` which contains global struct definition , function definition.
 
-For instance.
+For example.
 ~~~
 0x1::some_module { 
     fun some_fun() {  // some_fun will saved in `addresses` and can be accessed somehow.
@@ -66,7 +66,7 @@ For instance.
 ### `ResolvedType`
 `ResolvedType` is a type have semantic meanings.
 It's a type resovled from user defined.
-For instance.
+For example.
 ~~~
 struct XXX {}
 fun some_fun() : XXX  // XXX will resovled to ResolvedType::Struct which will contains information of the structure too.
@@ -79,7 +79,7 @@ fun some_fun() : XXX  // XXX will resovled to ResolvedType::Struct which will co
 ### `Access`
 `Access` mean a access point to a Item.
 When you define a variable ,you must be used it somehow.
-For instance.
+For example.
 ~~~
 fun some_fun() {
     let x = 1;
@@ -120,7 +120,7 @@ Actual the `ScopeVisitor` is a consumer and can consume the information create b
 
 `ItemOrAccess` is either a `Item` or `Access`. Our `goto to definition` and `auto completion` ,... base On `ScopeVisitor`.
 
-For Instance 
+For example 
 
 When you want to implement `goto to definition`.
 * if the `item_or_access` is `Item` you just return the `def_loc` of the `item_or_access`.
@@ -136,9 +136,9 @@ Let me introduce How is `Project` is create.
 
 Wait,But How can we do that.
 
-The main entry point for `Project` to enter item and call `ScopeVisitor`.`handle_item_or_access...` is `visit_module`.
+The main entry point for `Project` to enter item and call `ScopeVisitor`.`handle_item_or_access...` is `visit`.
 ~~~
-pub fn visit_module(
+pub fn visit(
         &self,
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
@@ -161,14 +161,14 @@ fn with_struct(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &StructD
     ... 
 }
 ~~~
-This is convenient way for function `visit_module` to access(We don't want to  iter `Vec<Definition>`);
+This is convenient way for function `visit` to access(We don't want to  iter `Vec<Definition>`);
 And the trait `AstProvider` provides us a way only visit part of the project's AST, we will talk about it later.
 
-function `visit_module` is reponsible for itration of all AST,create `ItemOrAccess`,enter `Item`,and call `ScopeVisitor`'s method.
+function `visit` is reponsible for itration of all AST,create `ItemOrAccess`,enter `Item`,and call `ScopeVisitor`'s method.
 
-For Instance.
+For example.
 ~~~
-pub fn visit_module(
+pub fn visit(
         &self,
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
@@ -211,10 +211,42 @@ pub fn visit_module(
     }
 ~~~
 
-So create `Porject` basic contains two part `Load all the AST` and call `visit_module` build all global item.
+So create `Porject` basic contains two part `Load all the AST` and call `visit` build all global items.
 
 
-### Go-through-a-typcial IDE feature been implemented.
+### Go through a typcial IDE feature implemented.
+We talk about the trait `AstProvider` provide the ability to visit some part of the AST.
+
+Well `auto completion` is the case.
+
+When doing `auto completion` we consider The `Project`'s global items still the same except the one file we are editing.
+
+
+
+
+### syntax.rs
+Why we have `syntax.rs` in source tree?
+
+The official ast parse implemented as return an error when met the first error.
+
+Even through We know we can recover from it.
+
+For example
+~~~
+module 0x1::some_module {
+    use sui::xxx::XXX // a missing semicolon
+}
+~~~
+It is very common user forget enter a `semicolon`.
+
+This is where the `syntax.rs` comming from.
+
+`syntax.rs` is copy from the official version and recover some error and etc...
+
+especialy doing `auto completion` , The user's code  is always incomplete.
+
+
+### Multi Project support.
 
 
 
