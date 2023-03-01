@@ -164,7 +164,7 @@ fn with_struct(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &StructD
 This is convenient way for function `visit` to access(We don't want to  iter `Vec<Definition>`);
 And the trait `AstProvider` provides us a way only visit part of the project's AST, we will talk about it later.
 
-function `visit` is reponsible for itration of all AST,create `ItemOrAccess`,enter `Item`,and call `ScopeVisitor`'s method.
+function `visit` is reponsible for iteration of all AST,create `ItemOrAccess`,enter `Item`,and call `ScopeVisitor`'s method.
 
 For example.
 ~~~
