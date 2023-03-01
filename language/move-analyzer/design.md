@@ -151,7 +151,7 @@ pub fn visit(
 
 Let me first introduce `AstProvider`.
 
-`AstProvider` is trait that have a lot of with function.
+`AstProvider` is trait that have a lot of `with` function.
 ~~~
 fn with_const(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &Constant)) {
     ... 
