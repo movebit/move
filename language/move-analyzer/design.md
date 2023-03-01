@@ -133,7 +133,7 @@ Let me introduce How is `Project` is create.
 
 Wait,But How can we do that .
 
-The main entry point for `Project` to enter item and call `ScopeVisitor`.`ScopeVisitor` is `visit_module`.
+The main entry point for `Project` to enter item and call `ScopeVisitor`.`handle_item_or_access...` is `visit_module`.
 ~~~
 pub fn visit_module(
         &self,
