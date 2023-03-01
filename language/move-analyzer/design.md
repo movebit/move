@@ -7,6 +7,7 @@ First let's look at some core structure of move-analyzer.
 
 ### `Item`
 Item is some you can define in you program. and used it later somewhere.
+
 variable,paramater,typeparameter,and ... are all items.
 
 ### `Scope`
@@ -14,6 +15,7 @@ variable,paramater,typeparameter,and ... are all items.
 Scope means some scope you can define variable,function,etc.
 
 For instance module is scope, and function is a scope too.
+
 ~~~
 // module is scope,So you can define a function in it.
 0x1::some_module{
@@ -31,9 +33,10 @@ For instance module is scope, and function is a scope too.
 `scopes` is a stack of `Scope`.
 
 `scopes` works like function calls.
-push a frame on stack when you want call a function.
 
-pop out a frame when function returns.
+* push a frame on stack when you want call function.
+
+* pop out a frame when function returns.
 
 For instance.
 ~~~
