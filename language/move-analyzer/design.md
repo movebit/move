@@ -84,7 +84,7 @@ fun some_fun() {
     some_fun2(x); // When we dealing with access of x 
                   // We have a structure below 
                   Access::ExprAccessChain(
-                    NameAccessChain,  // access point the name access chain.
+                    NameAccessChain,  // access point.
                     Option<AddrAndModuleName>,  // The item maybe locate at some module,So we can implement goto to definition,... for module.
                     Box<Item>, // The actual Item.
                 ) 
@@ -114,8 +114,11 @@ pub trait ScopeVisitor: std::fmt::Display {
 }
 ~~~
 Actual the `ScopeVisitor` is a consumer and can consume the information create by `Project`.
+
 `ItemOrAccess` is either a `Item` or `Access`. Our `goto to definition` and `auto completion` ,... base On `ScopeVisitor`.
+
 For Instance 
+
 When you want to implement `goto to definition`.
 * if the `item_or_access` is `Item` you just return the `def_loc` of the `item_or_access`.
 * if the `item_or_access` is `Access` you just return the `def_loc` of the `item_or_access`'s item.
@@ -128,7 +131,8 @@ Let me introduce How is `Project` is create.
 - loading AST and depency's AST into Memory.
 - enter all the global function,const,and struct to `Scopes`.`addresses`.
 
-Wait,But How can we do that.
+Wait,But How can we do that .
+
 The main entry point for `Project` to enter item and call `ScopeVisitor`.`ScopeVisitor` is `visit_module`.
 ~~~
 pub fn visit_module(
