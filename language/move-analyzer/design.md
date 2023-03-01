@@ -6,7 +6,7 @@ move-analyzer2 have a build in semantic analyzer for move and MSL.
 First let's look at some core structure of move-analyzer.
 
 ### `Item`
-Item is some you can define in you program. and used it later somewhere.
+Item is something you can define in you program. and used it later somewhere.
 
 variable,paramater,typeparameter,and ... are all items.
 
