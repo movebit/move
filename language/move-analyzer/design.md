@@ -1,9 +1,9 @@
 ## The design of move-analyzer2
-move-analyzer2 is a new design for move lanugage IDE support.
+move-analyzer2 is have complete new design for move lanugage IDE support.
 
 move-analyzer2 have a build in semantic analyzer for move and MSL.
 
-First let's look at some core structure of move-analyzer.
+First let's look at some core Concept of move-analyzer.
 
 ### `Item`
 Item is something you can define in you program. and used it later somewhere.
@@ -124,11 +124,11 @@ For example
 
 When you want to implement `goto to definition`.
 * if the `item_or_access` is `Item` you just return the `def_loc` of the `item_or_access`.
-* if the `item_or_access` is `Access` you just return the `def_loc` of the `item_or_access`'s item.
+* if the `item_or_access` is `Access` you just return the `def_loc` of the `access`'s`Definition` item.
 
 So the core purpose of `Porject` is to produce `ItemOrAccess`.
 
-Let me introduce How is `Project` is create.
+Let me introduce How is `Project`'s creation.
 `Project` creation involves  next steps.
 
 - loading AST and depency's AST into Memory.
@@ -151,7 +151,7 @@ pub fn visit(
 
 Let me first introduce `AstProvider`.
 
-`AstProvider` is trait than have a lot of with function.
+`AstProvider` is trait that have a lot of with function.
 ~~~
 fn with_const(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &Constant)) {
     ... 
