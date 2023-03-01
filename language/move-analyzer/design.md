@@ -131,7 +131,7 @@ Let me introduce How is `Project` is create.
 - loading AST and depency's AST into Memory.
 - enter all the global function,const,and struct to `Scopes`.`addresses`.
 
-Wait,But How can we do that .
+Wait,But How can we do that.
 
 The main entry point for `Project` to enter item and call `ScopeVisitor`.`handle_item_or_access...` is `visit_module`.
 ~~~
@@ -146,7 +146,9 @@ pub fn visit_module(
 
 ~~~
 
-Let me first introduce `AstProvider`. `AstProvider` is trait than have a lot of with function.
+Let me first introduce `AstProvider`.
+
+`AstProvider` is trait than have a lot of with function.
 ~~~
 fn with_const(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &Constant)) {
     ... 
@@ -157,9 +159,10 @@ fn with_struct(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &StructD
 }
 ~~~
 This is convenient way for function `visit_module` to access(We don't want to  iter `Vec<Definition>`);
-And the trait `AstProvider` provides us a way only visit part of the project AST, we will talk about it later.
+And the trait `AstProvider` provides us a way only visit part of the project's AST, we will talk about it later.
 
 function `visit_module` is reponsible for itration of all AST,create `ItemOrAccess`,enter `Item`,and call `ScopeVisitor`'s method.
+
 For Instance.
 ~~~
 pub fn visit_module(
@@ -205,11 +208,10 @@ pub fn visit_module(
     }
 ~~~
 
+So create `Porject` basic contains two part `Load all the AST` and call `visit_module` build all global item.
 
 
-
-
-
+### Go-through-a-typcial IDE feature been implemented.
 
 
 
