@@ -211,7 +211,7 @@ pub fn visit(
     }
 ~~~
 
-So create `Porject` basic contains two part `Load all the AST` and call `visit` build all global items.
+So create `Porject` basic contains two part `Load all the AST` and call `visit` enter all global items.
 
 
 ### Go through a typcial IDE feature implemented.
