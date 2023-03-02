@@ -255,7 +255,7 @@ For example
                             _ => false,
                         }),
                     );
-                    // here we are auto-completion all address.
+                    // here we are auto-completion all addresses.
                     let items = services.get_all_addrs(scopes);
                     push_addr_spaces(self, &items, scopes);
                 }
