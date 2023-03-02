@@ -283,3 +283,29 @@ especialy doing `auto completion` , The user's code  is always incomplete.
 
 
 ### Multi Project support.
+move-analyzer2 supprt multi project development concurrently.
+It is convenient for user.
+How is multi project support.
+Well first We need load it the memory.
+~~~
+pub struct MultiProject {
+    // projects are all loaded project from filesystem.
+     pub projects: HashMap<HashSet<PathBuf>, Project>,
+    ... 
+}
+~~~
+But which project should answer the user call (like `goto to definition`) , the `projects` field is map which the `key`
+is `HashSet<PathBuf>`,which contains the all the manifest path the `Project` was loaded from.
+
+And We can know `goto to definition`'s filepath, So we know which `Project` is belongs.We just select the project to handle the request.
+
+There is another thing I want mention about.
+Mutlti project can have the same dependency, So there are somethings can share together Like AST definitions.
+~~~
+pub struct MultiProject {
+    pub asts: HashMap<PathBuf, Rc<RefCell<SourceDefs>>>,
+ }
+~~~
+Share AST definition reduce memory consumption and save us time for loading project.
+
+
