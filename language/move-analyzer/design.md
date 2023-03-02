@@ -128,7 +128,7 @@ When you want to implement `goto to definition`.
 * if the `item_or_access` is `Item` you just return the `def_loc` of the `item_or_access`.
 * if the `item_or_access` is `Access` you just return the `def_loc` of the `access`'s `Item`.
 
-So the core purpose of `Porject` is to produce `ItemOrAccess`.
+So the main purpose of `Porject` is to produce `ItemOrAccess`.
 
 Let me introduce How is `Project`'s creation.
 `Project` creation involves  next steps.
@@ -153,7 +153,7 @@ pub fn visit(
 
 Let me first introduce `AstProvider`.
 
-`AstProvider` is trait that have a lot of `with` function.
+`AstProvider` is a  trait that have a lot of `with` function.
 ~~~
 fn with_const(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &Constant)) {
     ... 
@@ -163,8 +163,9 @@ fn with_struct(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &StructD
     ... 
 }
 ~~~
-This is convenient way for function `visit` to access(We don't want to  iter `Vec<Definition>`);
-And the trait `AstProvider` provides us a way only visit part of the project's AST, we will talk about it later.
+This is convenient way for function `visit` to access(We don't want to  iter `Vec<Definition>`).
+
+And the trait `AstProvider` provides us a way visit some part of the project's AST, we will talk about it later.
 
 function `visit` is reponsible for iteration of all AST,create `ItemOrAccess`,enter `Item`,and call `ScopeVisitor`'s method.
 
@@ -200,8 +201,8 @@ pub fn visit(
             is_test: attributes_has_test(&c.attributes).is_test(),
         }));
         // Call visitor's handle_item_or_access method.
-        // In this case this is a `ItemOrAccess::Item`
         visitor.handle_item_or_access(self, scopes, &item);
+        // In this case this is a `ItemOrAccess::Item`
         let item: Item = item.into();
         // enter the `Item` into Scope.
         if let Some((address, module)) = enter_top {
@@ -216,7 +217,7 @@ pub fn visit(
 So create `Porject` basic contains two part `Load all the AST` and call `visit` enter all global items.
 
 
-### Go through a typcial IDE feature implemented.
+### Go through a typcial IDE feature implementation.
 We talk about the trait `AstProvider` provide the ability to visit some part of the AST.
 
 Well `auto completion` is the case.
@@ -237,7 +238,7 @@ For example
             move_compiler::parser::ast::NameAccessChain_::One(x) => {
                 if self.match_loc(&x.loc, services) {
                     // If location matches the position We want to do auto completion.
-                    // We just push all the const,variable,We can found in current scope.
+                    // We just push all the const,variable,We can found in current scopes.
                     push_items(
                         self,
                         &scopes.collect_items(|x| match x {
@@ -281,7 +282,7 @@ This is where the `syntax.rs` comming from.
 
 `syntax.rs` is copy from the official version and modified to recover some recoverable errors.
 
-especialy doing `auto completion` , The user's code  is always incomplete.
+especialy doing `auto completion` , The user's code is always incomplete.
 
 
 ### Multi Project support.
@@ -299,15 +300,17 @@ pub struct MultiProject {
 But which project should answer the user call (like `goto to definition`) , the `projects` field is map which the `key`
 is `HashSet<PathBuf>`,which contains the all the manifest path the `Project` was loaded from.
 
-And We can know `goto to definition`'s filepath, So we know which `Project` is belongs.We just select the project to handle the request.
+And We can know `goto to definition`'s filepath, So we know which manifest file it belongs.
+
+We just select the `Project` who contains the manifest file  to handle the request.
 
 There is another thing I want mention about.
 Mutlti project can have the same dependency, So there are somethings can share together Like AST definitions.
 ~~~
 pub struct MultiProject {
+    ... 
     pub asts: HashMap<PathBuf, Rc<RefCell<SourceDefs>>>,
+    ... 
  }
 ~~~
 Share AST definition reduce memory consumption and save us time for loading project.
-
-
