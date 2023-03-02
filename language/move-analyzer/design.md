@@ -154,9 +154,10 @@ pub struct Project {
     >,
     /// All manifests
     pub(crate) manifests: Vec<move_package::source_package::parsed_manifest::SourceManifest>,
-    /// filepath hash mapping for convert a FileHash to filename
-    pub(crate) hash_file: Rc<RefCell<PathBufHashMap>>,
-    pub(crate) file_line_mapping: Rc<RefCell<FileLineMapping>>,
+    
+    ... 
+    
+    /// All manifests related to this project.
     pub(crate) manifest_paths: Vec<PathBuf>,
 
     /// Global constants,functions.etc...
@@ -246,9 +247,8 @@ When doing `auto completion` we consider The `Project`'s global items remain the
 
 So the entry function `visit` take a `AstProvider` only visit the file we are editing.
 
-Next is simple.
-
 `auto completion` functionality become simple.
+
 If the auto completion location is a `Access`,That is the most case.
 
 For example
