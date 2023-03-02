@@ -3,7 +3,7 @@ move-analyzer2 is have complete new design for move lanugage IDE support.
 
 move-analyzer2 have a build in semantic analyzer for move and MSL.
 
-First let's look at some core Concept of move-analyzer.
+First let's look at some core Concept of move-analyzer2.
 
 ### `Item`
 Item is something you can define in you program. and used it later somewhere.
@@ -70,7 +70,7 @@ For example.
 It's a type resovled from user defined.
 For example.
 ~~~
-struct XXX {}
+struct XXX { ... }
 fun some_fun() : XXX  // XXX will resovled to ResolvedType::Struct which will contains information of the structure too.
 {
     
@@ -79,7 +79,7 @@ fun some_fun() : XXX  // XXX will resovled to ResolvedType::Struct which will co
 
 
 ### `Access`
-`Access` mean a access point to a Item.
+`Access` means a access point to a `Item`.
 When you define a variable ,you must be used it somehow.
 For example.
 ~~~
@@ -118,7 +118,7 @@ pub trait ScopeVisitor: std::fmt::Display {
     fn finished(&self) -> bool;
 }
 ~~~
-Actual the `ScopeVisitor` is a consumer and can consume the information create by `Project`.
+Actualy the `ScopeVisitor` is a consumer and can consume the information create by `Project`.
 
 `ItemOrAccess` is either a `Item` or `Access`. Our `goto to definition` and `auto completion` ,... base On `ScopeVisitor`.
 
