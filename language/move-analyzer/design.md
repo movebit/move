@@ -138,7 +138,7 @@ fn with_struct(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &StructD
     ... 
 }
 ~~~
-This is convenient way for someone who intrested in who want to know all the constants or functions in a module.
+This is convenient way for someone who interested in who want to know all the constants or functions in a module.
 
 And the trait `AstProvider` provides us a way visit some part of the project's AST, We will talk about it later.
 
