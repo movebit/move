@@ -988,7 +988,12 @@ impl Scopes {
                     Item::Use(x) => {
                         for x in x.iter() {
                             match x {
-                                ItemUse::Module(_) => {}
+                                ItemUse::Module(_) => {
+                                    if ret_names.contains(kname) == false {
+                                        ret.push(item.clone());
+                                        ret_names.insert(kname.clone());
+                                    }
+                                }
                                 ItemUse::Item(ItemUseItem { members, name, .. }) => {
                                     // TODO this could be a type like struct.
                                     // do a query to if if this is a type.

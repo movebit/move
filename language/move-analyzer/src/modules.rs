@@ -26,14 +26,12 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use walkdir::WalkDir;
 
-/// All Modules.
+/// A Project.
 pub struct Project {
     pub(crate) modules: HashMap<
         PathBuf, /* this is a Move.toml like xxxx/Move.toml  */
         Rc<RefCell<SourceDefs>>,
     >,
-    /// a field contains the root manifest file
-    /// if Modules construct successful this field is never None.
     pub(crate) manifests: Vec<move_package::source_package::parsed_manifest::SourceManifest>,
     pub(crate) hash_file: Rc<RefCell<PathBufHashMap>>,
     pub(crate) file_line_mapping: Rc<RefCell<FileLineMapping>>,

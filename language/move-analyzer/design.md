@@ -1,9 +1,9 @@
 ## The design of move-analyzer2
-move-analyzer2 is have complete new design for move lanugage IDE support.
+move-analyzer2 is a novel move lanugage IDE support.
 
-move-analyzer2 have a build in semantic analyzer for move and MSL.
+move-analyzer2 include semantic analyzer of move and MSL.
 
-First let's look at some core Concept of move-analyzer2.
+First visit some core Concept of move-analyzer2.
 
 ### `Item`
 Item is something you can define in you program. and used it later somewhere.
@@ -96,11 +96,7 @@ fun some_fun() {
     ), 
 ~~~
 
-### `Project`
-`Project` represents a loaded project from a `Move.toml`.
-`Project` is the most complex part of move-analyzer2.
-
-First let me introduce `ScopeVisitor`.
+### `ScopeVisitor`.
 ~~~
 
 pub trait ScopeVisitor: std::fmt::Display {
@@ -128,13 +124,53 @@ When you want to implement `goto to definition`.
 * if the `item_or_access` is `Item` you just return the `def_loc` of the `item_or_access`.
 * if the `item_or_access` is `Access` you just return the `def_loc` of the `access`'s `Item`.
 
-So the main purpose of `Porject` is to produce `ItemOrAccess`.
+So the main purpose of `Project` is to produce `ItemOrAccess`.
+
+### AstProvider
+
+`AstProvider` is a  trait that have a lot of `with` function.
+~~~
+fn with_const(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &Constant)) {
+    ... 
+}
+
+fn with_struct(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &StructDefinition)) {
+    ... 
+}
+~~~
+This is convenient way for someone who intrested in who want to know all the constants or functions in a module.
+
+And the trait `AstProvider` provides us a way visit some part of the project's AST, We will talk about it later.
+
+
+### `Project`
+`Project` represents a loaded project from a `Move.toml`.
+~~~
+pub struct Project {
+    /// All the AST definition.
+    pub(crate) modules: HashMap<
+        PathBuf, /* this is a Move.toml like xxxx/Move.toml  */
+        Rc<RefCell<SourceDefs>>,
+    >,
+    /// All manifests
+    pub(crate) manifests: Vec<move_package::source_package::parsed_manifest::SourceManifest>,
+    /// filepath hash mapping for convert a FileHash to filename
+    pub(crate) hash_file: Rc<RefCell<PathBufHashMap>>,
+    pub(crate) file_line_mapping: Rc<RefCell<FileLineMapping>>,
+    pub(crate) manifest_paths: Vec<PathBuf>,
+
+    /// Global constants,functions.etc...
+    pub(crate) scopes: Scopes,
+    pub(crate) manifest_not_exists: HashSet<PathBuf>,
+}
+~~~
+The project mainly constains the AST and global items assoiate with this Project.
 
 Let me introduce `Project`'s creation.
 `Project` creation involves  next steps.
 
-- loading AST and depency's AST into Memory.
-- enter all the global function,const,and struct to `Scopes`.`addresses`.
+* loading AST and dependency's AST into Memory.
+* enter all the global function,const,and struct to `Scopes`.`addresses`.
 
 Wait,But How can we do that.
 
@@ -151,23 +187,7 @@ pub fn visit(
 
 ~~~
 
-Let me first introduce `AstProvider`.
-
-`AstProvider` is a  trait that have a lot of `with` function.
-~~~
-fn with_const(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &Constant)) {
-    ... 
-}
-
-fn with_struct(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &StructDefinition)) {
-    ... 
-}
-~~~
-This is convenient way for function `visit` to access(We don't want to  iter `Vec<Definition>`).
-
-And the trait `AstProvider` provides us a way visit some part of the project's AST, we will talk about it later.
-
-function `visit` is reponsible for iteration of all AST,create `ItemOrAccess`,enter `Item`,and call `ScopeVisitor`'s method.
+function `visit` is reponsible for iteration of all AST,create `ItemOrAccess`,enter `Item` to scopes,and call `ScopeVisitor`'s method.
 
 For example.
 ~~~
