@@ -126,7 +126,7 @@ For example
 
 When you want to implement `goto to definition`.
 * if the `item_or_access` is `Item` you just return the `def_loc` of the `item_or_access`.
-* if the `item_or_access` is `Access` you just return the `def_loc` of the `access`'s `Item`.`Definition` item.
+* if the `item_or_access` is `Access` you just return the `def_loc` of the `access`'s `Item`.
 
 So the core purpose of `Porject` is to produce `ItemOrAccess`.
 
