@@ -46,13 +46,15 @@ fun some_fun() {
         // push a `Scope` when enter so we can hold 
         // current block declared variables.
         let _x = 100;
+        
+        ...
 
         // at end we pop out a `Scope`. 
     }
 
 }
 ~~~
-`addresses` are just Global `Scope` which contains global struct definition , function definition.
+`addresses` are just Global `Scope` which contains global struct definition , function definition,etc.
 
 For example.
 ~~~
@@ -124,7 +126,7 @@ For example
 
 When you want to implement `goto to definition`.
 * if the `item_or_access` is `Item` you just return the `def_loc` of the `item_or_access`.
-* if the `item_or_access` is `Access` you just return the `def_loc` of the `access`'s`Definition` item.
+* if the `item_or_access` is `Access` you just return the `def_loc` of the `access`'s `Item`.`Definition` item.
 
 So the core purpose of `Porject` is to produce `ItemOrAccess`.
 
