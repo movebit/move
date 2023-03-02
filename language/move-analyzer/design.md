@@ -130,7 +130,7 @@ When you want to implement `goto to definition`.
 
 So the main purpose of `Porject` is to produce `ItemOrAccess`.
 
-Let me introduce How is `Project`'s creation.
+Let me introduce `Project`'s creation.
 `Project` creation involves  next steps.
 
 - loading AST and depency's AST into Memory.
