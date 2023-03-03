@@ -1,77 +1,79 @@
 ## The design of move-analyzer2
-move-analyzer2 is a novel move lanugage IDE support.
 
+move-analyzer2 is a novel move-lanugage IDE support.
 move-analyzer2 include semantic analyzer of move and MSL.
-
-First visit some core Concept of move-analyzer2.
+Here we demonstrate serval core concepts in move-analyzer2 to help you understand how it works.
+ 
+## Basic
 
 ### `Item`
-Item is something you can define in you program. and used it later somewhere.
 
-variable,paramater,typeparameter,and ... are all items.
+Item is nearly anything that you can define in you program and save for later use.
+Variable, parameter, typeparameter are all items.
 
 ### `Scope`
 
-Scope means some scope you can define variable,function,etc.
-
-For example module is scope, and function is a scope too.
+Scope is where you defined variable, function, etc.
+For example, module, function are all scope.
 
 ~~~
-// module is scope,So you can define a function in it.
+// module is a scope, you can define a function inside.
 0x1::some_module{
-    // here you can define function,const,...
+    // define function, const,...
     fun some_fun() {
-        // function is scope too, you can create variable and ... 
+        // function is a scope too, you can create variable and ... 
     }
 }
 ~~~
 
 ### `Scopes`
 
-`Scopes` composed with two important field(`scopes` and `addresses`) and someother addtional information.
+`Scopes` is composed by `scopes`, `addresses`, and some addtional info.
 
-`scopes` is a stack of `Scope`.
+`Scopes` is simply a stack of `Scope`.
 
-`scopes` works like function calls.
+`Scopes` works like function calls.
 
 * push a frame on stack when you want call function.
 
 * pop out a frame when function returns.
 
-For example.
+Example:
 ~~~
 fun some_fun() {
     
-    {   // here is a scope.
-        // push a `Scope` when enter so we can hold 
-        // current block declared variables.
+    {   // When enter, we create a `scope`.
+        // push this `scope` to `Scopes` stack. 
+        // declared variables.
         let _x = 100;
         
         ...
 
-        // at end we pop out a `Scope`. 
+        // At end, we pop out this `Scope`. 
     }
 
 }
 ~~~
-`addresses` are just Global `Scope` which contains global struct definition , function definition,etc.
+`addresses` are just Global `Scope` which contains global struct definition, function definition,etc.
 
-For example.
+Example:
 ~~~
 0x1::some_module { 
-    fun some_fun() {  // some_fun will saved in `addresses` and can be accessed somehow.
+    fun some_fun() {  // some_fun will saved in `addresses` and can be accessed by method.
 
     }
 }
 ~~~
 
 ### `ResolvedType`
-`ResolvedType` is a type have semantic meanings.
-It's a type resovled from user defined.
-For example.
+
+`ResolvedType` is the type which have semantic meanings.
+It's resolved from user defined.
+
+Example:
 ~~~
 struct XXX { ... }
-fun some_fun() : XXX  // XXX will resovled to ResolvedType::Struct which will contains information of the structure too.
+fun some_fun() : XXX  // XXX will resovled to ResolvedType::Struct which will contains info of a structure.
 {
     
 }
@@ -80,8 +82,9 @@ fun some_fun() : XXX  // XXX will resovled to ResolvedType::Struct which will co
 
 ### `Access`
 `Access` means a access point to a `Item`.
-When you define a variable ,you must be used it somehow.
-For example.
+It happens when using a item.
+
+Example:
 ~~~
 fun some_fun() {
     let x = 1;
@@ -97,6 +100,9 @@ fun some_fun() {
 ~~~
 
 ### `ScopeVisitor`.
+
+The `ScopeVisitor` is a consumer to consume the information create by `Project`.
+
 ~~~
 
 pub trait ScopeVisitor: std::fmt::Display {
@@ -114,9 +120,9 @@ pub trait ScopeVisitor: std::fmt::Display {
     fn finished(&self) -> bool;
 }
 ~~~
-Actualy the `ScopeVisitor` is a consumer and can consume the information create by `Project`.
 
-`ItemOrAccess` is either a `Item` or `Access`. Our `goto to definition` and `auto completion` ,... base On `ScopeVisitor`.
+
+`ItemOrAccess` is either a `Item` or `Access`. Features like `goto to definition` and `auto completion` ,... base On `ScopeVisitor`.
 
 For example 
 
@@ -128,7 +134,7 @@ So the main purpose of `Project` is to produce `ItemOrAccess`.
 
 ### AstProvider
 
-`AstProvider` is a  trait that have a lot of `with` function.
+`AstProvider` is a trait that have a lot of `with` function.
 ~~~
 fn with_const(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &Constant)) {
     ... 
@@ -144,6 +150,7 @@ And the trait `AstProvider` provides us a way visit some part of the project's A
 
 
 ### `Project`
+
 `Project` represents a loaded project from a `Move.toml`.
 ~~~
 pub struct Project {
