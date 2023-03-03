@@ -807,6 +807,8 @@ impl Project {
     /// Entrance for `ScopeVisitor` base on analyze.
     pub fn run_full_visitor(&self, visitor: &mut dyn ScopeVisitor) {
         log::info!("run visitor for {} ", visitor);
+        self.scopes.clear_scopes_and_addresses();
+
         // visit should `rev`.
         let manifests: Vec<_> = self
             .manifest_paths
