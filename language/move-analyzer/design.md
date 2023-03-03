@@ -14,14 +14,14 @@ Variable, parameter, typeparameter are all items.
 ### `Scope`
 
 Scope is where you defined variable, function, etc.
-For example, module, function are all scope.
+For example, module, function are all `Scope`.
 
 ~~~
-// module is a scope, you can define a function inside.
+// module is a `Scope`, you can define a function inside.
 0x1::some_module{
     // define function, const,...
     fun some_fun() {
-        // function is a scope too, you can create variable and ... 
+        // function is a `Scope` too, you can create variable and ... 
     }
 }
 ~~~
@@ -30,9 +30,9 @@ For example, module, function are all scope.
 
 `ProjectContext` composed with two important field(`scopes` and `addresses`) and someother addtional information.
 
-`Scopes` is simply a stack of `Scope`.
+`scopes` is simply a stack of `Scope`.
 
-`Scopes` works like function calls.
+`scopes` works like function calls.
 
 * push a frame on stack when you want call function.
 
@@ -42,12 +42,11 @@ Example:
 ~~~
 fun some_fun() {
     
-    {   // When enter, we create a `scope`.
-        // push this `scope` to `Scopes` stack. 
-        // declared variables.
+    {   // When enter, we create a `Scope` to hold declared variables.
+        // push this `Scope` to `scopes` stack. 
         let _x = 100;
         
-        ...
+        ... 
 
         // At end, we pop out this `Scope`. 
     }
@@ -59,7 +58,7 @@ fun some_fun() {
 Example:
 ~~~
 0x1::some_module { 
-    fun some_fun() {  // some_fun will saved in `addresses` and can be accessed by method.
+    fun some_fun() {  // some_fun will saved in `addresses` and can be accessed.
 
     }
 }
@@ -67,9 +66,24 @@ Example:
 
 ### `ResolvedType`
 
+~~~
+#[derive(Clone)]
+pub enum ResolvedType {
+    // Structure type
+    Struct(item::ItemStruct),
+    // Build in type like u8 ... 
+    BuildInType(BuildInType),
+    /// T : drop typeparameter
+    TParam(Name, Vec<Ability>),
+
+    /// & mut ...
+    Ref(bool, Box<ResolvedType>),
+    
+    ... 
+}
+~~~
 `ResolvedType` is the type which have semantic meanings.
 It's resolved from user defined.
-
 Example:
 ~~~
 struct XXX { ... }
@@ -101,7 +115,7 @@ fun some_fun() {
 
 ### `ItemOrAccessHandler`.
 
-The `ItemOrAccessHandler` is a consumer to consume the information create by `Project`.
+The trait `ItemOrAccessHandler` is a consumer to consume the information create by `Project`.
 
 ~~~
 
@@ -110,7 +124,7 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
     fn handle_item_or_access(
         &mut self,
         services: &dyn HandleItemService,
-        scopes: &ProjectContext,
+        project_context: &ProjectContext,
         item_or_access: &ItemOrAccess,
     );
     
@@ -171,7 +185,7 @@ pub struct Project {
     pub(crate) manifest_paths: Vec<PathBuf>,
 
     /// Global constants,functions.etc...
-    pub(crate) scopes: ProjectContext,
+    pub(crate) project_context: ProjectContext,
     pub(crate) manifest_not_exists: HashSet<PathBuf>,
 }
 ~~~
@@ -189,7 +203,7 @@ The main entry point for `Project` to enter item and call `ItemOrAccessHandler`.
 ~~~
 pub fn visit(
         &self,
-        scopes: &ProjectContext,
+        project_context: &ProjectContext,
         visitor: &mut dyn ItemOrAccessHandler,
         provider: impl AstProvider,
     ) {
@@ -198,19 +212,19 @@ pub fn visit(
 
 ~~~
 
-function `visit` is reponsible for iteration of all AST,create `ItemOrAccess`,enter `Item` to scopes,and call `ItemOrAccessHandler`'s method.
+function `visit` is reponsible for iteration of all AST,create `ItemOrAccess`,enter `Item` to `scopes`,and call `ItemOrAccessHandler`'s method.
 
 For example.
 ~~~
 pub fn visit(
         &self,
-        scopes: &ProjectContext,
+        project_context: &ProjectContext,
         visitor: &mut dyn ItemOrAccessHandler,
         provider: impl AstProvider,
     ) {
         ... 
         provider.with_const(|addr, name, c| {
-            self.visit_const(Some((addr, name)), c, scopes, visitor);
+            self.visit_const(Some((addr, name)), c, project_context, visitor);
         });
         ...
 }
@@ -219,12 +233,12 @@ pub fn visit(
         &self,
         enter_top: Option<(AccountAddress, Symbol)>,
         c: &Constant,
-        scopes: &ProjectContext,
+        project_context: &ProjectContext,
         visitor: &mut dyn ItemOrAccessHandler,
     ) {
         ... 
         // Get const's ty
-        let ty = scopes.resolve_type(&c.signature, self);
+        let ty = project_context.resolve_type(&c.signature, self);
         // Create the ItemOrAccess
         let item = ItemOrAccess::Item(Item::Const(ItemConst {
             name: c.name.clone(),
@@ -232,15 +246,15 @@ pub fn visit(
             is_test: attributes_has_test(&c.attributes).is_test(),
         }));
         // Call visitor's handle_item_or_access method.
-        visitor.handle_item_or_access(self, scopes, &item);
+        visitor.handle_item_or_access(self, project_context, &item);
         // In this case this is a `ItemOrAccess::Item`
         let item: Item = item.into();
         // enter the `Item` into Scope.
         if let Some((address, module)) = enter_top {
             
-            scopes.enter_top_item(self, address, module, c.name.value(), item.clone(), false);
+            project_context.enter_top_item(self, address, module, c.name.value(), item.clone(), false);
         } else {
-            scopes.enter_item(self, c.name.value(), item);
+            project_context.enter_item(self, c.name.value(), item);
         }
     }
 ~~~
@@ -268,10 +282,10 @@ For example
             move_compiler::parser::ast::NameAccessChain_::One(x) => {
                 if self.match_loc(&x.loc, services) {
                     // If location matches the position We want to do auto completion.
-                    // We just push all the const,variable,We can found in current scopes.
+                    // We just push all the const,variable,We can found in current co.
                     push_items(
                         self,
-                        &scopes.collect_items(|x| match x {
+                        &project_context.collect_items(|x| match x {
                             Item::Var(_, _)
                             | Item::Parameter(_, _)
                             | Item::Use(_)
@@ -286,8 +300,8 @@ For example
                         }),
                     );
                     // here we are auto-completion all addresses.
-                    let items = services.get_all_addrs(scopes);
-                    push_addr_spaces(self, &items, scopes);
+                    let items = services.get_all_addrs(project_context);
+                    push_addr_spaces(self, &items, project_context);
                 }
             }
     }
@@ -316,6 +330,7 @@ especialy doing `auto completion` , The user's code is always incomplete.
 
 
 ### Multi Project support.
+
 move-analyzer2 supprt multi project development concurrently.
 It is convenient for user.
 How is multi project support.
