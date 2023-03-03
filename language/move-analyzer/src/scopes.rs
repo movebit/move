@@ -28,6 +28,34 @@ pub enum AccessEnv {
     Test,
     Spec,
 }
+impl Scopes {
+    pub(crate) fn clear_scopes_and_addresses(&self) {
+        let d = Self::default();
+        *self.scopes.as_ref().borrow_mut() = d.scopes.as_ref().borrow().clone();
+        *self.addresses.borrow_mut() = Default::default();
+    }
+}
+
+impl Default for Scopes {
+    fn default() -> Self {
+        let x = Self {
+            scopes: Default::default(),
+            addresses: Default::default(),
+            addr_and_name: RefCell::new(AddrAndModuleName {
+                addr: *ERR_ADDRESS,
+                name: ModuleName(Spanned {
+                    loc: UNKNOWN_LOC,
+                    value: Symbol::from("_"),
+                }),
+            }),
+            access_env: Cell::new(Default::default()),
+        };
+        let s = Scope::default();
+        x.scopes.as_ref().borrow_mut().push(s);
+        x.enter_build_in();
+        x
+    }
+}
 
 impl Default for AccessEnv {
     fn default() -> Self {
@@ -46,22 +74,7 @@ impl AccessEnv {
 
 impl Scopes {
     pub(crate) fn new() -> Self {
-        let x = Self {
-            scopes: Default::default(),
-            addresses: Default::default(),
-            addr_and_name: RefCell::new(AddrAndModuleName {
-                addr: *ERR_ADDRESS,
-                name: ModuleName(Spanned {
-                    loc: UNKNOWN_LOC,
-                    value: Symbol::from("_"),
-                }),
-            }),
-            access_env: Cell::new(Default::default()),
-        };
-        let s = Scope::default();
-        x.scopes.as_ref().borrow_mut().push(s);
-        x.enter_build_in();
-        x
+        Self::default()
     }
 
     pub(crate) fn try_fix_local_var_type(&self, name: Symbol, ty: ResolvedType) {
