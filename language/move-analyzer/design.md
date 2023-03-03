@@ -161,7 +161,7 @@ fn with_struct(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &StructD
     ... 
 }
 ~~~
-This is convenient way for someone who interested in who want to know all the constants or functions in a module.
+This is convenient way for someone who interested in gettting all the constants or functions in a module.
 
 And the trait `AstProvider` provides us a way visit some part of the project's AST, We will talk about it later.
 
@@ -173,7 +173,7 @@ And the trait `AstProvider` provides us a way visit some part of the project's A
 pub struct Project {
     /// All the AST definition.
     pub(crate) modules: HashMap<
-        PathBuf, /* this is a Move.toml like xxxx/Move.toml  */
+        PathBuf,  // manifest path.
         Rc<RefCell<SourceDefs>>,
     >,
     /// All manifests
@@ -199,7 +199,7 @@ Let me introduce `Project`'s creation.
 
 Wait,But How can we do that.
 
-The main entry point for `Project` to enter item and call `ItemOrAccessHandler`.`handle_item_or_access...` is `visit`.
+The main entry point for `Project` to enter item and call `ItemOrAccessHandler`.`handle_item_or_access` ... is `visit`.
 ~~~
 pub fn visit(
         &self,
@@ -271,7 +271,7 @@ When doing `auto completion` we consider The `Project`'s global items remain the
 
 So the entry function `visit` take a `AstProvider` only visit the file we are editing.
 
-`auto completion` functionality become simple.
+With `ItemOrAccess` created by Project,`auto completion` functionality become simple.
 
 If the auto completion location is a `Access`,That is the most case.
 
@@ -282,7 +282,7 @@ For example
             move_compiler::parser::ast::NameAccessChain_::One(x) => {
                 if self.match_loc(&x.loc, services) {
                     // If location matches the position We want to do auto completion.
-                    // We just push all the const,variable,We can found in current co.
+                    // We just push all the const,variable,We can found in current context.
                     push_items(
                         self,
                         &project_context.collect_items(|x| match x {

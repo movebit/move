@@ -29,7 +29,7 @@ use walkdir::WalkDir;
 /// A Project.
 pub struct Project {
     pub(crate) modules: HashMap<
-        PathBuf, /* this is a Move.toml like xxxx/Move.toml  */
+        PathBuf, // manifest path.
         Rc<RefCell<SourceDefs>>,
     >,
     pub(crate) manifests: Vec<move_package::source_package::parsed_manifest::SourceManifest>,
