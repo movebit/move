@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::item::*;
-use super::modules::*;
-use super::scopes::*;
+use super::project::*;
+use super::project_context::*;
 use super::types::ResolvedType;
 use super::utils::*;
 use crate::context::Context;
@@ -132,7 +132,7 @@ pub fn on_completion_request(context: &Context, request: &Request) {
         fpath.as_path(),
     );
 
-    let mut visitor = Visitor::new(fpath.clone(), line, col);
+    let mut visitor = Handler::new(fpath.clone(), line, col);
     let _ = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => return,
@@ -151,7 +151,7 @@ pub fn on_completion_request(context: &Context, request: &Request) {
         .unwrap();
 }
 
-pub(crate) struct Visitor {
+pub(crate) struct Handler {
     /// The file we are looking for.
     pub(crate) filepath: PathBuf,
     pub(crate) line: u32,
@@ -160,7 +160,7 @@ pub(crate) struct Visitor {
     completion_on_def: bool,
 }
 
-impl Visitor {
+impl Handler {
     pub(crate) fn new(filepath: impl Into<PathBuf>, line: u32, col: u32) -> Self {
         Self {
             filepath: filepath.into(),
@@ -180,17 +180,17 @@ impl Visitor {
     }
 }
 
-impl ScopeVisitor for Visitor {
+impl ItemOrAccessHandler for Handler {
     fn visit_fun_or_spec_body(&self) -> bool {
         true
     }
     fn handle_item_or_access(
         &mut self,
         services: &dyn HandleItemService,
-        scopes: &Scopes,
+        scopes: &ProjectContext,
         item_or_access: &ItemOrAccess,
     ) {
-        let push_items = |visitor: &mut Visitor, items: &Vec<Item>| {
+        let push_items = |visitor: &mut Handler, items: &Vec<Item>| {
             if visitor.result.is_none() {
                 visitor.result = Some(vec![]);
             }
@@ -202,7 +202,7 @@ impl ScopeVisitor for Visitor {
             });
         };
         let push_addr_spaces =
-            |visitor: &mut Visitor, items: &HashSet<AddressSpace>, scopes: &Scopes| {
+            |visitor: &mut Handler, items: &HashSet<AddressSpace>, scopes: &ProjectContext| {
                 if visitor.result.is_none() {
                     visitor.result = Some(vec![]);
                 }
@@ -230,7 +230,7 @@ impl ScopeVisitor for Visitor {
 
         // just like push_addr_spaces
         // bu only push names.
-        let push_addr_spaces_names = |visitor: &mut Visitor, items: &HashSet<AddressSpace>| {
+        let push_addr_spaces_names = |visitor: &mut Handler, items: &HashSet<AddressSpace>| {
             if visitor.result.is_none() {
                 visitor.result = Some(vec![]);
             }
@@ -239,7 +239,7 @@ impl ScopeVisitor for Visitor {
                 .for_each(|x| visitor.result.as_mut().unwrap().push(x));
         };
 
-        let push_completion_items = |visitor: &mut Visitor, items: Vec<CompletionItem>| {
+        let push_completion_items = |visitor: &mut Handler, items: Vec<CompletionItem>| {
             if visitor.result.is_none() {
                 visitor.result = Some(vec![]);
             }
@@ -248,7 +248,7 @@ impl ScopeVisitor for Visitor {
                 .into_iter()
                 .for_each(|x| visitor.result.as_mut().unwrap().push(x));
         };
-        let push_fields = |visitor: &mut Visitor, items: &HashMap<Symbol, (Name, ResolvedType)>| {
+        let push_fields = |visitor: &mut Handler, items: &HashMap<Symbol, (Name, ResolvedType)>| {
             if visitor.result.is_none() {
                 visitor.result = Some(vec![]);
             }
@@ -256,7 +256,7 @@ impl ScopeVisitor for Visitor {
             x.into_iter()
                 .for_each(|x| visitor.result.as_mut().unwrap().push(x));
         };
-        let push_module_names = |visitor: &mut Visitor, items: &Vec<ModuleName>| {
+        let push_module_names = |visitor: &mut Handler, items: &Vec<ModuleName>| {
             if visitor.result.is_none() {
                 visitor.result = Some(vec![]);
             }
@@ -620,7 +620,7 @@ impl ScopeVisitor for Visitor {
     }
 }
 
-impl std::fmt::Display for Visitor {
+impl std::fmt::Display for Handler {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -630,7 +630,7 @@ impl std::fmt::Display for Visitor {
     }
 }
 
-impl GetPosition for Visitor {
+impl GetPosition for Handler {
     fn get_position(&self) -> (PathBuf, u32 /* line */, u32 /* col */) {
         (self.filepath.clone(), self.line, self.col)
     }

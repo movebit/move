@@ -1,7 +1,7 @@
 use super::context::*;
 use super::item::*;
-use super::modules::*;
-use super::scopes::*;
+use super::project::*;
+use super::project_context::*;
 use super::types::ResolvedType;
 
 use crate::utils::path_concat;
@@ -38,7 +38,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
         col,
     );
 
-    let mut visitor = Visitor::new(fpath.clone(), line, col);
+    let mut visitor = Handler::new(fpath.clone(), line, col);
     let _ = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
@@ -59,7 +59,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
         .unwrap();
 }
 
-pub(crate) struct Visitor {
+pub(crate) struct Handler {
     /// The file we are looking for.
     pub(crate) filepath: PathBuf,
     pub(crate) line: u32,
@@ -76,7 +76,7 @@ pub(crate) struct Visitor {
     pub(crate) result_item_or_access: Option<ItemOrAccess>,
 }
 
-impl Visitor {
+impl Handler {
     pub(crate) fn new(filepath: impl Into<PathBuf>, line: u32, col: u32) -> Self {
         Self {
             filepath: filepath.into(),
@@ -109,15 +109,14 @@ impl Visitor {
     }
 }
 
-impl ScopeVisitor for Visitor {
+impl ItemOrAccessHandler for Handler {
     fn visit_fun_or_spec_body(&self) -> bool {
         true
     }
-
     fn handle_item_or_access(
         &mut self,
         services: &dyn HandleItemService,
-        _scopes: &Scopes,
+        _project_context: &ProjectContext,
         item_or_access: &ItemOrAccess,
     ) {
         match item_or_access {
@@ -254,7 +253,7 @@ impl ScopeVisitor for Visitor {
     }
 }
 
-impl std::fmt::Display for Visitor {
+impl std::fmt::Display for Handler {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -263,7 +262,7 @@ impl std::fmt::Display for Visitor {
         )
     }
 }
-impl GetPosition for Visitor {
+impl GetPosition for Handler {
     fn get_position(&self) -> (PathBuf, u32, u32) {
         (self.filepath.clone(), self.line, self.col)
     }
@@ -293,14 +292,14 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
         col,
     );
 
-    let mut visitor = Visitor::new(fpath.clone(), line, col);
+    let mut visitor = Handler::new(fpath.clone(), line, col);
     let modules = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => return,
     };
 
     let _ = modules.run_visitor_for_file(&mut visitor, &fpath);
-    fn type_defs(ret: &mut Vec<Location>, ty: &ResolvedType, modules: &super::modules::Project) {
+    fn type_defs(ret: &mut Vec<Location>, ty: &ResolvedType, modules: &super::project::Project) {
         match ty {
             ResolvedType::UnKnown => {}
             ResolvedType::Struct(x) => {
@@ -339,7 +338,7 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
             ResolvedType::Range => {}
         }
     }
-    fn item_type_defs(ret: &mut Vec<Location>, x: &Item, modules: &super::modules::Project) {
+    fn item_type_defs(ret: &mut Vec<Location>, x: &Item, modules: &super::project::Project) {
         match x {
             Item::Var(_, ty) | Item::Parameter(_, ty) => {
                 type_defs(ret, ty, modules);

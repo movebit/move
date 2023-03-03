@@ -1,5 +1,5 @@
-use crate::scopes::AccessEnv;
-use crate::scopes::Scopes;
+use crate::project_context::AccessEnv;
+use crate::project_context::ProjectContext;
 
 use super::scope::*;
 use super::types::*;
@@ -139,7 +139,7 @@ impl AttrTest {
 }
 
 impl ItemFun {
-    pub(crate) fn accessible(&self, scopes: &Scopes, env: AccessEnv) -> bool {
+    pub(crate) fn accessible(&self, scopes: &ProjectContext, env: AccessEnv) -> bool {
         if !env.is_spec() && self.is_spec {
             return false;
         }

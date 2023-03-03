@@ -1,6 +1,6 @@
 use super::item::*;
 use super::types::*;
-use crate::modules::ERR_ADDRESS;
+use crate::project::ERR_ADDRESS;
 use move_compiler::parser::ast::*;
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Spanned;

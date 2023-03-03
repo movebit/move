@@ -1,9 +1,9 @@
 use crate::utils::discover_manifest_and_kind;
 
 use super::item::*;
-use super::modules::*;
+use super::project::*;
+use super::project_context::*;
 use super::scope::*;
-use super::scopes::*;
 use super::types::*;
 use move_compiler::parser::ast::*;
 use move_compiler::shared::Identifier;
@@ -20,19 +20,19 @@ use std::{path::PathBuf, rc::Rc};
 impl Project {
     pub fn visit(
         &self,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
         provider: impl AstProvider,
     ) {
-        scopes.set_access_env(Default::default());
+        project_context.set_access_env(Default::default());
         provider.with_module(|addr, module_def| {
             let item = ItemOrAccess::Item(Item::ModuleName(ItemModuleName {
                 name: module_def.name,
                 is_test: attributes_has_test(&module_def.attributes).is_test(),
             }));
-            visitor.handle_item_or_access(self, scopes, &item);
+            visitor.handle_item_or_access(self, project_context, &item);
             if !module_def.is_spec_module {
-                scopes.set_up_module(
+                project_context.set_up_module(
                     addr,
                     module_def.name,
                     provider.found_in_test()
@@ -42,7 +42,7 @@ impl Project {
         });
 
         provider.with_const(|addr, name, c| {
-            self.visit_const(Some((addr, name)), c, scopes, visitor);
+            self.visit_const(Some((addr, name)), c, project_context, visitor);
         });
         provider.with_struct(|addr, module_name, c| {
             let item = Item::StructNameRef(ItemStructNameRef {
@@ -52,16 +52,22 @@ impl Project {
                 type_parameters: c.type_parameters.clone(),
                 is_test: attributes_has_test(&c.attributes).is_test(),
             });
-            scopes.enter_top_item(self, addr, module_name, c.name.0.value, item, false);
+            project_context.enter_top_item(self, addr, module_name, c.name.0.value, item, false);
         });
 
         provider.with_use_decl(|addr, module_name, u, is_spec_module| {
-            self.visit_use_decl(Some((addr, module_name)), u, scopes, None, is_spec_module)
+            self.visit_use_decl(
+                Some((addr, module_name)),
+                u,
+                project_context,
+                None,
+                is_spec_module,
+            )
         });
 
         provider.with_struct(|addr, module_name, s| {
-            let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
-            scopes.enter_scope(|scopes| {
+            let _guard = project_context.clone_scope_and_enter(addr, module_name, false);
+            project_context.enter_scope(|scopes| {
                 scopes.set_access_env(
                     if provider.found_in_test()
                         || scopes.module_is_test(addr, module_name).unwrap_or_default()
@@ -111,14 +117,14 @@ impl Project {
 
         let enter_function = |modules: &Project,
                               f: &Function,
-                              scopes: &Scopes,
-                              visitor: &mut dyn ScopeVisitor,
+                              project_context: &ProjectContext,
+                              visitor: &mut dyn ItemOrAccessHandler,
                               addr: AccountAddress,
                               module_name: Symbol,
                               is_spec_module: bool,
                               is_spec: bool| {
             // This enter scope make sure the visit_tparam cannot override some module level item.
-            scopes.enter_scope(|scopes| {
+            project_context.enter_scope(|scopes| {
                 scopes.set_access_env(
                     if provider.found_in_test()
                         || scopes.module_is_test(addr, module_name).unwrap_or_default()
@@ -178,30 +184,48 @@ impl Project {
 
         provider.with_function(|addr, module_name, f| {
             // This clone scope make sure we can visit module level item.
-            let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
-            enter_function(self, f, scopes, visitor, addr, module_name, false, false);
+            let _guard = project_context.clone_scope_and_enter(addr, module_name, false);
+            enter_function(
+                self,
+                f,
+                project_context,
+                visitor,
+                addr,
+                module_name,
+                false,
+                false,
+            );
         });
 
         // enter schema.
         provider.with_spec_schema(|addr, module_name, name, spec, is_spec_module| {
-            scopes.set_current_addr_and_module_name(addr, module_name);
-            scopes.set_access_env(AccessEnv::Spec);
+            project_context.set_current_addr_and_module_name(addr, module_name);
+            project_context.set_access_env(AccessEnv::Spec);
             let item = ItemOrAccess::Item(Item::SpecSchema(
                 name.clone(),
-                self.collect_spec_schema_fields(scopes, &spec.value.members),
+                self.collect_spec_schema_fields(project_context, &spec.value.members),
             ));
 
-            visitor.handle_item_or_access(self, scopes, &item);
-            scopes.enter_top_item(self, addr, module_name, name.value, item, is_spec_module);
+            visitor.handle_item_or_access(self, project_context, &item);
+            project_context.enter_top_item(
+                self,
+                addr,
+                module_name,
+                name.value,
+                item,
+                is_spec_module,
+            );
         });
 
         // visit use decl again.
         provider.with_use_decl(|addr, module_name, u, is_spec_module| {
-            scopes.set_current_addr_and_module_name(addr, module_name);
-            scopes.set_access_env(if is_spec_module {
+            project_context.set_current_addr_and_module_name(addr, module_name);
+            project_context.set_access_env(if is_spec_module {
                 AccessEnv::Spec
             } else if provider.found_in_test()
-                || scopes.module_is_test(addr, module_name).unwrap_or_default()
+                || project_context
+                    .module_is_test(addr, module_name)
+                    .unwrap_or_default()
             {
                 AccessEnv::Test
             } else {
@@ -210,19 +234,19 @@ impl Project {
             self.visit_use_decl(
                 Some((addr, module_name)),
                 u,
-                scopes,
+                project_context,
                 Some(visitor),
                 is_spec_module,
             );
         });
 
         provider.with_friend(|addr, module_name, f| {
-            scopes.set_current_addr_and_module_name(addr, module_name);
-            self.visit_friend(f, addr, module_name, scopes, visitor);
+            project_context.set_current_addr_and_module_name(addr, module_name);
+            self.visit_friend(f, addr, module_name, project_context, visitor);
         });
         provider.with_spec(|addr, module_name, spec, is_spec_module| {
-            scopes.set_current_addr_and_module_name(addr, module_name);
-            scopes.set_access_env(AccessEnv::Spec);
+            project_context.set_current_addr_and_module_name(addr, module_name);
+            project_context.set_access_env(AccessEnv::Spec);
             match &spec.value.target.value {
                 SpecBlockTarget_::Module => {}
                 _ => return,
@@ -248,7 +272,7 @@ impl Project {
                         enter_function(
                             self,
                             &f,
-                            scopes,
+                            project_context,
                             visitor,
                             addr,
                             module_name,
@@ -268,10 +292,12 @@ impl Project {
 
         // visit function body.
         provider.with_function(|addr, module_name, f| {
-            scopes.set_current_addr_and_module_name(addr, module_name);
-            scopes.set_access_env(
+            project_context.set_current_addr_and_module_name(addr, module_name);
+            project_context.set_access_env(
                 if provider.found_in_test()
-                    || scopes.module_is_test(addr, module_name).unwrap_or_default()
+                    || project_context
+                        .module_is_test(addr, module_name)
+                        .unwrap_or_default()
                     || attributes_has_test(&f.attributes).is_test()
                 {
                     AccessEnv::Test
@@ -286,13 +312,13 @@ impl Project {
             if !visitor.function_or_spec_body_should_visit(range.as_ref().unwrap()) {
                 return;
             }
-            let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
-            self.visit_function(f, scopes, visitor);
+            let _guard = project_context.clone_scope_and_enter(addr, module_name, false);
+            self.visit_function(f, project_context, visitor);
         });
 
         provider.with_spec(|addr, module_name, spec, _is_spec_module| {
-            scopes.set_current_addr_and_module_name(addr, module_name);
-            scopes.set_access_env(AccessEnv::Spec);
+            project_context.set_current_addr_and_module_name(addr, module_name);
+            project_context.set_access_env(AccessEnv::Spec);
             let range = self.convert_loc_range(&spec.loc);
             if range.is_none() {
                 return;
@@ -300,19 +326,19 @@ impl Project {
             if !visitor.function_or_spec_body_should_visit(range.as_ref().unwrap()) {
                 return;
             }
-            let _guard = scopes.clone_scope_and_enter(addr, module_name, true);
-            self.visit_spec(spec, scopes, visitor);
+            let _guard = project_context.clone_scope_and_enter(addr, module_name, true);
+            self.visit_spec(spec, project_context, visitor);
         });
     }
 
     pub(crate) fn visit_scripts(
         &self,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
         provider: impl AstProvider,
     ) {
         provider.with_script(|script| {
-            scopes.enter_scope(|scopes| {
+            project_context.enter_scope(|scopes| {
                 scopes.set_access_env(AccessEnv::default());
                 for u in script.uses.iter() {
                     self.visit_use_decl(None, u, scopes, Some(visitor), false);
@@ -337,8 +363,13 @@ impl Project {
         });
     }
 
-    pub fn visit_spec(&self, spec: &SpecBlock, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
-        let _guard = scopes.enter_scope_guard(Scope::default());
+    pub fn visit_spec(
+        &self,
+        spec: &SpecBlock,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
+    ) {
+        let _guard = project_context.enter_scope_guard(Scope::default());
         match &spec.value.target.value {
             SpecBlockTarget_::Code => {
                 // Nothing to do here.
@@ -356,7 +387,7 @@ impl Project {
                         value: m.value,
                     }),
                 };
-                let (item_ret, _) = scopes.find_name_chain_item(&chain, self);
+                let (item_ret, _) = project_context.find_name_chain_item(&chain, self);
                 {
                     // TODO this may not be expr.
                     // You can write spec for struct.
@@ -364,7 +395,7 @@ impl Project {
                         m.clone(),
                         Box::new(item_ret.clone().unwrap_or_default()),
                     ));
-                    visitor.handle_item_or_access(self, scopes, &item);
+                    visitor.handle_item_or_access(self, project_context, &item);
                     if visitor.finished() {
                         return;
                     }
@@ -374,14 +405,14 @@ impl Project {
                     match &item_ret {
                         Item::Fun(x) => {
                             for (var, ty) in x.parameters.iter() {
-                                scopes.enter_item(
+                                project_context.enter_item(
                                     self,
                                     var.0.value,
                                     Item::Parameter(var.clone(), ty.clone()),
                                 );
                             }
                             for (var, ty) in x.type_parameters.iter() {
-                                scopes.enter_types(
+                                project_context.enter_types(
                                     self,
                                     var.value,
                                     Item::TParam(var.clone(), ty.clone()),
@@ -400,7 +431,7 @@ impl Project {
                                         .iter(),
                                     ) {
                                         let s = Symbol::from(format!("result_{}", index).as_str());
-                                        scopes.enter_item(
+                                        project_context.enter_item(
                                             self,
                                             s,
                                             Item::Var(
@@ -416,7 +447,7 @@ impl Project {
                                 }
 
                                 _ => {
-                                    scopes.enter_item(
+                                    project_context.enter_item(
                                         self,
                                         Symbol::from("result"),
                                         Item::Var(
@@ -432,7 +463,7 @@ impl Project {
                         }
                         Item::Struct(x) => {
                             for f in x.fields.iter() {
-                                scopes.enter_item(
+                                project_context.enter_item(
                                     self,
                                     f.0.value(),
                                     Item::Var(Var(f.0 .0.clone()), f.1.clone()),
@@ -458,7 +489,7 @@ impl Project {
                 // TODO why spec have function signature.
                 // 看起来是重复定义，必须和函数的定义一模一样。
                 if let Some(signature) = signature {
-                    self.visit_signature(signature.as_ref(), scopes, visitor);
+                    self.visit_signature(signature.as_ref(), project_context, visitor);
                     if visitor.finished() {
                         return;
                     }
@@ -466,7 +497,7 @@ impl Project {
             }
             SpecBlockTarget_::Schema(_, type_parameters) => {
                 for t in type_parameters.iter() {
-                    self.visit_tparam(t, scopes, visitor);
+                    self.visit_tparam(t, project_context, visitor);
                     if visitor.finished() {
                         return;
                     }
@@ -478,7 +509,7 @@ impl Project {
             self.visit_use_decl(
                 None,
                 u,
-                scopes,
+                project_context,
                 Some(visitor),
                 true, /*  here false or true doesn't matter. */
             );
@@ -487,7 +518,7 @@ impl Project {
             }
         }
         for m in spec.value.members.iter() {
-            self.visit_spec_member(m, scopes, visitor);
+            self.visit_spec_member(m, project_context, visitor);
             if visitor.finished() {
                 return;
             }
@@ -499,7 +530,7 @@ impl Project {
     /// }
     pub(crate) fn collect_spec_schema_fields(
         &self,
-        scopes: &Scopes,
+        project_context: &ProjectContext,
         members: &Vec<SpecBlockMember>,
     ) -> HashMap<Symbol, (Name, ResolvedType)> {
         let mut ret = HashMap::new();
@@ -512,9 +543,9 @@ impl Project {
                     type_,
                     init,
                 } => {
-                    let mut ty = scopes.resolve_type(type_, self);
+                    let mut ty = project_context.resolve_type(type_, self);
                     if ty.is_err() && init.is_some() {
-                        ty = self.get_expr_type(init.as_ref().unwrap(), scopes);
+                        ty = self.get_expr_type(init.as_ref().unwrap(), project_context);
                     }
                     ret.insert(name.value, (name.clone(), ty));
                 }
@@ -527,8 +558,8 @@ impl Project {
     pub fn visit_spec_member(
         &self,
         member: &SpecBlockMember,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
     ) {
         log::trace!("visit spec member:{:?}", member);
         match &member.value {
@@ -540,19 +571,19 @@ impl Project {
             } => {
                 let empty = vec![];
                 let type_parameters = get_spec_condition_type_parameters(kind).unwrap_or(&empty);
-                scopes.enter_scope(|scopes: &Scopes| {
+                project_context.enter_scope(|project_context: &ProjectContext| {
                     // enter type parameters.
                     for (name, ab) in type_parameters.iter() {
                         let item = ItemOrAccess::Item(Item::TParam(name.clone(), ab.clone()));
-                        visitor.handle_item_or_access(self, scopes, &item);
-                        scopes.enter_item(self, name.value, item);
+                        visitor.handle_item_or_access(self, project_context, &item);
+                        project_context.enter_item(self, name.value, item);
                     }
-                    self.visit_expr(exp, scopes, visitor);
+                    self.visit_expr(exp, project_context, visitor);
                     if visitor.finished() {
                         return;
                     }
                     for exp in additional_exps.iter() {
-                        self.visit_expr(exp, scopes, visitor);
+                        self.visit_expr(exp, project_context, visitor);
                         if visitor.finished() {
                             return;
                         }
@@ -565,13 +596,13 @@ impl Project {
                 signature,
                 body,
             } => {
-                self.visit_signature(signature, scopes, visitor);
+                self.visit_signature(signature, project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
-                let _guard = scopes.enter_scope_guard(Scope::default());
+                let _guard = project_context.enter_scope_guard(Scope::default());
                 for t in signature.type_parameters.iter() {
-                    self.visit_tparam(t, scopes, visitor);
+                    self.visit_tparam(t, project_context, visitor);
                     if visitor.finished() {
                         return;
                     }
@@ -579,10 +610,10 @@ impl Project {
                 let parameter: Vec<_> = signature
                     .parameters
                     .iter()
-                    .map(|(var, ty)| (var.clone(), scopes.resolve_type(ty, self)))
+                    .map(|(var, ty)| (var.clone(), project_context.resolve_type(ty, self)))
                     .collect();
 
-                let ret_ty = scopes.resolve_type(&signature.return_type, self);
+                let ret_ty = project_context.resolve_type(&signature.return_type, self);
                 let item = Item::Fun(ItemFun {
                     name: name.clone(),
                     type_parameters: signature.type_parameters.clone(),
@@ -591,16 +622,16 @@ impl Project {
                     ret_type_unresolved: signature.return_type.clone(),
                     is_spec: true,
                     vis: Visibility::Internal,
-                    addr_and_name: scopes.get_current_addr_and_module_name(),
+                    addr_and_name: project_context.get_current_addr_and_module_name(),
                     is_test: AttrTest::No,
                 });
-                scopes.enter_item(self, name.value(), item);
+                project_context.enter_item(self, name.value(), item);
                 for (var, ty) in parameter {
-                    scopes.enter_item(self, var.value(), Item::Parameter(var, ty));
+                    project_context.enter_item(self, var.value(), Item::Parameter(var, ty));
                 }
                 // visit function body.
                 match &body.value {
-                    FunctionBody_::Defined(s) => self.visit_block(s, scopes, visitor),
+                    FunctionBody_::Defined(s) => self.visit_block(s, project_context, visitor),
                     FunctionBody_::Native => {}
                 }
             }
@@ -612,16 +643,16 @@ impl Project {
                 type_: ty,
                 init,
             } => {
-                self.visit_type_apply(ty, scopes, visitor);
+                self.visit_type_apply(ty, project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
-                let ty = scopes.resolve_type(&ty, self);
+                let ty = project_context.resolve_type(&ty, self);
                 let item = ItemOrAccess::Item(Item::Var(Var(name.clone()), ty));
-                visitor.handle_item_or_access(self, scopes, &item);
-                scopes.enter_item(self, name.value, item);
+                visitor.handle_item_or_access(self, project_context, &item);
+                project_context.enter_item(self, name.value, item);
                 if let Some(init) = init {
-                    self.visit_expr(init, scopes, visitor);
+                    self.visit_expr(init, project_context, visitor);
                 }
             }
 
@@ -630,16 +661,16 @@ impl Project {
                 post_state: _post_state,
                 def,
             } => {
-                let ty = self.get_expr_type(&def, scopes);
+                let ty = self.get_expr_type(&def, project_context);
                 let item = ItemOrAccess::Item(Item::Var(Var(name.clone()), ty));
-                visitor.handle_item_or_access(self, scopes, &item);
-                scopes.enter_item(self, name.value, item);
-                self.visit_expr(def, scopes, visitor);
+                visitor.handle_item_or_access(self, project_context, &item);
+                project_context.enter_item(self, name.value, item);
+                self.visit_expr(def, project_context, visitor);
             }
 
             SpecBlockMember_::Update { lhs, rhs } => {
-                self.visit_expr(&lhs, scopes, visitor);
-                self.visit_expr(&rhs, scopes, visitor);
+                self.visit_expr(&lhs, project_context, visitor);
+                self.visit_expr(&rhs, project_context, visitor);
             }
             SpecBlockMember_::Include {
                 properties: _properties,
@@ -649,18 +680,19 @@ impl Project {
                 // TODO.
                 match &exp.value {
                     Exp_::Name(chain, type_args) => {
-                        let (item_ret, _module_ret) = scopes.find_name_chain_item(chain, self);
+                        let (item_ret, _module_ret) =
+                            project_context.find_name_chain_item(chain, self);
                         let item = ItemOrAccess::Access(Access::IncludeSchema(
                             chain.clone(),
                             Box::new(item_ret.unwrap_or_default()),
                         ));
-                        visitor.handle_item_or_access(self, scopes, &item);
+                        visitor.handle_item_or_access(self, project_context, &item);
                         if visitor.finished() {
                             return;
                         }
                         if let Some(type_args) = type_args {
                             for t in type_args.iter() {
-                                self.visit_type_apply(t, scopes, visitor);
+                                self.visit_type_apply(t, project_context, visitor);
                                 if visitor.finished() {
                                     return;
                                 }
@@ -668,18 +700,19 @@ impl Project {
                         }
                     }
                     Exp_::Pack(chain, type_args, fields) => {
-                        let (item_ret, _module_ret) = scopes.find_name_chain_item(chain, self);
+                        let (item_ret, _module_ret) =
+                            project_context.find_name_chain_item(chain, self);
                         let item = ItemOrAccess::Access(Access::IncludeSchema(
                             chain.clone(),
                             Box::new(item_ret.clone().unwrap_or_default()),
                         ));
-                        visitor.handle_item_or_access(self, scopes, &item);
+                        visitor.handle_item_or_access(self, project_context, &item);
                         if visitor.finished() {
                             return;
                         }
                         if let Some(type_args) = type_args {
                             for t in type_args.iter() {
-                                self.visit_type_apply(t, scopes, visitor);
+                                self.visit_type_apply(t, project_context, visitor);
                                 if visitor.finished() {
                                     return;
                                 }
@@ -697,7 +730,7 @@ impl Project {
 
                             for (f, e) in fields.iter() {
                                 // TODO can jump to the schema where define this field??.
-                                self.visit_expr(e, scopes, visitor);
+                                self.visit_expr(e, project_context, visitor);
                                 if visitor.finished() {
                                     return;
                                 }
@@ -711,7 +744,7 @@ impl Project {
                                             all_fields: all_fields.clone(),
                                             item: None,
                                         }));
-                                    visitor.handle_item_or_access(self, scopes, &item);
+                                    visitor.handle_item_or_access(self, project_context, &item);
                                     if visitor.finished() {
                                         return;
                                     }
@@ -724,7 +757,7 @@ impl Project {
                                             all_fields: all_fields.clone(),
                                             item: None,
                                         }));
-                                    visitor.handle_item_or_access(self, scopes, &item);
+                                    visitor.handle_item_or_access(self, project_context, &item);
                                     if visitor.finished() {
                                         return;
                                     }
@@ -746,7 +779,7 @@ impl Project {
                     Exp_::Name(chain, t) => {
                         if let Some(ts) = t {
                             for ty in ts.iter() {
-                                self.visit_type_apply(ty, scopes, visitor);
+                                self.visit_type_apply(ty, project_context, visitor);
                                 if visitor.finished() {
                                     return;
                                 }
@@ -757,13 +790,13 @@ impl Project {
                     _ => None,
                 };
                 if let Some(rule) = rule {
-                    let (item_ret, _) = scopes.find_name_chain_item(&rule, self);
+                    let (item_ret, _) = project_context.find_name_chain_item(&rule, self);
                     let item_ret = item_ret.unwrap_or_default();
                     let item = ItemOrAccess::Access(Access::IncludeSchema(
                         rule.clone(),
                         Box::new(item_ret),
                     ));
-                    visitor.handle_item_or_access(self, scopes, &item);
+                    visitor.handle_item_or_access(self, project_context, &item);
                 }
                 for x in patterns.iter().chain(exclusion_patterns.iter()) {
                     for x in x.value.name_pattern.iter() {
@@ -775,13 +808,13 @@ impl Project {
                                     value: NameAccessChain_::One(name.clone()),
                                 };
                                 let (item_ret, _module_ret) =
-                                    scopes.find_name_chain_item(&chain, self);
+                                    project_context.find_name_chain_item(&chain, self);
                                 let item_ret = item_ret.unwrap_or_default();
                                 let item = ItemOrAccess::Access(Access::ApplySchemaTo(
                                     chain.clone(),
                                     Box::new(item_ret),
                                 ));
-                                visitor.handle_item_or_access(self, scopes, &item);
+                                visitor.handle_item_or_access(self, project_context, &item);
                                 if visitor.finished() {
                                     return;
                                 }
@@ -795,7 +828,7 @@ impl Project {
                 // https://github.com/move-language/move/blob/main/language/move-prover/doc/user/spec-lang.md#pragmas-and-properties
                 for p in properties.iter() {
                     let item = ItemOrAccess::Access(Access::PragmaProperty(p.clone()));
-                    visitor.handle_item_or_access(self, scopes, &item);
+                    visitor.handle_item_or_access(self, project_context, &item);
                     if visitor.finished() {
                         return;
                     }
@@ -804,10 +837,10 @@ impl Project {
         }
     }
 
-    /// Entrance for `ScopeVisitor` base on analyze.
-    pub fn run_full_visitor(&self, visitor: &mut dyn ScopeVisitor) {
+    /// Entrance for `ItemOrAccessHandler` base on analyze.
+    pub fn run_full_visitor(&self, visitor: &mut dyn ItemOrAccessHandler) {
         log::info!("run visitor for {} ", visitor);
-        self.scopes.clear_scopes_and_addresses();
+        self.project_context.clear_scopes_and_addresses();
 
         // visit should `rev`.
         let manifests: Vec<_> = self
@@ -818,7 +851,7 @@ impl Project {
             .collect();
         for m in manifests.iter() {
             self.visit(
-                &self.scopes,
+                &self.project_context,
                 visitor,
                 ModulesAstProvider::new(self, m.clone(), SourcePackageLayout::Sources),
             );
@@ -826,7 +859,7 @@ impl Project {
                 return;
             }
             self.visit(
-                &self.scopes,
+                &self.project_context,
                 visitor,
                 ModulesAstProvider::new(self, m.clone(), SourcePackageLayout::Tests),
             );
@@ -834,7 +867,7 @@ impl Project {
                 return;
             }
             self.visit_scripts(
-                &self.scopes,
+                &self.project_context,
                 visitor,
                 ModulesAstProvider::new(self, m.clone(), SourcePackageLayout::Scripts),
             );
@@ -875,13 +908,13 @@ impl Project {
 
     pub fn run_visitor_for_file(
         &self,
-        visitor: &mut dyn ScopeVisitor,
+        visitor: &mut dyn ItemOrAccessHandler,
         filepath: &PathBuf,
     ) -> anyhow::Result<()> {
         log::info!("run visitor part for {} ", visitor);
         self.get_defs(filepath, |provider| {
-            self.visit(&self.scopes, visitor, provider.clone());
-            self.visit_scripts(&self.scopes, visitor, provider);
+            self.visit(&self.project_context, visitor, provider.clone());
+            self.visit_scripts(&self.project_context, visitor, provider);
         })
     }
 
@@ -889,27 +922,34 @@ impl Project {
         &self,
         enter_top: Option<(AccountAddress, Symbol)>,
         c: &Constant,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
     ) {
-        self.visit_type_apply(&c.signature, scopes, visitor);
+        self.visit_type_apply(&c.signature, project_context, visitor);
         if visitor.finished() {
             return;
         }
         // const can only be declared at top scope
-        let ty = scopes.resolve_type(&c.signature, self);
+        let ty = project_context.resolve_type(&c.signature, self);
 
         let item = ItemOrAccess::Item(Item::Const(ItemConst {
             name: c.name.clone(),
             ty,
             is_test: attributes_has_test(&c.attributes).is_test(),
         }));
-        visitor.handle_item_or_access(self, scopes, &item);
+        visitor.handle_item_or_access(self, project_context, &item);
         let item: Item = item.into();
         if let Some((address, module)) = enter_top {
-            scopes.enter_top_item(self, address, module, c.name.value(), item.clone(), false);
+            project_context.enter_top_item(
+                self,
+                address,
+                module,
+                c.name.value(),
+                item.clone(),
+                false,
+            );
         } else {
-            scopes.enter_item(self, c.name.value(), item);
+            project_context.enter_item(self, c.name.value(), item);
         }
     }
     pub(crate) fn get_module_addr(
@@ -936,10 +976,10 @@ impl Project {
     pub(crate) fn visit_function(
         &self,
         function: &Function,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
     ) {
-        return scopes.enter_scope(|s| {
+        return project_context.enter_scope(|s| {
             self.visit_signature(&function.signature, s, visitor);
             if visitor.finished() {
                 return;
@@ -949,7 +989,7 @@ impl Project {
                     loc: v.loc,
                     value: Type_::Apply(Box::new(v.clone()), vec![]),
                 };
-                self.visit_type_apply(&ty, scopes, visitor);
+                self.visit_type_apply(&ty, project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
@@ -957,7 +997,7 @@ impl Project {
 
             match function.body.value {
                 FunctionBody_::Native => {}
-                FunctionBody_::Defined(ref seq) => self.visit_block(seq, scopes, visitor),
+                FunctionBody_::Defined(ref seq) => self.visit_block(seq, project_context, visitor),
             }
         });
     }
@@ -965,10 +1005,10 @@ impl Project {
     pub(crate) fn visit_block(
         &self,
         seq: &Sequence,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
     ) {
-        scopes.enter_scope(|scopes| {
+        project_context.enter_scope(|scopes| {
             for u in seq.0.iter() {
                 self.visit_use_decl(None, u, scopes, Some(visitor), false);
                 if visitor.finished() {
@@ -990,24 +1030,24 @@ impl Project {
     pub(crate) fn visit_sequence_item(
         &self,
         seq: &SequenceItem,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
     ) {
         match seq.value {
             SequenceItem_::Seq(ref e) => {
-                self.visit_expr(e, scopes, visitor);
+                self.visit_expr(e, project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
             }
             SequenceItem_::Declare(ref list, ref ty) => {
-                self.visit_bind_list(list, ty, None, scopes, visitor);
+                self.visit_bind_list(list, ty, None, project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
             }
             SequenceItem_::Bind(ref list, ref ty, ref expr) => {
-                self.visit_bind_list(list, ty, Some(expr), scopes, visitor);
+                self.visit_bind_list(list, ty, Some(expr), project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
@@ -1020,23 +1060,23 @@ impl Project {
         bind_list: &BindList,
         ty: &Option<Type>,
         expr: Option<&Box<Exp>>,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
     ) {
         if let Some(expr) = expr {
-            self.visit_expr(expr.as_ref(), scopes, visitor);
+            self.visit_expr(expr.as_ref(), project_context, visitor);
             if visitor.finished() {
                 return;
             }
         }
         let ty = if let Some(ty) = ty {
-            self.visit_type_apply(ty, scopes, visitor);
+            self.visit_type_apply(ty, project_context, visitor);
             if visitor.finished() {
                 return;
             }
-            scopes.resolve_type(ty, self)
+            project_context.resolve_type(ty, self)
         } else if let Some(expr) = expr {
-            let ty = self.get_expr_type(expr, scopes);
+            let ty = self.get_expr_type(expr, project_context);
             ty
         } else {
             ResolvedType::UnKnown
@@ -1045,7 +1085,7 @@ impl Project {
             let ty = ty.nth_ty(index);
             let unknown = ResolvedType::UnKnown;
             let ty = ty.unwrap_or(&unknown);
-            self.visit_bind(bind, ty, scopes, visitor);
+            self.visit_bind(bind, ty, project_context, visitor);
             if visitor.finished() {
                 return;
             }
@@ -1056,18 +1096,18 @@ impl Project {
         &self,
         bind: &Bind,
         infer_ty: &ResolvedType,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
     ) {
         log::info!("visit_bind:{:?}", bind);
         match &bind.value {
             Bind_::Var(var) => {
                 let item = ItemOrAccess::Item(Item::Var(var.clone(), infer_ty.clone()));
-                visitor.handle_item_or_access(self, scopes, &item);
+                visitor.handle_item_or_access(self, project_context, &item);
                 if visitor.finished() {
                     return;
                 }
-                scopes.enter_item(self, var.0.value, item);
+                project_context.enter_item(self, var.0.value, item);
                 return;
             }
             Bind_::Unpack(chain, tys, field_binds) => {
@@ -1076,20 +1116,20 @@ impl Project {
                         loc: chain.loc,
                         value: Type_::Apply(chain.clone(), vec![]),
                     },
-                    scopes,
+                    project_context,
                     visitor,
                 );
-                let (struct_ty, _) = scopes.find_name_chain_item(chain, self);
+                let (struct_ty, _) = project_context.find_name_chain_item(chain, self);
                 let struct_ty = struct_ty.unwrap_or_default().to_type().unwrap_or_default();
                 if let Some(tys) = tys {
                     for t in tys.iter() {
-                        self.visit_type_apply(t, scopes, visitor);
+                        self.visit_type_apply(t, project_context, visitor);
                         if visitor.finished() {
                             return;
                         }
                     }
                 }
-                let mut struct_ty = struct_ty.struct_ref_to_struct(scopes);
+                let mut struct_ty = struct_ty.struct_ref_to_struct(project_context);
                 match &struct_ty.clone() {
                     ResolvedType::Struct(ItemStruct {
                         name: _name,
@@ -1099,13 +1139,15 @@ impl Project {
                         is_test: _is_test,
                     }) => {
                         let struct_ty = if let Some(tys) = tys {
-                            let tys: Vec<_> =
-                                tys.iter().map(|x| scopes.resolve_type(x, self)).collect();
+                            let tys: Vec<_> = tys
+                                .iter()
+                                .map(|x| project_context.resolve_type(x, self))
+                                .collect();
                             let mut m = HashMap::new();
                             type_parameters.iter().zip(tys.iter()).for_each(|(t, ty)| {
                                 m.insert(t.name.value, ty.clone());
                             });
-                            struct_ty.bind_type_parameter(&mut m, scopes);
+                            struct_ty.bind_type_parameter(&mut m, project_context);
                             struct_ty
                         } else {
                             // use
@@ -1134,12 +1176,12 @@ impl Project {
                                     all_fields: struct_ty.all_fields(),
                                     item: None,
                                 }));
-                                visitor.handle_item_or_access(self, scopes, &item);
+                                visitor.handle_item_or_access(self, project_context, &item);
                                 if visitor.finished() {
                                     return;
                                 }
                             }
-                            self.visit_bind(bind, &field_ty, scopes, visitor);
+                            self.visit_bind(bind, &field_ty, project_context, visitor);
                         }
                         //
                     }
@@ -1152,35 +1194,35 @@ impl Project {
     pub(crate) fn visit_type_apply(
         &self,
         ty: &Type,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
     ) {
         match &ty.value {
             Type_::Apply(chain, types) => {
-                let ty = scopes.resolve_type(ty, self);
-                let (_, module) = scopes.find_name_chain_item(chain, self);
+                let ty = project_context.resolve_type(ty, self);
+                let (_, module) = project_context.find_name_chain_item(chain, self);
                 let item = ItemOrAccess::Access(Access::ApplyType(
                     chain.as_ref().clone(),
                     module.map(|x| x.name.clone()),
                     Box::new(ty),
                 ));
-                visitor.handle_item_or_access(self, scopes, &item);
+                visitor.handle_item_or_access(self, project_context, &item);
                 if visitor.finished() {
                     return;
                 }
                 for t in types.iter() {
-                    self.visit_type_apply(t, scopes, visitor);
+                    self.visit_type_apply(t, project_context, visitor);
                     if visitor.finished() {
                         return;
                     }
                 }
             }
-            Type_::Ref(_, ty) => self.visit_type_apply(ty, scopes, visitor),
+            Type_::Ref(_, ty) => self.visit_type_apply(ty, project_context, visitor),
             Type_::Fun(_, _) => {}
             Type_::Unit => {}
             Type_::Multiple(types) => {
                 for t in types.iter() {
-                    self.visit_type_apply(t, scopes, visitor);
+                    self.visit_type_apply(t, project_context, visitor);
                     if visitor.finished() {
                         return;
                     }
@@ -1189,40 +1231,45 @@ impl Project {
         }
     }
 
-    pub(crate) fn visit_expr(&self, exp: &Exp, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
+    pub(crate) fn visit_expr(
+        &self,
+        exp: &Exp,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
+    ) {
         log::trace!("visit_expr:{:?}", exp);
         match &exp.value {
             Exp_::Value(ref v) => {
                 if let Some(name) = get_name_from_value(v) {
                     let item = ItemOrAccess::Access(Access::ExprAddressName(name.clone()));
-                    visitor.handle_item_or_access(self, scopes, &item);
+                    visitor.handle_item_or_access(self, project_context, &item);
                 }
             }
             Exp_::Move(var) | Exp_::Copy(var) => {
-                let item = scopes.find_var(var.value());
+                let item = project_context.find_var(var.value());
                 let item = ItemOrAccess::Access(Access::ExprVar(
                     var.clone(),
                     Box::new(item.unwrap_or_default()),
                 ));
-                visitor.handle_item_or_access(self, scopes, &item);
+                visitor.handle_item_or_access(self, project_context, &item);
             }
             Exp_::Name(chain, tys) => {
                 // let's try.
                 if let Some(tys) = tys {
                     for ty in tys.iter() {
-                        self.visit_type_apply(ty, scopes, visitor);
+                        self.visit_type_apply(ty, project_context, visitor);
                         if visitor.finished() {
                             return;
                         }
                     }
                 }
-                let (item, module) = scopes.find_name_chain_item(chain, self);
+                let (item, module) = project_context.find_name_chain_item(chain, self);
                 let item = ItemOrAccess::Access(Access::ExprAccessChain(
                     chain.clone(),
                     module,
                     Box::new(item.unwrap_or_default()),
                 ));
-                visitor.handle_item_or_access(self, scopes, &item);
+                visitor.handle_item_or_access(self, project_context, &item);
                 if visitor.finished() {
                     return;
                 }
@@ -1232,29 +1279,29 @@ impl Project {
                 if *is_macro {
                     let c = MacroCall::from_chain(chain).unwrap_or_default();
                     let item = ItemOrAccess::Access(Access::MacroCall(c, chain.clone()));
-                    visitor.handle_item_or_access(self, scopes, &item);
+                    visitor.handle_item_or_access(self, project_context, &item);
                 } else {
-                    let (item, module) = scopes.find_name_chain_item(chain, self);
+                    let (item, module) = project_context.find_name_chain_item(chain, self);
                     let item = ItemOrAccess::Access(Access::ExprAccessChain(
                         chain.clone(),
                         module,
                         Box::new(item.unwrap_or_default()),
                     ));
-                    visitor.handle_item_or_access(self, scopes, &item);
+                    visitor.handle_item_or_access(self, project_context, &item);
                     if visitor.finished() {
                         return;
                     }
                 }
                 if let Some(ref types) = types {
                     for t in types.iter() {
-                        self.visit_type_apply(t, scopes, visitor);
+                        self.visit_type_apply(t, project_context, visitor);
                         if visitor.finished() {
                             return;
                         }
                     }
                 }
                 for expr in exprs.value.iter() {
-                    self.visit_expr(expr, scopes, visitor);
+                    self.visit_expr(expr, project_context, visitor);
                     if visitor.finished() {
                         return;
                     }
@@ -1266,17 +1313,17 @@ impl Project {
                         loc: chain.loc,
                         value: Type_::Apply(Box::new(chain.clone()), vec![]),
                     },
-                    scopes,
+                    project_context,
                     visitor,
                 );
                 if visitor.finished() {
                     return;
                 }
-                let (ty, _) = scopes.find_name_chain_item(chain, self);
+                let (ty, _) = project_context.find_name_chain_item(chain, self);
                 let ty = ty.unwrap_or_default().to_type().unwrap_or_default();
                 if let Some(types) = types {
                     for t in types.iter() {
-                        self.visit_type_apply(t, scopes, visitor);
+                        self.visit_type_apply(t, project_context, visitor);
                         if visitor.finished() {
                             return;
                         }
@@ -1289,7 +1336,8 @@ impl Project {
                         Exp_::Name(chain, _) => match &chain.value {
                             NameAccessChain_::One(x) => {
                                 if x.value == f.0.value() && x.loc == f.0.loc() {
-                                    let (item, _) = scopes.find_name_chain_item(chain, self);
+                                    let (item, _) =
+                                        project_context.find_name_chain_item(chain, self);
                                     item
                                 } else {
                                     None
@@ -1308,7 +1356,7 @@ impl Project {
                             all_fields,
                             item,
                         }));
-                        visitor.handle_item_or_access(self, scopes, &item);
+                        visitor.handle_item_or_access(self, project_context, &item);
                     } else {
                         let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
                             from: f.0.clone(),
@@ -1317,12 +1365,12 @@ impl Project {
                             all_fields,
                             item,
                         }));
-                        visitor.handle_item_or_access(self, scopes, &item);
+                        visitor.handle_item_or_access(self, project_context, &item);
                     }
                     if visitor.finished() {
                         return;
                     }
-                    self.visit_expr(&f.1, scopes, visitor);
+                    self.visit_expr(&f.1, project_context, visitor);
                     if visitor.finished() {
                         return;
                     }
@@ -1332,43 +1380,43 @@ impl Project {
             Exp_::Vector(_loc, ref ty, ref exprs) => {
                 if let Some(ty) = ty {
                     for t in ty.iter() {
-                        self.visit_type_apply(t, scopes, visitor);
+                        self.visit_type_apply(t, project_context, visitor);
                         if visitor.finished() {
                             return;
                         }
                     }
                 }
                 for e in exprs.value.iter() {
-                    self.visit_expr(e, scopes, visitor);
+                    self.visit_expr(e, project_context, visitor);
                     if visitor.finished() {
                         return;
                     }
                 }
             }
             Exp_::IfElse(condition, then_, else_) => {
-                self.visit_expr(condition, scopes, visitor);
+                self.visit_expr(condition, project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
-                self.visit_expr(then_, scopes, visitor);
+                self.visit_expr(then_, project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
                 if let Some(else_) = else_ {
-                    self.visit_expr(else_.as_ref(), scopes, visitor);
+                    self.visit_expr(else_.as_ref(), project_context, visitor);
                 }
             }
             Exp_::While(condition, body) => {
-                self.visit_expr(condition, scopes, visitor);
+                self.visit_expr(condition, project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
-                self.visit_expr(body.as_ref(), scopes, visitor);
+                self.visit_expr(body.as_ref(), project_context, visitor);
             }
             Exp_::Loop(e) => {
-                self.visit_expr(e.as_ref(), scopes, visitor);
+                self.visit_expr(e.as_ref(), project_context, visitor);
             }
-            Exp_::Block(b) => self.visit_block(b, scopes, visitor),
+            Exp_::Block(b) => self.visit_block(b, project_context, visitor),
             Exp_::Lambda(_, _) => {
                 // TODO have lambda expression  in ast structure.
                 // But I don't find in msl spec.
@@ -1385,7 +1433,7 @@ impl Project {
             Exp_::Quant(_, binds, bodies, where_, result) => {
                 // TODO look list t can be use a type alias.
                 // forall t: type, addr: address where exists<R<t>>(addr): exists<T<t>>(addr)
-                scopes.enter_scope(|scopes| {
+                project_context.enter_scope(|scopes| {
                     for bind_expr in binds.value.iter() {
                         let bind = &bind_expr.value.0;
                         let expr = &bind_expr.value.1;
@@ -1447,7 +1495,7 @@ impl Project {
             }
             Exp_::ExpList(list) => {
                 for e in list.iter() {
-                    self.visit_expr(e, scopes, visitor);
+                    self.visit_expr(e, project_context, visitor);
                     if visitor.finished() {
                         return;
                     }
@@ -1457,16 +1505,16 @@ impl Project {
                 // Nothing.
             }
             Exp_::Assign(left, right) => {
-                self.visit_expr(left, scopes, visitor);
+                self.visit_expr(left, project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
-                self.visit_expr(right, scopes, visitor);
+                self.visit_expr(right, project_context, visitor);
                 match &left.value {
                     Exp_::Name(name, _) => match &name.value {
                         NameAccessChain_::One(name) => {
-                            let ty = self.get_expr_type(right.as_ref(), scopes);
-                            scopes.try_fix_local_var_type(name.value, ty);
+                            let ty = self.get_expr_type(right.as_ref(), project_context);
+                            project_context.try_fix_local_var_type(name.value, ty);
                         }
                         NameAccessChain_::Two(_, _) => {}
                         NameAccessChain_::Three(_, _) => {}
@@ -1476,41 +1524,41 @@ impl Project {
             }
             Exp_::Return(e) => {
                 if let Some(e) = e {
-                    self.visit_expr(e, scopes, visitor);
+                    self.visit_expr(e, project_context, visitor);
                 }
             }
-            Exp_::Abort(e) => self.visit_expr(e.as_ref(), scopes, visitor),
+            Exp_::Abort(e) => self.visit_expr(e.as_ref(), project_context, visitor),
             Exp_::Break => {
                 let item = ItemOrAccess::Access(Access::KeyWords("break"));
-                visitor.handle_item_or_access(self, scopes, &item);
+                visitor.handle_item_or_access(self, project_context, &item);
             }
             Exp_::Continue => {
                 let item = ItemOrAccess::Access(Access::KeyWords("continue"));
-                visitor.handle_item_or_access(self, scopes, &item);
+                visitor.handle_item_or_access(self, project_context, &item);
             }
             Exp_::Dereference(x) => {
-                self.visit_expr(x.as_ref(), scopes, visitor);
+                self.visit_expr(x.as_ref(), project_context, visitor);
             }
             Exp_::UnaryExp(_, e) => {
-                self.visit_expr(e.as_ref(), scopes, visitor);
+                self.visit_expr(e.as_ref(), project_context, visitor);
             }
             Exp_::BinopExp(left, _, right) => {
-                self.visit_expr(left, scopes, visitor);
+                self.visit_expr(left, project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
-                self.visit_expr(right, scopes, visitor);
+                self.visit_expr(right, project_context, visitor);
             }
             Exp_::Borrow(_, e) => {
-                self.visit_expr(e.as_ref(), scopes, visitor);
+                self.visit_expr(e.as_ref(), project_context, visitor);
             }
             Exp_::Dot(e, field) => {
-                self.visit_expr(e.as_ref(), scopes, visitor);
+                self.visit_expr(e.as_ref(), project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
-                let struct_ty = self.get_expr_type(e, scopes);
-                let struct_ty = struct_ty.struct_ref_to_struct(scopes);
+                let struct_ty = self.get_expr_type(e, project_context);
+                let struct_ty = struct_ty.struct_ref_to_struct(project_context);
                 let all_fields = struct_ty.all_fields();
                 if let Some(def_field) = struct_ty.find_filed_by_name(field.value) {
                     let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
@@ -1520,7 +1568,7 @@ impl Project {
                         all_fields,
                         item: None,
                     }));
-                    visitor.handle_item_or_access(self, scopes, &item);
+                    visitor.handle_item_or_access(self, project_context, &item);
                 } else {
                     let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
                         from: Field(field.clone()),
@@ -1529,31 +1577,31 @@ impl Project {
                         all_fields,
                         item: None,
                     }));
-                    visitor.handle_item_or_access(self, scopes, &item);
+                    visitor.handle_item_or_access(self, project_context, &item);
                 }
             }
             Exp_::Index(e, index) => {
-                self.visit_expr(e.as_ref(), scopes, visitor);
-                self.visit_expr(index.as_ref(), scopes, visitor)
+                self.visit_expr(e.as_ref(), project_context, visitor);
+                self.visit_expr(index.as_ref(), project_context, visitor)
             }
             Exp_::Cast(e, ty) => {
-                self.visit_expr(e.as_ref(), scopes, visitor);
+                self.visit_expr(e.as_ref(), project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
-                self.visit_type_apply(ty, scopes, visitor);
+                self.visit_type_apply(ty, project_context, visitor);
             }
             Exp_::Annotate(e, ty) => {
-                self.visit_expr(e.as_ref(), scopes, visitor);
+                self.visit_expr(e.as_ref(), project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
-                self.visit_type_apply(ty, scopes, visitor);
+                self.visit_type_apply(ty, project_context, visitor);
             }
             Exp_::Spec(spec) => {
-                let old = scopes.set_access_env(AccessEnv::Spec);
-                self.visit_spec(spec, scopes, visitor);
-                scopes.set_access_env(old);
+                let old = project_context.set_access_env(AccessEnv::Spec);
+                self.visit_spec(spec, project_context, visitor);
+                project_context.set_access_env(old);
             }
             Exp_::UnresolvedError => {
                 //
@@ -1566,8 +1614,8 @@ impl Project {
         friend_decl: &FriendDecl,
         addr: AccountAddress,
         module_name: Symbol,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
     ) {
         match &friend_decl.friend.value {
             NameAccessChain_::One(x) => {
@@ -1579,7 +1627,7 @@ impl Project {
                         value: Symbol::from("uOZKbQXVWi"),
                     }),
                 ));
-                visitor.handle_item_or_access(self, scopes, &item);
+                visitor.handle_item_or_access(self, project_context, &item);
             }
 
             NameAccessChain_::Two(x, name) => {
@@ -1587,14 +1635,14 @@ impl Project {
                     LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
                     LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
                 };
-                let m = scopes.resolve_friend(addr_friend, name.value);
+                let m = project_context.resolve_friend(addr_friend, name.value);
                 let m = match m {
                     Some(x) => x,
                     None => ModuleName(name.clone()),
                 };
                 let item = ItemOrAccess::Access(Access::Friend(friend_decl.friend.clone(), m));
-                visitor.handle_item_or_access(self, scopes, &item);
-                scopes.insert_friend(addr, module_name, (addr_friend, name.value));
+                visitor.handle_item_or_access(self, project_context, &item);
+                project_context.insert_friend(addr, module_name, (addr_friend, name.value));
             }
 
             NameAccessChain_::Three(_, _) => {
@@ -1607,11 +1655,11 @@ impl Project {
         &self,
         is_global: Option<(AccountAddress, Symbol)>,
         use_decl: &UseDecl,
-        scopes: &Scopes,
-        visitor: Option<&mut dyn ScopeVisitor>,
+        project_context: &ProjectContext,
+        visitor: Option<&mut dyn ItemOrAccessHandler>,
         is_spec_module: bool,
     ) {
-        let mut dummy = DummyVisitor;
+        let mut dummy = DummyHandler;
         let visitor = visitor.unwrap_or(&mut dummy);
         let get_addr = |module: &ModuleIdent| -> AccountAddress {
             match &module.value.address.value {
@@ -1620,15 +1668,16 @@ impl Project {
             }
         };
         let get_module = |module: &ModuleIdent| -> Option<Rc<RefCell<ModuleScope>>> {
-            let module_scope = scopes.visit_address(|top| -> Option<Rc<RefCell<ModuleScope>>> {
-                let x = top
-                    .address
-                    .get(&get_addr(module))?
-                    .modules
-                    .get(&module.value.module.0.value)?
-                    .clone();
-                Some(x)
-            });
+            let module_scope =
+                project_context.visit_address(|top| -> Option<Rc<RefCell<ModuleScope>>> {
+                    let x = top
+                        .address
+                        .get(&get_addr(module))?
+                        .modules
+                        .get(&module.value.module.0.value)?
+                        .clone();
+                    Some(x)
+                });
             let module_scope = match module_scope {
                 Some(x) => x,
                 None => return None,
@@ -1651,7 +1700,7 @@ impl Project {
                     is_test: attributes_has_test(&use_decl.attributes) == AttrTest::TestOnly,
                 })]));
 
-                visitor.handle_item_or_access(self, scopes, &item);
+                visitor.handle_item_or_access(self, project_context, &item);
                 if visitor.finished() {
                     return;
                 }
@@ -1661,9 +1710,16 @@ impl Project {
                     module.value.module.value()
                 };
                 if let Some((addr, module_name)) = is_global {
-                    scopes.enter_top_use_item(self, addr, module_name, name, item, is_spec_module);
+                    project_context.enter_top_use_item(
+                        self,
+                        addr,
+                        module_name,
+                        name,
+                        item,
+                        is_spec_module,
+                    );
                 } else {
-                    scopes.enter_use_item(self, name, item);
+                    project_context.enter_use_item(self, name, item);
                 }
             }
 
@@ -1698,7 +1754,7 @@ impl Project {
                                 is_test: attributes_has_test(&use_decl.attributes)
                                     == AttrTest::TestOnly,
                             })]));
-                        visitor.handle_item_or_access(self, scopes, &item);
+                        visitor.handle_item_or_access(self, project_context, &item);
                         if visitor.finished() {
                             return;
                         }
@@ -1708,7 +1764,7 @@ impl Project {
                             module.value.module.value()
                         };
                         if let Some((addr, module_name)) = is_global {
-                            scopes.enter_top_use_item(
+                            project_context.enter_top_use_item(
                                 self,
                                 addr,
                                 module_name,
@@ -1717,7 +1773,7 @@ impl Project {
                                 is_spec_module,
                             );
                         } else {
-                            scopes.enter_use_item(self, name, item);
+                            project_context.enter_use_item(self, name, item);
                         }
                         continue;
                     }
@@ -1733,12 +1789,12 @@ impl Project {
                         members: module_scope.clone(),
                         is_test: attributes_has_test(&use_decl.attributes) == AttrTest::TestOnly,
                     })]));
-                    visitor.handle_item_or_access(self, scopes, &item);
+                    visitor.handle_item_or_access(self, project_context, &item);
                     if visitor.finished() {
                         return;
                     }
                     if let Some((addr, module_name)) = is_global {
-                        scopes.enter_top_use_item(
+                        project_context.enter_top_use_item(
                             self,
                             addr,
                             module_name,
@@ -1747,7 +1803,7 @@ impl Project {
                             is_spec_module,
                         );
                     } else {
-                        scopes.enter_use_item(self, name.value, item);
+                        project_context.enter_use_item(self, name.value, item);
                     }
                 }
             }

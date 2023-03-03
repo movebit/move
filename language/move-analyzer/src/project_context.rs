@@ -1,5 +1,5 @@
 use super::item::*;
-use super::modules::*;
+use super::project::*;
 use super::scope::*;
 use super::types::*;
 use super::utils::*;
@@ -15,7 +15,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 #[derive(Clone)]
-pub struct Scopes {
+pub struct ProjectContext {
     scopes: Rc<RefCell<Vec<Scope>>>,
     pub(crate) addresses: RefCell<Addresses>,
     pub(crate) addr_and_name: RefCell<AddrAndModuleName>,
@@ -28,7 +28,7 @@ pub enum AccessEnv {
     Test,
     Spec,
 }
-impl Scopes {
+impl ProjectContext {
     pub(crate) fn clear_scopes_and_addresses(&self) {
         let d = Self::default();
         *self.scopes.as_ref().borrow_mut() = d.scopes.as_ref().borrow().clone();
@@ -36,7 +36,7 @@ impl Scopes {
     }
 }
 
-impl Default for Scopes {
+impl Default for ProjectContext {
     fn default() -> Self {
         let x = Self {
             scopes: Default::default(),
@@ -72,7 +72,7 @@ impl AccessEnv {
     }
 }
 
-impl Scopes {
+impl ProjectContext {
     pub(crate) fn new() -> Self {
         Self::default()
     }
@@ -220,7 +220,7 @@ impl Scopes {
             .unwrap()
             .enter_build_in();
     }
-    pub(crate) fn enter_scope<R>(&self, call_back: impl FnOnce(&Scopes) -> R) -> R {
+    pub(crate) fn enter_scope<R>(&self, call_back: impl FnOnce(&ProjectContext) -> R) -> R {
         let s = Scope::default();
         self.scopes.as_ref().borrow_mut().push(s);
         let _guard = ScopesGuarder::new(self.clone());
@@ -1245,7 +1245,7 @@ impl Scopes {
 pub(crate) struct ScopesGuarder(Rc<RefCell<Vec<Scope>>>);
 
 impl ScopesGuarder {
-    pub(crate) fn new(s: Scopes) -> Self {
+    pub(crate) fn new(s: ProjectContext) -> Self {
         Self(s.scopes.clone())
     }
 }

@@ -19,7 +19,7 @@ use lsp_types::{
 };
 
 #[allow(unused)]
-use move_analyzer::modules::Ending;
+use move_analyzer::project::Ending;
 use move_command_line_common::files::FileHash;
 use move_compiler::diagnostics::Diagnostics;
 use move_compiler::{shared::*, PASS_TYPING};
@@ -35,7 +35,7 @@ use move_analyzer::{
     completion::on_completion_request,
     context::{Context, FileDiags, MultiProject},
     document_symbol, goto_definition, hover,
-    modules::ConvertLoc,
+    project::ConvertLoc,
     references,
     utils::*,
 };

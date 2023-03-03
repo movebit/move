@@ -1,7 +1,7 @@
 use super::context::Context;
 use super::goto_definition;
 use super::item::*;
-use super::modules::*;
+use super::project::*;
 use super::utils::*;
 use im::HashMap;
 use lsp_server::*;
@@ -28,7 +28,7 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
         fpath.as_path(),
     );
     // first find definition.
-    let mut goto_definition = goto_definition::Visitor::new(fpath.clone(), line, col);
+    let mut goto_definition = goto_definition::Handler::new(fpath.clone(), line, col);
     let modules = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => return,
@@ -78,7 +78,7 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
         Some(x) => x,
         None => return,
     };
-    let mut visitor = Visitor::new(def_loc, def_loc_range, include_declaration, is_local);
+    let mut visitor = Handler::new(def_loc, def_loc_range, include_declaration, is_local);
     if is_local {
         let _ = modules.run_visitor_for_file(&mut visitor, &fpath);
     } else {
@@ -100,7 +100,7 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
         .unwrap();
 }
 
-struct Visitor {
+struct Handler {
     def_loc: Loc,
     def_loc_range: FileRange,
     include_declaration: bool,
@@ -108,7 +108,7 @@ struct Visitor {
     is_local: bool,
 }
 
-impl Visitor {
+impl Handler {
     pub(crate) fn new(
         def_loc: Loc,
         def_loc_range: FileRange,
@@ -148,7 +148,7 @@ impl Visitor {
     }
 }
 
-impl GetPosition for Visitor {
+impl GetPosition for Handler {
     fn get_position(&self) -> (PathBuf, u32 /* line */, u32 /* col */) {
         (
             self.def_loc_range.path.clone(),
@@ -158,7 +158,7 @@ impl GetPosition for Visitor {
     }
 }
 
-impl ScopeVisitor for Visitor {
+impl ItemOrAccessHandler for Handler {
     fn visit_fun_or_spec_body(&self) -> bool {
         true
     }
@@ -174,7 +174,7 @@ impl ScopeVisitor for Visitor {
     fn handle_item_or_access(
         &mut self,
         _services: &dyn HandleItemService,
-        _scopes: &crate::scopes::Scopes,
+        _project_context: &crate::project_context::ProjectContext,
         item: &crate::item::ItemOrAccess,
     ) {
         match item {
@@ -202,7 +202,7 @@ impl ScopeVisitor for Visitor {
     }
 }
 
-impl std::fmt::Display for Visitor {
+impl std::fmt::Display for Handler {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "find references for {:?}", self.def_loc)
     }

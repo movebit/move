@@ -1,6 +1,6 @@
 use super::item::*;
 use crate::item::{self, ItemFun};
-use crate::scopes::Scopes;
+use crate::project_context::ProjectContext;
 use enum_iterator::Sequence;
 use move_command_line_common::files::FileHash;
 use move_compiler::shared::Identifier;
@@ -125,7 +125,7 @@ impl ResolvedType {
     }
 
     /// bind type parameter to concrete type
-    pub(crate) fn bind_struct_type_parameter(&mut self, scopes: &Scopes) {
+    pub(crate) fn bind_struct_type_parameter(&mut self, scopes: &ProjectContext) {
         match self {
             Self::Struct(x) => {
                 let mut m = HashMap::new();
@@ -148,7 +148,7 @@ impl ResolvedType {
     pub(crate) fn bind_type_parameter(
         &mut self,
         types: &HashMap<Symbol, ResolvedType>,
-        scopes: &Scopes,
+        scopes: &ProjectContext,
     ) {
         match self {
             ResolvedType::UnKnown => {}
@@ -336,7 +336,7 @@ impl std::fmt::Display for ResolvedType {
 }
 
 impl ResolvedType {
-    pub(crate) fn struct_ref_to_struct(self, s: &Scopes) -> ResolvedType {
+    pub(crate) fn struct_ref_to_struct(self, s: &ProjectContext) -> ResolvedType {
         match self.clone() {
             Self::StructRef(
                 ItemStructNameRef {

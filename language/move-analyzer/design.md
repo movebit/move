@@ -26,9 +26,9 @@ For example module is scope, and function is a scope too.
 }
 ~~~
 
-### `Scopes`
+### `ProjectContext`
 
-`Scopes` composed with two important field(`scopes` and `addresses`) and someother addtional information.
+`ProjectContext` composed with two important field(`scopes` and `addresses`) and someother addtional information.
 
 `scopes` is a stack of `Scope`.
 
@@ -96,15 +96,15 @@ fun some_fun() {
     ), 
 ~~~
 
-### `ScopeVisitor`.
+### `ItemOrAccessHandler`.
 ~~~
 
-pub trait ScopeVisitor: std::fmt::Display {
+pub trait ItemOrAccessHandler: std::fmt::Display {
     /// Handle this item_or_access.
     fn handle_item_or_access(
         &mut self,
         services: &dyn HandleItemService,
-        scopes: &Scopes,
+        scopes: &ProjectContext,
         item_or_access: &ItemOrAccess,
     );
     
@@ -114,9 +114,9 @@ pub trait ScopeVisitor: std::fmt::Display {
     fn finished(&self) -> bool;
 }
 ~~~
-Actualy the `ScopeVisitor` is a consumer and can consume the information create by `Project`.
+Actualy the `ItemOrAccessHandler` is a consumer and can consume the information create by `Project`.
 
-`ItemOrAccess` is either a `Item` or `Access`. Our `goto to definition` and `auto completion` ,... base On `ScopeVisitor`.
+`ItemOrAccess` is either a `Item` or `Access`. Our `goto to definition` and `auto completion` ,... base On `ItemOrAccessHandler`.
 
 For example 
 
@@ -161,7 +161,7 @@ pub struct Project {
     pub(crate) manifest_paths: Vec<PathBuf>,
 
     /// Global constants,functions.etc...
-    pub(crate) scopes: Scopes,
+    pub(crate) scopes: ProjectContext,
     pub(crate) manifest_not_exists: HashSet<PathBuf>,
 }
 ~~~
@@ -171,16 +171,16 @@ Let me introduce `Project`'s creation.
 `Project` creation involves  next steps.
 
 * loading AST and dependency's AST into Memory.
-* enter all the global function,const,and struct to `Scopes`.`addresses`.
+* enter all the global function,const,and struct to `ProjectContext`.`addresses`.
 
 Wait,But How can we do that.
 
-The main entry point for `Project` to enter item and call `ScopeVisitor`.`handle_item_or_access...` is `visit`.
+The main entry point for `Project` to enter item and call `ItemOrAccessHandler`.`handle_item_or_access...` is `visit`.
 ~~~
 pub fn visit(
         &self,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        scopes: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
         provider: impl AstProvider,
     ) {
         ... 
@@ -188,14 +188,14 @@ pub fn visit(
 
 ~~~
 
-function `visit` is reponsible for iteration of all AST,create `ItemOrAccess`,enter `Item` to scopes,and call `ScopeVisitor`'s method.
+function `visit` is reponsible for iteration of all AST,create `ItemOrAccess`,enter `Item` to scopes,and call `ItemOrAccessHandler`'s method.
 
 For example.
 ~~~
 pub fn visit(
         &self,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        scopes: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
         provider: impl AstProvider,
     ) {
         ... 
@@ -209,8 +209,8 @@ pub fn visit(
         &self,
         enter_top: Option<(AccountAddress, Symbol)>,
         c: &Constant,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        scopes: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
     ) {
         ... 
         // Get const's ty
