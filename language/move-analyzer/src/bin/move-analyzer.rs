@@ -41,7 +41,7 @@ use move_analyzer::{
 };
 
 use url::Url;
- 
+
 struct SimpleLogger;
 impl log::Log for SimpleLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
@@ -381,8 +381,6 @@ fn cpu_pprof(seconds: u64) {
         };
     });
 }
-
- 
 
 fn get_package_compile_diagnostics(
     pkg_path: &Path,
