@@ -35,7 +35,7 @@ pub fn on_hover_request(context: &Context, request: &Request) {
         Some(x) => x,
         None => return,
     }
-    .run_visitor_for_file(&mut visitor, &fpath);
+    .run_visitor_for_file(&mut visitor, &fpath, false);
     let item = visitor.result_item_or_access.clone();
     let hover = item.map(|x| hover_on_item_or_access(&x));
     let hover = hover.map(|x| Hover {

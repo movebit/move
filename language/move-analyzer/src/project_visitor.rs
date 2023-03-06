@@ -23,6 +23,7 @@ impl Project {
         project_context: &ProjectContext,
         visitor: &mut dyn ItemOrAccessHandler,
         provider: impl AstProvider,
+        enter_import: bool,
     ) {
         project_context.set_access_env(Default::default());
         provider.with_module(|addr, module_def| {
@@ -62,6 +63,7 @@ impl Project {
                 project_context,
                 None,
                 is_spec_module,
+                enter_import,
             )
         });
 
@@ -237,6 +239,7 @@ impl Project {
                 project_context,
                 Some(visitor),
                 is_spec_module,
+                false,
             );
         });
 
@@ -341,7 +344,7 @@ impl Project {
             project_context.enter_scope(|scopes| {
                 scopes.set_access_env(AccessEnv::default());
                 for u in script.uses.iter() {
-                    self.visit_use_decl(None, u, scopes, Some(visitor), false);
+                    self.visit_use_decl(None, u, scopes, Some(visitor), false, true);
                     if visitor.finished() {
                         return;
                     }
@@ -512,6 +515,7 @@ impl Project {
                 project_context,
                 Some(visitor),
                 true, /*  here false or true doesn't matter. */
+                true,
             );
             if visitor.finished() {
                 return;
@@ -854,6 +858,7 @@ impl Project {
                 &self.project_context,
                 visitor,
                 ModulesAstProvider::new(self, m.clone(), SourcePackageLayout::Sources),
+                true,
             );
             if visitor.finished() {
                 return;
@@ -862,6 +867,7 @@ impl Project {
                 &self.project_context,
                 visitor,
                 ModulesAstProvider::new(self, m.clone(), SourcePackageLayout::Tests),
+                true,
             );
             if visitor.finished() {
                 return;
@@ -910,10 +916,16 @@ impl Project {
         &self,
         visitor: &mut dyn ItemOrAccessHandler,
         filepath: &PathBuf,
+        enter_import: bool,
     ) -> anyhow::Result<()> {
         log::info!("run visitor part for {} ", visitor);
         self.get_defs(filepath, |provider| {
-            self.visit(&self.project_context, visitor, provider.clone());
+            self.visit(
+                &self.project_context,
+                visitor,
+                provider.clone(),
+                enter_import,
+            );
             self.visit_scripts(&self.project_context, visitor, provider);
         })
     }
@@ -1010,7 +1022,7 @@ impl Project {
     ) {
         project_context.enter_scope(|scopes| {
             for u in seq.0.iter() {
-                self.visit_use_decl(None, u, scopes, Some(visitor), false);
+                self.visit_use_decl(None, u, scopes, Some(visitor), false, true);
                 if visitor.finished() {
                     return;
                 }
@@ -1658,6 +1670,7 @@ impl Project {
         project_context: &ProjectContext,
         visitor: Option<&mut dyn ItemOrAccessHandler>,
         is_spec_module: bool,
+        enter_import: bool,
     ) {
         let mut dummy = DummyHandler;
         let visitor = visitor.unwrap_or(&mut dummy);
@@ -1709,17 +1722,19 @@ impl Project {
                 } else {
                     module.value.module.value()
                 };
-                if let Some((addr, module_name)) = is_global {
-                    project_context.enter_top_use_item(
-                        self,
-                        addr,
-                        module_name,
-                        name,
-                        item,
-                        is_spec_module,
-                    );
-                } else {
-                    project_context.enter_use_item(self, name, item);
+                if enter_import {
+                    if let Some((addr, module_name)) = is_global {
+                        project_context.enter_top_use_item(
+                            self,
+                            addr,
+                            module_name,
+                            name,
+                            item,
+                            is_spec_module,
+                        );
+                    } else {
+                        project_context.enter_use_item(self, name, item);
+                    }
                 }
             }
 
@@ -1793,17 +1808,19 @@ impl Project {
                     if visitor.finished() {
                         return;
                     }
-                    if let Some((addr, module_name)) = is_global {
-                        project_context.enter_top_use_item(
-                            self,
-                            addr,
-                            module_name,
-                            name.value,
-                            item,
-                            is_spec_module,
-                        );
-                    } else {
-                        project_context.enter_use_item(self, name.value, item);
+                    if enter_import {
+                        if let Some((addr, module_name)) = is_global {
+                            project_context.enter_top_use_item(
+                                self,
+                                addr,
+                                module_name,
+                                name.value,
+                                item,
+                                is_spec_module,
+                            );
+                        } else {
+                            project_context.enter_use_item(self, name.value, item);
+                        }
                     }
                 }
             }

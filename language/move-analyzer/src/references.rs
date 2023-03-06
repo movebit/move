@@ -33,7 +33,7 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
         Some(x) => x,
         None => return,
     };
-    let _ = modules.run_visitor_for_file(&mut goto_definition, &fpath);
+    let _ = modules.run_visitor_for_file(&mut goto_definition, &fpath, false);
     let send_err = || {
         let err = format!("{:?}:{}:{} not found definition.", fpath.clone(), line, col);
         let r = Response::new_err(request.id.clone(), ErrorCode::UnknownErrorCode as i32, err);
@@ -80,7 +80,7 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
     };
     let mut visitor = Handler::new(def_loc, def_loc_range, include_declaration, is_local);
     if is_local {
-        let _ = modules.run_visitor_for_file(&mut visitor, &fpath);
+        let _ = modules.run_visitor_for_file(&mut visitor, &fpath, false);
     } else {
         modules.run_full_visitor(&mut visitor);
     }

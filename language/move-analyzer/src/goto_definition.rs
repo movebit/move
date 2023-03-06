@@ -46,7 +46,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
             return;
         }
     }
-    .run_visitor_for_file(&mut visitor, &fpath);
+    .run_visitor_for_file(&mut visitor, &fpath, false);
     let locations = visitor.to_locations();
     let r = Response::new_ok(
         request.id.clone(),
@@ -298,7 +298,7 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
         None => return,
     };
 
-    let _ = modules.run_visitor_for_file(&mut visitor, &fpath);
+    let _ = modules.run_visitor_for_file(&mut visitor, &fpath, false);
     fn type_defs(ret: &mut Vec<Location>, ty: &ResolvedType, modules: &super::project::Project) {
         match ty {
             ResolvedType::UnKnown => {}

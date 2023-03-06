@@ -95,7 +95,7 @@ impl Project {
         };
         // Update defs.
         let mut dummy = DummyHandler;
-        let _ = self.run_visitor_for_file(&mut dummy, file_path);
+        let _ = self.run_visitor_for_file(&mut dummy, file_path, true);
     }
 
     /// Load a Move.toml project.
@@ -940,7 +940,7 @@ impl Name2Addr for Project {
     }
 }
 
-/// Scoped analyze based visitor.
+/// Handler a `ItemOrAccess` producced By `Project`.
 pub trait ItemOrAccessHandler: std::fmt::Display {
     /// Handle this item.
     fn handle_item_or_access(

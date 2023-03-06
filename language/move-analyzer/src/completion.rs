@@ -137,7 +137,7 @@ pub fn on_completion_request(context: &Context, request: &Request) {
         Some(x) => x,
         None => return,
     }
-    .run_visitor_for_file(&mut visitor, &fpath);
+    .run_visitor_for_file(&mut visitor, &fpath, false);
     let mut result = visitor.result.unwrap_or(vec![]);
     if result.len() == 0 && !visitor.completion_on_def {
         result = all_intrinsic();

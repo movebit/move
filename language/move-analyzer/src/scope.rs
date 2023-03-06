@@ -50,7 +50,6 @@ impl Scope {
                     Item::MoveBuildInFun(x.clone()),
                 )
             });
-
         self.enter_spec_build_in();
     }
     pub(crate) fn enter_use_item(&mut self, s: Symbol, item: impl Into<Item>) {
@@ -60,6 +59,7 @@ impl Scope {
                 match self.uses.get_mut(&s) {
                     Some(x) => match x {
                         Item::Use(x2) => {
+                            // TODO provent insert twice.
                             // inserted, just return.
                             x2.extend(items.clone());
                             return;

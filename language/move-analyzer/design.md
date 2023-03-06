@@ -338,7 +338,7 @@ Well first We need load it the memory.
 ~~~
 pub struct MultiProject {
     // projects are all loaded project from filesystem.
-     pub projects: HashMap<HashSet<PathBuf>, Project>,
+    pub projects: HashMap<HashSet<PathBuf>, Project>,
     ... 
 }
 ~~~
@@ -347,7 +347,7 @@ is `HashSet<PathBuf>`,which contains the all the manifest path the `Project` was
 
 And We can know `goto to definition`'s filepath, So we know which manifest file it belongs.
 
-We just select the `Project` who contains the manifest file  to handle the request.
+We just select the `Project` who contains the manifest file to handle the request.
 
 There is another thing I want mention about.
 Mutlti project can have the same dependency, So there are somethings can share together Like AST definitions.
@@ -359,3 +359,8 @@ pub struct MultiProject {
  }
 ~~~
 Share AST definition reduce memory consumption and save us time for loading project.
+
+
+
+### Build in semantic analyzer
+
