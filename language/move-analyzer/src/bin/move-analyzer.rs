@@ -41,20 +41,7 @@ use move_analyzer::{
 };
 
 use url::Url;
-
-use jemalloc_ctl::{Access, AsName};
-use jemallocator;
-#[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
-const PROF_ACTIVE: &'static [u8] = b"prof.active\0";
-const PROF_DUMP: &'static [u8] = b"prof.dump\0";
-const PROFILE_OUTPUT: &'static [u8] = b"profile.out\0";
-
-fn set_memory_prof_active(active: bool) {
-    let name = PROF_ACTIVE.name();
-    name.write(active).expect("Should succeed to set prof");
-}
-
+ 
 struct SimpleLogger;
 impl log::Log for SimpleLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
@@ -395,21 +382,7 @@ fn cpu_pprof(seconds: u64) {
     });
 }
 
-fn memory_pprof(seconds: u64) {
-    use std::time::Duration;
-    std::thread::spawn(move || loop {
-        set_memory_prof_active(true);
-        std::thread::sleep(Duration::new(seconds, 0));
-        set_memory_prof_active(false);
-        dump_memory_profile();
-    });
-}
-
-fn dump_memory_profile() {
-    let name = PROF_DUMP.name();
-    name.write(PROFILE_OUTPUT)
-        .expect("Should succeed to dump profile")
-}
+ 
 
 fn get_package_compile_diagnostics(
     pkg_path: &Path,
