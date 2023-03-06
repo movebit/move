@@ -363,4 +363,7 @@ Share AST definition reduce memory consumption and save us time for loading proj
 
 
 ### Build in semantic analyzer
+move-analyzer has build in semantic analyzer.It's can infer variable's type.
+Know about variables in current scope,etc.
+
 

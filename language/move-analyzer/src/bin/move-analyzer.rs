@@ -360,6 +360,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
     }
 }
 
+#[cfg(not(target_env = "msvc"))]
 fn cpu_pprof(seconds: u64) {
     use std::fs::File;
     use std::time::Duration;

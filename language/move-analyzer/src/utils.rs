@@ -10,7 +10,7 @@ use move_package::source_package::layout::SourcePackageLayout;
 use std::collections::HashMap;
 use std::{path::*, vec};
 
-/// Double way mapping from FileHash and FilePath.
+/// Double way mapping between FileHash and FilePath.
 #[derive(Debug, Default)]
 pub struct PathBufHashMap {
     path_2_hash: HashMap<PathBuf, FileHash>,
