@@ -11,7 +11,6 @@ edition = "2021"
 [dependencies]
 lazy_static = "1.4.0"
 wait-timeout = "0.2.0"
-memory-stats = "1.1.0"
 regex = "1.5.5"
 bisection = "0.1.0"
 anyhow = "1.0.52"

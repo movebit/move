@@ -3072,7 +3072,6 @@ dependencies = [
  "log",
  "lsp-server",
  "lsp-types",
- "memory-stats",
  "move-cli",
  "move-command-line-common",
  "move-compiler",
