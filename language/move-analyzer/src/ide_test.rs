@@ -132,20 +132,6 @@ fn goto_definition_test4() {
 }
 
 #[test]
-fn goto_definition_test5() {
-    init_log();
-    let mut d = MultiProject::default();
-    let m = Project::new("/Volumes/sanDisk/projects/test-move2", &mut d).unwrap();
-    let mut v = goto_definition::Handler::new(
-        "/Volumes/sanDisk/projects/test-move2/sources/some.move",
-        8,
-        23,
-    );
-    m.run_full_visitor(&mut v);
-    eprintln!("{:?}", v.result.unwrap());
-}
-
-#[test]
 fn completion2() {
     init_log();
     let mut d = MultiProject::default();
@@ -159,4 +145,18 @@ fn completion2() {
     for x in v.result.unwrap().iter() {
         eprintln!("completion items:{:?} {:?} ", x.label, x.kind)
     }
+}
+
+#[test]
+fn goto_definition_test5() {
+    init_log();
+    let mut d = MultiProject::default();
+    let m = Project::new("/Volumes/sanDisk/projects/test-move2", &mut d).unwrap();
+    let mut v = goto_definition::Handler::new(
+        "/Volumes/sanDisk/projects/test-move2/sources/some.spec.move",
+        1,
+        10,
+    );
+    m.run_full_visitor(&mut v);
+    eprintln!("{:?}", v.result.unwrap());
 }

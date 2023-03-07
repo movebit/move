@@ -42,6 +42,8 @@ pub mod hover;
 #[cfg(test)]
 mod ide_test;
 pub mod item;
+pub mod move_generate_spec;
+pub mod move_generate_spec_file;
 pub mod project;
 pub mod project_context;
 pub mod project_visitor;

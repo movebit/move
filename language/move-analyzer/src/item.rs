@@ -106,7 +106,7 @@ impl Item {
 #[derive(Clone)]
 pub struct ItemStructNameRef {
     pub(crate) addr: AccountAddress,
-    pub(crate) module_name: Symbol, // module name.
+    pub(crate) module_name: Symbol,
     pub(crate) name: StructName,
     pub(crate) type_parameters: Vec<StructTypeParameter>,
     pub(crate) is_test: bool,
@@ -139,23 +139,23 @@ impl AttrTest {
 }
 
 impl ItemFun {
-    pub(crate) fn accessible(&self, scopes: &ProjectContext, env: AccessEnv) -> bool {
+    pub(crate) fn accessible(&self, project_context: &ProjectContext, env: AccessEnv) -> bool {
         if !env.is_spec() && self.is_spec {
             return false;
         }
         if !env.is_test() && self.is_test.is_test() {
             return false;
         }
-        let current = scopes.get_current_addr_and_module_name();
+        let current = project_context.get_current_addr_and_module_name();
         match self.vis {
             Visibility::Internal => {
-                if scopes.get_current_addr_and_module_name() != self.addr_and_name {
+                if project_context.get_current_addr_and_module_name() != self.addr_and_name {
                     return false;
                 }
             }
             Visibility::Public(_) => {}
             Visibility::Friend(_) => {
-                if !scopes.with_friends(
+                if !project_context.with_friends(
                     self.addr_and_name.addr,
                     self.addr_and_name.name.value(),
                     |friends| friends.contains(&(current.addr, current.name.value())),

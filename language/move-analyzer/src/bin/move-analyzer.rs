@@ -35,6 +35,7 @@ use move_analyzer::{
     completion::on_completion_request,
     context::{Context, FileDiags, MultiProject},
     document_symbol, goto_definition, hover,
+    move_generate_spec_file::on_generate_spec_file,
     project::ConvertLoc,
     references,
     utils::*,
@@ -236,6 +237,9 @@ fn on_request(context: &mut Context, request: &Request) {
         lsp_types::request::CodeLensRequest::METHOD => {
             code_lens::move_get_test_code_lens(context, request);
         }
+        "move/generate/spec/file" => {
+            on_generate_spec_file(context, request);
+        }
         _ => log::error!("handle request '{}' from client", request.method),
     }
 }
@@ -295,7 +299,6 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             update_defs(context, fpath.clone(), content.as_str());
             make_diag(context, diag_sender, fpath);
         }
-
         lsp_types::notification::DidChangeTextDocument::METHOD => {
             use lsp_types::DidChangeTextDocumentParams;
             let parameters =
@@ -325,7 +328,15 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 }
             };
             match context.projects.get_project(&fpath) {
-                Some(_) => return,
+                Some(_) => {
+                    match std::fs::read_to_string(fpath.as_path()) {
+                        Ok(x) => {
+                            update_defs(context, fpath.clone(), x.as_str());
+                        }
+                        Err(_) => {}
+                    };
+                    return;
+                }
                 None => {
                     eprintln!("project '{:?}' not found try load.", fpath.as_path());
                 }

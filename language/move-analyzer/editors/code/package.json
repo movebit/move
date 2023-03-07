@@ -38,7 +38,7 @@
 			},
 			{
 				"command": "move-analyzer.sui.create_project",
-				"title": "Create SUI project.",
+				"title": "Create SUI project",
 				"category": "Move Analyzer"
 			},
 			{
@@ -142,8 +142,13 @@
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.move.generateSpec",
-				"title": "Generate Move Spec.",
+				"command": "move-analyzer.move.generate.spec.file",
+				"title": "Generate Move Spec File",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.move.generate.spec.sel",
+				"title": "Generate Move Spec",
 				"category": "Move Analyzer"
 			},
 			{
@@ -199,10 +204,15 @@
 				}
 			],
 			"editor/context" : [
-				{ 
+				{
 					"when": "resourceLangId == move",
-					"command": "move-analyzer.move.generateSpec",
-					"group": "2_main@1"
+					"command": "move-analyzer.move.generate.spec.file",
+					"group": "5_cutcopypaste"
+				},
+				{
+					"when": "resourceLangId == move",
+					"command": "move-analyzer.move.generate.spec.sel",
+					"group": "5_cutcopypaste"
 				}
 			] 
 		}

@@ -78,13 +78,13 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
         Some(x) => x,
         None => return,
     };
-    let mut visitor = Handler::new(def_loc, def_loc_range, include_declaration, is_local);
+    let mut handle = Handler::new(def_loc, def_loc_range, include_declaration, is_local);
     if is_local {
-        let _ = modules.run_visitor_for_file(&mut visitor, &fpath, false);
+        let _ = modules.run_visitor_for_file(&mut handle, &fpath, false);
     } else {
-        modules.run_full_visitor(&mut visitor);
+        modules.run_full_visitor(&mut handle);
     }
-    let locations = visitor.to_locations(modules);
+    let locations = handle.to_locations(modules);
     let loc = Some(locations.clone());
     if !is_local {
         // We only cache global items.

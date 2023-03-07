@@ -39,7 +39,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
         col,
     );
 
-    let mut visitor = Handler::new(fpath.clone(), line, col);
+    let mut handler = Handler::new(fpath.clone(), line, col);
     let _ = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
@@ -47,8 +47,8 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
             return;
         }
     }
-    .run_visitor_for_file(&mut visitor, &fpath, false);
-    let locations = visitor.to_locations();
+    .run_visitor_for_file(&mut handler, &fpath, false);
+    let locations = handler.to_locations();
     let r = Response::new_ok(
         request.id.clone(),
         serde_json::to_value(GotoDefinitionResponse::Array(locations)).unwrap(),
@@ -300,13 +300,13 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
         col,
     );
 
-    let mut visitor = Handler::new(fpath.clone(), line, col);
+    let mut handler = Handler::new(fpath.clone(), line, col);
     let modules = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => return,
     };
 
-    let _ = modules.run_visitor_for_file(&mut visitor, &fpath, false);
+    let _ = modules.run_visitor_for_file(&mut handler, &fpath, false);
     fn type_defs(ret: &mut Vec<Location>, ty: &ResolvedType, modules: &super::project::Project) {
         match ty {
             ResolvedType::UnKnown => {}
@@ -363,7 +363,7 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
         }
     }
     let mut locations = vec![];
-    match &visitor.result_item_or_access {
+    match &handler.result_item_or_access {
         Some(x) => match x {
             ItemOrAccess::Item(x) => item_type_defs(&mut locations, x, modules),
             ItemOrAccess::Access(x) => match x {

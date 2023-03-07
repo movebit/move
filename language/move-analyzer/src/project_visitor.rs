@@ -1712,7 +1712,6 @@ impl Project {
                     s: None,
                     is_test: attributes_has_test(&use_decl.attributes) == AttrTest::TestOnly,
                 })]));
-
                 visitor.handle_item_or_access(self, project_context, &item);
                 if visitor.finished() {
                     return;

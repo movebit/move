@@ -691,7 +691,66 @@ export async function activate(
     sui_working_dir = new_;
     void vscode.window.showInformationMessage('sui working directory set to ' + new_);
   });
-  context.registerCommand('move.generateSpec', () => {
-    void vscode.window.showInformationMessage("genen..............");
+  context.registerCommand('move.generate.spec.file', (_, ...args) => {
+    interface FsPath {
+      fsPath: string;
+    }
+    if (args.length === 0) {
+      return;
+    }
+    const fsPath = (args[0] as FsPath).fsPath;
+    if (fsPath.endsWith('.spec.move')) {
+      void vscode.window.showErrorMessage('This is already a spec file');
+      return;
+    }
+    const client = context.getClient();
+    if (client === undefined) {
+      return;
+    }
+    interface Result {
+      fpath: string;
+    }
+    vscode.window.activeTextEditor;
+    client.sendRequest<Result>('move/generate/spec/file', { 'fpath': fsPath }).then(
+      (result) => {
+        void vscode.workspace.openTextDocument(result.fpath).then((a) => {
+          void vscode.window.showTextDocument(a);
+        });
+      },
+    ).catch((err) => {
+      void vscode.window.showErrorMessage('generate failed: ' + (err as string));
+    });
+  });
+  context.registerCommand('move.generate.spec.sel', (_, ...args) => {
+    interface FsPath {
+      fsPath: string;
+    }
+    if (args.length === 0) {
+      return;
+    }
+    const fsPath = (args[0] as FsPath).fsPath;
+    if (fsPath.endsWith('.spec.move')) {
+      void vscode.window.showErrorMessage('This is already a spec file');
+      return;
+    }
+    const client = context.getClient();
+    if (client === undefined) {
+      return;
+    }
+    interface Result {
+      fpath: string;
+    }
+    vscode.window.activeTextEditor;
+    client.sendRequest<Result>('move/generate/spec/file', { 'fpath': fsPath }).then(
+      (result) => {
+        void vscode.workspace.openTextDocument(result.fpath).then((a) => {
+          void vscode.window.showTextDocument(a);
+        });
+      },
+    ).catch((err) => {
+      void vscode.window.showErrorMessage('generate failed: ' + (err as string));
+    });
   });
 }
+
+

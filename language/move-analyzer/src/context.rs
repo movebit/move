@@ -93,6 +93,7 @@ impl MultiProject {
         let m = MultiProject::default();
         m
     }
+
     pub fn get_project(&self, x: &PathBuf) -> Option<&Project> {
         let (manifest, _) = super::utils::discover_manifest_and_kind(x.as_path())?;
         for (k, v) in self.projects.iter() {
@@ -126,6 +127,7 @@ impl MultiProject {
                 return;
             }
         };
+
         let mut b = self.asts.get_mut(&manifest).unwrap().borrow_mut();
         let old_defs = if layout == SourcePackageLayout::Sources {
             b.sources.insert(file_path.clone(), defs)

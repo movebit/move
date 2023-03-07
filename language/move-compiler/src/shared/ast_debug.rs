@@ -53,7 +53,7 @@ pub struct AstWriter {
 }
 
 impl AstWriter {
-    fn new(verbose: bool) -> Self {
+    pub fn new(verbose: bool) -> Self {
         Self {
             verbose,
             margin: 0,

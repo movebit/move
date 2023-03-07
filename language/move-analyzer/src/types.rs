@@ -125,7 +125,7 @@ impl ResolvedType {
     }
 
     /// bind type parameter to concrete type
-    pub(crate) fn bind_struct_type_parameter(&mut self, scopes: &ProjectContext) {
+    pub(crate) fn bind_struct_type_parameter(&mut self, project_context: &ProjectContext) {
         match self {
             Self::Struct(x) => {
                 let mut m = HashMap::new();
@@ -135,7 +135,7 @@ impl ResolvedType {
                     .for_each(|(name, ty)| {
                         m.insert(name.name.value, ty.clone());
                     });
-                self.bind_type_parameter(&m, scopes);
+                self.bind_type_parameter(&m, project_context);
             }
             Self::StructRef(_, _) => {
                 unreachable!()
@@ -148,14 +148,14 @@ impl ResolvedType {
     pub(crate) fn bind_type_parameter(
         &mut self,
         types: &HashMap<Symbol, ResolvedType>,
-        scopes: &ProjectContext,
+        project_context: &ProjectContext,
     ) {
         match self {
             ResolvedType::UnKnown => {}
             ResolvedType::Struct(item::ItemStruct { ref mut fields, .. }) => {
                 for i in 0..fields.len() {
                     let t = fields.get_mut(i).unwrap();
-                    t.1.bind_type_parameter(types, scopes);
+                    t.1.bind_type_parameter(types, project_context);
                 }
             }
             ResolvedType::BuildInType(_) => {}
@@ -165,32 +165,34 @@ impl ResolvedType {
                 }
             }
             ResolvedType::Ref(_, ref mut b) => {
-                b.as_mut().bind_type_parameter(types, scopes);
+                b.as_mut().bind_type_parameter(types, project_context);
             }
             ResolvedType::Unit => {}
             ResolvedType::Multiple(ref mut xs) => {
                 for i in 0..xs.len() {
                     let t = xs.get_mut(i).unwrap();
-                    t.bind_type_parameter(types, scopes);
+                    t.bind_type_parameter(types, project_context);
                 }
             }
             ResolvedType::Fun(x) => {
                 let xs = &mut x.parameters;
                 for i in 0..xs.len() {
                     let t = xs.get_mut(i).unwrap();
-                    t.1.bind_type_parameter(types, scopes);
+                    t.1.bind_type_parameter(types, project_context);
                 }
-                x.ret_type.as_mut().bind_type_parameter(types, scopes);
+                x.ret_type
+                    .as_mut()
+                    .bind_type_parameter(types, project_context);
             }
             ResolvedType::Vec(ref mut b) => {
-                b.as_mut().bind_type_parameter(types, scopes);
+                b.as_mut().bind_type_parameter(types, project_context);
             }
 
             ResolvedType::StructRef(_, _) => {
-                let _ = std::mem::replace(self, self.clone().struct_ref_to_struct(scopes));
+                let _ = std::mem::replace(self, self.clone().struct_ref_to_struct(project_context));
                 match self {
                     ResolvedType::Struct(_) => {
-                        self.bind_type_parameter(types, scopes);
+                        self.bind_type_parameter(types, project_context);
                     }
                     ResolvedType::StructRef(_, _) => {
                         // This must be toplevel type resolve.

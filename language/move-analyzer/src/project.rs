@@ -624,8 +624,8 @@ impl Project {
             Exp_::Block(b) => {
                 if let Some(expr) = b.3.as_ref() {
                     project_context.enter_scope(|scopes| {
-                        let mut visitor = DummyHandler;
-                        self.visit_block(&b, scopes, &mut visitor);
+                        let mut handler = DummyHandler;
+                        self.visit_block(&b, scopes, &mut handler);
                         self.get_expr_type(expr, scopes)
                     })
                 } else {
@@ -738,10 +738,14 @@ impl Project {
     pub(crate) fn visit_struct_tparam(
         &self,
         t: &StructTypeParameter,
-        scopes: &ProjectContext,
+        project_context: &ProjectContext,
         visitor: &mut dyn ItemOrAccessHandler,
     ) {
-        self.visit_tparam(&(t.name.clone(), t.constraints.clone()), scopes, visitor);
+        self.visit_tparam(
+            &(t.name.clone(), t.constraints.clone()),
+            project_context,
+            visitor,
+        );
     }
 
     pub(crate) fn visit_tparam(
@@ -1049,6 +1053,14 @@ impl From<Symbol> for AddressSpace {
     }
 }
 
+impl ToString for AddressSpace {
+    fn to_string(&self) -> String {
+        match self {
+            AddressSpace::Addr(addr) => addr.to_hex_literal(),
+            AddressSpace::Name(x) => x.as_str().to_string(),
+        }
+    }
+}
 impl From<AccountAddress> for AddressSpace {
     fn from(x: AccountAddress) -> Self {
         Self::Addr(x)
@@ -1092,7 +1104,7 @@ pub trait AstProvider: Clone {
             }
             Definition::Address(a) => {
                 for module in a.modules.iter() {
-                    call_back(self.get_module_addr(module.address, module), module);
+                    call_back(self.get_module_addr(Some(a.addr), module), module);
                 }
             }
             _ => {}
@@ -1120,7 +1132,7 @@ pub trait AstProvider: Clone {
                 for module in a.modules.iter() {
                     for m in module.members.iter() {
                         call_back(
-                            self.get_module_addr(module.address, module),
+                            self.get_module_addr(Some(a.addr), module),
                             module.name.0.value,
                             m,
                             module.is_spec_module,
