@@ -797,23 +797,9 @@ fn option_ty_is_valid(x: &Option<ResolvedType>) -> bool {
 
 #[derive(Debug, Clone, Default)]
 pub struct SourceDefs {
-    pub(crate) sources: HashMap<
-        PathBuf, /*  file path  xxxx/abc.move  */
-        Vec<move_compiler::parser::ast::Definition>,
-    >,
-
-    /*
-        TODO tests.
-    */
-    pub(crate) tests: HashMap<
-        PathBuf, /*  file path  xxxx/abc.move  */
-        Vec<move_compiler::parser::ast::Definition>,
-    >,
-
-    pub(crate) scripts: HashMap<
-        PathBuf, /*  file path  xxxx/abc.move  */
-        Vec<move_compiler::parser::ast::Definition>,
-    >,
+    pub(crate) sources: HashMap<PathBuf, Vec<move_compiler::parser::ast::Definition>>,
+    pub(crate) tests: HashMap<PathBuf, Vec<move_compiler::parser::ast::Definition>>,
+    pub(crate) scripts: HashMap<PathBuf, Vec<move_compiler::parser::ast::Definition>>,
 }
 
 pub(crate) const UNKNOWN_TYPE: ResolvedType = ResolvedType::UnKnown;

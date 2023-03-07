@@ -691,4 +691,7 @@ export async function activate(
     sui_working_dir = new_;
     void vscode.window.showInformationMessage('sui working directory set to ' + new_);
   });
+  context.registerCommand('move.generateSpec', () => {
+    void vscode.window.showInformationMessage("genen..............");
+  });
 }

@@ -7,6 +7,7 @@ use super::types::ResolvedType;
 use crate::utils::path_concat;
 use crate::utils::FileRange;
 use crate::utils::GetPosition;
+use crate::utils::GetPositionStruct;
 use lsp_server::*;
 
 use lsp_types::*;
@@ -93,7 +94,14 @@ impl Handler {
     fn match_loc(&self, loc: &Loc, services: &dyn HandleItemService) -> bool {
         let r = services.convert_loc_range(loc);
         match &r {
-            Some(r) => r.in_range(self.filepath.clone(), self.line, self.col),
+            Some(r) => GetPositionStruct::in_range(
+                &GetPositionStruct {
+                    fpath: self.filepath.clone(),
+                    line: self.line,
+                    col: self.col,
+                },
+                r,
+            ),
             None => false,
         }
     }
