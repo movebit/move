@@ -710,7 +710,6 @@ export async function activate(
     interface Result {
       fpath: string;
     }
-    vscode.window.activeTextEditor;
     client.sendRequest<Result>('move/generate/spec/file', { 'fpath': fsPath }).then(
       (result) => {
         void vscode.workspace.openTextDocument(result.fpath).then((a) => {
@@ -728,6 +727,11 @@ export async function activate(
     if (args.length === 0) {
       return;
     }
+    if (vscode.window.activeTextEditor === undefined) {
+      return;
+    }
+    const line = vscode.window.activeTextEditor.selection.active.line;
+    const col = vscode.window.activeTextEditor.selection.active.character;
     const fsPath = (args[0] as FsPath).fsPath;
     if (fsPath.endsWith('.spec.move')) {
       void vscode.window.showErrorMessage('This is already a spec file');
@@ -738,13 +742,15 @@ export async function activate(
       return;
     }
     interface Result {
-      fpath: string;
+      content: string;
+      line: number;
+      col: number;
     }
-    vscode.window.activeTextEditor;
-    client.sendRequest<Result>('move/generate/spec/file', { 'fpath': fsPath }).then(
+
+    client.sendRequest<Result>('move/generate/spec/sel', { 'fpath': fsPath, line: line, col: col }).then(
       (result) => {
-        void vscode.workspace.openTextDocument(result.fpath).then((a) => {
-          void vscode.window.showTextDocument(a);
+        vscode.window.activeTextEditor?.edit((e) => {
+          e.insert(new vscode.Position(result.line + 1, result.col), result.content);
         });
       },
     ).catch((err) => {

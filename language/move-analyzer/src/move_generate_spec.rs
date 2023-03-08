@@ -1,5 +1,4 @@
-use move_compiler::parser::ast::*;
-use move_compiler::shared::Identifier;
+use move_compiler::{parser::ast::*, shared::Identifier};
 
 #[derive(Default)]
 pub struct StructSpecGenerator {

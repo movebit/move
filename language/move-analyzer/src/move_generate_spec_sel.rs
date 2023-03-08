@@ -1,16 +1,18 @@
 use super::context::*;
 use super::move_generate_spec::*;
+use crate::project::ConvertLoc;
 use crate::project::{attributes_has_test, AstProvider};
 use crate::utils::GetPosition;
 use lsp_server::*;
 use move_compiler::{parser::ast::*, shared::Identifier};
+use move_ir_types::location::Loc;
 use serde::Deserialize;
 use std::{path::PathBuf, str::FromStr};
 
-pub fn on_generate_spec_file(context: &Context, request: &Request) {
+pub fn on_generate_spec_sel(context: &Context, request: &Request) {
     let parameters = serde_json::from_value::<ReqParameters>(request.params.clone())
         .expect("could not deserialize go-to-def request");
-    let fpath = PathBuf::from_str(parameters.fpath.as_str()).unwrap();
+    let parameters = ReqParametersPath::from(parameters);
     let send_err = |context: &Context, msg: String| {
         let r = Response::new_err(request.id.clone(), ErrorCode::UnknownErrorCode as i32, msg);
         context
@@ -19,18 +21,51 @@ pub fn on_generate_spec_file(context: &Context, request: &Request) {
             .send(Message::Response(r))
             .unwrap();
     };
-    let project = match context.projects.get_project(&fpath) {
+    let project = match context.projects.get_project(&parameters.fpath) {
         Some(x) => x,
         None => return,
     };
-    let mut result: Option<String> = None;
-    let pos: Option<lsp_types::Position> = None;
+    let mut result: Option<Resp> = None;
+
+    fn insert_pos(loc: Loc, context: &Context) -> Option<(u32, u32)> {
+        context
+            .projects
+            .convert_loc_range(&loc)
+            .map(|x| (x.line_end, x.col_end))
+    }
+
     let mut process_member = |m: &ModuleMember| match m {
         ModuleMember::Function(f) => {
-            todo!()
+            if let Some(range) = context.projects.convert_loc_range(&f.loc) {
+                if ReqParametersPath::in_range(&parameters, &range) {
+                    if let Some(insert_pos) = insert_pos(f.loc, context) {
+                        let mut g = FunSpecGenerator::new();
+                        g.generate(f);
+                        let s = g.to_string();
+                        result = Some(Resp {
+                            line: insert_pos.0,
+                            col: insert_pos.1,
+                            content: s,
+                        });
+                    }
+                }
+            }
         }
         ModuleMember::Struct(f) => {
-            todo!()
+            if let Some(range) = context.projects.convert_loc_range(&f.loc) {
+                if ReqParametersPath::in_range(&parameters, &range) {
+                    if let Some(insert_pos) = insert_pos(f.loc, context) {
+                        let mut g = StructSpecGenerator::new();
+                        g.generate(f);
+                        let s = g.to_string();
+                        result = Some(Resp {
+                            line: insert_pos.0,
+                            col: insert_pos.1,
+                            content: s,
+                        });
+                    }
+                }
+            }
         }
         _ => {}
     };
@@ -52,7 +87,6 @@ pub fn on_generate_spec_file(context: &Context, request: &Request) {
                     return;
                 }
                 for m in x.modules.iter() {
-                    let module_name = m.name.value();
                     for m in m.members.iter() {
                         process_member(m);
                     }
@@ -61,22 +95,15 @@ pub fn on_generate_spec_file(context: &Context, request: &Request) {
             Definition::Script(_) => {}
         };
     };
-    let _ = project.get_defs(&fpath, |x| x.with_definition(call_back));
+    let _ = project.get_defs(&parameters.fpath, |x| x.with_definition(call_back));
     let result = match result {
         Some(x) => x,
-        None => send_err(context, "not found".to_string()),
+        None => {
+            send_err(context, "not found".to_string());
+            return;
+        }
     };
-    let pos = pos.unwrap();
-    let engine = base64::
-    let r = Response::new_ok(
-        request.id.clone(),
-        serde_json::to_value(Resp {
-            line: pos.line,
-            col: pos.character,
-            content: base64::Engine::encode(&self, input),
-        })
-        .unwrap(),
-    );
+    let r = Response::new_ok(request.id.clone(), serde_json::to_value(result).unwrap());
     context
         .connection
         .sender
@@ -91,13 +118,13 @@ pub struct ReqParameters {
     col: u32,
 }
 
-pub struct ReqParameters2 {
+pub struct ReqParametersPath {
     fpath: PathBuf,
     line: u32,
     col: u32,
 }
 
-impl From<ReqParameters> for ReqParameters2 {
+impl From<ReqParameters> for ReqParametersPath {
     fn from(value: ReqParameters) -> Self {
         Self {
             fpath: PathBuf::from_str(value.fpath.as_str()).unwrap(),
@@ -106,7 +133,7 @@ impl From<ReqParameters> for ReqParameters2 {
         }
     }
 }
-impl GetPosition for ReqParameters2 {
+impl GetPosition for ReqParametersPath {
     fn get_position(&self) -> (PathBuf, u32 /* line */, u32 /* col */) {
         (self.fpath.clone(), self.line, self.col)
     }
