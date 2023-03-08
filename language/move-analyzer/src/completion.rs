@@ -467,7 +467,6 @@ impl ItemOrAccessHandler for Handler {
                             }
                         }
                     },
-
                     Access::ExprVar(var, _) => {
                         if self.match_loc(&var.loc(), services) {
                             let items = project_context.collect_items(|x| match x {
@@ -499,6 +498,7 @@ impl ItemOrAccessHandler for Handler {
                                     );
                                     let items = services.get_all_addrs(project_context);
                                     push_addr_spaces(self, &items, project_context);
+                                    push_completion_items(self, keywords());
                                 }
                             }
 
@@ -552,8 +552,21 @@ impl ItemOrAccessHandler for Handler {
                                     let items = services.get_all_addrs(project_context);
                                     push_addr_spaces(self, &items, project_context);
                                 } else if self.match_loc(&name_and_module.loc, services) {
-                                    let items = project_context.collect_modules(&addr);
-                                    push_module_names(self, &items);
+                                    // A guesss
+
+                                    let items =
+                                        project_context.collect_use_module_items(&x, |x| -> bool {
+                                            match x {
+                                                Item::Fun(_) => true,
+                                                _ => false,
+                                            }
+                                        });
+                                    if items.len() > 0 {
+                                        push_items(self, &items);
+                                    } else {
+                                        let items = project_context.collect_modules(&addr);
+                                        push_module_names(self, &items);
+                                    }
                                 } else if self.match_loc(&_z.loc, services) {
                                     let items = project_context.collect_modules_items(
                                         &addr,

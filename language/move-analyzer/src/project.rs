@@ -110,9 +110,21 @@ impl Project {
             return Ok(());
         }
         self.manifest_paths.push(manifest_path.clone());
-        // if !manifest_path.has_root() {
         eprintln!("load manifest file at {:?}", &manifest_path);
-        // }
+        if let Some(x) = multi.asts.get(&manifest_path) {
+            self.modules.insert(manifest_path.clone(), x.clone());
+        } else {
+            let d: Rc<RefCell<SourceDefs>> = Default::default();
+            self.modules.insert(manifest_path.clone(), d.clone());
+            multi.asts.insert(manifest_path.clone(), d.clone());
+            self.load_layout_files(&manifest_path, SourcePackageLayout::Sources);
+            self.load_layout_files(&manifest_path, SourcePackageLayout::Tests);
+            self.load_layout_files(&manifest_path, SourcePackageLayout::Scripts);
+        }
+        if manifest_path.exists() == false {
+            self.manifest_not_exists.insert(manifest_path);
+            return anyhow::Result::Ok(());
+        }
         let manifest = match parse_move_manifest_from_file(&manifest_path) {
             std::result::Result::Ok(x) => x,
             std::result::Result::Err(err) => {
@@ -140,16 +152,6 @@ impl Project {
                 dep_name
             );
             self.load_project(&p, multi)?;
-        }
-        if let Some(x) = multi.asts.get(&manifest_path) {
-            self.modules.insert(manifest_path, x.clone());
-        } else {
-            let d: Rc<RefCell<SourceDefs>> = Default::default();
-            self.modules.insert(manifest_path.clone(), d.clone());
-            multi.asts.insert(manifest_path.clone(), d.clone());
-            self.load_layout_files(&manifest_path, SourcePackageLayout::Sources);
-            self.load_layout_files(&manifest_path, SourcePackageLayout::Tests);
-            self.load_layout_files(&manifest_path, SourcePackageLayout::Scripts);
         }
         Ok(())
     }

@@ -26,9 +26,7 @@ pub struct ItemStruct {
 
 impl std::fmt::Display for ItemStruct {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "struct {}", self.name.value().as_str())?;
-        write!(f, "{{")?;
-        write!(f, "}}")
+        write!(f, "{}", self.name.value().as_str())
     }
 }
 

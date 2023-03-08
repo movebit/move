@@ -895,7 +895,13 @@ impl Project {
             }
         };
         let d = Default::default();
-        let b = self.modules.get(&manifest_path).unwrap().as_ref().borrow();
+        let d2 = Default::default();
+        let b = self
+            .modules
+            .get(&manifest_path)
+            .unwrap_or(&d2)
+            .as_ref()
+            .borrow();
         call_back(VecDefAstProvider::new(
             if layout == SourcePackageLayout::Sources {
                 b.sources.get(filepath).unwrap_or(&d)

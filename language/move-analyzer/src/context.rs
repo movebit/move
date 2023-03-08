@@ -127,7 +127,6 @@ impl MultiProject {
                 return;
             }
         };
-
         let mut b = self.asts.get_mut(&manifest).unwrap().borrow_mut();
         let old_defs = if layout == SourcePackageLayout::Sources {
             b.sources.insert(file_path.clone(), defs)

@@ -1,4 +1,4 @@
-use move_compiler::{parser::ast::*, shared::Identifier};
+use move_compiler::parser::ast::*;
 
 #[derive(Default)]
 pub struct StructSpecGenerator {
@@ -17,7 +17,7 @@ impl StructSpecGenerator {
             .push_str(format!("    spec {}", x.name.0.value.as_str()).as_str());
         self.result.push_str("{\n");
         self.result.push_str("\n");
-        self.result.push_str("    }\n\n")
+        self.result.push_str("    }\n")
     }
 }
 
@@ -59,7 +59,7 @@ impl FunSpecGenerator {
         }
         self.result.push_str("{\n");
         self.result.push_str("\n");
-        self.result.push_str("    }\n\n")
+        self.result.push_str("    }\n")
     }
 }
 

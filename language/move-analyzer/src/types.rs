@@ -306,7 +306,7 @@ impl std::fmt::Display for ResolvedType {
             ResolvedType::UnKnown => write!(f, "unknown"),
             ResolvedType::Struct(x) => write!(f, "{}", x),
             ResolvedType::StructRef(ItemStructNameRef { name, .. }, _) => {
-                write!(f, "struct {}", name.value().as_str())
+                write!(f, "{}", name.value().as_str())
             }
             ResolvedType::BuildInType(x) => write!(f, "{}", x.to_static_str()),
             ResolvedType::TParam(name, _) => {

@@ -750,7 +750,7 @@ export async function activate(
     client.sendRequest<Result>('move/generate/spec/sel', { 'fpath': fsPath, line: line, col: col }).then(
       (result) => {
         vscode.window.activeTextEditor?.edit((e) => {
-          e.insert(new vscode.Position(result.line + 1, result.col), result.content);
+          e.insert(new vscode.Position(result.line, result.col), result.content);
         });
       },
     ).catch((err) => {
