@@ -9,6 +9,7 @@ publish = false
 edition = "2021"
 
 [dependencies]
+cfg-if = "1.0.0"
 lazy_static = "1.4.0"
 wait-timeout = "0.2.0"
 regex = "1.5.5"
@@ -43,4 +44,10 @@ pprof = { version = "0.11.0" , features = ["flamegraph" , "protobuf"]}
 
 [profile.release]
 debug = true
+
+
+[features]
+aptos = []
+sui = []
+pprof = []
 

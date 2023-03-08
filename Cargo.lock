@@ -3061,6 +3061,7 @@ version = "1.1.0"
 dependencies = [
  "anyhow",
  "bisection",
+ "cfg-if 1.0.0",
  "clap 3.1.8",
  "codespan-reporting",
  "crossbeam",

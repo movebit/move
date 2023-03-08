@@ -69,8 +69,7 @@ pub fn init_log() {
 struct Options {}
 
 fn main() {
-    // cpu_pprof(20);
-    // memory_pprof(20);
+    cpu_pprof(20);
 
     // For now, move-analyzer only responds to options built-in to clap,
     // such as `--help` or `--version`.
@@ -376,26 +375,34 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
 }
 
 #[cfg(not(target_env = "msvc"))]
-fn cpu_pprof(seconds: u64) {
-    use std::fs::File;
-    use std::time::Duration;
-    let guard = pprof::ProfilerGuardBuilder::default()
-        .frequency(1000)
-        .blocklist(&["libc", "libgcc", "pthread", "vdso"])
-        .build()
-        .unwrap();
-    std::thread::spawn(move || loop {
-        std::thread::sleep(Duration::new(seconds, 0));
-        match guard.report().build() {
-            Result::Ok(report) => {
-                let file = File::create("/Users/temp/.move-analyzer/flamegraph.svg").unwrap();
-                report.flamegraph(file).unwrap();
-            }
-            Result::Err(e) => {
-                log::error!("build report failed,err:{}", e);
-            }
-        };
-    });
+fn cpu_pprof(_seconds: u64) {
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "pprof")] {
+            use std::fs::File;
+            use std::time::Duration;
+            let guard = pprof::ProfilerGuardBuilder::default()
+                .frequency(1000)
+                .blocklist(&["libc", "libgcc", "pthread", "vdso"])
+                .build()
+                .unwrap();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(Duration::new(_seconds, 0));
+                match guard.report().build() {
+                    Result::Ok(report) => {
+                        let  mut tmp = std::env::temp_dir();
+                        tmp.push("move-analyzer-flamegraph.svg") ;
+                        let file = File::create(tmp.clone()).unwrap();
+                        report.flamegraph(file).unwrap();
+                        eprintln!("pprof file at {:?}",tmp.as_path()) ;
+
+                    }
+                    Result::Err(e) => {
+                        log::error!("build report failed,err:{}", e);
+                    }
+                };
+            });
+        }
+    }
 }
 
 fn get_package_compile_diagnostics(

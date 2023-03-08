@@ -89,7 +89,18 @@ pub fn on_generate_spec_file(context: &Context, request: &Request) {
             Definition::Script(_) => {}
         };
     };
-    let _ = project.get_defs(&fpath, |x| x.with_definition(call_back));
+    let mut found_in_tests = false;
+    let _ = project.get_defs(&fpath, |x| {
+        if x.found_in_test() {
+            found_in_tests = true;
+        } else {
+            x.with_definition(call_back);
+        }
+    });
+    if found_in_tests {
+        send_err(context, "This file found in tests directory.".to_string());
+        return;
+    }
     let file_content = result.to_string();
     match std::fs::write(result_file_path.clone(), file_content) {
         Ok(_) => {}

@@ -364,10 +364,10 @@ impl std::fmt::Display for Item {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Item::Parameter(var, t) => {
-                write!(f, "parameter {}:{}", var.0.value.as_str(), t)
+                write!(f, "{}:{}", var.0.value.as_str(), t)
             }
             Item::ModuleName(ItemModuleName { name, .. }) => {
-                write!(f, "module {}", name.value().as_str())
+                write!(f, "{}", name.value().as_str())
             }
             Item::Use(x) => Ok(for x in x.iter() {
                 match x {
@@ -396,20 +396,20 @@ impl std::fmt::Display for Item {
             }),
 
             Item::Const(ItemConst { name, ty, .. }) => {
-                write!(f, "const {}:{}", name.0.value.as_str(), ty)
+                write!(f, "{}:{}", name.0.value.as_str(), ty)
             }
             Item::SpecConst(ItemConst { name, ty, .. }) => {
-                write!(f, "spec_const {}:{}", name.0.value.as_str(), ty)
+                write!(f, "{}:{}", name.0.value.as_str(), ty)
             }
             Item::Struct(s) => {
                 write!(f, "{}", s)
             }
             Item::StructNameRef(ItemStructNameRef { name, .. }) => {
-                write!(f, "struct {}", name.value().as_str())
+                write!(f, "{}", name.value().as_str())
             }
             Item::Fun(x) => write!(f, "{}", x),
             Item::BuildInType(x) => {
-                write!(f, "build in '{:?}'", x)
+                write!(f, "{}", x.to_static_str())
             }
             Item::TParam(tname, abilities) => {
                 write!(f, "{}:", tname.value.as_str())?;
@@ -420,16 +420,16 @@ impl std::fmt::Display for Item {
                 std::result::Result::Ok(())
             }
             Item::Var(name, ty) => {
-                write!(f, "var {}:{}", name.0.value.as_str(), ty)
+                write!(f, "{}:{}", name.0.value.as_str(), ty)
             }
             Item::Field(x, ty) => {
-                write!(f, "field {}:{}", x.0.value.as_str(), ty)
+                write!(f, "{}:{}", x.0.value.as_str(), ty)
             }
             Item::Dummy => {
                 write!(f, "dummy")
             }
             Item::SpecSchema(name, _) => {
-                write!(f, "schema {}", name.value.as_str())
+                write!(f, "{}", name.value.as_str())
             }
             Item::MoveBuildInFun(x) => write!(f, "move_build_in_fun {}", x.to_static_str()),
             Item::SpecBuildInFun(x) => write!(f, "spec_build_in_fun {}", x.to_static_str()),
@@ -529,7 +529,7 @@ impl std::fmt::Display for Access {
                     "{}{}",
                     x.value.name.value.as_str(),
                     if let Some(_value) = &x.value.value {
-                        //TODO. actual.ame
+                        // TODO. actual.ame
                         String::from("...")
                     } else {
                         String::from("...")
