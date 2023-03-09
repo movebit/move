@@ -231,7 +231,7 @@
 		"publish": "npm run pretest && npm run test && vsce publish"
 	},
 	"extensionDependencies": [
-		"damirka.move-syntax"
+		"movebit.move-msl-syx"
 	],
 	"dependencies": {
 		"command-exists": "^1.2.9",
