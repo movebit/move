@@ -35,15 +35,11 @@ pub fn on_generate_spec_file(context: &Context, request: &Request) {
     let mut process_member = |addr, module_name, m: &ModuleMember| {
         let spec = match m {
             ModuleMember::Function(x) => {
-                let mut g = FunSpecGenerator::new();
-                g.generate(x);
-                let r = g.to_string();
+                let r = generate_fun_spec(x);
                 Some(r)
             }
             ModuleMember::Struct(x) => {
-                let mut g = StructSpecGenerator::new();
-                g.generate(x);
-                let r = g.to_string();
+                let r = genrate_struct_spec(x);
                 Some(r)
             }
             _ => None,
@@ -89,22 +85,28 @@ pub fn on_generate_spec_file(context: &Context, request: &Request) {
             Definition::Script(_) => {}
         };
     };
-    let mut found_in_tests = false;
+    let mut found_in_tests_or_scripts = false;
     let _ = project.get_defs(&fpath, |x| {
-        if x.found_in_test() {
-            found_in_tests = true;
+        if x.found_in_test() || x.found_in_scripts() {
+            found_in_tests_or_scripts = true;
         } else {
             x.with_definition(call_back);
         }
     });
-    if found_in_tests {
-        send_err(context, "This file found in tests directory.".to_string());
+    if found_in_tests_or_scripts {
+        send_err(
+            context,
+            "This file found in tests or scripts directory.".to_string(),
+        );
         return;
     }
     let file_content = result.to_string();
     match std::fs::write(result_file_path.clone(), file_content) {
         Ok(_) => {}
-        Err(err) => send_err(context, format!("write to file failed,err:{:?}", err)),
+        Err(err) => {
+            send_err(context, format!("write to file failed,err:{:?}", err));
+            return;
+        }
     };
     let r = Response::new_ok(
         request.id.clone(),

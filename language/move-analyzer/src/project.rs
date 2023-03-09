@@ -1113,7 +1113,13 @@ pub trait AstProvider: Clone {
         })
     }
 
-    fn found_in_test(&self) -> bool;
+    fn found_in_test(&self) -> bool {
+        self.layout() == SourcePackageLayout::Tests
+    }
+    fn found_in_scripts(&self) -> bool {
+        self.layout() == SourcePackageLayout::Scripts
+    }
+    fn layout(&self) -> SourcePackageLayout;
 
     fn with_module_member(
         &self,
@@ -1243,8 +1249,8 @@ impl<'a> AstProvider for VecDefAstProvider<'a> {
             call_back(d);
         }
     }
-    fn found_in_test(&self) -> bool {
-        self.layout == SourcePackageLayout::Tests
+    fn layout(&self) -> SourcePackageLayout {
+        self.layout
     }
 }
 #[derive(Clone)]
@@ -1302,8 +1308,7 @@ impl<'a> AstProvider for ModulesAstProvider<'a> {
             }
         }
     }
-
-    fn found_in_test(&self) -> bool {
-        self.layout == SourcePackageLayout::Tests
+    fn layout(&self) -> SourcePackageLayout {
+        self.layout
     }
 }

@@ -59,9 +59,7 @@ pub fn on_generate_spec_sel(context: &Context, request: &Request) {
                 if let Some(range) = context.projects.convert_loc_range(&f.loc) {
                     if ReqParametersPath::in_range(&parameters, &range) {
                         if let Some(insert_pos) = insert_pos(f.loc, module_loc, context) {
-                            let mut g = FunSpecGenerator::new();
-                            g.generate(f);
-                            let s = g.to_string();
+                            let s = generate_fun_spec(f);
                             result = Some(Resp {
                                 line: insert_pos.0,
                                 col: insert_pos.1,
@@ -78,9 +76,7 @@ pub fn on_generate_spec_sel(context: &Context, request: &Request) {
                 if let Some(range) = context.projects.convert_loc_range(&f.loc) {
                     if ReqParametersPath::in_range(&parameters, &range) {
                         if let Some(insert_pos) = insert_pos(f.loc, module_loc, context) {
-                            let mut g = StructSpecGenerator::new();
-                            g.generate(f);
-                            let s = g.to_string();
+                            let s = genrate_struct_spec(f);
                             result = Some(Resp {
                                 line: insert_pos.0,
                                 col: insert_pos.1,
