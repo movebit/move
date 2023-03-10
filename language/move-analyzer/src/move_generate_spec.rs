@@ -130,7 +130,7 @@ impl FunSpecGenerator {
                             // Ok e is suitable for generate.
                             let mut names = HashSet::new();
                             let mut modules = HashSet::new();
-                            name_and_modules_in_expr(&mut names, &mut modules, &e).unwrap();
+                            let _ = name_and_modules_in_expr(&mut names, &mut modules, &e);
                             for name in names {
                                 if let Some(x) = shadow.query(name) {
                                     match x {
