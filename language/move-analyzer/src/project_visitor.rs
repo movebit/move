@@ -66,7 +66,7 @@ impl Project {
                 enter_import,
             )
         });
-
+        
         provider.with_struct(|addr, module_name, s| {
             let _guard = project_context.clone_scope_and_enter(addr, module_name, false);
             project_context.enter_scope(|scopes| {

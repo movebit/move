@@ -801,3 +801,29 @@ impl std::fmt::Display for SpecBuildInFun {
         write!(f, "{}", self.to_static_str())
     }
 }
+
+pub(crate) fn name_is_build_in(name: Symbol) -> bool {
+    let name = name.as_str();
+    if name == "vector" {
+        return true;
+    }
+    if BuildInType::build_ins()
+        .iter()
+        .any(|x| x.to_static_str() == name)
+    {
+        return true;
+    }
+    if enum_iterator::all::<MoveBuildInFun>()
+        .into_iter()
+        .any(|x| x.to_static_str() == name)
+    {
+        return true;
+    }
+    if enum_iterator::all::<SpecBuildInFun>()
+        .into_iter()
+        .any(|x| x.to_static_str() == name)
+    {
+        return true;
+    }
+    false
+}

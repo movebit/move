@@ -361,9 +361,9 @@ impl ResolvedType {
                         x
                     }
                     _ => {
-                        log::info!(
-                            "looks like impossible addr:{:?} module:{:?} item:{:?} x:{} not struct def.",
-                            addr,
+                        log::error!(
+                            "looks like impossible addr:0x{:?} module:{:?} item:{:?} x:{} not struct def.",
+                            addr.short_str_lossless(),
                             module_name,
                             name,
                             x

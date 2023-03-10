@@ -88,32 +88,37 @@ impl FunSpecGenerator {
     }
 
     fn generate_assert(f: &Function) -> String {
-        let mut result = String::new();
+        let mut statements = String::new();
         let body = match &f.body.value {
             FunctionBody_::Defined(x) => x,
-            FunctionBody_::Native => return result,
+            FunctionBody_::Native => return statements,
         };
-        fn insert_bind(r: &mut HashSet<Symbol>, bind: &Bind) {
+        let mut shadow = ShadowItems::new();
+        let mut imports = GroupShadowItemUse::new();
+        let mut local_emits = HashSet::new();
+        fn insert_bind(r: &mut ShadowItems, bind: &Bind, index: usize) {
             match &bind.value {
                 Bind_::Var(var) => {
                     if var.0.value.as_str() != "_" {
-                        r.insert(var.0.value);
+                        r.insert(var.0.value, ShadowItem::Local(ShadowItemLocal { index }));
                     }
                 }
                 Bind_::Unpack(_, _, xs) => {
                     for (_, b) in xs.iter() {
-                        insert_bind(r, b);
+                        insert_bind(r, b, index);
                     }
                 }
             }
         }
-        fn insert_bind_list(r: &mut HashSet<Symbol>, bind: &BindList) {
+        fn insert_bind_list(r: &mut ShadowItems, bind: &BindList, index: usize) {
             for b in bind.value.iter() {
-                insert_bind(r, b)
+                insert_bind(r, b, index)
             }
         }
-        let mut shadow = HashSet::new();
-        let handle_e = |result: &mut String, e: &Exp| match &e.value {
+        for u in body.0.iter() {
+            shadow.insert_use(&u.use_);
+        }
+        let mut handle_e = |shadow: &ShadowItems, statements: &mut String, e: &Exp| match &e.value {
             Exp_::Call(_call, is_macro, should_be_none, es) => {
                 if MacroCall::from_chain(_call).is_some()
                     && *is_macro
@@ -121,28 +126,57 @@ impl FunSpecGenerator {
                     && es.value.len() > 0
                 {
                     match Self::inverse_expression(es.value.get(0).unwrap()) {
-                        std::result::Result::Ok(e) => result.push_str(
-                            format!("{}aborts_if {};\n", indent(2), format_xxx(&e)).as_str(),
-                        ),
+                        std::result::Result::Ok(e) => {
+                            // Ok e is suitable for generate.
+                            let mut names = HashSet::new();
+                            let mut modules = HashSet::new();
+                            name_and_modules_in_expr(&mut names, &mut modules, &e).unwrap();
+                            for name in names {
+                                if let Some(x) = shadow.query(name) {
+                                    match x {
+                                        ShadowItem::Use(x) => {
+                                            imports.insert(x.clone());
+                                        }
+                                        ShadowItem::Local(index) => {
+                                            if local_emits.contains(&index.index) == false {
+                                                let seq = body.1.get(index.index).unwrap().clone();
+                                                // emit right here,right now.
+                                                statements.push_str(
+                                                    format!("{}{};\n", indent(2), format_xxx(&seq))
+                                                        .as_str(),
+                                                );
+                                                local_emits.insert(index.index);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            statements.push_str(
+                                format!("{}aborts_if {};\n", indent(2), format_xxx(&e)).as_str(),
+                            );
+                        }
                         std::result::Result::Err(_) => {}
                     }
                 }
             }
             _ => {}
         };
-
-        for x in body.1.iter() {
-            match &x.value {
+        for (index, seq) in body.1.iter().enumerate() {
+            match &seq.value {
                 SequenceItem_::Declare(b, _) | SequenceItem_::Bind(b, _, _) => {
-                    insert_bind_list(&mut shadow, b);
+                    insert_bind_list(&mut shadow, b, index);
                 }
-                SequenceItem_::Seq(e) => handle_e(&mut result, e),
+                SequenceItem_::Seq(e) => handle_e(&shadow, &mut statements, e),
             }
         }
         if let Some(e) = body.3.as_ref() {
-            handle_e(&mut result, e);
+            handle_e(&shadow, &mut statements, e);
         }
-        result
+        {
+            let mut result = imports.to_string(2);
+            result.push_str(statements.as_str());
+            result
+        }
     }
 
     /// Inverse a expr for `aborts_if` etc.
@@ -250,7 +284,7 @@ fn indent(num: usize) -> String {
     "    ".to_string().repeat(num)
 }
 
-fn expr_name_in_expr(
+fn name_and_modules_in_expr(
     names: &mut HashSet<Symbol>,
     modules: &mut HashSet<Symbol>,
     e: &Exp,
@@ -260,12 +294,9 @@ fn expr_name_in_expr(
         modules: &mut HashSet<Symbol>,
         chain: &NameAccessChain,
     ) {
-        let name_is_build_in = |name: Symbol| -> bool { unimplemented!() };
         match &chain.value {
             NameAccessChain_::One(x) => {
-                if !name_is_build_in(x.value) {
-                    names.insert(x.value);
-                }
+                names.insert(x.value);
             }
             NameAccessChain_::Two(name, _) => match &name.value {
                 LeadingNameAccess_::AnonymousAddress(_) => {}
@@ -276,6 +307,7 @@ fn expr_name_in_expr(
             NameAccessChain_::Three(_, _) => {}
         }
     }
+
     fn handle_ty(
         names: &mut HashSet<Symbol>,
         modules: &mut HashSet<Symbol>,
@@ -313,11 +345,10 @@ fn expr_name_in_expr(
         exprs: &Vec<Exp>,
     ) -> Result<(), ()> {
         for e in exprs.iter() {
-            expr_name_in_expr(names, modules, e)?;
+            name_and_modules_in_expr(names, modules, e)?;
         }
         Ok(())
     }
-
     match &e.value {
         Exp_::Value(_) => {}
         Exp_::Move(var) => {
@@ -345,7 +376,7 @@ fn expr_name_in_expr(
                 handle_tys(names, modules, tys)?;
             };
             for (_, e) in exprs.iter() {
-                expr_name_in_expr(names, modules, e)?;
+                name_and_modules_in_expr(names, modules, e)?;
             }
         }
         Exp_::Vector(_, tys, exprs) => {
@@ -355,10 +386,10 @@ fn expr_name_in_expr(
             handle_exprs(names, modules, &exprs.value)?;
         }
         Exp_::IfElse(con, then_, else_) => {
-            expr_name_in_expr(names, modules, con.as_ref())?;
-            expr_name_in_expr(names, modules, then_.as_ref())?;
+            name_and_modules_in_expr(names, modules, con.as_ref())?;
+            name_and_modules_in_expr(names, modules, then_.as_ref())?;
             if let Some(else_) = else_ {
-                expr_name_in_expr(names, modules, else_.as_ref())?;
+                name_and_modules_in_expr(names, modules, else_.as_ref())?;
             }
         }
         Exp_::While(_, _) => {}
@@ -368,7 +399,9 @@ fn expr_name_in_expr(
         }
         Exp_::Lambda(_, _) => {}
         Exp_::Quant(_, _, _, _, _) => {}
-        Exp_::ExpList(_) => {}
+        Exp_::ExpList(exprs) => {
+            handle_exprs(names, modules, exprs)?;
+        }
         Exp_::Unit => {}
         Exp_::Assign(_, _) => {}
         Exp_::Return(_) => {}
@@ -376,30 +409,30 @@ fn expr_name_in_expr(
         Exp_::Break => {}
         Exp_::Continue => {}
         Exp_::Dereference(e) => {
-            expr_name_in_expr(names, modules, e.as_ref())?;
+            name_and_modules_in_expr(names, modules, e.as_ref())?;
         }
         Exp_::UnaryExp(_, e) => {
-            expr_name_in_expr(names, modules, e.as_ref())?;
+            name_and_modules_in_expr(names, modules, e.as_ref())?;
         }
         Exp_::BinopExp(l, _, r) => {
-            expr_name_in_expr(names, modules, l.as_ref())?;
-            expr_name_in_expr(names, modules, r.as_ref())?;
+            name_and_modules_in_expr(names, modules, l.as_ref())?;
+            name_and_modules_in_expr(names, modules, r.as_ref())?;
         }
         Exp_::Borrow(_, e) => {
-            expr_name_in_expr(names, modules, e.as_ref())?;
+            name_and_modules_in_expr(names, modules, e.as_ref())?;
         }
         Exp_::Dot(a, _) => {
-            expr_name_in_expr(names, modules, a.as_ref())?;
+            name_and_modules_in_expr(names, modules, a.as_ref())?;
         }
         Exp_::Index(a, b) => {
-            expr_name_in_expr(names, modules, a.as_ref())?;
-            expr_name_in_expr(names, modules, b.as_ref())?;
+            name_and_modules_in_expr(names, modules, a.as_ref())?;
+            name_and_modules_in_expr(names, modules, b.as_ref())?;
         }
         Exp_::Cast(a, _) => {
-            expr_name_in_expr(names, modules, a.as_ref())?;
+            name_and_modules_in_expr(names, modules, a.as_ref())?;
         }
         Exp_::Annotate(a, _) => {
-            expr_name_in_expr(names, modules, a.as_ref())?;
+            name_and_modules_in_expr(names, modules, a.as_ref())?;
         }
         Exp_::Spec(_) => return Err(()),
         Exp_::UnresolvedError => return Err(()),
@@ -454,7 +487,6 @@ impl GroupShadowItemUse {
             self.items.insert(k, vec![x]);
         }
     }
-
     fn to_string(&self, indent_size: usize) -> String {
         let mut ret = String::new();
         for (k, v) in self.items.iter() {
@@ -571,4 +603,40 @@ fn use_2_shadow_items(u: &Use) -> HashMap<Symbol, Vec<ShadowItem>> {
         }
     };
     ret
+}
+
+#[derive(Default)]
+pub struct ShadowItems {
+    items: HashMap<Symbol, Vec<ShadowItem>>,
+}
+
+impl ShadowItems {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    fn insert(&mut self, name: Symbol, item: ShadowItem) {
+        if let Some(x) = self.items.get_mut(&name) {
+            x.push(item);
+        } else {
+            self.items.insert(name, vec![item]);
+        }
+    }
+    fn insert_use(&mut self, u: &Use) {
+        self.insert2(use_2_shadow_items(u));
+    }
+
+    fn insert2(&mut self, item: HashMap<Symbol, Vec<ShadowItem>>) {
+        for (name, v) in item.into_iter() {
+            if let Some(x) = self.items.get_mut(&name) {
+                x.extend(v);
+            } else {
+                self.items.insert(name, v);
+            }
+        }
+    }
+
+    fn query(&self, name: Symbol) -> Option<&ShadowItem> {
+        self.items.get(&name).map(|x| x.last()).flatten()
+    }
 }
