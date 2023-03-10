@@ -81,7 +81,6 @@ impl FunSpecGenerator {
         }
         self.result.push_str("{\n");
         self.result.push_str("\n");
-
         let assert = Self::generate_assert(f);
         self.result.push_str(assert.as_str());
         self.result.push_str(format!("{}}}\n", indent(1)).as_str())
@@ -95,7 +94,7 @@ impl FunSpecGenerator {
         };
         let mut shadow = ShadowItems::new();
         let mut imports = GroupShadowItemUse::new();
-        let mut local_emits = HashSet::new();
+        let mut local_emited = HashSet::new();
         fn insert_bind(r: &mut ShadowItems, bind: &Bind, index: usize) {
             match &bind.value {
                 Bind_::Var(var) => {
@@ -118,68 +117,112 @@ impl FunSpecGenerator {
         for u in body.0.iter() {
             shadow.insert_use(&u.use_);
         }
-        let mut handle_e = |shadow: &ShadowItems, statements: &mut String, e: &Exp| match &e.value {
-            Exp_::Call(_call, is_macro, should_be_none, es) => {
-                if MacroCall::from_chain(_call).is_some()
-                    && *is_macro
-                    && should_be_none.is_none()
-                    && es.value.len() > 0
-                {
-                    match Self::inverse_expression(es.value.get(0).unwrap()) {
-                        std::result::Result::Ok(e) => {
-                            // Ok e is suitable for generate.
-                            let mut names = HashSet::new();
-                            let mut modules = HashSet::new();
-                            let _ = name_and_modules_in_expr(&mut names, &mut modules, &e);
-                            for name in names {
-                                if let Some(x) = shadow.query(name) {
-                                    match x {
-                                        ShadowItem::Use(x) => {
-                                            imports.insert(x.clone());
-                                        }
-                                        ShadowItem::Local(index) => {
-                                            if local_emits.contains(&index.index) == false {
-                                                let seq = body.1.get(index.index).unwrap().clone();
-                                                // emit right here,right now.
-                                                statements.push_str(
-                                                    format!("{}{};\n", indent(2), format_xxx(&seq))
-                                                        .as_str(),
-                                                );
-                                                local_emits.insert(index.index);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            statements.push_str(
-                                format!(
-                                    "{}aborts_if {}{};\n",
-                                    indent(2),
-                                    format_xxx(&e),
-                                    match es.value.get(1) {
-                                        Some(e) => format!(" with {}", format_xxx(e)),
-                                        None => "".to_string(),
-                                    }
-                                )
-                                .as_str(),
-                            );
+        fn emit_local(
+            shadow: &ShadowItems,
+            statements: &mut String,
+            e: &Exp,
+            imports: &mut GroupShadowItemUse,
+            local_emited: &mut HashSet<usize>,
+            body: &Sequence,
+        ) {
+            let mut names = HashSet::new();
+            let mut modules = HashSet::new();
+            let _ = name_and_modules_in_expr(&mut names, &mut modules, &e);
+            for name in names {
+                if let Some(x) = shadow.query(name) {
+                    match x {
+                        ShadowItem::Use(x) => {
+                            imports.insert(x.clone());
                         }
-                        std::result::Result::Err(_) => {}
+                        ShadowItem::Local(index) => {
+                            if local_emited.contains(&index.index) == false {
+                                let seq = body.1.get(index.index).unwrap().clone();
+                                match &seq.value {
+                                    SequenceItem_::Seq(_) => unreachable!(),
+                                    SequenceItem_::Declare(_, _) => {}
+                                    SequenceItem_::Bind(_, _, e) => emit_local(
+                                        shadow,
+                                        statements,
+                                        e.as_ref(),
+                                        imports,
+                                        local_emited,
+                                        body,
+                                    ),
+                                }
+                                // emit right here,right now.
+                                statements.push_str(
+                                    format!("{}{};\n", indent(2), format_xxx(&seq)).as_str(),
+                                );
+                                local_emited.insert(index.index);
+                            }
+                        }
                     }
                 }
             }
-            _ => {}
-        };
+        }
+        fn emit_assert(
+            shadow: &ShadowItems,
+            statements: &mut String,
+            e: &Exp,
+            imports: &mut GroupShadowItemUse,
+            local_emited: &mut HashSet<usize>,
+            body: &Sequence,
+        ) {
+            match &e.value {
+                Exp_::Call(_call, is_macro, should_be_none, es) => {
+                    if MacroCall::from_chain(_call).is_some()
+                        && *is_macro
+                        && should_be_none.is_none()
+                        && es.value.len() > 0
+                    {
+                        match FunSpecGenerator::inverse_expression(es.value.get(0).unwrap()) {
+                            std::result::Result::Ok(e) => {
+                                emit_local(shadow, statements, &e, imports, local_emited, body);
+                                statements.push_str(
+                                    format!(
+                                        "{}aborts_if {}{};\n",
+                                        indent(2),
+                                        format_xxx(&e),
+                                        match es.value.get(1) {
+                                            Some(e) => format!(" with {}", format_xxx(e)),
+                                            None => "".to_string(),
+                                        }
+                                    )
+                                    .as_str(),
+                                );
+                            }
+                            std::result::Result::Err(_) => {}
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
         for (index, seq) in body.1.iter().enumerate() {
             match &seq.value {
                 SequenceItem_::Declare(b, _) | SequenceItem_::Bind(b, _, _) => {
                     insert_bind_list(&mut shadow, b, index);
                 }
-                SequenceItem_::Seq(e) => handle_e(&shadow, &mut statements, e),
+                SequenceItem_::Seq(e) => emit_assert(
+                    &shadow,
+                    &mut statements,
+                    e,
+                    &mut imports,
+                    &mut local_emited,
+                    body,
+                ),
             }
         }
         if let Some(e) = body.3.as_ref() {
-            handle_e(&shadow, &mut statements, e);
+            emit_assert(
+                &shadow,
+                &mut statements,
+                e,
+                &mut imports,
+                &mut local_emited,
+                body,
+            );
         }
         {
             let mut result = imports.to_string(2);
@@ -622,7 +665,6 @@ impl ShadowItems {
     fn new() -> Self {
         Self::default()
     }
-
     fn insert(&mut self, name: Symbol, item: ShadowItem) {
         if let Some(x) = self.items.get_mut(&name) {
             x.push(item);
@@ -643,7 +685,6 @@ impl ShadowItems {
             }
         }
     }
-
     fn query(&self, name: Symbol) -> Option<&ShadowItem> {
         self.items.get(&name).map(|x| x.last()).flatten()
     }
