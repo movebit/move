@@ -152,7 +152,16 @@ impl FunSpecGenerator {
                                 }
                             }
                             statements.push_str(
-                                format!("{}aborts_if {};\n", indent(2), format_xxx(&e)).as_str(),
+                                format!(
+                                    "{}aborts_if {}{};\n",
+                                    indent(2),
+                                    format_xxx(&e),
+                                    match es.value.get(1) {
+                                        Some(e) => format!(" with {}", format_xxx(e)),
+                                        None => "".to_string(),
+                                    }
+                                )
+                                .as_str(),
                             );
                         }
                         std::result::Result::Err(_) => {}
@@ -307,7 +316,6 @@ fn name_and_modules_in_expr(
             NameAccessChain_::Three(_, _) => {}
         }
     }
-
     fn handle_ty(
         names: &mut HashSet<Symbol>,
         modules: &mut HashSet<Symbol>,
