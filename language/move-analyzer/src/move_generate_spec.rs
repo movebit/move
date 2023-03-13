@@ -117,7 +117,7 @@ impl FunSpecGenerator {
         for u in body.0.iter() {
             shadow.insert_use(&u.use_);
         }
-        fn emit_local(
+        fn emit_local_and_imports(
             shadow: &ShadowItems,
             statements: &mut String,
             e: &Exp,
@@ -127,9 +127,20 @@ impl FunSpecGenerator {
         ) {
             let mut names = HashSet::new();
             let mut modules = HashSet::new();
-            let _ = name_and_modules_in_expr(&mut names, &mut modules, &e);
-            for name in names {
-                if let Some(x) = shadow.query(name) {
+            let _ = names_and_modules_in_expr(&mut names, &mut modules, &e);
+
+            for (name, is_module) in {
+                let mut x: Vec<_> = names.iter().map(|x| (x.clone(), false)).collect();
+                x.extend(
+                    modules
+                        .iter()
+                        .map(|x| (x.clone(), true))
+                        .collect::<Vec<_>>()
+                        .into_iter(),
+                );
+                x
+            } {
+                if let Some(x) = shadow.query(name, is_module) {
                     match x {
                         ShadowItem::Use(x) => {
                             imports.insert(x.clone());
@@ -140,7 +151,7 @@ impl FunSpecGenerator {
                                 match &seq.value {
                                     SequenceItem_::Seq(_) => unreachable!(),
                                     SequenceItem_::Declare(_, _) => {}
-                                    SequenceItem_::Bind(_, _, e) => emit_local(
+                                    SequenceItem_::Bind(_, _, e) => emit_local_and_imports(
                                         shadow,
                                         statements,
                                         e.as_ref(),
@@ -177,14 +188,33 @@ impl FunSpecGenerator {
                     {
                         match FunSpecGenerator::inverse_expression(es.value.get(0).unwrap()) {
                             std::result::Result::Ok(e) => {
-                                emit_local(shadow, statements, &e, imports, local_emited, body);
+                                emit_local_and_imports(
+                                    shadow,
+                                    statements,
+                                    &e,
+                                    imports,
+                                    local_emited,
+                                    body,
+                                );
+                                if let Some(e) = es.value.get(1) {
+                                    emit_local_and_imports(
+                                        shadow,
+                                        statements,
+                                        &e,
+                                        imports,
+                                        local_emited,
+                                        body,
+                                    );
+                                }
                                 statements.push_str(
                                     format!(
                                         "{}aborts_if {}{};\n",
                                         indent(2),
                                         format_xxx(&e),
                                         match es.value.get(1) {
-                                            Some(e) => format!(" with {}", format_xxx(e)),
+                                            Some(e) => {
+                                                format!(" with {}", format_xxx(e))
+                                            }
                                             None => "".to_string(),
                                         }
                                     )
@@ -336,7 +366,7 @@ fn indent(num: usize) -> String {
     "    ".to_string().repeat(num)
 }
 
-fn name_and_modules_in_expr(
+fn names_and_modules_in_expr(
     names: &mut HashSet<Symbol>,
     modules: &mut HashSet<Symbol>,
     e: &Exp,
@@ -396,7 +426,7 @@ fn name_and_modules_in_expr(
         exprs: &Vec<Exp>,
     ) -> Result<(), ()> {
         for e in exprs.iter() {
-            name_and_modules_in_expr(names, modules, e)?;
+            names_and_modules_in_expr(names, modules, e)?;
         }
         Ok(())
     }
@@ -427,7 +457,7 @@ fn name_and_modules_in_expr(
                 handle_tys(names, modules, tys)?;
             };
             for (_, e) in exprs.iter() {
-                name_and_modules_in_expr(names, modules, e)?;
+                names_and_modules_in_expr(names, modules, e)?;
             }
         }
         Exp_::Vector(_, tys, exprs) => {
@@ -437,10 +467,10 @@ fn name_and_modules_in_expr(
             handle_exprs(names, modules, &exprs.value)?;
         }
         Exp_::IfElse(con, then_, else_) => {
-            name_and_modules_in_expr(names, modules, con.as_ref())?;
-            name_and_modules_in_expr(names, modules, then_.as_ref())?;
+            names_and_modules_in_expr(names, modules, con.as_ref())?;
+            names_and_modules_in_expr(names, modules, then_.as_ref())?;
             if let Some(else_) = else_ {
-                name_and_modules_in_expr(names, modules, else_.as_ref())?;
+                names_and_modules_in_expr(names, modules, else_.as_ref())?;
             }
         }
         Exp_::While(_, _) => {}
@@ -460,30 +490,30 @@ fn name_and_modules_in_expr(
         Exp_::Break => {}
         Exp_::Continue => {}
         Exp_::Dereference(e) => {
-            name_and_modules_in_expr(names, modules, e.as_ref())?;
+            names_and_modules_in_expr(names, modules, e.as_ref())?;
         }
         Exp_::UnaryExp(_, e) => {
-            name_and_modules_in_expr(names, modules, e.as_ref())?;
+            names_and_modules_in_expr(names, modules, e.as_ref())?;
         }
         Exp_::BinopExp(l, _, r) => {
-            name_and_modules_in_expr(names, modules, l.as_ref())?;
-            name_and_modules_in_expr(names, modules, r.as_ref())?;
+            names_and_modules_in_expr(names, modules, l.as_ref())?;
+            names_and_modules_in_expr(names, modules, r.as_ref())?;
         }
         Exp_::Borrow(_, e) => {
-            name_and_modules_in_expr(names, modules, e.as_ref())?;
+            names_and_modules_in_expr(names, modules, e.as_ref())?;
         }
         Exp_::Dot(a, _) => {
-            name_and_modules_in_expr(names, modules, a.as_ref())?;
+            names_and_modules_in_expr(names, modules, a.as_ref())?;
         }
         Exp_::Index(a, b) => {
-            name_and_modules_in_expr(names, modules, a.as_ref())?;
-            name_and_modules_in_expr(names, modules, b.as_ref())?;
+            names_and_modules_in_expr(names, modules, a.as_ref())?;
+            names_and_modules_in_expr(names, modules, b.as_ref())?;
         }
         Exp_::Cast(a, _) => {
-            name_and_modules_in_expr(names, modules, a.as_ref())?;
+            names_and_modules_in_expr(names, modules, a.as_ref())?;
         }
         Exp_::Annotate(a, _) => {
-            name_and_modules_in_expr(names, modules, a.as_ref())?;
+            names_and_modules_in_expr(names, modules, a.as_ref())?;
         }
         Exp_::Spec(_) => return Err(()),
         Exp_::UnresolvedError => return Err(()),
@@ -491,7 +521,7 @@ fn name_and_modules_in_expr(
     Ok(())
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 struct ShadowItemUseItem {
     lead: LeadingNameAccess_,
     module: Symbol,
@@ -499,20 +529,19 @@ struct ShadowItemUseItem {
     alias: Option<Symbol>,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 struct ShadowItemUseModule {
     lead: LeadingNameAccess_,
     module: Symbol,
     alias: Option<Symbol>,
-    has_self: bool,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct ShadowItemLocal {
     index: usize,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 enum ShadowItemUse {
     Module(ShadowItemUseModule),
     Item(ShadowItemUseItem),
@@ -542,20 +571,14 @@ impl GroupShadowItemUse {
         let mut ret = String::new();
         for (k, v) in self.items.iter() {
             let mut v_str = String::new();
-            if v.len() > 1 {
-                v_str.push('{');
-            }
+            v_str.push('{');
             let v_len = v.len();
             for (index, vv) in v.iter().enumerate() {
                 v_str.push_str(
                     match vv {
                         ShadowItemUse::Module(x) => match &x.alias {
-                            Some(alias) => format!(
-                                "{} as {}",
-                                x.module.as_str().to_string(),
-                                alias.as_str().to_string()
-                            ),
-                            None => x.module.as_str().to_string(),
+                            Some(alias) => format!("{} as {}", "Self", alias.as_str().to_string()),
+                            None => "Self".to_string(),
                         },
                         ShadowItemUse::Item(item) => {
                             if item.alias.is_some() {
@@ -575,15 +598,14 @@ impl GroupShadowItemUse {
                     v_str.push(',');
                 }
             }
-            if v.len() > 1 {
-                v_str.push('}');
-            }
+            v_str.push('}');
             ret.push_str(
                 format!(
                     "{}use {}::{}::{};\n",
                     indent(indent_size),
                     match &k.0 {
-                        LeadingNameAccess_::AnonymousAddress(_) => todo!(),
+                        LeadingNameAccess_::AnonymousAddress(x) =>
+                            format!("0x{}", x.into_inner().short_str_lossless()),
                         LeadingNameAccess_::Name(name) => name.value.as_str().to_string(),
                     },
                     k.1.as_str(),
@@ -596,7 +618,7 @@ impl GroupShadowItemUse {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum ShadowItem {
     Use(ShadowItemUse),
     Local(ShadowItemLocal),
@@ -615,7 +637,6 @@ fn use_2_shadow_items(u: &Use) -> HashMap<Symbol, Vec<ShadowItem>> {
                 lead: addr_module.value.address.value.clone(),
                 module: addr_module.value.module.value(),
                 alias: alias.map(|x| x.0.value),
-                has_self: false,
             }));
             if let Some(xxx) = ret.get_mut(&name) {
                 xxx.push(item);
@@ -642,7 +663,6 @@ fn use_2_shadow_items(u: &Use) -> HashMap<Symbol, Vec<ShadowItem>> {
                         lead: addr_module.value.address.value.clone(),
                         module: addr_module.value.module.value(),
                         alias: alias.map(|x| x.value),
-                        has_self: true,
                     }))
                 };
                 if let Some(xxx) = ret.get_mut(&name) {
@@ -685,7 +705,20 @@ impl ShadowItems {
             }
         }
     }
-    fn query(&self, name: Symbol) -> Option<&ShadowItem> {
-        self.items.get(&name).map(|x| x.last()).flatten()
+    fn query(&self, name: Symbol, is_module: bool) -> Option<&ShadowItem> {
+        if is_module {
+            for i in self.items.get(&name)?.iter().rev() {
+                match i {
+                    ShadowItem::Use(x) => match x {
+                        ShadowItemUse::Module(_) => return Some(i),
+                        ShadowItemUse::Item(_) => {}
+                    },
+                    ShadowItem::Local(_) => {}
+                }
+            }
+            None
+        } else {
+            self.items.get(&name).map(|x| x.last()).flatten()
+        }
     }
 }
