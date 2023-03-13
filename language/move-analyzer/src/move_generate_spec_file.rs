@@ -143,6 +143,10 @@ impl ModuleSpecBuilder {
         for (k, vv) in self.results.into_iter() {
             let mut x = String::default();
             x.push_str(format!("spec {} {{\n\n", k.to_string()).as_str());
+            x.push_str(format!("{}spec module {{\n", indent(1)).as_str());
+            x.push_str(format!("{}pragma verify = true;\n", indent(2)).as_str());
+            x.push_str(format!("{}pragma aborts_if_is_strict;\n", indent(2)).as_str());
+            x.push_str(format!("{}}}\n", indent(1)).as_str());
             for v in vv.into_iter() {
                 x.push_str(v.as_str());
             }

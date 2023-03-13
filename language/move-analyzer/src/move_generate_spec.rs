@@ -1,5 +1,4 @@
-#![allow(dead_code)]
-
+use super::move_generate_spec_chen::*;
 use crate::item::MacroCall;
 use im::HashMap;
 use move_compiler::shared::Identifier;
@@ -65,7 +64,7 @@ impl FunSpecGenerator {
             for (index, (var, ty)) in f.signature.parameters.iter().enumerate() {
                 self.result.push_str(var.0.value.as_str());
                 self.result.push_str(": ");
-                self.result.push_str(format_xxx(ty).as_str());
+                self.result.push_str(format_xxx(ty, false).as_str());
                 if (index + 1) < para_len {
                     self.result.push_str(", ");
                 }
@@ -76,7 +75,8 @@ impl FunSpecGenerator {
             Type_::Unit => {}
             _ => {
                 self.result.push_str(": ");
-                self.result.push_str(&format_xxx(&f.signature.return_type));
+                self.result
+                    .push_str(&format_xxx(&f.signature.return_type, false));
             }
         }
         self.result.push_str("{\n");
@@ -117,59 +117,7 @@ impl FunSpecGenerator {
         for u in body.0.iter() {
             shadow.insert_use(&u.use_);
         }
-        fn emit_local_and_imports(
-            shadow: &ShadowItems,
-            statements: &mut String,
-            e: &Exp,
-            imports: &mut GroupShadowItemUse,
-            local_emited: &mut HashSet<usize>,
-            body: &Sequence,
-        ) {
-            let mut names = HashSet::new();
-            let mut modules = HashSet::new();
-            let _ = names_and_modules_in_expr(&mut names, &mut modules, &e);
-            for (name, is_module) in {
-                let mut x: Vec<_> = names.iter().map(|x| (x.clone(), false)).collect();
-                x.extend(
-                    modules
-                        .iter()
-                        .map(|x| (x.clone(), true))
-                        .collect::<Vec<_>>()
-                        .into_iter(),
-                );
-                x
-            } {
-                if let Some(x) = shadow.query(name, is_module) {
-                    match x {
-                        ShadowItem::Use(x) => {
-                            imports.insert(x.clone());
-                        }
-                        ShadowItem::Local(index) => {
-                            if local_emited.contains(&index.index) == false {
-                                let seq = body.1.get(index.index).unwrap().clone();
-                                match &seq.value {
-                                    SequenceItem_::Seq(_) => unreachable!(),
-                                    SequenceItem_::Declare(_, _) => {}
-                                    SequenceItem_::Bind(_, _, e) => emit_local_and_imports(
-                                        shadow,
-                                        statements,
-                                        e.as_ref(),
-                                        imports,
-                                        local_emited,
-                                        body,
-                                    ),
-                                }
-                                // emit right here,right now.
-                                statements.push_str(
-                                    format!("{}{};\n", indent(2), format_xxx(&seq)).as_str(),
-                                );
-                                local_emited.insert(index.index);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+
         fn emit_assert(
             shadow: &ShadowItems,
             statements: &mut String,
@@ -184,35 +132,46 @@ impl FunSpecGenerator {
                         && *is_macro
                         && should_be_none.is_none()
                         && es.value.len() > 0
+                        && FunSpecGenerator::expr_has_spec_unsupprted(es.value.get(0).unwrap())
+                            == false
                     {
                         match FunSpecGenerator::inverse_expression(es.value.get(0).unwrap()) {
                             std::result::Result::Ok(e) => {
-                                emit_local_and_imports(
-                                    shadow,
-                                    statements,
-                                    &e,
-                                    imports,
-                                    local_emited,
-                                    body,
-                                );
-                                if let Some(e) = es.value.get(1) {
-                                    emit_local_and_imports(
+                                if false
+                                    == FunSpecGenerator::emit_local_and_imports(
                                         shadow,
                                         statements,
                                         &e,
                                         imports,
                                         local_emited,
                                         body,
-                                    );
+                                    )
+                                {
+                                    return;
+                                }
+
+                                if let Some(e) = es.value.get(1) {
+                                    if false
+                                        == FunSpecGenerator::emit_local_and_imports(
+                                            shadow,
+                                            statements,
+                                            &e,
+                                            imports,
+                                            local_emited,
+                                            body,
+                                        )
+                                    {
+                                        return;
+                                    }
                                 }
                                 statements.push_str(
                                     format!(
                                         "{}aborts_if {}{};\n",
                                         indent(2),
-                                        format_xxx(&e),
+                                        format_xxx(&e, true),
                                         match es.value.get(1) {
                                             Some(e) => {
-                                                format!(" with {}", format_xxx(e))
+                                                format!(" with {}", format_xxx(e, true))
                                             }
                                             None => "".to_string(),
                                         }
@@ -227,7 +186,6 @@ impl FunSpecGenerator {
                 _ => {}
             }
         }
-
         for (index, seq) in body.1.iter().enumerate() {
             match &seq.value {
                 SequenceItem_::Declare(b, _) | SequenceItem_::Bind(b, _, _) => {
@@ -258,6 +216,145 @@ impl FunSpecGenerator {
             result.push_str(statements.as_str());
             result
         }
+    }
+}
+
+impl FunSpecGenerator {
+    fn expr_has_spec_unsupprted(e: &Exp) -> bool {
+        fn exprs_has_spec_unsupprted(es: &Vec<Exp>) -> bool {
+            es.iter()
+                .any(|e| FunSpecGenerator::expr_has_spec_unsupprted(e))
+        }
+        match &e.value {
+            Exp_::Value(_) => false,
+            Exp_::Move(_) => false,
+            Exp_::Copy(_) => false,
+            Exp_::Name(_, _) => false,
+            Exp_::Call(_, _, _, es) => exprs_has_spec_unsupprted(&es.value),
+            Exp_::Pack(_, _, es) => es
+                .iter()
+                .any(|e| FunSpecGenerator::expr_has_spec_unsupprted(&e.1)),
+            Exp_::Vector(_, _, es) => exprs_has_spec_unsupprted(&es.value),
+            Exp_::IfElse(e, then_, else_) => {
+                FunSpecGenerator::expr_has_spec_unsupprted(e.as_ref())
+                    || FunSpecGenerator::expr_has_spec_unsupprted(then_.as_ref())
+                    || if let Some(else_) = else_ {
+                        FunSpecGenerator::expr_has_spec_unsupprted(else_.as_ref())
+                    } else {
+                        false
+                    }
+            }
+            Exp_::While(e, b) => {
+                FunSpecGenerator::expr_has_spec_unsupprted(e.as_ref())
+                    || FunSpecGenerator::expr_has_spec_unsupprted(b.as_ref())
+            }
+            Exp_::Loop(e) => FunSpecGenerator::expr_has_spec_unsupprted(e),
+            Exp_::Block(_) => {
+                // TODO
+                false
+            }
+            Exp_::Lambda(_, _) => false,
+            Exp_::Quant(_, _, _, _, _) => false,
+            Exp_::ExpList(es) => exprs_has_spec_unsupprted(es),
+            Exp_::Unit => false,
+            Exp_::Assign(l, r) => {
+                FunSpecGenerator::expr_has_spec_unsupprted(l.as_ref())
+                    || FunSpecGenerator::expr_has_spec_unsupprted(r.as_ref())
+            }
+            Exp_::Return(_) => false,
+            Exp_::Abort(_) => false,
+            Exp_::Break => false,
+            Exp_::Continue => false,
+            Exp_::Dereference(_) => true,
+            Exp_::UnaryExp(_, e) => FunSpecGenerator::expr_has_spec_unsupprted(e),
+            Exp_::BinopExp(l, _, r) => {
+                FunSpecGenerator::expr_has_spec_unsupprted(l.as_ref())
+                    || FunSpecGenerator::expr_has_spec_unsupprted(r.as_ref())
+            }
+            Exp_::Borrow(_, _) => true,
+            Exp_::Dot(l, _) => FunSpecGenerator::expr_has_spec_unsupprted(l.as_ref()),
+            Exp_::Index(l, r) => {
+                FunSpecGenerator::expr_has_spec_unsupprted(l.as_ref())
+                    || FunSpecGenerator::expr_has_spec_unsupprted(r.as_ref())
+            }
+            Exp_::Cast(e, _) => FunSpecGenerator::expr_has_spec_unsupprted(e.as_ref()),
+            Exp_::Annotate(_, _) => false,
+            Exp_::Spec(_) => false,
+            Exp_::UnresolvedError => false,
+        }
+    }
+}
+
+impl FunSpecGenerator {
+    fn emit_local_and_imports(
+        shadow: &ShadowItems,
+        statements: &mut String,
+        e: &Exp,
+        imports: &mut GroupShadowItemUse,
+        local_emited: &mut HashSet<usize>,
+        body: &Sequence,
+    ) -> bool // emit ok ???
+    {
+        let mut names = HashSet::new();
+        let mut modules = HashSet::new();
+        let _ = names_and_modules_in_expr(&mut names, &mut modules, &e);
+        for (name, is_module) in {
+            let mut x: Vec<_> = names.iter().map(|x| (x.clone(), false)).collect();
+            x.extend(
+                modules
+                    .iter()
+                    .map(|x| (x.clone(), true))
+                    .collect::<Vec<_>>()
+                    .into_iter(),
+            );
+            x
+        } {
+            if let Some(x) = shadow.query(name, is_module) {
+                match x {
+                    ShadowItem::Use(x) => {
+                        imports.insert(x.clone());
+                    }
+                    ShadowItem::Local(index) => {
+                        if local_emited.contains(&index.index) == false {
+                            let seq = body.1.get(index.index).unwrap().clone();
+                            match &seq.value {
+                                SequenceItem_::Seq(_) => {
+                                    // TODO looks emitable.
+                                    return false;
+                                }
+                                SequenceItem_::Declare(_, _) => {
+                                    return false;
+                                }
+                                SequenceItem_::Bind(_, _, e) => {
+                                    if FunSpecGenerator::expr_has_spec_unsupprted(e) {
+                                        return false;
+                                    }
+                                    if false
+                                        == FunSpecGenerator::emit_local_and_imports(
+                                            shadow,
+                                            statements,
+                                            e.as_ref(),
+                                            imports,
+                                            local_emited,
+                                            body,
+                                        )
+                                    {
+                                        return false;
+                                    }
+                                }
+                            }
+                            // emit right here,right now.
+                            statements.push_str(
+                                format!("{}{};\n", indent(2), format_xxx(&seq, true)).as_str(),
+                            );
+                            local_emited.insert(index.index);
+                        }
+                    }
+                }
+            }
+        }
+
+        true
     }
 
     /// Inverse a expr for `aborts_if` etc.
@@ -348,8 +445,10 @@ impl FunSpecGenerator {
         }
     }
 }
-
-pub(crate) fn format_xxx<T>(e: &T) -> String
+pub(crate) fn format_xxx<T>(
+    e: &T,
+    replace_ban_spece: bool, // ast_debug print `!a` as `! a`.
+) -> String
 where
     T: AstDebug,
 {
@@ -358,10 +457,14 @@ where
     e.ast_debug(&mut w);
     let x = w.to_string();
     // TOTO better way to do this.
-    x.trim_end().to_string()
+    let mut x = x.trim_end().to_string();
+    if replace_ban_spece {
+        x = x.replacen("! ", "!", usize::MAX);
+    }
+    x
 }
 
-fn indent(num: usize) -> String {
+pub(crate) fn indent(num: usize) -> String {
     "    ".to_string().repeat(num)
 }
 

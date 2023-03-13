@@ -43,6 +43,7 @@ pub mod hover;
 mod ide_test;
 pub mod item;
 pub mod move_generate_spec;
+pub mod move_generate_spec_chen;
 pub mod move_generate_spec_file;
 pub mod move_generate_spec_sel;
 pub mod project;
