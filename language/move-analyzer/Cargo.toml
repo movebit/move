@@ -39,7 +39,7 @@ walkdir = "2"
 log = "0.4.14"
 stderrlog = "0.5.4"
 enum-iterator = "1.2.0"
-[target.'cfg(not(target_env = "msvc"))'.dependencies]
+[target.'cfg(not(target_os= "windows"))'.dependencies]
 pprof = { version = "0.11.0" , features = ["flamegraph" , "protobuf"]} 
 
 [profile.release]
