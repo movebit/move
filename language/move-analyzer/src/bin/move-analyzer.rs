@@ -374,7 +374,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
     }
 }
 
-#[cfg(not(target_env = "msvc"))]
+#[cfg(not(target_os = "windows"))]
 fn cpu_pprof(_seconds: u64) {
     cfg_if::cfg_if! {
         if #[cfg(feature = "pprof")] {
@@ -403,6 +403,10 @@ fn cpu_pprof(_seconds: u64) {
             });
         }
     }
+}
+#[cfg(target_os = "windows")]
+fn cpu_pprof(_seconds: u64) {
+    log::error!("Can't run pprof in Windows");
 }
 
 fn get_package_compile_diagnostics(
