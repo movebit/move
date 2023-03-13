@@ -128,7 +128,6 @@ impl FunSpecGenerator {
             let mut names = HashSet::new();
             let mut modules = HashSet::new();
             let _ = names_and_modules_in_expr(&mut names, &mut modules, &e);
-
             for (name, is_module) in {
                 let mut x: Vec<_> = names.iter().map(|x| (x.clone(), false)).collect();
                 x.extend(
@@ -577,7 +576,7 @@ impl GroupShadowItemUse {
                 v_str.push_str(
                     match vv {
                         ShadowItemUse::Module(x) => match &x.alias {
-                            Some(alias) => format!("{} as {}", "Self", alias.as_str().to_string()),
+                            Some(alias) => format!("{} as {}", "Self", alias.as_str()),
                             None => "Self".to_string(),
                         },
                         ShadowItemUse::Item(item) => {
@@ -695,7 +694,6 @@ impl ShadowItems {
     fn insert_use(&mut self, u: &Use) {
         self.insert2(use_2_shadow_items(u));
     }
-
     fn insert2(&mut self, item: HashMap<Symbol, Vec<ShadowItem>>) {
         for (name, v) in item.into_iter() {
             if let Some(x) = self.items.get_mut(&name) {
@@ -705,8 +703,8 @@ impl ShadowItems {
             }
         }
     }
-    fn query(&self, name: Symbol, is_module: bool) -> Option<&ShadowItem> {
-        if is_module {
+    fn query(&self, name: Symbol, module_name: bool) -> Option<&ShadowItem> {
+        if module_name {
             for i in self.items.get(&name)?.iter().rev() {
                 match i {
                     ShadowItem::Use(x) => match x {

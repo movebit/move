@@ -99,7 +99,6 @@ pub fn on_generate_spec_sel(context: &Context, request: &Request) {
                     return;
                 }
                 let module_loc = x.loc;
-
                 for m in x.members.iter() {
                     process_member(m, module_loc);
                 }
@@ -122,7 +121,7 @@ pub fn on_generate_spec_sel(context: &Context, request: &Request) {
     let result = match result {
         Some(x) => x,
         None => {
-            send_err(context, "not found".to_string());
+            send_err(context, "spec target not found.".to_string());
             return;
         }
     };
