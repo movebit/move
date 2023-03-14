@@ -18,120 +18,128 @@ impl FunSpecGenerator {
     // 这个函数收集 e 中所有的加法减法等操作
     pub(crate) fn collect_spec_exp(e: &Exp) -> Vec<SpecExpItem> {
         let mut ret = Vec::new();
-        fn collect_add_sub_etc_(ret: &mut Vec<SpecExpItem>, e: &Exp) {
+        fn collect_spec_exp_(ret: &mut Vec<SpecExpItem>, e: &Exp) {
             match &e.value {
-                Exp_::Call(n, _, _, e_exp) => {
+                Exp_::Call(n, _, tys, es) => {
+                    let first_ty = tys.as_ref().map(|x| x.get(0)).flatten();
+                    let first_e = es.value.get(0);
                     match &n.value {
-                        NameAccessChain_::One(n_1) => {}
+                        NameAccessChain_::One(name) => match name.value.as_str() {
+                            "borrow_global_mut" if first_ty.is_some() && first_e.is_some() => {
+                                let ty = first_ty.clone().unwrap().clone();
+                                ret.push(SpecExpItem::BorrowGlobal {
+                                    ty,
+                                    addr: first_e.clone().unwrap().clone(),
+                                });
+                            }
+                            "type_of" if first_ty.is_some() => {
+                                let ty = first_ty.clone().unwrap().clone();
+                                ret.push(SpecExpItem::TypeOf { ty });
+                            }
+                            "type_name" if first_ty.is_some() => {
+                                let ty = first_ty.clone().unwrap().clone();
+                                ret.push(SpecExpItem::TypeName { ty });
+                            }
+                            _ => {}
+                        },
                         _ => {}
                     }
 
-                    for e in e_exp.value.iter() {
-                        collect_add_sub_etc_(ret, e)
+                    for e in es.value.iter() {
+                        collect_spec_exp_(ret, e)
                     }
                 }
                 Exp_::Pack(_, _, e_exp) => {
                     for e in e_exp.iter() {
-                        collect_add_sub_etc_(ret, &e.1)
+                        collect_spec_exp_(ret, &e.1)
                     }
                 }
                 Exp_::Vector(_, _, e_exp) => {
                     for e in e_exp.value.iter() {
-                        collect_add_sub_etc_(ret, &e)
+                        collect_spec_exp_(ret, &e)
                     }
                 }
                 Exp_::IfElse(e_exp, then_, else_) => {
-                    collect_add_sub_etc_(ret, &e_exp.as_ref());
-                    collect_add_sub_etc_(ret, &then_.as_ref());
+                    collect_spec_exp_(ret, &e_exp.as_ref());
+                    collect_spec_exp_(ret, &then_.as_ref());
                     if let Some(else_) = else_ {
-                        collect_add_sub_etc_(ret, &else_.as_ref());
+                        collect_spec_exp_(ret, &else_.as_ref());
                     } else {
                     }
                 }
                 Exp_::While(a, b) => {
-                    collect_add_sub_etc_(ret, &a.as_ref());
-                    collect_add_sub_etc_(ret, &b.as_ref())
+                    collect_spec_exp_(ret, &a.as_ref());
+                    collect_spec_exp_(ret, &b.as_ref())
                 }
-                Exp_::Loop(e_exp) => collect_add_sub_etc_(ret, &e_exp),
-                Exp_::Block(s) => {
-                    //TODO
-                    // for e1 in s.1.to_vec().iter()
-                    // {
-                    //     match &e1.value
-                    //     {
-                    //         SequenceItem_::Bind(_,_,e_t) =>
-                    //         {
-                    //             collect_add_sub_etc_(ret,&e_t.as_ref())
-                    //         }
-                    //         SequenceItem_::Seq(e_t) =>
-                    //         {
-                    //             collect_add_sub_etc_(ret,&e_t.as_ref())
-                    //         }
-                    //     }
-                    // }
-                }
-                Exp_::Lambda(_, e_exp) => collect_add_sub_etc_(ret, &e_exp),
-                Exp_::Quant(_, _, a, _, b) => {
-                    for e_1 in a.iter() {
-                        for e_2 in e_1.iter() {
-                            collect_add_sub_etc_(ret, &e_2)
-                        }
-                    }
-                    collect_add_sub_etc_(ret, &b.as_ref())
-                }
-                Exp_::ExpList(e_exp) => {
-                    for e in e_exp.iter() {
-                        collect_add_sub_etc_(ret, &e)
+                Exp_::Loop(_) => {}
+                Exp_::Block(_) => {}
+                Exp_::Lambda(_, e_exp) => collect_spec_exp_(ret, &e_exp),
+                Exp_::Quant(_, _, _, _, _) => {}
+                Exp_::ExpList(es) => {
+                    for e in es.iter() {
+                        collect_spec_exp_(ret, &e)
                     }
                 }
                 Exp_::Assign(a, b) => {
-                    collect_add_sub_etc_(ret, &a.as_ref());
-                    collect_add_sub_etc_(ret, &b.as_ref())
+                    collect_spec_exp_(ret, &a.as_ref());
+                    collect_spec_exp_(ret, &b.as_ref())
                 }
-                Exp_::Abort(e_exp) => collect_add_sub_etc_(ret, &e_exp.as_ref()),
-                Exp_::Dereference(e_exp) => collect_add_sub_etc_(ret, &e_exp.as_ref()),
-                Exp_::UnaryExp(_, e_exp) => collect_add_sub_etc_(ret, &e_exp.as_ref()),
+                Exp_::Abort(e_exp) => collect_spec_exp_(ret, &e_exp.as_ref()),
+                Exp_::Dereference(e_exp) => collect_spec_exp_(ret, &e_exp.as_ref()),
+                Exp_::UnaryExp(_, e_exp) => collect_spec_exp_(ret, &e_exp.as_ref()),
                 Exp_::BinopExp(l, op, r) => {
                     if let Some(reason) = BinOPReason::cause_exception(op.value.clone()) {
-                        ret.push(SpecExpItem::BinOP(
+                        ret.push(SpecExpItem::BinOP {
                             reason,
-                            l.as_ref().clone(),
-                            r.as_ref().clone(),
-                        ));
+                            left: l.as_ref().clone(),
+                            right: r.as_ref().clone(),
+                        });
                     }
-                    collect_add_sub_etc_(ret, l.as_ref());
-                    collect_add_sub_etc_(ret, r.as_ref());
+                    collect_spec_exp_(ret, l.as_ref());
+                    collect_spec_exp_(ret, r.as_ref());
                 }
 
-                Exp_::Borrow(_, e_exp) => collect_add_sub_etc_(ret, &e_exp.as_ref()),
-                Exp_::Dot(e_exp, _) => collect_add_sub_etc_(ret, &e_exp.as_ref()),
+                Exp_::Borrow(_, e) => collect_spec_exp_(ret, &e.as_ref()),
+                Exp_::Dot(e, _) => collect_spec_exp_(ret, &e.as_ref()),
                 Exp_::Index(a, b) => {
-                    collect_add_sub_etc_(ret, &a.as_ref());
-                    collect_add_sub_etc_(ret, &b.as_ref())
+                    collect_spec_exp_(ret, &a.as_ref());
+                    collect_spec_exp_(ret, &b.as_ref())
                 }
-                Exp_::Cast(e_exp, t) => {
-                    collect_add_sub_etc_(ret, &e_exp.as_ref())
+                Exp_::Cast(e, t) => {
+                    collect_spec_exp_(ret, &e.as_ref())
                     //TODO TYPE
                 }
-                Exp_::Annotate(e_exp, t) => {
-                    collect_add_sub_etc_(ret, &e_exp.as_ref())
-                    //TODO TYPE
-                }
+                Exp_::Annotate(e_exp, t) => {}
                 _ => {}
             }
         }
 
-        collect_add_sub_etc_(&mut ret, e);
+        collect_spec_exp_(&mut ret, e);
         ret
     }
 }
 
+#[derive(Clone, Debug)]
 pub(crate) enum SpecExpItem {
-    BinOP(BinOPReason, Exp, Exp),
-    TypeOf(Type),
+    BinOP {
+        reason: BinOPReason,
+        left: Exp,
+        right: Exp,
+    },
+    TypeOf {
+        ty: Type,
+    },
+    TypeName {
+        ty: Type,
+    },
+    BorrowGlobal {
+        ty: Type,
+        addr: Exp,
+    },
 }
 
 /// 这个枚举代表操作符错误类型
+#[derive(Clone, Copy, Debug)]
 pub(crate) enum BinOPReason {
     OverFlowADD,
     OverFlowMUL,
