@@ -1,183 +1,107 @@
-use std::f32::consts::E;
-
 use super::move_generate_spec::FunSpecGenerator;
 use move_compiler::parser::ast::*;
 
+/*
+     { let c = 0;
+    let a = (b + 1) /  c ; }
+    spec {
+        aborts_if a + 1 < a;
+        aborts_if c == 0;
+    }
 
+    a + 1
+    (a +1) / c
+
+*/
 impl FunSpecGenerator {
     // 针对加法 减法 移位等运算可能会参数溢出等异常
     // 这个函数收集 e 中所有的加法减法等操作
-    pub(crate) fn collect_add_sub_etc(e: &Exp) -> Vec<&Exp> {
-        let mut v_temp:Vec<&Exp> = Vec::new();
-        if FunSpecGenerator::is_binop_specful(e){
+    pub(crate) fn collect_add_sub_etc(e: &Exp) -> Vec<ExpceptionItem> {
+        let mut ret = Vec::new();
+        fn collect_add_sub_etc_(ret: &mut Vec<ExpceptionItem>, e: &Exp) {
             match &e.value {
-                Exp_::Call(_, _, _, e_exp) => {
-                    for e in e_exp.value.iter()
-                    {
-                       v_temp.push(&e)
-                    }
-                    return v_temp
-                }
-                Exp_::Pack(_, _, e_exp) => {
-                    for e in e_exp.iter()
-                    {
-                       v_temp.push(&e.1)
-                    }
-                    return v_temp
-                }
-                    
-                Exp_::Vector(_, _, e_exp) => {
-                    for e in e_exp.value.iter()
-                    {
-                       v_temp.push(&e)
-                    }
-                    return v_temp
-                }
-                        
-                Exp_::IfElse(e_exp, then_, else_) => {
-                    v_temp.push(&e_exp);
-                    v_temp.push(&then_);
-                    if let Some(else_) = else_ {
-                        v_temp.push(&else_)
-                    } else{}
-                    
-                    return v_temp
-                }
-                Exp_::While(a, b) => {
-                    v_temp.push(&a);
-                    v_temp.push(&b);
-                    return v_temp
-                }
-                Exp_::Loop(e_exp) => {
-                    v_temp.push(&e_exp);
-                    return v_temp
-                }
-                Exp_::Block(_) => {
-                    // TODO
-                    return v_temp
-                }
-                Exp_::ExpList(e_exp) => {
-                    for e in e_exp.iter()
-                    {
-                       v_temp.push(&e)
-                    }
-                    return v_temp
-                }
-                
-                Exp_::Assign(a, b) => {
-                    v_temp.push(&a);
-                    v_temp.push(&a);
-                    return v_temp
-                }
-    
-                Exp_::UnaryExp(_, e_exp) => {
-                    v_temp.push(&e_exp);
-                    return v_temp
-                }
-    
-              
-                Exp_::Dot(e_exp, _) => {
-                    v_temp.push(&e_exp);
-                    return v_temp
-                }
-                Exp_::Index(a, b) => {
-                    v_temp.push(&a);
-                    v_temp.push(&b);
-                    return v_temp
-                }
-                Exp_::Cast(a, _) =>    
-                {
-                    v_temp.push(&a);
-                    return v_temp
-                }                 
-                
+                Exp_::Value(_) => todo!(),
+                Exp_::Move(_) => todo!(),
+                Exp_::Copy(_) => todo!(),
+                Exp_::Name(_, _) => todo!(),
+                Exp_::Call(_, _, _, _) => todo!(),
+                Exp_::Pack(_, _, _) => todo!(),
+                Exp_::Vector(_, _, _) => todo!(),
+                Exp_::IfElse(_, _, _) => todo!(),
+                Exp_::While(_, _) => todo!(),
+                Exp_::Loop(_) => todo!(),
+                Exp_::Block(_) => todo!(),
+                Exp_::Lambda(_, _) => todo!(),
+                Exp_::Quant(_, _, _, _, _) => todo!(),
+                Exp_::ExpList(_) => todo!(),
+                Exp_::Unit => todo!(),
+                Exp_::Assign(_, _) => todo!(),
+                Exp_::Return(_) => todo!(),
+                Exp_::Abort(_) => todo!(),
+                Exp_::Break => todo!(),
+                Exp_::Continue => todo!(),
+                Exp_::Dereference(_) => todo!(),
+                Exp_::UnaryExp(_, _) => todo!(),
                 Exp_::BinopExp(l, op, r) => {
-                    v_temp.push(e);
-                    return v_temp
+                    if let Some(reason) = BinOPReasion::cause_exception(op.value.clone()) {
+                        ret.push(ExpceptionItem::BinOP(
+                            reason,
+                            l.as_ref().clone(),
+                            r.as_ref().clone(),
+                        ));
+                    }
                 }
-                _ => return v_temp
+
+                Exp_::Borrow(_, _) => todo!(),
+                Exp_::Dot(_, _) => todo!(),
+                Exp_::Index(_, _) => todo!(),
+                Exp_::Cast(_, _) => todo!(),
+                Exp_::Annotate(_, _) => todo!(),
+                Exp_::Spec(_) => todo!(),
+                Exp_::UnresolvedError => todo!(),
             }
         }
-        else
-        {
-            return v_temp
-        }
-        }
-    
-    fn is_binop_specful(e:&Exp) -> bool{
-
-        //有没有表达式？如果有，继续迭代
-        //如果是Binop，看看有没有符合条件的运算，有就返回true，反之false
-        //如果不是Binop，返回false
-
-        let mut b_temp:bool = false;
-
-        match &e.value {
-            Exp_::Call(_, _, _, e_exp) => {
-                for e in e_exp.value.iter()
-                {
-                    b_temp = b_temp || FunSpecGenerator::is_binop_specful(&e);
-                }
-                b_temp
-            },
-            Exp_::Pack(_, _, e_exp) => 
-                e_exp.iter()
-                    .any(|e| FunSpecGenerator::is_binop_specful(&e.1)),
-            Exp_::Vector(_, _, e_exp) => 
-                e_exp.value.iter()
-                    .any(|e| FunSpecGenerator::is_binop_specful(&e)),
-            Exp_::IfElse(e_exp, then_, else_) => {
-                FunSpecGenerator::is_binop_specful(&e_exp.as_ref())||
-                FunSpecGenerator::is_binop_specful(&then_.as_ref())||
-                if let Some(else_) = else_ {
-                    FunSpecGenerator::is_binop_specful(&else_.as_ref())
-                } else {
-                    false
-                }              
-            }
-            Exp_::While(a, b) => {
-                FunSpecGenerator::is_binop_specful(&a.as_ref())||
-                FunSpecGenerator::is_binop_specful(&b.as_ref())
-            }
-            Exp_::Loop(e_exp) => FunSpecGenerator::is_binop_specful(&e_exp.as_ref()),
-            Exp_::Block(_) => {
-                // TODO
-                false
-            }
-            Exp_::ExpList(e_exp) => 
-                e_exp.iter()
-                .any(|e| FunSpecGenerator::is_binop_specful(&e)),
-            
-            Exp_::Assign(l, r) => {
-                FunSpecGenerator::is_binop_specful(&l.as_ref())||
-                FunSpecGenerator::is_binop_specful(&r.as_ref())
-            }
-
-            Exp_::UnaryExp(_, e_exp) => FunSpecGenerator::is_binop_specful(&e_exp.as_ref()),
-
-          
-            Exp_::Dot(e_exp, _) => FunSpecGenerator::is_binop_specful(&e_exp.as_ref()),
-            Exp_::Index(l, r) => {
-                FunSpecGenerator::is_binop_specful(&l.as_ref())||
-                FunSpecGenerator::is_binop_specful(&r.as_ref())
-            }
-            Exp_::Cast(e_exp, _) => FunSpecGenerator::is_binop_specful(&e_exp.as_ref()),
-            Exp_::BinopExp(l, op, r) => {
-                match &op.value{
-                    BinOp_::Add => true,
-                    BinOp_::BitAnd => true,
-                    BinOp_::BitOr => true,
-                    BinOp_::Div => true,
-                    BinOp_::Mul => true,
-                    BinOp_::Xor => true,
-                    BinOp_::Sub => true,
-                    _ => false
-                }
-            }
-            _ => false
-        }
+        
+        collect_add_sub_etc_(&mut ret, e);
+        ret
     }
-
 }
 
+pub(crate) enum ExpceptionItem {
+    BinOP(BinOPReasion, Exp, Exp),
+    TypeOf(Type),
+}
 
+pub(crate) enum BinOPReasion {
+    OverFlow,
+    DivByZero,
+    UnderFlow,
+}
+
+impl BinOPReasion {
+    fn cause_exception(op: BinOp_) -> Option<Self> {
+        match op {
+            BinOp_::Add => todo!(),
+            BinOp_::Sub => todo!(),
+            BinOp_::Mul => todo!(),
+            BinOp_::Mod => todo!(),
+            BinOp_::Div => todo!(),
+            BinOp_::BitOr => todo!(),
+            BinOp_::BitAnd => todo!(),
+            BinOp_::Xor => todo!(),
+            BinOp_::Shl => todo!(),
+            BinOp_::Shr => todo!(),
+            BinOp_::Range => todo!(),
+            BinOp_::Implies => todo!(),
+            BinOp_::Iff => todo!(),
+            BinOp_::And => todo!(),
+            BinOp_::Or => todo!(),
+            BinOp_::Eq => todo!(),
+            BinOp_::Neq => todo!(),
+            BinOp_::Lt => todo!(),
+            BinOp_::Gt => todo!(),
+            BinOp_::Le => todo!(),
+            BinOp_::Ge => todo!(),
+        }
+    }
+}

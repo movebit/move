@@ -295,9 +295,7 @@ impl FunSpecGenerator {
         body: &Sequence,
     ) -> bool // emit ok ???
     {
-        let mut names = HashSet::new();
-        let mut modules = HashSet::new();
-        let _ = names_and_modules_in_expr(&mut names, &mut modules, &e);
+        let (names, modules) = names_and_modules_in_expr(e);
         for (name, is_module) in {
             let mut x: Vec<_> = names.iter().map(|x| (x.clone(), false)).collect();
             x.extend(
@@ -469,10 +467,18 @@ pub(crate) fn indent(num: usize) -> String {
 }
 
 fn names_and_modules_in_expr(
-    names: &mut HashSet<Symbol>,
-    modules: &mut HashSet<Symbol>,
     e: &Exp,
-) -> Result<(), ()> {
+) -> (
+    HashSet<Symbol>, // names
+    HashSet<Symbol>, // modules
+) {
+    let mut names = Default::default();
+    let mut modules = Default::default();
+    names_and_modules_in_expr_(&mut names, &mut modules, e);
+    (names, modules)
+}
+
+fn names_and_modules_in_expr_(names: &mut HashSet<Symbol>, modules: &mut HashSet<Symbol>, e: &Exp) {
     fn handle_name_access_chain(
         names: &mut HashSet<Symbol>,
         modules: &mut HashSet<Symbol>,
@@ -491,46 +497,31 @@ fn names_and_modules_in_expr(
             NameAccessChain_::Three(_, _) => {}
         }
     }
-    fn handle_ty(
-        names: &mut HashSet<Symbol>,
-        modules: &mut HashSet<Symbol>,
-        ty: &Type,
-    ) -> Result<(), ()> {
+    fn handle_ty(names: &mut HashSet<Symbol>, modules: &mut HashSet<Symbol>, ty: &Type) {
         match &ty.value {
             Type_::Apply(chain, tys) => {
-                handle_tys(names, modules, tys)?;
+                handle_tys(names, modules, tys);
                 handle_name_access_chain(names, modules, chain);
             }
             Type_::Ref(_, ty) => {
-                handle_ty(names, modules, ty)?;
+                handle_ty(names, modules, ty);
             }
-            Type_::Fun(_, _) => return Err(()),
+            Type_::Fun(_, _) => {}
             Type_::Unit => {}
             Type_::Multiple(tys) => {
-                handle_tys(names, modules, tys)?;
+                handle_tys(names, modules, tys);
             }
         }
-        Ok(())
     }
-    fn handle_tys(
-        names: &mut HashSet<Symbol>,
-        modules: &mut HashSet<Symbol>,
-        tys: &Vec<Type>,
-    ) -> Result<(), ()> {
+    fn handle_tys(names: &mut HashSet<Symbol>, modules: &mut HashSet<Symbol>, tys: &Vec<Type>) {
         for ty in tys.iter() {
-            handle_ty(names, modules, ty)?;
+            handle_ty(names, modules, ty);
         }
-        Ok(())
     }
-    fn handle_exprs(
-        names: &mut HashSet<Symbol>,
-        modules: &mut HashSet<Symbol>,
-        exprs: &Vec<Exp>,
-    ) -> Result<(), ()> {
+    fn handle_exprs(names: &mut HashSet<Symbol>, modules: &mut HashSet<Symbol>, exprs: &Vec<Exp>) {
         for e in exprs.iter() {
-            names_and_modules_in_expr(names, modules, e)?;
+            names_and_modules_in_expr_(names, modules, e);
         }
-        Ok(())
     }
     match &e.value {
         Exp_::Value(_) => {}
@@ -543,47 +534,45 @@ fn names_and_modules_in_expr(
         Exp_::Name(name, tys) => {
             handle_name_access_chain(names, modules, name);
             if let Some(tys) = tys {
-                handle_tys(names, modules, tys)?;
+                handle_tys(names, modules, tys);
             };
         }
         Exp_::Call(chain, _, tys, exprs) => {
             handle_name_access_chain(names, modules, chain);
             if let Some(tys) = tys {
-                handle_tys(names, modules, tys)?;
+                handle_tys(names, modules, tys);
             };
-            handle_exprs(names, modules, &exprs.value)?;
+            handle_exprs(names, modules, &exprs.value);
         }
         Exp_::Pack(chain, tys, exprs) => {
             handle_name_access_chain(names, modules, chain);
             if let Some(tys) = tys {
-                handle_tys(names, modules, tys)?;
+                handle_tys(names, modules, tys);
             };
             for (_, e) in exprs.iter() {
-                names_and_modules_in_expr(names, modules, e)?;
+                names_and_modules_in_expr_(names, modules, e);
             }
         }
         Exp_::Vector(_, tys, exprs) => {
             if let Some(tys) = tys {
-                handle_tys(names, modules, tys)?;
+                handle_tys(names, modules, tys);
             };
-            handle_exprs(names, modules, &exprs.value)?;
+            handle_exprs(names, modules, &exprs.value);
         }
         Exp_::IfElse(con, then_, else_) => {
-            names_and_modules_in_expr(names, modules, con.as_ref())?;
-            names_and_modules_in_expr(names, modules, then_.as_ref())?;
+            names_and_modules_in_expr_(names, modules, con.as_ref());
+            names_and_modules_in_expr_(names, modules, then_.as_ref());
             if let Some(else_) = else_ {
-                names_and_modules_in_expr(names, modules, else_.as_ref())?;
+                names_and_modules_in_expr_(names, modules, else_.as_ref());
             }
         }
         Exp_::While(_, _) => {}
         Exp_::Loop(_) => {}
-        Exp_::Block(_b) => {
-            return Err(());
-        }
+        Exp_::Block(_b) => {}
         Exp_::Lambda(_, _) => {}
         Exp_::Quant(_, _, _, _, _) => {}
         Exp_::ExpList(exprs) => {
-            handle_exprs(names, modules, exprs)?;
+            handle_exprs(names, modules, exprs);
         }
         Exp_::Unit => {}
         Exp_::Assign(_, _) => {}
@@ -592,35 +581,34 @@ fn names_and_modules_in_expr(
         Exp_::Break => {}
         Exp_::Continue => {}
         Exp_::Dereference(e) => {
-            names_and_modules_in_expr(names, modules, e.as_ref())?;
+            names_and_modules_in_expr_(names, modules, e.as_ref());
         }
         Exp_::UnaryExp(_, e) => {
-            names_and_modules_in_expr(names, modules, e.as_ref())?;
+            names_and_modules_in_expr_(names, modules, e.as_ref());
         }
         Exp_::BinopExp(l, _, r) => {
-            names_and_modules_in_expr(names, modules, l.as_ref())?;
-            names_and_modules_in_expr(names, modules, r.as_ref())?;
+            names_and_modules_in_expr_(names, modules, l.as_ref());
+            names_and_modules_in_expr_(names, modules, r.as_ref());
         }
         Exp_::Borrow(_, e) => {
-            names_and_modules_in_expr(names, modules, e.as_ref())?;
+            names_and_modules_in_expr_(names, modules, e.as_ref());
         }
         Exp_::Dot(a, _) => {
-            names_and_modules_in_expr(names, modules, a.as_ref())?;
+            names_and_modules_in_expr_(names, modules, a.as_ref());
         }
         Exp_::Index(a, b) => {
-            names_and_modules_in_expr(names, modules, a.as_ref())?;
-            names_and_modules_in_expr(names, modules, b.as_ref())?;
+            names_and_modules_in_expr_(names, modules, a.as_ref());
+            names_and_modules_in_expr_(names, modules, b.as_ref());
         }
         Exp_::Cast(a, _) => {
-            names_and_modules_in_expr(names, modules, a.as_ref())?;
+            names_and_modules_in_expr_(names, modules, a.as_ref());
         }
         Exp_::Annotate(a, _) => {
-            names_and_modules_in_expr(names, modules, a.as_ref())?;
+            names_and_modules_in_expr_(names, modules, a.as_ref());
         }
-        Exp_::Spec(_) => return Err(()),
-        Exp_::UnresolvedError => return Err(()),
+        Exp_::Spec(_) => {}
+        Exp_::UnresolvedError => {}
     };
-    Ok(())
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
