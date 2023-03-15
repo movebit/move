@@ -599,140 +599,148 @@ fn names_and_modules_in_expr(
     let mut names = Default::default();
     let mut modules = Default::default();
     names_and_modules_in_expr_(&mut names, &mut modules, e);
-    (names, modules)
-}
+    return (names, modules);
 
-fn names_and_modules_in_expr_(names: &mut HashSet<Symbol>, modules: &mut HashSet<Symbol>, e: &Exp) {
-    fn handle_name_access_chain(
+    fn names_and_modules_in_expr_(
         names: &mut HashSet<Symbol>,
         modules: &mut HashSet<Symbol>,
-        chain: &NameAccessChain,
+        e: &Exp,
     ) {
-        match &chain.value {
-            NameAccessChain_::One(x) => {
-                names.insert(x.value);
-            }
-            NameAccessChain_::Two(name, _) => match &name.value {
-                LeadingNameAccess_::AnonymousAddress(_) => {}
-                LeadingNameAccess_::Name(name) => {
-                    modules.insert(name.value);
+        fn handle_name_access_chain(
+            names: &mut HashSet<Symbol>,
+            modules: &mut HashSet<Symbol>,
+            chain: &NameAccessChain,
+        ) {
+            match &chain.value {
+                NameAccessChain_::One(x) => {
+                    names.insert(x.value);
                 }
-            },
-            NameAccessChain_::Three(_, _) => {}
-        }
-    }
-    fn handle_ty(names: &mut HashSet<Symbol>, modules: &mut HashSet<Symbol>, ty: &Type) {
-        match &ty.value {
-            Type_::Apply(chain, tys) => {
-                handle_tys(names, modules, tys);
-                handle_name_access_chain(names, modules, chain);
+                NameAccessChain_::Two(name, _) => match &name.value {
+                    LeadingNameAccess_::AnonymousAddress(_) => {}
+                    LeadingNameAccess_::Name(name) => {
+                        modules.insert(name.value);
+                    }
+                },
+                NameAccessChain_::Three(_, _) => {}
             }
-            Type_::Ref(_, ty) => {
+        }
+        fn handle_ty(names: &mut HashSet<Symbol>, modules: &mut HashSet<Symbol>, ty: &Type) {
+            match &ty.value {
+                Type_::Apply(chain, tys) => {
+                    handle_tys(names, modules, tys);
+                    handle_name_access_chain(names, modules, chain);
+                }
+                Type_::Ref(_, ty) => {
+                    handle_ty(names, modules, ty);
+                }
+                Type_::Fun(_, _) => {}
+                Type_::Unit => {}
+                Type_::Multiple(tys) => {
+                    handle_tys(names, modules, tys);
+                }
+            }
+        }
+        fn handle_tys(names: &mut HashSet<Symbol>, modules: &mut HashSet<Symbol>, tys: &Vec<Type>) {
+            for ty in tys.iter() {
                 handle_ty(names, modules, ty);
             }
-            Type_::Fun(_, _) => {}
-            Type_::Unit => {}
-            Type_::Multiple(tys) => {
-                handle_tys(names, modules, tys);
-            }
         }
-    }
-    fn handle_tys(names: &mut HashSet<Symbol>, modules: &mut HashSet<Symbol>, tys: &Vec<Type>) {
-        for ty in tys.iter() {
-            handle_ty(names, modules, ty);
-        }
-    }
-    fn handle_exprs(names: &mut HashSet<Symbol>, modules: &mut HashSet<Symbol>, exprs: &Vec<Exp>) {
-        for e in exprs.iter() {
-            names_and_modules_in_expr_(names, modules, e);
-        }
-    }
-    match &e.value {
-        Exp_::Value(_) => {}
-        Exp_::Move(var) => {
-            names.insert(var.0.value);
-        }
-        Exp_::Copy(var) => {
-            names.insert(var.0.value);
-        }
-        Exp_::Name(name, tys) => {
-            handle_name_access_chain(names, modules, name);
-            if let Some(tys) = tys {
-                handle_tys(names, modules, tys);
-            };
-        }
-        Exp_::Call(chain, _, tys, exprs) => {
-            handle_name_access_chain(names, modules, chain);
-            if let Some(tys) = tys {
-                handle_tys(names, modules, tys);
-            };
-            handle_exprs(names, modules, &exprs.value);
-        }
-        Exp_::Pack(chain, tys, exprs) => {
-            handle_name_access_chain(names, modules, chain);
-            if let Some(tys) = tys {
-                handle_tys(names, modules, tys);
-            };
-            for (_, e) in exprs.iter() {
+        fn handle_exprs(
+            names: &mut HashSet<Symbol>,
+            modules: &mut HashSet<Symbol>,
+            exprs: &Vec<Exp>,
+        ) {
+            for e in exprs.iter() {
                 names_and_modules_in_expr_(names, modules, e);
             }
         }
-        Exp_::Vector(_, tys, exprs) => {
-            if let Some(tys) = tys {
-                handle_tys(names, modules, tys);
-            };
-            handle_exprs(names, modules, &exprs.value);
-        }
-        Exp_::IfElse(con, then_, else_) => {
-            names_and_modules_in_expr_(names, modules, con.as_ref());
-            names_and_modules_in_expr_(names, modules, then_.as_ref());
-            if let Some(else_) = else_ {
-                names_and_modules_in_expr_(names, modules, else_.as_ref());
+        match &e.value {
+            Exp_::Value(_) => {}
+            Exp_::Move(var) => {
+                names.insert(var.0.value);
             }
-        }
-        Exp_::While(_, _) => {}
-        Exp_::Loop(_) => {}
-        Exp_::Block(_b) => {}
-        Exp_::Lambda(_, _) => {}
-        Exp_::Quant(_, _, _, _, _) => {}
-        Exp_::ExpList(exprs) => {
-            handle_exprs(names, modules, exprs);
-        }
-        Exp_::Unit => {}
-        Exp_::Assign(_, _) => {}
-        Exp_::Return(_) => {}
-        Exp_::Abort(_) => {}
-        Exp_::Break => {}
-        Exp_::Continue => {}
-        Exp_::Dereference(e) => {
-            names_and_modules_in_expr_(names, modules, e.as_ref());
-        }
-        Exp_::UnaryExp(_, e) => {
-            names_and_modules_in_expr_(names, modules, e.as_ref());
-        }
-        Exp_::BinopExp(l, _, r) => {
-            names_and_modules_in_expr_(names, modules, l.as_ref());
-            names_and_modules_in_expr_(names, modules, r.as_ref());
-        }
-        Exp_::Borrow(_, e) => {
-            names_and_modules_in_expr_(names, modules, e.as_ref());
-        }
-        Exp_::Dot(a, _) => {
-            names_and_modules_in_expr_(names, modules, a.as_ref());
-        }
-        Exp_::Index(a, b) => {
-            names_and_modules_in_expr_(names, modules, a.as_ref());
-            names_and_modules_in_expr_(names, modules, b.as_ref());
-        }
-        Exp_::Cast(a, _) => {
-            names_and_modules_in_expr_(names, modules, a.as_ref());
-        }
-        Exp_::Annotate(a, _) => {
-            names_and_modules_in_expr_(names, modules, a.as_ref());
-        }
-        Exp_::Spec(_) => {}
-        Exp_::UnresolvedError => {}
-    };
+            Exp_::Copy(var) => {
+                names.insert(var.0.value);
+            }
+            Exp_::Name(name, tys) => {
+                handle_name_access_chain(names, modules, name);
+                if let Some(tys) = tys {
+                    handle_tys(names, modules, tys);
+                };
+            }
+            Exp_::Call(chain, _, tys, exprs) => {
+                handle_name_access_chain(names, modules, chain);
+                if let Some(tys) = tys {
+                    handle_tys(names, modules, tys);
+                };
+                handle_exprs(names, modules, &exprs.value);
+            }
+            Exp_::Pack(chain, tys, exprs) => {
+                handle_name_access_chain(names, modules, chain);
+                if let Some(tys) = tys {
+                    handle_tys(names, modules, tys);
+                };
+                for (_, e) in exprs.iter() {
+                    names_and_modules_in_expr_(names, modules, e);
+                }
+            }
+            Exp_::Vector(_, tys, exprs) => {
+                if let Some(tys) = tys {
+                    handle_tys(names, modules, tys);
+                };
+                handle_exprs(names, modules, &exprs.value);
+            }
+            Exp_::IfElse(con, then_, else_) => {
+                names_and_modules_in_expr_(names, modules, con.as_ref());
+                names_and_modules_in_expr_(names, modules, then_.as_ref());
+                if let Some(else_) = else_ {
+                    names_and_modules_in_expr_(names, modules, else_.as_ref());
+                }
+            }
+            Exp_::While(_, _) => {}
+            Exp_::Loop(_) => {}
+            Exp_::Block(_b) => {}
+            Exp_::Lambda(_, _) => {}
+            Exp_::Quant(_, _, _, _, _) => {}
+            Exp_::ExpList(exprs) => {
+                handle_exprs(names, modules, exprs);
+            }
+            Exp_::Unit => {}
+            Exp_::Assign(_, _) => {}
+            Exp_::Return(_) => {}
+            Exp_::Abort(_) => {}
+            Exp_::Break => {}
+            Exp_::Continue => {}
+            Exp_::Dereference(e) => {
+                names_and_modules_in_expr_(names, modules, e.as_ref());
+            }
+            Exp_::UnaryExp(_, e) => {
+                names_and_modules_in_expr_(names, modules, e.as_ref());
+            }
+            Exp_::BinopExp(l, _, r) => {
+                names_and_modules_in_expr_(names, modules, l.as_ref());
+                names_and_modules_in_expr_(names, modules, r.as_ref());
+            }
+            Exp_::Borrow(_, e) => {
+                names_and_modules_in_expr_(names, modules, e.as_ref());
+            }
+            Exp_::Dot(a, _) => {
+                names_and_modules_in_expr_(names, modules, a.as_ref());
+            }
+            Exp_::Index(a, b) => {
+                names_and_modules_in_expr_(names, modules, a.as_ref());
+                names_and_modules_in_expr_(names, modules, b.as_ref());
+            }
+            Exp_::Cast(a, _) => {
+                names_and_modules_in_expr_(names, modules, a.as_ref());
+            }
+            Exp_::Annotate(a, _) => {
+                names_and_modules_in_expr_(names, modules, a.as_ref());
+            }
+            Exp_::Spec(_) => {}
+            Exp_::UnresolvedError => {}
+        };
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
