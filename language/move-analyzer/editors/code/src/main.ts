@@ -316,7 +316,13 @@ export async function activate(
       defaultUri: vscode.Uri.parse(w),
     });
     if (dir === undefined) {
-      void vscode.window.showErrorMessage('Please input a directory');
+      void vscode.window.showErrorMessage('No directory found, use the default setting');
+      const dir2 = vscode.Uri.parse(w).toString().replace("%5F","/").replace("%5C","\\");
+      const project_name = path.parse(dir2).base;
+      const replace_name = 'my_first_package';
+      fs.writeFileSync(dir2 + '/Move.toml', sui_move_toml_template.toString().replaceAll(replace_name, project_name));
+      fs.mkdirSync(dir2 + '/sources');
+      fs.writeFileSync(dir2 + '/sources/my_module.move', sui_module_file_template.replaceAll(replace_name, project_name));
       return;
     }
     const dir2 = dir.fsPath;
