@@ -6,12 +6,14 @@ import { Configuration } from './configuration';
 import { Context } from './context';
 import { Extension } from './extension';
 import { log } from './log';
+// import { platform } from 'node:process';
 
 import * as childProcess from 'child_process';
 import * as vscode from 'vscode';
 import * as commands from './commands';
 import * as fs from 'fs';
 import * as path from 'path';
+
 
 
 /**
@@ -312,17 +314,17 @@ export async function activate(
     if (w === undefined) {
       w = '.';
     }
+
     const dir = await vscode.window.showSaveDialog({
-      defaultUri: vscode.Uri.parse(w),
+      defaultUri: vscode.Uri.file(w),
     });
+
+    // if (platform == 'win32') {
+    // defaultUri: vscode.Uri.parse('.'),
+
+
     if (dir === undefined) {
-      void vscode.window.showErrorMessage('No directory found, use the default setting');
-      const dir2 = vscode.Uri.parse(w).toString().replace("%5F","/").replace("%5C","\\");
-      const project_name = path.parse(dir2).base;
-      const replace_name = 'my_first_package';
-      fs.writeFileSync(dir2 + '/Move.toml', sui_move_toml_template.toString().replaceAll(replace_name, project_name));
-      fs.mkdirSync(dir2 + '/sources');
-      fs.writeFileSync(dir2 + '/sources/my_module.move', sui_module_file_template.replaceAll(replace_name, project_name));
+      void vscode.window.showErrorMessage('Please input a directory');
       return;
     }
     const dir2 = dir.fsPath;
