@@ -66,7 +66,7 @@ impl Project {
                 enter_import,
             )
         });
-        
+
         provider.with_struct(|addr, module_name, s| {
             let _guard = project_context.clone_scope_and_enter(addr, module_name, false);
             project_context.enter_scope(|scopes| {
@@ -1256,6 +1256,10 @@ impl Project {
         visitor: &mut dyn ItemOrAccessHandler,
     ) {
         log::trace!("visit_expr:{:?}", exp);
+        if visitor.need_expr_type() {
+            let ty = self.get_expr_type(exp, project_context);
+            visitor.handle_expr_typ(exp, ty);
+        }
         match &exp.value {
             Exp_::Value(ref v) => {
                 if let Some(name) = get_name_from_value(v) {

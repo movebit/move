@@ -1,12 +1,14 @@
 use super::move_generate_spec_chen::*;
 use crate::item::MacroCall;
-use im::HashMap;
+use crate::project::Project;
+use crate::types::ResolvedType;
 use move_compiler::shared::Identifier;
 use move_compiler::{parser::ast::*, shared::ast_debug::AstDebug};
+use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
-use std::result::Result::*;
+use std::path::PathBuf;
 
 #[derive(Default)]
 pub struct StructSpecGenerator {
@@ -34,9 +36,9 @@ pub struct FunSpecGenerator {
     result: String,
 }
 
-pub fn generate_fun_spec(f: &Function) -> String {
+pub fn generate_fun_spec(f: &Function, get_exp_ty: &dyn GetExprType) -> String {
     let mut g = FunSpecGenerator::new();
-    g.generate(f);
+    g.generate(f, get_exp_ty);
     let r = g.to_string();
     r
 }
@@ -55,7 +57,7 @@ impl FunSpecGenerator {
     pub(crate) fn to_string(self) -> String {
         self.result
     }
-    pub(crate) fn generate(&mut self, f: &Function) {
+    pub(crate) fn generate(&mut self, f: &Function, get_expr_ty: &dyn GetExprType) {
         self.result
             .push_str(format!("{}spec {}", indent(1), f.name.0.value.as_str()).as_str());
         let para_len = f.signature.parameters.len();
@@ -81,12 +83,12 @@ impl FunSpecGenerator {
         }
         self.result.push_str("{\n");
         self.result.push_str("\n");
-        let assert = Self::generate_assert(f);
+        let assert = Self::generate_body(f, get_expr_ty);
         self.result.push_str(assert.as_str());
         self.result.push_str(format!("{}}}\n", indent(1)).as_str())
     }
 
-    fn generate_assert(f: &Function) -> String {
+    fn generate_body(f: &Function, get_expr_type: &dyn GetExprType) -> String {
         let mut statements = String::new();
         let body = match &f.body.value {
             FunctionBody_::Defined(x) => x,
@@ -117,26 +119,87 @@ impl FunSpecGenerator {
         for u in body.0.iter() {
             shadow.insert_use(&u.use_);
         }
+        for (index, seq) in body.1.iter().enumerate() {
+            match &seq.value {
+                SequenceItem_::Declare(b, _) => {
+                    insert_bind_list(&mut shadow, b, index);
+                }
+                SequenceItem_::Bind(b, _, e) => {
+                    insert_bind_list(&mut shadow, b, index);
+                    FunSpecGenerator::try_emit_exp(
+                        &shadow,
+                        &mut statements,
+                        e,
+                        &mut imports,
+                        &mut local_emited,
+                        body,
+                        get_expr_type,
+                    )
+                }
+                SequenceItem_::Seq(e) => FunSpecGenerator::try_emit_exp(
+                    &shadow,
+                    &mut statements,
+                    e,
+                    &mut imports,
+                    &mut local_emited,
+                    body,
+                    get_expr_type,
+                ),
+            }
+        }
+        if let Some(e) = body.3.as_ref() {
+            FunSpecGenerator::try_emit_exp(
+                &shadow,
+                &mut statements,
+                e,
+                &mut imports,
+                &mut local_emited,
+                body,
+                get_expr_type,
+            );
+        }
+        {
+            let mut result = imports.to_string(2);
+            result.push_str(statements.as_str());
+            result
+        }
+    }
+}
 
-        fn emit_assert(
-            shadow: &ShadowItems,
-            statements: &mut String,
-            e: &Exp,
-            imports: &mut GroupShadowItemUse,
-            local_emited: &mut HashSet<usize>,
-            body: &Sequence,
-        ) {
-            match &e.value {
-                Exp_::Call(_call, is_macro, should_be_none, es) => {
-                    if MacroCall::from_chain(_call).is_some()
-                        && *is_macro
-                        && should_be_none.is_none()
-                        && es.value.len() > 0
-                        && FunSpecGenerator::expr_has_spec_unsupprted(es.value.get(0).unwrap())
-                            == false
-                    {
-                        match FunSpecGenerator::inverse_expression(es.value.get(0).unwrap()) {
-                            std::result::Result::Ok(e) => {
+impl FunSpecGenerator {
+    fn try_emit_exp(
+        shadow: &ShadowItems,
+        statements: &mut String,
+        e: &Exp,
+        imports: &mut GroupShadowItemUse,
+        local_emited: &mut HashSet<usize>,
+        body: &Sequence,
+        get_expr_type: &dyn GetExprType,
+    ) {
+        match &e.value {
+            Exp_::Call(_call, is_macro, should_be_none, es) => {
+                if MacroCall::from_chain(_call).is_some()
+                    && *is_macro
+                    && should_be_none.is_none()
+                    && es.value.len() > 0
+                    && FunSpecGenerator::expr_has_spec_unsupprted(es.value.get(0).unwrap()) == false
+                {
+                    match FunSpecGenerator::inverse_expression(es.value.get(0).unwrap()) {
+                        std::result::Result::Ok(e) => {
+                            if false
+                                == FunSpecGenerator::emit_local_and_imports(
+                                    shadow,
+                                    statements,
+                                    &e,
+                                    imports,
+                                    local_emited,
+                                    body,
+                                )
+                            {
+                                return;
+                            }
+
+                            if let Some(e) = es.value.get(1) {
                                 if false
                                     == FunSpecGenerator::emit_local_and_imports(
                                         shadow,
@@ -149,76 +212,137 @@ impl FunSpecGenerator {
                                 {
                                     return;
                                 }
-
-                                if let Some(e) = es.value.get(1) {
-                                    if false
-                                        == FunSpecGenerator::emit_local_and_imports(
-                                            shadow,
-                                            statements,
-                                            &e,
-                                            imports,
-                                            local_emited,
-                                            body,
-                                        )
-                                    {
-                                        return;
-                                    }
-                                }
-                                statements.push_str(
-                                    format!(
-                                        "{}aborts_if {}{};\n",
-                                        indent(2),
-                                        format_xxx(&e, true),
-                                        match es.value.get(1) {
-                                            Some(e) => {
-                                                format!(" with {}", format_xxx(e, true))
-                                            }
-                                            None => "".to_string(),
-                                        }
-                                    )
-                                    .as_str(),
-                                );
                             }
-                            std::result::Result::Err(_) => {}
+                            statements.push_str(
+                                format!(
+                                    "{}aborts_if {}{};\n",
+                                    indent(2),
+                                    format_xxx(&e, true),
+                                    match es.value.get(1) {
+                                        Some(e) => {
+                                            format!(" with {}", format_xxx(e, true))
+                                        }
+                                        None => "".to_string(),
+                                    }
+                                )
+                                .as_str(),
+                            );
                         }
+                        std::result::Result::Err(_) => {}
                     }
                 }
-                _ => {}
             }
-        }
-        for (index, seq) in body.1.iter().enumerate() {
-            match &seq.value {
-                SequenceItem_::Declare(b, _) | SequenceItem_::Bind(b, _, _) => {
-                    insert_bind_list(&mut shadow, b, index);
+            _ => {
+                let items = FunSpecGenerator::collect_spec_exp(e);
+                for item in items.iter() {
+                    match item {
+                        SpecExpItem::BinOP {
+                            reason,
+                            left,
+                            right,
+                        } => {
+                            let ty = get_expr_type
+                                .get_expr_type(left)
+                                .map(|x| match x {
+                                    ResolvedType::BuildInType(x) => Some(x),
+                                    _ => None,
+                                })
+                                .flatten()
+                                .map(|x| match x {
+                                    crate::types::BuildInType::Bool => None,
+                                    crate::types::BuildInType::NumType => None,
+                                    crate::types::BuildInType::String => None,
+                                    crate::types::BuildInType::Signer => None,
+                                    _ => Some(x),
+                                })
+                                .flatten()
+                                .map(|x| *x)
+                                .unwrap_or(crate::types::BuildInType::U64);
+                            if *reason != BinOPReason::DivByZero {
+                                if false
+                                    == FunSpecGenerator::emit_local_and_imports(
+                                        shadow,
+                                        statements,
+                                        left,
+                                        imports,
+                                        local_emited,
+                                        body,
+                                    )
+                                {
+                                    return;
+                                }
+                            }
+                            if false
+                                == FunSpecGenerator::emit_local_and_imports(
+                                    shadow,
+                                    statements,
+                                    right,
+                                    imports,
+                                    local_emited,
+                                    body,
+                                )
+                            {
+                                return;
+                            }
+                            match reason {
+                                BinOPReason::OverFlowADD
+                                | BinOPReason::OverFlowMUL
+                                | BinOPReason::OverFlowSHL => {
+                                    statements.push_str(
+                                        format!(
+                                            "{}aborts_if {} {} {} > {};\n",
+                                            indent(2),
+                                            format_xxx(left, true),
+                                            match reason {
+                                                BinOPReason::OverFlowADD => "+",
+                                                BinOPReason::OverFlowMUL => "*",
+                                                BinOPReason::OverFlowSHL => "<<",
+                                                _ => unreachable!(),
+                                            },
+                                            format_xxx(right, true),
+                                            format!(
+                                                "MAX_{}",
+                                                ty.to_static_str().to_ascii_uppercase()
+                                            ),
+                                        )
+                                        .as_str(),
+                                    );
+                                }
+                                BinOPReason::DivByZero => {
+                                    statements.push_str(
+                                        format!(
+                                            "{}aborts_if {} = 0;\n",
+                                            indent(2),
+                                            format_xxx(right, true)
+                                        )
+                                        .as_str(),
+                                    );
+                                }
+                                BinOPReason::UnderFlow => {
+                                    statements.push_str(
+                                        format!(
+                                            "{}aborts_if {} - {} <= 0;\n",
+                                            indent(2),
+                                            format_xxx(left, true),
+                                            format_xxx(right, true),
+                                        )
+                                        .as_str(),
+                                    );
+                                }
+                            }
+                        }
+                        SpecExpItem::TypeOf { ty: _ty } => {}
+                        SpecExpItem::TypeName { ty: _ty } => {}
+                        SpecExpItem::BorrowGlobalMut {
+                            ty: _ty,
+                            addr: _addr,
+                        } => {}
+                    }
                 }
-                SequenceItem_::Seq(e) => emit_assert(
-                    &shadow,
-                    &mut statements,
-                    e,
-                    &mut imports,
-                    &mut local_emited,
-                    body,
-                ),
             }
-        }
-        if let Some(e) = body.3.as_ref() {
-            emit_assert(
-                &shadow,
-                &mut statements,
-                e,
-                &mut imports,
-                &mut local_emited,
-                body,
-            );
-        }
-        {
-            let mut result = imports.to_string(2);
-            result.push_str(statements.as_str());
-            result
         }
     }
 }
-
 impl FunSpecGenerator {
     fn expr_has_spec_unsupprted(e: &Exp) -> bool {
         fn exprs_has_spec_unsupprted(es: &Vec<Exp>) -> bool {
@@ -445,7 +569,7 @@ impl FunSpecGenerator {
 }
 pub(crate) fn format_xxx<T>(
     e: &T,
-    replace_ban_spece: bool, // ast_debug print `!a` as `! a`.
+    replace_not: bool, // ast_debug print `!a` as `! a`.
 ) -> String
 where
     T: AstDebug,
@@ -456,7 +580,7 @@ where
     let x = w.to_string();
     // TOTO better way to do this.
     let mut x = x.trim_end().to_string();
-    if replace_ban_spece {
+    if replace_not {
         x = x.replacen("! ", "!", usize::MAX);
     }
     x
@@ -741,6 +865,7 @@ fn use_2_shadow_items(u: &Use) -> HashMap<Symbol, Vec<ShadowItem>> {
                 } else {
                     item.value
                 };
+
                 let item = if item.value.as_str() != "Self" {
                     ShadowItem::Use(ShadowItemUse::Item(ShadowItemUseItem {
                         lead: addr_module.value.address.value.clone(),
@@ -809,5 +934,55 @@ impl ShadowItems {
         } else {
             self.items.get(&name).map(|x| x.last()).flatten()
         }
+    }
+}
+
+pub trait GetExprType {
+    fn get_expr_type(&self, e: &Exp) -> Option<&ResolvedType>;
+}
+
+#[derive(Default)]
+pub struct GetExprTypeImpl {
+    types: HashMap<Loc, ResolvedType>,
+}
+
+impl GetExprType for GetExprTypeImpl {
+    fn get_expr_type(&self, e: &Exp) -> Option<&ResolvedType> {
+        self.types.get(&e.loc)
+    }
+}
+
+impl GetExprTypeImpl {
+    pub(crate) fn new(filepath: &PathBuf, p: &Project) -> Self {
+        let mut x = Self::default();
+        let _ = p.run_visitor_for_file(&mut x, filepath, false);
+        x
+    }
+}
+
+impl crate::project::ItemOrAccessHandler for GetExprTypeImpl {
+    fn need_expr_type(&self) -> bool {
+        true
+    }
+    fn handle_expr_typ(&mut self, exp: &Exp, ty: ResolvedType) {
+        self.types.insert(exp.loc, ty);
+    }
+
+    fn function_or_spec_body_should_visit(&self, _range: &crate::utils::FileRange) -> bool {
+        true
+    }
+
+    fn visit_fun_or_spec_body(&self) -> bool {
+        true
+    }
+
+    fn finished(&self) -> bool {
+        false
+    }
+}
+
+impl std::fmt::Display for GetExprTypeImpl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", "visit for generate spec.")
     }
 }

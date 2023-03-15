@@ -35,7 +35,7 @@ pub fn on_generate_spec_file(context: &Context, request: &Request) {
     let mut process_member = |addr, module_name, m: &ModuleMember| {
         let spec = match m {
             ModuleMember::Function(x) => {
-                let r = generate_fun_spec(x);
+                let r = generate_fun_spec(x, &GetExprTypeImpl::new(&fpath, project));
                 Some(r)
             }
             ModuleMember::Struct(x) => {

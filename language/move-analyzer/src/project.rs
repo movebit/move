@@ -937,10 +937,11 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
     /// Handle this item.
     fn handle_item_or_access(
         &mut self,
-        services: &dyn HandleItemService,
-        project_context: &ProjectContext,
-        item: &ItemOrAccess,
-    );
+        _services: &dyn HandleItemService,
+        _project_context: &ProjectContext,
+        _item: &ItemOrAccess,
+    ) {
+    }
 
     /// Need visit function or spec body or not.
     /// Sometimes you want visit function body But not all the function Body.
@@ -949,6 +950,13 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
 
     /// Visitor should finished.
     fn finished(&self) -> bool;
+
+    // need Expr type ??
+    fn need_expr_type(&self) -> bool {
+        false
+    }
+    // handle expr type.
+    fn handle_expr_typ(&mut self, _exp: &Exp, _ty: ResolvedType) {}
 }
 
 pub trait HandleItemService: ConvertLoc + GetAllAddrs + Name2Addr {}

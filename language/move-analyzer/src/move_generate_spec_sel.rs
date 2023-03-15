@@ -59,7 +59,10 @@ pub fn on_generate_spec_sel(context: &Context, request: &Request) {
                 if let Some(range) = context.projects.convert_loc_range(&f.loc) {
                     if ReqParametersPath::in_range(&parameters, &range) {
                         if let Some(insert_pos) = insert_pos(f.loc, module_loc, context) {
-                            let s = generate_fun_spec(f);
+                            let s = generate_fun_spec(
+                                f,
+                                &GetExprTypeImpl::new(&parameters.fpath.clone(), project),
+                            );
                             result = Some(Resp {
                                 line: insert_pos.0,
                                 col: insert_pos.1,
