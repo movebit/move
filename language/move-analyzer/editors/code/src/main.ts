@@ -6,14 +6,12 @@ import { Configuration } from './configuration';
 import { Context } from './context';
 import { Extension } from './extension';
 import { log } from './log';
-// import { platform } from 'node:process';
+// Import { platform } from 'node:process';
 
 import * as childProcess from 'child_process';
 import * as vscode from 'vscode';
-import * as commands from './commands';
 import * as fs from 'fs';
 import * as path from 'path';
-
 
 
 /**
@@ -266,15 +264,7 @@ export async function activate(
 
   // All other utilities provided by this extension occur via the language server.
   await context.startClient();
-  context.registerCommand(
-    'textDocumentDocumentSymbol',
-    commands.textDocumentDocumentSymbol,
-  );
-  context.registerCommand('textDocumentHover', commands.textDocumentHover);
-  context.registerCommand(
-    'textDocumentCompletion',
-    commands.textDocumentCompletion,
-  );
+
   // / a test ui button at move file.
   context.registerCommand('sui.test_ui', (_, ...args) => {
     const cwd = args[0] as string;
@@ -319,7 +309,7 @@ export async function activate(
       defaultUri: vscode.Uri.file(w),
     });
 
-    // if (platform == 'win32') {
+    // If (platform == 'win32') {
     // defaultUri: vscode.Uri.parse('.'),
 
 
