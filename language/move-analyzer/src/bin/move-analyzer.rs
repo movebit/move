@@ -4,7 +4,6 @@
 
 // TODO the memory profiling not working,figure it out.
 // Sometimes I want run profiling on my local machine.
-#![allow(dead_code)]
 use anyhow::Result;
 use clap::Parser;
 use crossbeam::channel::bounded;
@@ -18,8 +17,6 @@ use lsp_types::{
     TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
 
-#[allow(unused)]
-use move_analyzer::project::Ending;
 use move_command_line_common::files::FileHash;
 use move_compiler::diagnostics::Diagnostics;
 use move_compiler::{shared::*, PASS_TYPING};

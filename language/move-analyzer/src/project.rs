@@ -1131,7 +1131,12 @@ pub trait AstProvider: Clone {
 
     fn with_module_member(
         &self,
-        mut call_back: impl FnMut(AccountAddress, Symbol, &ModuleMember, bool /* if is_spec */),
+        mut call_back: impl FnMut(
+            AccountAddress,
+            Symbol,
+            &ModuleMember,
+            bool, /* if is_spec_module */
+        ),
     ) {
         self.with_definition(|x| match x {
             Definition::Module(module) => {
