@@ -34,8 +34,8 @@
 
 
     
-###  被很多函数调用的函数自动生成schema
-    这种还是用户自己来选择函数来生成schema的好
+###  增加一个选项  自动生成schema 
+
     /// See the profits of a grocery
     public fun profits(grocery: &Grocery): u64 {
         balance::value(&grocery.profits)
@@ -43,4 +43,4 @@
     spec schema ProfitsAbortsIf {
 
     }
-    提示用户可能需要生成schema
+    格式
