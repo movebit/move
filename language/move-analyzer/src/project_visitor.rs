@@ -14,6 +14,7 @@ use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::vec;
 use std::{path::PathBuf, rc::Rc};
 
@@ -26,6 +27,7 @@ impl Project {
         enter_import: bool,
     ) {
         project_context.set_access_env(Default::default());
+        let mut all_spec_module = HashSet::new();
         provider.with_module(|addr, module_def| {
             let item = ItemOrAccess::Item(Item::ModuleName(ItemModuleName {
                 name: module_def.name,
@@ -39,8 +41,30 @@ impl Project {
                     provider.found_in_test()
                         || attributes_has_test(&module_def.attributes).is_test(),
                 );
+            } else {
+                all_spec_module.insert((addr, module_def.name));
             }
         });
+        // module created
+        let mut spec_module_created = HashSet::new();
+        project_context.visit_address(|address| {
+            for (addr, module_name) in all_spec_module.iter() {
+                let created = address
+                    .address
+                    .get(addr)
+                    .map(|mm| mm.modules.get(&module_name.0.value).is_some())
+                    .unwrap_or(false);
+                if created {
+                    spec_module_created.insert((*addr, module_name.clone()));
+                }
+            }
+        });
+        for (addr, module_name) in all_spec_module.into_iter() {
+            // skip if created.
+            if spec_module_created.contains(&(addr.clone(), module_name.clone())) == false {
+                project_context.set_up_module(addr, module_name, false);
+            }
+        }
 
         provider.with_const(|addr, name, c| {
             self.visit_const(Some((addr, name)), c, project_context, visitor);
