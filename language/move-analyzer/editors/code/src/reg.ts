@@ -250,7 +250,7 @@ export class Reg {
             const cwd = args[0] as string;
             const name = args[1] as string;
             const sui_test = terminalManager.alloc(cwd + 'sui.test_ui', () => {
-                return vscode.window.createTerminal({ 
+                return vscode.window.createTerminal({
                     cwd: cwd,
                     name: 'sui test',
                 });
