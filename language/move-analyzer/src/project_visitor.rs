@@ -1333,6 +1333,30 @@ impl Project {
                         module,
                         Box::new(item.unwrap_or_default()),
                     ));
+                    if visitor.need_call_tree() {
+                        match item.clone().into() {
+                            Item::Fun(_f) => {
+                                let addr = project_context.get_current_addr_and_module_name();
+                                visitor.handle_call_tree(
+                                    FunID {
+                                        addr: addr.addr.clone(),
+                                        addr_name: "".to_string(), // TODO
+                                        module_name: addr.name.0.value.clone(),
+                                        function_name: get_name_chain_last_name(chain).value,
+                                    },
+                                    FunID {
+                                        addr: _f.addr_and_name.addr.clone(),
+                                        addr_name: "".to_string(), // TODO
+                                        module_name: _f.addr_and_name.name.0.value,
+                                        function_name: _f.name.0.value,
+                                    },
+                                );
+                            }
+
+                            _ => {}
+                        }
+                    }
+
                     visitor.handle_item_or_access(self, project_context, &item);
                     if visitor.finished() {
                         return;

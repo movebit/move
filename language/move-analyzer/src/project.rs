@@ -957,6 +957,19 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
     }
     // handle expr type.
     fn handle_expr_typ(&mut self, _exp: &Exp, _ty: ResolvedType) {}
+
+    fn need_call_tree(&self) -> bool {
+        false
+    }
+    fn handle_call_tree(&mut self, _from: FunID, _to: FunID) {}
+}
+
+#[derive(Clone, serde::Serialize, Debug)]
+pub struct FunID {
+    pub(crate) addr: AccountAddress,
+    pub(crate) addr_name: String,
+    pub(crate) module_name: Symbol,
+    pub(crate) function_name: Symbol,
 }
 
 pub trait HandleItemService: ConvertLoc + GetAllAddrs + Name2Addr {}

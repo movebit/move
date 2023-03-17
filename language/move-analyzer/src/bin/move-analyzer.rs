@@ -17,6 +17,7 @@ use lsp_types::{
     TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
 
+use move_analyzer::call;
 use move_command_line_common::files::FileHash;
 use move_compiler::diagnostics::Diagnostics;
 use move_compiler::{shared::*, PASS_TYPING};
@@ -239,6 +240,9 @@ fn on_request(context: &mut Context, request: &Request) {
         }
         "move/generate/spec/sel" => {
             on_generate_spec_sel(context, request);
+        }
+        "move/call/tree" => {
+            call::on_get_call_tree(context, request);
         }
         _ => log::error!("handle request '{}' from client", request.method),
     }
