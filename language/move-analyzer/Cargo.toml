@@ -9,9 +9,9 @@ publish = false
 edition = "2021"
 
 [dependencies]
+cfg-if = "1.0.0"
 lazy_static = "1.4.0"
 wait-timeout = "0.2.0"
-memory-stats = "1.1.0"
 regex = "1.5.5"
 bisection = "0.1.0"
 anyhow = "1.0.52"
@@ -39,13 +39,15 @@ walkdir = "2"
 log = "0.4.14"
 stderrlog = "0.5.4"
 enum-iterator = "1.2.0"
+[target.'cfg(not(target_os= "windows"))'.dependencies]
 pprof = { version = "0.11.0" , features = ["flamegraph" , "protobuf"]} 
-jemallocator = "0.3.2"
-jemalloc-ctl = "0.3.2"
-[dependencies.jemalloc-sys]
-version = "0.3.2"
-features = ["stats", "profiling", "unprefixed_malloc_on_supported_platforms"]
 
 [profile.release]
 debug = true
+
+
+[features]
+aptos = []
+sui = []
+pprof = []
 

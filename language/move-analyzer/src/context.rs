@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::utils::*;
-use crate::modules::Project;
-use crate::modules::*;
+use crate::project::Project;
+use crate::project::*;
 use crate::references::ReferencesCache;
 use im::HashSet;
 use lsp_server::Connection;
@@ -15,7 +15,6 @@ use move_ir_types::location::Loc;
 use move_package::source_package::layout::SourcePackageLayout;
 use std::cell::RefCell;
 use std::collections::HashMap;
-
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -94,6 +93,7 @@ impl MultiProject {
         let m = MultiProject::default();
         m
     }
+
     pub fn get_project(&self, x: &PathBuf) -> Option<&Project> {
         let (manifest, _) = super::utils::discover_manifest_and_kind(x.as_path())?;
         for (k, v) in self.projects.iter() {
@@ -189,11 +189,8 @@ impl FileDiags {
     }
 }
 
+///
 static LOAD_DEPS: bool = false;
-
-// use crossbeam::channel::Sender;
-// use std::sync::{Arc, Mutex};
-// type ProjectUpdateSender = Arc<Mutex<Sender<(HashSet<PathBuf>, Project)>>>;
 
 impl MultiProject {
     pub fn try_reload_projects_has_not_exists(&mut self) {

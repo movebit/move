@@ -1,6 +1,6 @@
 use super::item::*;
 use crate::item::{self, ItemFun};
-use crate::scopes::Scopes;
+use crate::project_context::ProjectContext;
 use enum_iterator::Sequence;
 use move_command_line_common::files::FileHash;
 use move_compiler::shared::Identifier;
@@ -124,7 +124,7 @@ impl ResolvedType {
     }
 
     /// bind type parameter to concrete type
-    pub(crate) fn bind_struct_type_parameter(&mut self, scopes: &Scopes) {
+    pub(crate) fn bind_struct_type_parameter(&mut self, project_context: &ProjectContext) {
         match self {
             Self::Struct(x) => {
                 let mut m = HashMap::new();
@@ -134,7 +134,7 @@ impl ResolvedType {
                     .for_each(|(name, ty)| {
                         m.insert(name.name.value, ty.clone());
                     });
-                self.bind_type_parameter(&m, scopes);
+                self.bind_type_parameter(&m, project_context);
             }
             Self::StructRef(_, _) => {
                 unreachable!()
@@ -147,14 +147,14 @@ impl ResolvedType {
     pub(crate) fn bind_type_parameter(
         &mut self,
         types: &HashMap<Symbol, ResolvedType>,
-        scopes: &Scopes,
+        project_context: &ProjectContext,
     ) {
         match self {
             ResolvedType::UnKnown => {}
             ResolvedType::Struct(item::ItemStruct { ref mut fields, .. }) => {
                 for i in 0..fields.len() {
                     let t = fields.get_mut(i).unwrap();
-                    t.1.bind_type_parameter(types, scopes);
+                    t.1.bind_type_parameter(types, project_context);
                 }
             }
             ResolvedType::BuildInType(_) => {}
@@ -164,32 +164,34 @@ impl ResolvedType {
                 }
             }
             ResolvedType::Ref(_, ref mut b) => {
-                b.as_mut().bind_type_parameter(types, scopes);
+                b.as_mut().bind_type_parameter(types, project_context);
             }
             ResolvedType::Unit => {}
             ResolvedType::Multiple(ref mut xs) => {
                 for i in 0..xs.len() {
                     let t = xs.get_mut(i).unwrap();
-                    t.bind_type_parameter(types, scopes);
+                    t.bind_type_parameter(types, project_context);
                 }
             }
             ResolvedType::Fun(x) => {
                 let xs = &mut x.parameters;
                 for i in 0..xs.len() {
                     let t = xs.get_mut(i).unwrap();
-                    t.1.bind_type_parameter(types, scopes);
+                    t.1.bind_type_parameter(types, project_context);
                 }
-                x.ret_type.as_mut().bind_type_parameter(types, scopes);
+                x.ret_type
+                    .as_mut()
+                    .bind_type_parameter(types, project_context);
             }
             ResolvedType::Vec(ref mut b) => {
-                b.as_mut().bind_type_parameter(types, scopes);
+                b.as_mut().bind_type_parameter(types, project_context);
             }
 
             ResolvedType::StructRef(_, _) => {
-                let _ = std::mem::replace(self, self.clone().struct_ref_to_struct(scopes));
+                let _ = std::mem::replace(self, self.clone().struct_ref_to_struct(project_context));
                 match self {
                     ResolvedType::Struct(_) => {
-                        self.bind_type_parameter(types, scopes);
+                        self.bind_type_parameter(types, project_context);
                     }
                     ResolvedType::StructRef(_, _) => {
                         // This must be toplevel type resolve.
@@ -303,7 +305,7 @@ impl std::fmt::Display for ResolvedType {
             ResolvedType::UnKnown => write!(f, "unknown"),
             ResolvedType::Struct(x) => write!(f, "{}", x),
             ResolvedType::StructRef(ItemStructNameRef { name, .. }, _) => {
-                write!(f, "struct {}", name.value().as_str())
+                write!(f, "{}", name.value().as_str())
             }
             ResolvedType::BuildInType(x) => write!(f, "{}", x.to_static_str()),
             ResolvedType::TParam(name, _) => {
@@ -335,7 +337,7 @@ impl std::fmt::Display for ResolvedType {
 }
 
 impl ResolvedType {
-    pub(crate) fn struct_ref_to_struct(self, s: &Scopes) -> ResolvedType {
+    pub(crate) fn struct_ref_to_struct(self, s: &ProjectContext) -> ResolvedType {
         match self.clone() {
             Self::StructRef(
                 ItemStructNameRef {
@@ -358,9 +360,9 @@ impl ResolvedType {
                         x
                     }
                     _ => {
-                        log::info!(
-                            "looks like impossible addr:{:?} module:{:?} item:{:?} x:{} not struct def.",
-                            addr,
+                        log::error!(
+                            "looks like impossible addr:0x{:?} module:{:?} item:{:?} x:{} not struct def.",
+                            addr.short_str_lossless(),
                             module_name,
                             name,
                             x

@@ -4,7 +4,6 @@
 
 // TODO the memory profiling not working,figure it out.
 // Sometimes I want run profiling on my local machine.
-#![allow(dead_code)]
 use anyhow::Result;
 use clap::Parser;
 use crossbeam::channel::bounded;
@@ -18,8 +17,6 @@ use lsp_types::{
     TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
 
-#[allow(unused)]
-use move_analyzer::modules::Ending;
 use move_command_line_common::files::FileHash;
 use move_compiler::diagnostics::Diagnostics;
 use move_compiler::{shared::*, PASS_TYPING};
@@ -35,25 +32,14 @@ use move_analyzer::{
     completion::on_completion_request,
     context::{Context, FileDiags, MultiProject},
     document_symbol, goto_definition, hover,
-    modules::ConvertLoc,
+    move_generate_spec_file::on_generate_spec_file,
+    move_generate_spec_sel::on_generate_spec_sel,
+    project::ConvertLoc,
     references,
     utils::*,
 };
 
 use url::Url;
-
-use jemalloc_ctl::{Access, AsName};
-use jemallocator;
-#[global_allocator]
-static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
-const PROF_ACTIVE: &'static [u8] = b"prof.active\0";
-const PROF_DUMP: &'static [u8] = b"prof.dump\0";
-const PROFILE_OUTPUT: &'static [u8] = b"profile.out\0";
-
-fn set_memory_prof_active(active: bool) {
-    let name = PROF_ACTIVE.name();
-    name.write(active).expect("Should succeed to set prof");
-}
 
 struct SimpleLogger;
 impl log::Log for SimpleLogger {
@@ -80,8 +66,7 @@ pub fn init_log() {
 struct Options {}
 
 fn main() {
-    // cpu_pprof(20);
-    // memory_pprof(20);
+    cpu_pprof(20);
 
     // For now, move-analyzer only responds to options built-in to clap,
     // such as `--help` or `--version`.
@@ -249,6 +234,12 @@ fn on_request(context: &mut Context, request: &Request) {
         lsp_types::request::CodeLensRequest::METHOD => {
             code_lens::move_get_test_code_lens(context, request);
         }
+        "move/generate/spec/file" => {
+            on_generate_spec_file(context, request);
+        }
+        "move/generate/spec/sel" => {
+            on_generate_spec_sel(context, request);
+        }
         _ => log::error!("handle request '{}' from client", request.method),
     }
 }
@@ -308,7 +299,6 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             update_defs(context, fpath.clone(), content.as_str());
             make_diag(context, diag_sender, fpath);
         }
-
         lsp_types::notification::DidChangeTextDocument::METHOD => {
             use lsp_types::DidChangeTextDocumentParams;
             let parameters =
@@ -338,7 +328,15 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 }
             };
             match context.projects.get_project(&fpath) {
-                Some(_) => return,
+                Some(_) => {
+                    match std::fs::read_to_string(fpath.as_path()) {
+                        Ok(x) => {
+                            update_defs(context, fpath.clone(), x.as_str());
+                        }
+                        Err(_) => {}
+                    };
+                    return;
+                }
                 None => {
                     eprintln!("project '{:?}' not found try load.", fpath.as_path());
                 }
@@ -373,42 +371,39 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
     }
 }
 
-fn cpu_pprof(seconds: u64) {
-    use std::fs::File;
-    use std::time::Duration;
-    let guard = pprof::ProfilerGuardBuilder::default()
-        .frequency(1000)
-        .blocklist(&["libc", "libgcc", "pthread", "vdso"])
-        .build()
-        .unwrap();
-    std::thread::spawn(move || loop {
-        std::thread::sleep(Duration::new(seconds, 0));
-        match guard.report().build() {
-            Result::Ok(report) => {
-                let file = File::create("/Users/temp/.move-analyzer/flamegraph.svg").unwrap();
-                report.flamegraph(file).unwrap();
-            }
-            Result::Err(e) => {
-                log::error!("build report failed,err:{}", e);
-            }
-        };
-    });
-}
+#[cfg(not(target_os = "windows"))]
+fn cpu_pprof(_seconds: u64) {
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "pprof")] {
+            use std::fs::File;
+            use std::time::Duration;
+            let guard = pprof::ProfilerGuardBuilder::default()
+                .frequency(1000)
+                .blocklist(&["libc", "libgcc", "pthread", "vdso"])
+                .build()
+                .unwrap();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(Duration::new(_seconds, 0));
+                match guard.report().build() {
+                    Result::Ok(report) => {
+                        let  mut tmp = std::env::temp_dir();
+                        tmp.push("move-analyzer-flamegraph.svg") ;
+                        let file = File::create(tmp.clone()).unwrap();
+                        report.flamegraph(file).unwrap();
+                        eprintln!("pprof file at {:?}",tmp.as_path()) ;
 
-fn memory_pprof(seconds: u64) {
-    use std::time::Duration;
-    std::thread::spawn(move || loop {
-        set_memory_prof_active(true);
-        std::thread::sleep(Duration::new(seconds, 0));
-        set_memory_prof_active(false);
-        dump_memory_profile();
-    });
+                    }
+                    Result::Err(e) => {
+                        log::error!("build report failed,err:{}", e);
+                    }
+                };
+            });
+        }
+    }
 }
-
-fn dump_memory_profile() {
-    let name = PROF_DUMP.name();
-    name.write(PROFILE_OUTPUT)
-        .expect("Should succeed to dump profile")
+#[cfg(target_os = "windows")]
+fn cpu_pprof(_seconds: u64) {
+    log::error!("Can't run pprof in Windows");
 }
 
 fn get_package_compile_diagnostics(

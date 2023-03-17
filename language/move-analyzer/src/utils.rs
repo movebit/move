@@ -10,7 +10,7 @@ use move_package::source_package::layout::SourcePackageLayout;
 use std::collections::HashMap;
 use std::{path::*, vec};
 
-/// Double way mapping from FileHash and FilePath.
+/// Double way mapping between FileHash and FilePath.
 #[derive(Debug, Default)]
 pub struct PathBufHashMap {
     path_2_hash: HashMap<PathBuf, FileHash>,
@@ -188,12 +188,6 @@ impl std::fmt::Display for FileRange {
     }
 }
 impl FileRange {
-    pub(crate) fn in_range(&self, path: PathBuf, line: u32, col: u32) -> bool {
-        if self.path != path {
-            return false;
-        }
-        self.line_start == line && (col >= self.col_start && col <= self.col_end)
-    }
     pub(crate) fn unknown() -> Self {
         Self {
             path: PathBuf::from("<unknown>"),
@@ -282,6 +276,18 @@ pub trait GetPosition {
             return false;
         }
         true
+    }
+}
+
+pub struct GetPositionStruct {
+    pub fpath: PathBuf,
+    pub line: u32,
+    pub col: u32,
+}
+
+impl GetPosition for GetPositionStruct {
+    fn get_position(&self) -> (PathBuf, u32 /* line */, u32 /* col */) {
+        (self.fpath.clone(), self.line, self.col)
     }
 }
 

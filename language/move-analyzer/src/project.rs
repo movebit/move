@@ -4,7 +4,7 @@ use crate::context::MultiProject;
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 use super::item::*;
-use super::scopes::*;
+use super::project_context::*;
 use super::types::*;
 use super::utils::*;
 use anyhow::{Ok, Result};
@@ -26,19 +26,17 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use walkdir::WalkDir;
 
-/// All Modules.
+/// A Project.
 pub struct Project {
     pub(crate) modules: HashMap<
-        PathBuf, /* this is a Move.toml like xxxx/Move.toml  */
+        PathBuf, // manifest path.
         Rc<RefCell<SourceDefs>>,
     >,
-    /// a field contains the root manifest file
-    /// if Modules construct successful this field is never None.
     pub(crate) manifests: Vec<move_package::source_package::parsed_manifest::SourceManifest>,
     pub(crate) hash_file: Rc<RefCell<PathBufHashMap>>,
     pub(crate) file_line_mapping: Rc<RefCell<FileLineMapping>>,
     pub(crate) manifest_paths: Vec<PathBuf>,
-    pub(crate) scopes: Scopes,
+    pub(crate) project_context: ProjectContext,
     pub(crate) manifest_not_exists: HashSet<PathBuf>,
 }
 impl Project {
@@ -65,11 +63,11 @@ impl Project {
             hash_file: multi.hash_file.clone(),
             file_line_mapping: multi.file_line_mapping.clone(),
             manifest_paths: Default::default(),
-            scopes: Scopes::new(),
+            project_context: ProjectContext::new(),
             manifest_not_exists: Default::default(),
         };
         modules.load_project(&working_dir, multi)?;
-        let mut dummy = DummyVisitor;
+        let mut dummy = DummyHandler;
         modules.run_full_visitor(&mut dummy);
         Ok(modules)
     }
@@ -91,13 +89,13 @@ impl Project {
         if let Some(defs) = old_defs.as_ref() {
             let x = VecDefAstProvider::new(&defs, self, layout.clone());
             x.with_module(|addr, d| {
-                self.scopes
+                self.project_context
                     .delete_module_items(addr, d.name.value(), d.is_spec_module);
             });
         };
         // Update defs.
-        let mut dummy = DummyVisitor;
-        let _ = self.run_visitor_for_file(&mut dummy, file_path);
+        let mut dummy = DummyHandler;
+        let _ = self.run_visitor_for_file(&mut dummy, file_path, true);
     }
 
     /// Load a Move.toml project.
@@ -112,9 +110,21 @@ impl Project {
             return Ok(());
         }
         self.manifest_paths.push(manifest_path.clone());
-        // if !manifest_path.has_root() {
         eprintln!("load manifest file at {:?}", &manifest_path);
-        // }
+        if let Some(x) = multi.asts.get(&manifest_path) {
+            self.modules.insert(manifest_path.clone(), x.clone());
+        } else {
+            let d: Rc<RefCell<SourceDefs>> = Default::default();
+            self.modules.insert(manifest_path.clone(), d.clone());
+            multi.asts.insert(manifest_path.clone(), d.clone());
+            self.load_layout_files(&manifest_path, SourcePackageLayout::Sources);
+            self.load_layout_files(&manifest_path, SourcePackageLayout::Tests);
+            self.load_layout_files(&manifest_path, SourcePackageLayout::Scripts);
+        }
+        if manifest_path.exists() == false {
+            self.manifest_not_exists.insert(manifest_path);
+            return anyhow::Result::Ok(());
+        }
         let manifest = match parse_move_manifest_from_file(&manifest_path) {
             std::result::Result::Ok(x) => x,
             std::result::Result::Err(err) => {
@@ -142,16 +152,6 @@ impl Project {
                 dep_name
             );
             self.load_project(&p, multi)?;
-        }
-        if let Some(x) = multi.asts.get(&manifest_path) {
-            self.modules.insert(manifest_path, x.clone());
-        } else {
-            let d: Rc<RefCell<SourceDefs>> = Default::default();
-            self.modules.insert(manifest_path.clone(), d.clone());
-            multi.asts.insert(manifest_path.clone(), d.clone());
-            self.load_layout_files(&manifest_path, SourcePackageLayout::Sources);
-            self.load_layout_files(&manifest_path, SourcePackageLayout::Tests);
-            self.load_layout_files(&manifest_path, SourcePackageLayout::Scripts);
         }
         Ok(())
     }
@@ -271,7 +271,7 @@ impl Project {
 
     pub(crate) fn get_spec_build_in_call_type(
         &self,
-        scopes: &Scopes,
+        project_context: &ProjectContext,
         b: SpecBuildInFun,
         type_args: &Option<Vec<Type>>,
         exprs: &Spanned<Vec<Exp>>, // TODO need use _expr.
@@ -279,7 +279,7 @@ impl Project {
         let exprs_types: Vec<_> = exprs
             .value
             .iter()
-            .map(|e| self.get_expr_type(e, scopes))
+            .map(|e| self.get_expr_type(e, project_context))
             .collect();
         // vec<T>(x): vector<T> returns a singleton vector.
         // A lot of those build in function.
@@ -301,7 +301,7 @@ impl Project {
             SpecBuildInFun::Global => {
                 if let Some(type_args) = type_args {
                     if let Some(ty) = type_args.get(0) {
-                        scopes.resolve_type(ty, self)
+                        project_context.resolve_type(ty, self)
                     } else {
                         ResolvedType::UnKnown
                     }
@@ -313,7 +313,7 @@ impl Project {
             SpecBuildInFun::Update => {
                 if let Some(type_args) = type_args {
                     if let Some(ty) = type_args.get(0) {
-                        ResolvedType::new_vector(scopes.resolve_type(ty, self))
+                        ResolvedType::new_vector(project_context.resolve_type(ty, self))
                     } else {
                         ResolvedType::new_vector(t_in_vector)
                     }
@@ -324,7 +324,7 @@ impl Project {
             SpecBuildInFun::Vec => {
                 if let Some(type_args) = type_args {
                     if let Some(ty) = type_args.get(0) {
-                        ResolvedType::new_vector(scopes.resolve_type(ty, self))
+                        ResolvedType::new_vector(project_context.resolve_type(ty, self))
                     } else {
                         // TODO infer from expr.
                         ResolvedType::new_vector(first_t)
@@ -336,7 +336,7 @@ impl Project {
             SpecBuildInFun::Concat => {
                 if let Some(type_args) = type_args {
                     if let Some(ty) = type_args.get(0) {
-                        ResolvedType::new_vector(scopes.resolve_type(ty, self))
+                        ResolvedType::new_vector(project_context.resolve_type(ty, self))
                     } else {
                         ResolvedType::new_vector(t_in_vector)
                     }
@@ -357,7 +357,7 @@ impl Project {
     /// return type for `borrow_global`  ...
     pub(crate) fn get_move_build_in_call_type(
         &self,
-        scopes: &Scopes,
+        project_context: &ProjectContext,
         b: MoveBuildInFun,
         type_args: &Option<Vec<Type>>,
         _exprs: &Spanned<Vec<Exp>>, // TODO need use _expr.
@@ -367,7 +367,7 @@ impl Project {
             MoveBuildInFun::MoveFrom => {
                 if let Some(type_args) = type_args {
                     if let Some(ty) = type_args.get(0) {
-                        let ty = scopes.resolve_type(ty, self);
+                        let ty = project_context.resolve_type(ty, self);
                         ty
                     } else {
                         ResolvedType::UnKnown
@@ -379,7 +379,7 @@ impl Project {
             MoveBuildInFun::BorrowGlobalMut | MoveBuildInFun::BorrowGlobal => {
                 if let Some(type_args) = type_args {
                     if let Some(ty) = type_args.get(0) {
-                        let ty = scopes.resolve_type(ty, self);
+                        let ty = project_context.resolve_type(ty, self);
                         ResolvedType::new_ref(b == MoveBuildInFun::BorrowGlobalMut, ty)
                     } else {
                         ResolvedType::UnKnown
@@ -393,7 +393,11 @@ impl Project {
     }
 
     /// Get A Type for expr if possible otherwise Unknown is return.
-    pub(crate) fn get_expr_type(&self, expr: &Exp, scopes: &Scopes) -> ResolvedType {
+    pub(crate) fn get_expr_type(
+        &self,
+        expr: &Exp,
+        project_context: &ProjectContext,
+    ) -> ResolvedType {
         match &expr.value {
             Exp_::Value(ref x) => match &x.value {
                 Value_::Address(_) => ResolvedType::new_build_in(BuildInType::Address),
@@ -407,9 +411,9 @@ impl Project {
                 Value_::HexString(_) => ResolvedType::new_build_in(BuildInType::NumType),
                 Value_::ByteString(_) => ResolvedType::new_build_in(BuildInType::String),
             },
-            Exp_::Move(x) | Exp_::Copy(x) => scopes.find_var_type(x.0.value),
+            Exp_::Move(x) | Exp_::Copy(x) => project_context.find_var_type(x.0.value),
             Exp_::Name(name, _ /*  TODO this is a error. */) => {
-                let (item, _) = scopes.find_name_chain_item(name, self);
+                let (item, _) = project_context.find_name_chain_item(name, self);
                 return item.unwrap_or_default().to_type().unwrap_or_default();
             }
             Exp_::Call(name, is_macro, ref type_args, exprs) => {
@@ -421,27 +425,37 @@ impl Project {
                 }
                 match &name.value {
                     NameAccessChain_::One(name) => {
-                        if name.value.as_str() == crate::modules_visitor::SPEC_DOMAIN {
+                        if name.value.as_str() == crate::project_visitor::SPEC_DOMAIN {
                             return exprs
                                 .value
                                 .get(0)
-                                .map(|x| self.get_expr_type(x, scopes))
+                                .map(|x| self.get_expr_type(x, project_context))
                                 .unwrap_or(ResolvedType::UnKnown);
                         }
                     }
                     _ => {}
                 }
-                let (item, _) = scopes.find_name_chain_item(name, self);
+                let (item, _) = project_context.find_name_chain_item(name, self);
                 match item.unwrap_or_default() {
                     Item::SpecBuildInFun(b) => {
-                        return self.get_spec_build_in_call_type(scopes, b, type_args, exprs)
+                        return self.get_spec_build_in_call_type(
+                            project_context,
+                            b,
+                            type_args,
+                            exprs,
+                        )
                     }
                     Item::MoveBuildInFun(b) => {
-                        return self.get_move_build_in_call_type(scopes, b, type_args, exprs)
+                        return self.get_move_build_in_call_type(
+                            project_context,
+                            b,
+                            type_args,
+                            exprs,
+                        )
                     }
                     _ => {}
                 }
-                let (fun_type, _) = scopes.find_name_chain_item(name, self);
+                let (fun_type, _) = project_context.find_name_chain_item(name, self);
                 let fun_type = fun_type.unwrap_or_default().to_type().unwrap_or_default();
                 match &fun_type {
                     ResolvedType::Fun(x) => {
@@ -452,7 +466,7 @@ impl Project {
                                 Some(
                                     type_args
                                         .iter()
-                                        .map(|x| scopes.resolve_type(x, self))
+                                        .map(|x| project_context.resolve_type(x, self))
                                         .collect(),
                                 )
                             } else {
@@ -469,16 +483,16 @@ impl Project {
                             let exprs_types: Vec<_> = exprs
                                 .value
                                 .iter()
-                                .map(|e| self.get_expr_type(e, scopes))
+                                .map(|e| self.get_expr_type(e, project_context))
                                 .collect();
                             infer_type_parameter_on_expression(
                                 &mut types,
                                 &parameters.iter().map(|(_, t)| t.clone()).collect(),
                                 &exprs_types,
-                                scopes,
+                                project_context,
                             );
                         }
-                        fun_type.bind_type_parameter(&types, scopes);
+                        fun_type.bind_type_parameter(&types, project_context);
                         match &fun_type {
                             ResolvedType::Fun(x) => x.ret_type.as_ref().clone(),
                             _ => unreachable!(),
@@ -490,10 +504,10 @@ impl Project {
             }
 
             Exp_::Pack(name, type_args, fields) => {
-                let (struct_ty, _) = scopes.find_name_chain_item(name, self);
+                let (struct_ty, _) = project_context.find_name_chain_item(name, self);
 
                 let struct_ty = struct_ty.unwrap_or_default().to_type().unwrap_or_default();
-                let mut struct_ty = struct_ty.struct_ref_to_struct(scopes);
+                let mut struct_ty = struct_ty.struct_ref_to_struct(project_context);
                 let mut types = HashMap::new();
                 let mut struct_ty = match &struct_ty {
                     ResolvedType::Struct(ItemStruct {
@@ -508,7 +522,7 @@ impl Project {
                                 Some(
                                     type_args
                                         .iter()
-                                        .map(|x| scopes.resolve_type(x, self))
+                                        .map(|x| project_context.resolve_type(x, self))
                                         .collect(),
                                 )
                             } else {
@@ -519,7 +533,7 @@ impl Project {
                             let fields_exprs: Vec<_> = fields
                                 .iter()
                                 .map(|(field, expr)| {
-                                    (field.clone(), self.get_expr_type(expr, scopes))
+                                    (field.clone(), self.get_expr_type(expr, project_context))
                                 })
                                 .collect();
                             let fields_exp_map = {
@@ -545,7 +559,7 @@ impl Project {
                                 &mut types,
                                 &parameters,
                                 &expression_types,
-                                scopes,
+                                project_context,
                             )
                         }
                         if let Some(ref ts) = type_args {
@@ -553,7 +567,7 @@ impl Project {
                                 types.insert(para.name.value, args.clone());
                             }
                         }
-                        struct_ty.bind_type_parameter(&types, scopes);
+                        struct_ty.bind_type_parameter(&types, project_context);
 
                         struct_ty
                     }
@@ -581,7 +595,7 @@ impl Project {
             Exp_::Vector(_, ty, exprs) => {
                 let mut ty = if let Some(ty) = ty {
                     if let Some(ty) = ty.get(0) {
-                        Some(scopes.resolve_type(ty, self))
+                        Some(project_context.resolve_type(ty, self))
                     } else {
                         None
                     }
@@ -590,7 +604,7 @@ impl Project {
                 };
                 if !option_ty_is_valid(&ty) {
                     for e in exprs.value.iter() {
-                        let ty2 = self.get_expr_type(e, scopes);
+                        let ty2 = self.get_expr_type(e, project_context);
                         if !ty2.is_err() {
                             ty = Some(ty2);
                             break;
@@ -600,10 +614,10 @@ impl Project {
                 ResolvedType::new_vector(ty.unwrap_or_default())
             }
             Exp_::IfElse(_, then_, else_) => {
-                let mut ty = self.get_expr_type(then_.as_ref(), scopes);
+                let mut ty = self.get_expr_type(then_.as_ref(), project_context);
                 if ty.is_err() {
                     if let Some(else_) = else_ {
-                        ty = self.get_expr_type(else_, scopes);
+                        ty = self.get_expr_type(else_, project_context);
                     }
                 }
                 ty
@@ -611,9 +625,9 @@ impl Project {
             Exp_::While(_, _) | Exp_::Loop(_) => ResolvedType::new_unit(),
             Exp_::Block(b) => {
                 if let Some(expr) = b.3.as_ref() {
-                    scopes.enter_scope(|scopes| {
-                        let mut visitor = DummyVisitor;
-                        self.visit_block(&b, scopes, &mut visitor);
+                    project_context.enter_scope(|scopes| {
+                        let mut handler = DummyHandler;
+                        self.visit_block(&b, scopes, &mut handler);
                         self.get_expr_type(expr, scopes)
                     })
                 } else {
@@ -626,7 +640,10 @@ impl Project {
             }
             Exp_::Quant(_, _, _, _, _) => ResolvedType::UnKnown,
             Exp_::ExpList(e) => {
-                let tys: Vec<_> = e.iter().map(|x| self.get_expr_type(x, scopes)).collect();
+                let tys: Vec<_> = e
+                    .iter()
+                    .map(|x| self.get_expr_type(x, project_context))
+                    .collect();
                 ResolvedType::Multiple(tys)
             }
 
@@ -637,19 +654,19 @@ impl Project {
             Exp_::Break => ResolvedType::new_unit(),
             Exp_::Continue => ResolvedType::new_unit(),
             Exp_::Dereference(e) => {
-                let ty = self.get_expr_type(e, scopes);
+                let ty = self.get_expr_type(e, project_context);
                 match &ty {
                     ResolvedType::Ref(_, t) => t.as_ref().clone(),
                     _ => ty,
                 }
             }
             Exp_::UnaryExp(_, e) => {
-                let ty = self.get_expr_type(e, scopes);
+                let ty = self.get_expr_type(e, project_context);
                 ty
             }
             Exp_::BinopExp(left, op, right) => {
-                let left_ty = self.get_expr_type(left, scopes);
-                let right_ty = self.get_expr_type(right, scopes);
+                let left_ty = self.get_expr_type(left, project_context);
+                let right_ty = self.get_expr_type(right, project_context);
                 let binary_type = || {
                     if !left_ty.is_err() {
                         left_ty.clone()
@@ -684,11 +701,11 @@ impl Project {
                 }
             }
             Exp_::Borrow(is_mut, e) => {
-                let ty = self.get_expr_type(e, scopes);
+                let ty = self.get_expr_type(e, project_context);
                 ResolvedType::new_ref(*is_mut, ty)
             }
             Exp_::Dot(e, name) => {
-                let ty = self.get_expr_type(e, scopes);
+                let ty = self.get_expr_type(e, project_context);
                 if let Some(field) = ty.find_filed_by_name(name.value) {
                     field.1.clone()
                 } else {
@@ -696,7 +713,7 @@ impl Project {
                 }
             }
             Exp_::Index(e, _index) => {
-                let ty = self.get_expr_type(e, scopes);
+                let ty = self.get_expr_type(e, project_context);
                 let ty = match &ty {
                     ResolvedType::Ref(_, x) => x.as_ref().clone(),
                     _ => ty,
@@ -708,10 +725,10 @@ impl Project {
             }
 
             Exp_::Cast(_, ty) => {
-                let ty = scopes.resolve_type(ty, self);
+                let ty = project_context.resolve_type(ty, self);
                 ty
             }
-            Exp_::Annotate(_, ty) => scopes.resolve_type(ty, self),
+            Exp_::Annotate(_, ty) => project_context.resolve_type(ty, self),
             Exp_::Spec(_) => ResolvedType::new_unit(),
             Exp_::UnresolvedError => {
                 // Nothings. didn't know what to do.
@@ -723,51 +740,55 @@ impl Project {
     pub(crate) fn visit_struct_tparam(
         &self,
         t: &StructTypeParameter,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
     ) {
-        self.visit_tparam(&(t.name.clone(), t.constraints.clone()), scopes, visitor);
+        self.visit_tparam(
+            &(t.name.clone(), t.constraints.clone()),
+            project_context,
+            visitor,
+        );
     }
 
     pub(crate) fn visit_tparam(
         &self,
         t: &(Name, Vec<Ability>),
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
     ) {
         let (name, v) = t;
         let item = ItemOrAccess::Item(Item::TParam(name.clone(), v.clone()));
-        visitor.handle_item_or_access(self, scopes, &item);
+        visitor.handle_item_or_access(self, project_context, &item);
         if visitor.finished() {
             return;
         }
         // Enter this.
-        scopes.enter_types(self, name.value, item);
+        project_context.enter_types(self, name.value, item);
     }
     pub(crate) fn visit_signature(
         &self,
         signature: &FunctionSignature,
-        scopes: &Scopes,
-        visitor: &mut dyn ScopeVisitor,
+        project_context: &ProjectContext,
+        visitor: &mut dyn ItemOrAccessHandler,
     ) {
         for t in signature.type_parameters.iter() {
-            self.visit_tparam(t, scopes, visitor);
+            self.visit_tparam(t, project_context, visitor);
             if visitor.finished() {
                 return;
             }
         }
         for (v, t) in signature.parameters.iter() {
-            self.visit_type_apply(t, scopes, visitor);
-            let t = scopes.resolve_type(t, self);
+            self.visit_type_apply(t, project_context, visitor);
+            let t = project_context.resolve_type(t, self);
             let item = ItemOrAccess::Item(Item::Parameter(v.clone(), t));
             // found
-            visitor.handle_item_or_access(self, scopes, &item);
+            visitor.handle_item_or_access(self, project_context, &item);
             if visitor.finished() {
                 return;
             }
-            scopes.enter_item(self, v.value(), item)
+            project_context.enter_item(self, v.value(), item)
         }
-        self.visit_type_apply(&signature.return_type, scopes, visitor);
+        self.visit_type_apply(&signature.return_type, project_context, visitor);
     }
 }
 
@@ -782,23 +803,9 @@ fn option_ty_is_valid(x: &Option<ResolvedType>) -> bool {
 
 #[derive(Debug, Clone, Default)]
 pub struct SourceDefs {
-    pub(crate) sources: HashMap<
-        PathBuf, /*  file path  xxxx/abc.move  */
-        Vec<move_compiler::parser::ast::Definition>,
-    >,
-
-    /*
-        TODO tests.
-    */
-    pub(crate) tests: HashMap<
-        PathBuf, /*  file path  xxxx/abc.move  */
-        Vec<move_compiler::parser::ast::Definition>,
-    >,
-
-    pub(crate) scripts: HashMap<
-        PathBuf, /*  file path  xxxx/abc.move  */
-        Vec<move_compiler::parser::ast::Definition>,
-    >,
+    pub(crate) sources: HashMap<PathBuf, Vec<move_compiler::parser::ast::Definition>>,
+    pub(crate) tests: HashMap<PathBuf, Vec<move_compiler::parser::ast::Definition>>,
+    pub(crate) scripts: HashMap<PathBuf, Vec<move_compiler::parser::ast::Definition>>,
 }
 
 pub(crate) const UNKNOWN_TYPE: ResolvedType = ResolvedType::UnKnown;
@@ -817,10 +824,10 @@ pub(crate) fn infer_type_parameter_on_expression(
     ret: &mut HashMap<Symbol /*  name like T or ... */, ResolvedType>,
     parameters: &Vec<ResolvedType>,
     expression_types: &Vec<ResolvedType>,
-    scopes: &Scopes,
+    project_context: &ProjectContext,
 ) {
     for (p, expr_type) in parameters.iter().zip(expression_types.iter()) {
-        bind(ret, &p, expr_type, scopes);
+        bind(ret, &p, expr_type, project_context);
     }
     fn bind(
         ret: &mut HashMap<Symbol, ResolvedType>,
@@ -828,7 +835,7 @@ pub(crate) fn infer_type_parameter_on_expression(
         parameter_type: &ResolvedType,
         // a type that is certain.
         expr_type: &ResolvedType,
-        scopes: &Scopes,
+        project_context: &ProjectContext,
     ) {
         match &parameter_type {
             ResolvedType::UnKnown => {}
@@ -846,16 +853,18 @@ pub(crate) fn infer_type_parameter_on_expression(
                         .iter()
                         .zip(type_parameters_ins2.iter())
                         .for_each(|(x, y)| {
-                            bind(ret, x, y, scopes);
+                            bind(ret, x, y, project_context);
                         });
                     for (l, r) in fields.iter().zip(fields2.iter()) {
-                        bind(ret, &l.1, &r.1, scopes);
+                        bind(ret, &l.1, &r.1, project_context);
                     }
                 }
                 ResolvedType::StructRef(_, _) => {
-                    let expr_type = expr_type.clone().struct_ref_to_struct(scopes);
+                    let expr_type = expr_type.clone().struct_ref_to_struct(project_context);
                     match &expr_type {
-                        ResolvedType::Struct(_) => bind(ret, parameter_type, &expr_type, scopes),
+                        ResolvedType::Struct(_) => {
+                            bind(ret, parameter_type, &expr_type, project_context)
+                        }
                         _ => unreachable!(),
                     }
                 }
@@ -866,7 +875,7 @@ pub(crate) fn infer_type_parameter_on_expression(
                 ret.insert(name.value, expr_type.clone());
             }
             ResolvedType::Ref(_, l) => match &expr_type {
-                ResolvedType::Ref(_, r) => bind(ret, l.as_ref(), r.as_ref(), scopes),
+                ResolvedType::Ref(_, r) => bind(ret, l.as_ref(), r.as_ref(), project_context),
                 _ => {}
             },
             ResolvedType::Unit => {}
@@ -874,7 +883,7 @@ pub(crate) fn infer_type_parameter_on_expression(
                 ResolvedType::Multiple(y) => {
                     for (index, l) in x.iter().enumerate() {
                         if let Some(r) = y.get(index) {
-                            bind(ret, l, r, scopes);
+                            bind(ret, l, r, project_context);
                         } else {
                             break;
                         }
@@ -886,16 +895,16 @@ pub(crate) fn infer_type_parameter_on_expression(
             ResolvedType::Fun(_) => {}
             ResolvedType::Vec(x) => match &expr_type {
                 ResolvedType::Vec(y) => {
-                    bind(ret, x.as_ref(), y.as_ref(), scopes);
+                    bind(ret, x.as_ref(), y.as_ref(), project_context);
                 }
                 _ => {}
             },
 
             ResolvedType::StructRef(_, _) => {
-                let parameter_type = parameter_type.clone().struct_ref_to_struct(scopes);
+                let parameter_type = parameter_type.clone().struct_ref_to_struct(project_context);
                 match &parameter_type {
                     ResolvedType::Struct(_) => {
-                        bind(ret, &parameter_type, expr_type, scopes);
+                        bind(ret, &parameter_type, expr_type, project_context);
                     }
                     _ => {
                         unreachable!("");
@@ -923,15 +932,16 @@ impl Name2Addr for Project {
     }
 }
 
-/// Scoped analyze based visitor.
-pub trait ScopeVisitor: std::fmt::Display {
+/// Handler a `ItemOrAccess` producced By `Project`.
+pub trait ItemOrAccessHandler: std::fmt::Display {
     /// Handle this item.
     fn handle_item_or_access(
         &mut self,
-        services: &dyn HandleItemService,
-        scopes: &Scopes,
-        item: &ItemOrAccess,
-    );
+        _services: &dyn HandleItemService,
+        _project_context: &ProjectContext,
+        _item: &ItemOrAccess,
+    ) {
+    }
 
     /// Need visit function or spec body or not.
     /// Sometimes you want visit function body But not all the function Body.
@@ -940,6 +950,13 @@ pub trait ScopeVisitor: std::fmt::Display {
 
     /// Visitor should finished.
     fn finished(&self) -> bool;
+
+    // need Expr type ??
+    fn need_expr_type(&self) -> bool {
+        false
+    }
+    // handle expr type.
+    fn handle_expr_typ(&mut self, _exp: &Exp, _ty: ResolvedType) {}
 }
 
 pub trait HandleItemService: ConvertLoc + GetAllAddrs + Name2Addr {}
@@ -973,13 +990,13 @@ impl Ending {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct DummyVisitor;
+pub(crate) struct DummyHandler;
 
-impl ScopeVisitor for DummyVisitor {
+impl ItemOrAccessHandler for DummyHandler {
     fn handle_item_or_access(
         &mut self,
         _services: &dyn HandleItemService,
-        _scopes: &Scopes,
+        _project_context: &ProjectContext,
         _item: &ItemOrAccess,
     ) {
     }
@@ -994,7 +1011,7 @@ impl ScopeVisitor for DummyVisitor {
     }
 }
 
-impl std::fmt::Display for DummyVisitor {
+impl std::fmt::Display for DummyHandler {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
@@ -1005,11 +1022,11 @@ lazy_static! {
 }
 
 pub trait GetAllAddrs {
-    fn get_all_addrs(&self, scopes: &Scopes) -> HashSet<AddressSpace>;
+    fn get_all_addrs(&self, project_context: &ProjectContext) -> HashSet<AddressSpace>;
 }
 
 impl GetAllAddrs for Project {
-    fn get_all_addrs(&self, scopes: &Scopes) -> HashSet<AddressSpace> {
+    fn get_all_addrs(&self, project_context: &ProjectContext) -> HashSet<AddressSpace> {
         let mut addrs: HashSet<AddressSpace> = HashSet::new();
         let empty = Default::default();
         let empty2 = Default::default();
@@ -1025,7 +1042,7 @@ impl GetAllAddrs for Project {
                 addrs.insert(AddressSpace::from(addr.clone()));
             }
         }
-        scopes.visit_address(|addresss| {
+        project_context.visit_address(|addresss| {
             addresss.address.keys().for_each(|addr| {
                 addrs.insert(AddressSpace::from(addr.clone()));
             })
@@ -1046,6 +1063,14 @@ impl From<Symbol> for AddressSpace {
     }
 }
 
+impl ToString for AddressSpace {
+    fn to_string(&self) -> String {
+        match self {
+            AddressSpace::Addr(addr) => addr.to_hex_literal(),
+            AddressSpace::Name(x) => x.as_str().to_string(),
+        }
+    }
+}
 impl From<AccountAddress> for AddressSpace {
     fn from(x: AccountAddress) -> Self {
         Self::Addr(x)
@@ -1089,18 +1114,29 @@ pub trait AstProvider: Clone {
             }
             Definition::Address(a) => {
                 for module in a.modules.iter() {
-                    call_back(self.get_module_addr(module.address, module), module);
+                    call_back(self.get_module_addr(Some(a.addr), module), module);
                 }
             }
             _ => {}
         })
     }
 
-    fn found_in_test(&self) -> bool;
+    fn found_in_test(&self) -> bool {
+        self.layout() == SourcePackageLayout::Tests
+    }
+    fn found_in_scripts(&self) -> bool {
+        self.layout() == SourcePackageLayout::Scripts
+    }
+    fn layout(&self) -> SourcePackageLayout;
 
     fn with_module_member(
         &self,
-        mut call_back: impl FnMut(AccountAddress, Symbol, &ModuleMember, bool /* if is_spec */),
+        mut call_back: impl FnMut(
+            AccountAddress,
+            Symbol,
+            &ModuleMember,
+            bool, /* if is_spec_module */
+        ),
     ) {
         self.with_definition(|x| match x {
             Definition::Module(module) => {
@@ -1117,7 +1153,7 @@ pub trait AstProvider: Clone {
                 for module in a.modules.iter() {
                     for m in module.members.iter() {
                         call_back(
-                            self.get_module_addr(module.address, module),
+                            self.get_module_addr(Some(a.addr), module),
                             module.name.0.value,
                             m,
                             module.is_spec_module,
@@ -1226,8 +1262,8 @@ impl<'a> AstProvider for VecDefAstProvider<'a> {
             call_back(d);
         }
     }
-    fn found_in_test(&self) -> bool {
-        self.layout == SourcePackageLayout::Tests
+    fn layout(&self) -> SourcePackageLayout {
+        self.layout
     }
 }
 #[derive(Clone)]
@@ -1285,8 +1321,7 @@ impl<'a> AstProvider for ModulesAstProvider<'a> {
             }
         }
     }
-
-    fn found_in_test(&self) -> bool {
-        self.layout == SourcePackageLayout::Tests
+    fn layout(&self) -> SourcePackageLayout {
+        self.layout
     }
 }

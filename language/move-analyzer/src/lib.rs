@@ -42,11 +42,15 @@ pub mod hover;
 #[cfg(test)]
 mod ide_test;
 pub mod item;
-pub mod modules;
-pub mod modules_visitor;
+pub mod move_generate_spec;
+pub mod move_generate_spec_chen;
+pub mod move_generate_spec_file;
+pub mod move_generate_spec_sel;
+pub mod project;
+pub mod project_context;
+pub mod project_visitor;
 pub mod references;
 pub mod scope;
-pub mod scopes;
 pub mod syntax;
 pub mod types;
 pub mod utils;

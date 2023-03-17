@@ -1,5 +1,5 @@
-use crate::scopes::AccessEnv;
-use crate::scopes::Scopes;
+use crate::project_context::AccessEnv;
+use crate::project_context::ProjectContext;
 
 use super::scope::*;
 use super::types::*;
@@ -26,9 +26,7 @@ pub struct ItemStruct {
 
 impl std::fmt::Display for ItemStruct {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "struct {}", self.name.value().as_str())?;
-        write!(f, "{{")?;
-        write!(f, "}}")
+        write!(f, "{}", self.name.value().as_str())
     }
 }
 
@@ -106,7 +104,7 @@ impl Item {
 #[derive(Clone)]
 pub struct ItemStructNameRef {
     pub(crate) addr: AccountAddress,
-    pub(crate) module_name: Symbol, // module name.
+    pub(crate) module_name: Symbol,
     pub(crate) name: StructName,
     pub(crate) type_parameters: Vec<StructTypeParameter>,
     pub(crate) is_test: bool,
@@ -139,23 +137,23 @@ impl AttrTest {
 }
 
 impl ItemFun {
-    pub(crate) fn accessible(&self, scopes: &Scopes, env: AccessEnv) -> bool {
+    pub(crate) fn accessible(&self, project_context: &ProjectContext, env: AccessEnv) -> bool {
         if !env.is_spec() && self.is_spec {
             return false;
         }
         if !env.is_test() && self.is_test.is_test() {
             return false;
         }
-        let current = scopes.get_current_addr_and_module_name();
+        let current = project_context.get_current_addr_and_module_name();
         match self.vis {
             Visibility::Internal => {
-                if scopes.get_current_addr_and_module_name() != self.addr_and_name {
+                if project_context.get_current_addr_and_module_name() != self.addr_and_name {
                     return false;
                 }
             }
             Visibility::Public(_) => {}
             Visibility::Friend(_) => {
-                if !scopes.with_friends(
+                if !project_context.with_friends(
                     self.addr_and_name.addr,
                     self.addr_and_name.name.value(),
                     |friends| friends.contains(&(current.addr, current.name.value())),
@@ -366,10 +364,10 @@ impl std::fmt::Display for Item {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Item::Parameter(var, t) => {
-                write!(f, "parameter {}:{}", var.0.value.as_str(), t)
+                write!(f, "{}:{}", var.0.value.as_str(), t)
             }
             Item::ModuleName(ItemModuleName { name, .. }) => {
-                write!(f, "module {}", name.value().as_str())
+                write!(f, "{}", name.value().as_str())
             }
             Item::Use(x) => Ok(for x in x.iter() {
                 match x {
@@ -398,20 +396,20 @@ impl std::fmt::Display for Item {
             }),
 
             Item::Const(ItemConst { name, ty, .. }) => {
-                write!(f, "const {}:{}", name.0.value.as_str(), ty)
+                write!(f, "{}:{}", name.0.value.as_str(), ty)
             }
             Item::SpecConst(ItemConst { name, ty, .. }) => {
-                write!(f, "spec_const {}:{}", name.0.value.as_str(), ty)
+                write!(f, "{}:{}", name.0.value.as_str(), ty)
             }
             Item::Struct(s) => {
                 write!(f, "{}", s)
             }
             Item::StructNameRef(ItemStructNameRef { name, .. }) => {
-                write!(f, "struct {}", name.value().as_str())
+                write!(f, "{}", name.value().as_str())
             }
             Item::Fun(x) => write!(f, "{}", x),
             Item::BuildInType(x) => {
-                write!(f, "build in '{:?}'", x)
+                write!(f, "{}", x.to_static_str())
             }
             Item::TParam(tname, abilities) => {
                 write!(f, "{}:", tname.value.as_str())?;
@@ -422,16 +420,16 @@ impl std::fmt::Display for Item {
                 std::result::Result::Ok(())
             }
             Item::Var(name, ty) => {
-                write!(f, "var {}:{}", name.0.value.as_str(), ty)
+                write!(f, "{}:{}", name.0.value.as_str(), ty)
             }
             Item::Field(x, ty) => {
-                write!(f, "field {}:{}", x.0.value.as_str(), ty)
+                write!(f, "{}:{}", x.0.value.as_str(), ty)
             }
             Item::Dummy => {
                 write!(f, "dummy")
             }
             Item::SpecSchema(name, _) => {
-                write!(f, "schema {}", name.value.as_str())
+                write!(f, "{}", name.value.as_str())
             }
             Item::MoveBuildInFun(x) => write!(f, "move_build_in_fun {}", x.to_static_str()),
             Item::SpecBuildInFun(x) => write!(f, "spec_build_in_fun {}", x.to_static_str()),
@@ -531,7 +529,7 @@ impl std::fmt::Display for Access {
                     "{}{}",
                     x.value.name.value.as_str(),
                     if let Some(_value) = &x.value.value {
-                        //TODO. actual.ame
+                        // TODO. actual.ame
                         String::from("...")
                     } else {
                         String::from("...")

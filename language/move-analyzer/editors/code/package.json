@@ -38,7 +38,7 @@
 			},
 			{
 				"command": "move-analyzer.sui.create_project",
-				"title": "Create SUI project.",
+				"title": "Create SUI project",
 				"category": "Move Analyzer"
 			},
 			{
@@ -142,6 +142,16 @@
 				"category": "Move Analyzer"
 			},
 			{
+				"command": "move-analyzer.move.generate.spec.file",
+				"title": "Generate Move Spec File",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.move.generate.spec.sel",
+				"title": "Generate Move Spec",
+				"category": "Move Analyzer"
+			},
+			{
 				"command": "move-analyzer.sui.reset.working.space",
 				"title": "Sui reset working space",
 				"category": "Move Analyzer"
@@ -192,7 +202,19 @@
 				{
 					"command": "move-analyzer.serverVersion"
 				}
-			]
+			],
+			"editor/context" : [
+				{
+					"when": "resourceLangId == move",
+					"command": "move-analyzer.move.generate.spec.file",
+					"group": "5_cutcopypaste"
+				},
+				{
+					"when": "resourceLangId == move",
+					"command": "move-analyzer.move.generate.spec.sel",
+					"group": "5_cutcopypaste"
+				}
+			] 
 		}
 	},
 	"scripts": {
@@ -209,7 +231,7 @@
 		"publish": "npm run pretest && npm run test && vsce publish"
 	},
 	"extensionDependencies": [
-		"damirka.move-syntax"
+		"movebit.move-msl-syx"
 	],
 	"dependencies": {
 		"command-exists": "^1.2.9",

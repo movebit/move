@@ -9,7 +9,7 @@ use anyhow::{bail, Result};
 /// References file for documentation generation
 pub const REFERENCE_TEMPLATE_FILENAME: &str = "references.md";
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Copy)]
 pub enum SourcePackageLayout {
     Sources,
     Specifications,

@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::item::*;
-use super::modules::*;
-use super::scopes::*;
+use super::project::*;
+use super::project_context::*;
 use super::types::ResolvedType;
 use super::utils::*;
 use crate::context::Context;
@@ -132,14 +132,14 @@ pub fn on_completion_request(context: &Context, request: &Request) {
         fpath.as_path(),
     );
 
-    let mut visitor = Visitor::new(fpath.clone(), line, col);
+    let mut handler = Handler::new(fpath.clone(), line, col);
     let _ = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => return,
     }
-    .run_visitor_for_file(&mut visitor, &fpath);
-    let mut result = visitor.result.unwrap_or(vec![]);
-    if result.len() == 0 && !visitor.completion_on_def {
+    .run_visitor_for_file(&mut handler, &fpath, false);
+    let mut result = handler.result.unwrap_or(vec![]);
+    if result.len() == 0 && !handler.completion_on_def {
         result = all_intrinsic();
     }
     let ret = Some(CompletionResponse::Array(result));
@@ -151,7 +151,7 @@ pub fn on_completion_request(context: &Context, request: &Request) {
         .unwrap();
 }
 
-pub(crate) struct Visitor {
+pub(crate) struct Handler {
     /// The file we are looking for.
     pub(crate) filepath: PathBuf,
     pub(crate) line: u32,
@@ -160,7 +160,7 @@ pub(crate) struct Visitor {
     completion_on_def: bool,
 }
 
-impl Visitor {
+impl Handler {
     pub(crate) fn new(filepath: impl Into<PathBuf>, line: u32, col: u32) -> Self {
         Self {
             filepath: filepath.into(),
@@ -174,23 +174,30 @@ impl Visitor {
     fn match_loc(&self, loc: &Loc, services: &dyn HandleItemService) -> bool {
         let r = services.convert_loc_range(loc);
         match &r {
-            Some(r) => r.in_range(self.filepath.clone(), self.line, self.col),
+            Some(r) => GetPositionStruct::in_range(
+                &GetPositionStruct {
+                    fpath: self.filepath.clone(),
+                    line: self.line,
+                    col: self.col,
+                },
+                r,
+            ),
             None => false,
         }
     }
 }
 
-impl ScopeVisitor for Visitor {
+impl ItemOrAccessHandler for Handler {
     fn visit_fun_or_spec_body(&self) -> bool {
         true
     }
     fn handle_item_or_access(
         &mut self,
         services: &dyn HandleItemService,
-        scopes: &Scopes,
+        project_context: &ProjectContext,
         item_or_access: &ItemOrAccess,
     ) {
-        let push_items = |visitor: &mut Visitor, items: &Vec<Item>| {
+        let push_items = |visitor: &mut Handler, items: &Vec<Item>| {
             if visitor.result.is_none() {
                 visitor.result = Some(vec![]);
             }
@@ -201,36 +208,37 @@ impl ScopeVisitor for Visitor {
                 }
             });
         };
-        let push_addr_spaces =
-            |visitor: &mut Visitor, items: &HashSet<AddressSpace>, scopes: &Scopes| {
-                if visitor.result.is_none() {
-                    visitor.result = Some(vec![]);
-                }
+        let push_addr_spaces = |visitor: &mut Handler,
+                                items: &HashSet<AddressSpace>,
+                                project_context: &ProjectContext| {
+            if visitor.result.is_none() {
+                visitor.result = Some(vec![]);
+            }
 
-                let items: HashSet<_> = items
-                    .clone()
-                    .into_iter()
-                    .filter(|x| {
-                        let addr = match *x {
-                            AddressSpace::Addr(addr) => addr,
-                            AddressSpace::Name(name) => services.name_2_addr(name.clone()),
-                        };
-                        if scopes.collect_modules(&addr).len() > 0 {
-                            true
-                        } else {
-                            false
-                        }
-                    })
-                    .collect();
+            let items: HashSet<_> = items
+                .clone()
+                .into_iter()
+                .filter(|x| {
+                    let addr = match *x {
+                        AddressSpace::Addr(addr) => addr,
+                        AddressSpace::Name(name) => services.name_2_addr(name.clone()),
+                    };
+                    if project_context.collect_modules(&addr).len() > 0 {
+                        true
+                    } else {
+                        false
+                    }
+                })
+                .collect();
 
-                let x = name_spaces_to_completion_items(&items, true);
-                x.into_iter()
-                    .for_each(|x| visitor.result.as_mut().unwrap().push(x));
-            };
+            let x = name_spaces_to_completion_items(&items, true);
+            x.into_iter()
+                .for_each(|x| visitor.result.as_mut().unwrap().push(x));
+        };
 
         // just like push_addr_spaces
         // bu only push names.
-        let push_addr_spaces_names = |visitor: &mut Visitor, items: &HashSet<AddressSpace>| {
+        let push_addr_spaces_names = |visitor: &mut Handler, items: &HashSet<AddressSpace>| {
             if visitor.result.is_none() {
                 visitor.result = Some(vec![]);
             }
@@ -239,7 +247,7 @@ impl ScopeVisitor for Visitor {
                 .for_each(|x| visitor.result.as_mut().unwrap().push(x));
         };
 
-        let push_completion_items = |visitor: &mut Visitor, items: Vec<CompletionItem>| {
+        let push_completion_items = |visitor: &mut Handler, items: Vec<CompletionItem>| {
             if visitor.result.is_none() {
                 visitor.result = Some(vec![]);
             }
@@ -248,7 +256,7 @@ impl ScopeVisitor for Visitor {
                 .into_iter()
                 .for_each(|x| visitor.result.as_mut().unwrap().push(x));
         };
-        let push_fields = |visitor: &mut Visitor, items: &HashMap<Symbol, (Name, ResolvedType)>| {
+        let push_fields = |visitor: &mut Handler, items: &HashMap<Symbol, (Name, ResolvedType)>| {
             if visitor.result.is_none() {
                 visitor.result = Some(vec![]);
             }
@@ -256,7 +264,7 @@ impl ScopeVisitor for Visitor {
             x.into_iter()
                 .for_each(|x| visitor.result.as_mut().unwrap().push(x));
         };
-        let push_module_names = |visitor: &mut Visitor, items: &Vec<ModuleName>| {
+        let push_module_names = |visitor: &mut Handler, items: &Vec<ModuleName>| {
             if visitor.result.is_none() {
                 visitor.result = Some(vec![]);
             }
@@ -294,15 +302,15 @@ impl ScopeVisitor for Visitor {
                                         },
                                     );
                                     if self.match_loc(&module_ident.value.address.loc, services) {
-                                        let items = services.get_all_addrs(scopes);
-                                        push_addr_spaces(self, &items, scopes);
+                                        let items = services.get_all_addrs(project_context);
+                                        push_addr_spaces(self, &items, project_context);
                                     } else if self
                                         .match_loc(&module_ident.value.module.loc(), services)
                                     {
-                                        let items = scopes.collect_modules(&addr);
+                                        let items = project_context.collect_modules(&addr);
                                         push_module_names(self, &items);
                                     } else if self.match_loc(&whole_loc, services) {
-                                        let items = scopes.collect_modules_items(
+                                        let items = project_context.collect_modules_items(
                                             &addr,
                                             module_ident.value.module.0.value,
                                             |x| match x {
@@ -328,15 +336,15 @@ impl ScopeVisitor for Visitor {
                                         }
                                     };
                                     if self.match_loc(&module_ident.value.address.loc, services) {
-                                        let items = services.get_all_addrs(scopes);
-                                        push_addr_spaces(self, &items, scopes);
+                                        let items = services.get_all_addrs(project_context);
+                                        push_addr_spaces(self, &items, project_context);
                                     } else if self
                                         .match_loc(&module_ident.value.module.loc(), services)
                                     {
-                                        let items = scopes.collect_modules(&addr);
+                                        let items = project_context.collect_modules(&addr);
                                         push_module_names(self, &items);
                                     } else if self.match_loc(&name.loc, services) {
-                                        let items = scopes.collect_modules_items(
+                                        let items = project_context.collect_modules_items(
                                             &addr,
                                             module_ident.value.module.0.value,
                                             |x| match x {
@@ -373,16 +381,24 @@ impl ScopeVisitor for Visitor {
                     Access::ApplyType(chain, _, _) => match &chain.value {
                         move_compiler::parser::ast::NameAccessChain_::One(x) => {
                             if self.match_loc(&x.loc, services) {
-                                push_items(self, &scopes.collect_all_type_items());
+                                push_items(self, &project_context.collect_all_type_items());
                                 // Possible all namespaces.
-                                push_addr_spaces(self, &services.get_all_addrs(scopes), scopes);
+                                push_addr_spaces(
+                                    self,
+                                    &services.get_all_addrs(project_context),
+                                    project_context,
+                                );
                             }
                         }
                         move_compiler::parser::ast::NameAccessChain_::Two(space, _name) => {
                             if self.match_loc(&space.loc, services) {
-                                let items = scopes.collect_imported_modules();
+                                let items = project_context.collect_imported_modules();
                                 push_items(self, &items);
-                                push_addr_spaces(self, &services.get_all_addrs(scopes), scopes);
+                                push_addr_spaces(
+                                    self,
+                                    &services.get_all_addrs(project_context),
+                                    project_context,
+                                );
                             } else if self.match_loc(&_name.loc, services) {
                                 let addr = match &space.value {
                                     LeadingNameAccess_::Name(name) => {
@@ -390,7 +406,7 @@ impl ScopeVisitor for Visitor {
                                     }
                                     LeadingNameAccess_::AnonymousAddress(addr) => addr.into_inner(),
                                 };
-                                let items = scopes.collect_modules(&addr);
+                                let items = project_context.collect_modules(&addr);
                                 if items.len() > 0 {
                                     // This is a reasonable guess.
                                     // In situation like global<std::>
@@ -398,11 +414,13 @@ impl ScopeVisitor for Visitor {
                                     // this is still can be unfinished NameAccessChain_::Three.
                                     push_module_names(self, &items);
                                 } else {
-                                    let items =
-                                        scopes.collect_use_module_items(space, |x| match x {
+                                    let items = project_context.collect_use_module_items(
+                                        space,
+                                        |x| match x {
                                             Item::Struct(_) | Item::StructNameRef(_) => true,
                                             _ => false,
-                                        });
+                                        },
+                                    );
                                     push_items(self, &items);
                                     let addr = match &space.value {
                                         LeadingNameAccess_::AnonymousAddress(addr) => {
@@ -412,7 +430,10 @@ impl ScopeVisitor for Visitor {
                                             services.name_2_addr(name.value)
                                         }
                                     };
-                                    push_module_names(self, &scopes.collect_modules(&addr));
+                                    push_module_names(
+                                        self,
+                                        &project_context.collect_modules(&addr),
+                                    );
                                 }
                             }
                         }
@@ -426,15 +447,15 @@ impl ScopeVisitor for Visitor {
                                 LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
                             };
                             if self.match_loc(&addr_.loc, services) {
-                                let items = services.get_all_addrs(scopes);
-                                push_addr_spaces(self, &items, scopes);
+                                let items = services.get_all_addrs(project_context);
+                                push_addr_spaces(self, &items, project_context);
                             } else if self.match_loc(&addr_and_module.loc, services) {
-                                let items = scopes.collect_modules(&addr);
+                                let items = project_context.collect_modules(&addr);
                                 push_module_names(self, &items);
                             } else if self.match_loc(&chain.loc, services)
                                 || self.match_loc(&addr_and_module.loc, services)
                             {
-                                let items = scopes.collect_modules_items(
+                                let items = project_context.collect_modules_items(
                                     &addr,
                                     module.value,
                                     |x| match x {
@@ -446,10 +467,9 @@ impl ScopeVisitor for Visitor {
                             }
                         }
                     },
-
                     Access::ExprVar(var, _) => {
                         if self.match_loc(&var.loc(), services) {
-                            let items = scopes.collect_items(|x| match x {
+                            let items = project_context.collect_items(|x| match x {
                                 Item::Var(_, _) | Item::Parameter(_, _) => true,
                                 _ => false,
                             });
@@ -462,7 +482,7 @@ impl ScopeVisitor for Visitor {
                                 if self.match_loc(&x.loc, services) {
                                     push_items(
                                         self,
-                                        &scopes.collect_items(|x| match x {
+                                        &project_context.collect_items(|x| match x {
                                             Item::Var(_, _)
                                             | Item::Parameter(_, _)
                                             | Item::Use(_)
@@ -476,17 +496,18 @@ impl ScopeVisitor for Visitor {
                                             _ => false,
                                         }),
                                     );
-                                    let items = services.get_all_addrs(scopes);
-                                    push_addr_spaces(self, &items, scopes);
+                                    let items = services.get_all_addrs(project_context);
+                                    push_addr_spaces(self, &items, project_context);
+                                    push_completion_items(self, keywords());
                                 }
                             }
 
                             move_compiler::parser::ast::NameAccessChain_::Two(x, name) => {
                                 if self.match_loc(&x.loc, services) {
-                                    let items = scopes.collect_imported_modules();
+                                    let items = project_context.collect_imported_modules();
                                     push_items(self, &items);
-                                    let items = services.get_all_addrs(scopes);
-                                    push_addr_spaces(self, &items, scopes);
+                                    let items = services.get_all_addrs(project_context);
+                                    push_addr_spaces(self, &items, project_context);
                                 } else if self.match_loc(&name.loc, services) {
                                     let addr = match &x.value {
                                         LeadingNameAccess_::Name(name) => {
@@ -496,7 +517,7 @@ impl ScopeVisitor for Visitor {
                                             addr.into_inner()
                                         }
                                     };
-                                    let items = scopes.collect_modules(&addr);
+                                    let items = project_context.collect_modules(&addr);
                                     if items.len() > 0 {
                                         // This is a reasonable guess.
                                         // In situation like global<std::>
@@ -504,12 +525,14 @@ impl ScopeVisitor for Visitor {
                                         // this is still can be unfinished NameAccessChain_::Three.
                                         push_module_names(self, &items);
                                     } else {
-                                        let items =
-                                            scopes.collect_use_module_items(x, |x| match x {
+                                        let items = project_context.collect_use_module_items(
+                                            x,
+                                            |x| match x {
                                                 Item::Fun(_) => true,
                                                 Item::SpecSchema(_, _) => true,
                                                 _ => false,
-                                            });
+                                            },
+                                        );
                                         push_items(self, &items);
                                     }
                                 }
@@ -526,18 +549,34 @@ impl ScopeVisitor for Visitor {
                                     }
                                 };
                                 if self.match_loc(&x.loc, services) {
-                                    let items = services.get_all_addrs(scopes);
-                                    push_addr_spaces(self, &items, scopes);
+                                    let items = services.get_all_addrs(project_context);
+                                    push_addr_spaces(self, &items, project_context);
                                 } else if self.match_loc(&name_and_module.loc, services) {
-                                    let items = scopes.collect_modules(&addr);
-                                    push_module_names(self, &items);
-                                } else if self.match_loc(&_z.loc, services) {
+                                    // A guesss
+
                                     let items =
-                                        scopes.collect_modules_items(&addr, y.value, |x| match x {
+                                        project_context.collect_use_module_items(&x, |x| -> bool {
+                                            match x {
+                                                Item::Fun(_) => true,
+                                                _ => false,
+                                            }
+                                        });
+                                    if items.len() > 0 {
+                                        push_items(self, &items);
+                                    } else {
+                                        let items = project_context.collect_modules(&addr);
+                                        push_module_names(self, &items);
+                                    }
+                                } else if self.match_loc(&_z.loc, services) {
+                                    let items = project_context.collect_modules_items(
+                                        &addr,
+                                        y.value,
+                                        |x| match x {
                                             Item::Fun(_) => true,
                                             Item::SpecSchema(_, _) => true,
                                             _ => false,
-                                        });
+                                        },
+                                    );
                                     push_items(self, &items);
                                 }
                             }
@@ -554,14 +593,14 @@ impl ScopeVisitor for Visitor {
                     Access::Friend(chain, _) => match &chain.value {
                         move_compiler::parser::ast::NameAccessChain_::One(name) => {
                             if self.match_loc(&name.loc, services) {
-                                let items = services.get_all_addrs(scopes);
-                                push_addr_spaces(self, &items, scopes);
+                                let items = services.get_all_addrs(project_context);
+                                push_addr_spaces(self, &items, project_context);
                             }
                         }
                         move_compiler::parser::ast::NameAccessChain_::Two(addr, name) => {
                             if self.match_loc(&addr.loc, services) {
-                                let items = services.get_all_addrs(scopes);
-                                push_addr_spaces(self, &items, scopes);
+                                let items = services.get_all_addrs(project_context);
+                                push_addr_spaces(self, &items, project_context);
                             } else if self.match_loc(&name.loc, services) {
                                 let addr = match &addr.value {
                                     LeadingNameAccess_::AnonymousAddress(addr) => addr.into_inner(),
@@ -569,7 +608,7 @@ impl ScopeVisitor for Visitor {
                                         services.name_2_addr(name.value)
                                     }
                                 };
-                                let items = scopes.collect_modules(&addr);
+                                let items = project_context.collect_modules(&addr);
                                 push_module_names(self, &items);
                             }
                         }
@@ -579,13 +618,13 @@ impl ScopeVisitor for Visitor {
                     },
                     Access::IncludeSchema(x, _) => {
                         if self.match_loc(&x.loc, services) {
-                            let items = scopes.collect_all_spec_schema();
+                            let items = project_context.collect_all_spec_schema();
                             push_items(self, &items);
                         }
                     }
                     Access::ApplySchemaTo(x, _) => {
                         if self.match_loc(&x.loc, services) {
-                            let items = scopes.collect_all_spec_target();
+                            let items = project_context.collect_all_spec_target();
                             push_items(self, &items);
                         }
                     }
@@ -598,12 +637,12 @@ impl ScopeVisitor for Visitor {
                     }
                     Access::ExprAddressName(var) => {
                         if self.match_loc(&var.loc, services) {
-                            push_addr_spaces_names(self, &services.get_all_addrs(scopes));
+                            push_addr_spaces_names(self, &services.get_all_addrs(project_context));
                         }
                     }
                     Access::SpecFor(name, _) => {
                         if self.match_loc(&name.loc, services) {
-                            let items = scopes.collect_all_spec_target();
+                            let items = project_context.collect_all_spec_target();
                             push_items(self, &items);
                         }
                     }
@@ -620,7 +659,7 @@ impl ScopeVisitor for Visitor {
     }
 }
 
-impl std::fmt::Display for Visitor {
+impl std::fmt::Display for Handler {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -630,7 +669,7 @@ impl std::fmt::Display for Visitor {
     }
 }
 
-impl GetPosition for Visitor {
+impl GetPosition for Handler {
     fn get_position(&self) -> (PathBuf, u32 /* line */, u32 /* col */) {
         (self.filepath.clone(), self.line, self.col)
     }

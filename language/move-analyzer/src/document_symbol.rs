@@ -1,7 +1,7 @@
 #![allow(deprecated)] // https://github.com/rust-lang/rust/issues/102777
 
 use super::context::*;
-use super::modules::*;
+use super::project::*;
 
 use lsp_server::*;
 use lsp_types::*;

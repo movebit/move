@@ -24,12 +24,12 @@ pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request)
             .send(Message::Response(r))
             .unwrap();
     };
-    let mut v = TestVisitor::new();
+    let mut v = TestHandler::new();
     let _ = match context.projects.get_project(&fpath) {
         Some(p) => p,
         None => return,
     }
-    .run_visitor_for_file(&mut v, &fpath);
+    .run_visitor_for_file(&mut v, &fpath, false);
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(v.result).unwrap());
     context
         .connection
@@ -39,29 +39,29 @@ pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request)
 }
 
 #[derive(Default)]
-pub struct TestVisitor {
+pub struct TestHandler {
     result: Vec<CodeLens>,
 }
-impl TestVisitor {
+impl TestHandler {
     fn new() -> Self {
         Self::default()
     }
 }
 
-impl std::fmt::Display for TestVisitor {
+impl std::fmt::Display for TestHandler {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "move test code lens")
     }
 }
 
-impl super::modules::ScopeVisitor for TestVisitor {
+impl super::project::ItemOrAccessHandler for TestHandler {
     fn handle_item_or_access(
         &mut self,
-        services: &dyn crate::modules::HandleItemService,
-        _scopes: &crate::scopes::Scopes,
+        services: &dyn crate::project::HandleItemService,
+        _project_context: &crate::project_context::ProjectContext,
         item: &crate::item::ItemOrAccess,
     ) {
-        let push = |v: &mut TestVisitor, name: &str, range: FileRange| {
+        let push = |v: &mut TestHandler, name: &str, range: FileRange| {
             let (manifest_dir, _) = discover_manifest_and_kind(range.path.as_path()).unwrap();
             v.result.push(CodeLens {
                 range: range.mk_location().range,

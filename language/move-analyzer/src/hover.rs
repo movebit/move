@@ -30,13 +30,13 @@ pub fn on_hover_request(context: &Context, request: &Request) {
         col,
     );
 
-    let mut visitor = goto_definition::Visitor::new(fpath.clone(), line, col);
+    let mut handler = goto_definition::Handler::new(fpath.clone(), line, col);
     let _ = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => return,
     }
-    .run_visitor_for_file(&mut visitor, &fpath);
-    let item = visitor.result_item_or_access.clone();
+    .run_visitor_for_file(&mut handler, &fpath, false);
+    let item = handler.result_item_or_access.clone();
     let hover = item.map(|x| hover_on_item_or_access(&x));
     let hover = hover.map(|x| Hover {
         contents: HoverContents::Scalar(MarkedString::String(x)),
@@ -55,6 +55,7 @@ fn hover_on_item_or_access(ia: &ItemOrAccess) -> String {
         match item {
             Item::MoveBuildInFun(x) => String::from(x.to_notice()),
             Item::SpecBuildInFun(x) => String::from(x.to_notice()),
+            Item::Use(_) => "".to_string(),
             _ => {
                 // nothing special .
                 format!("{}", item)

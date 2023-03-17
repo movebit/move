@@ -1,15 +1,17 @@
+# This a project modified from https://github.com/move-language/move 
+
 # sui-move-analyzer
 
 ## sui-move-analyzer Introduction
 The **sui-move-analyzer** is a Visual Studio Code plugin based on **move-analyzer** improved for **Move & Sui Move** by [MoveBit](https://movebit.xyz). Just now, we used this plugin in our dev member's daily work, and it's an alpha release.
 
-## The changelogs are below:
+## The changelogs:
 * Added semantic analysis to the Move language and Sui Move, and enhanced some features of the plug-in, such as go-to-definition, auto-completion, finding references, etc.;
 * Added semantic analysis to MSL (Move Specification Language), supports features such as go-to-definition and auto-completion, and supports go-to-definition from MSL code to Move code;
 * Integrated common Sui development commands into Command Palette, support Sui Code Snippets automatic completion (currently only init function);
 * Support parallel development of multiple projects under the same directory;
 
-## How to Install
+## How to Install (Must Read)
 
 The sui-move-analyzer Visual Studio Code extension works via two components: the extension itself and
 the `sui-move-analyzer` language server.
@@ -19,11 +21,8 @@ the `sui-move-analyzer` language server.
 The `sui-move-analyzer` language server is a Rust program that is part of the
 [Move repository](https://github.com/movebit/move). It may be installed in one of two ways:
 
-* Clone [Move repository](https://github.com/movebit/move) yourself and build
-   `sui-move-analyzer` from its source code, which is especially useful if you will work on core Move.
-   To do so, follow the instructions in the Move tutorial's
-   [Step 0: Installation](https://github.com/movebit/move/tree/main/language/documentation/tutorial#step-0-installation).
-* Use Rust's package manager `cargo` to install `move-analyzer` in your user's PATH. This
+* Use Cargo (Recommended)
+   Use Rust's package manager `cargo` to install `move-analyzer` in your user's PATH. This
    is recommended for people who do not work on core Move.
    1. If you don't already have a Rust toolchain installed, you should install
       [Rustup](https://rustup.rs/), which will install the latest stable Rust toolchain.
@@ -32,8 +31,14 @@ The `sui-move-analyzer` language server is a Rust program that is part of the
       usually `~/.cargo/bin`. You'll want to make sure this location is in your `PATH` environment
       variable.
 
+* Manual Install
+   Clone [Move repository](https://github.com/movebit/move) yourself and build
+   `sui-move-analyzer` from its source code, which is especially useful if you will work on core Move.
+   To do so, follow the instructions in the Move tutorial's
+   [Step 0: Installation](https://github.com/movebit/move/tree/main/language/documentation/tutorial#step-0-installation).
+
 To confirm that you've installed the language server program successfully, execute
-`move-analyzer --version` on the command line. You should see the output `move-analyzer 1.1.0`.
+`move-analyzer --version` on the command line. You should see the output `move-analyzer version number`.
 
 ### 2. Installing the sui-move-analyzer Visual Studio Code extension
 
@@ -54,7 +59,7 @@ bottom-right of your Visual Studio Code screen when opening a Move file, it mean
 `move-analyzer` executable could not be found in your `PATH`. You may try the following:
 
 1. Confirm that invoking `move-analyzer --version` in a command line terminal prints out
-   `move-analyzer 1.0.0`. If it doesn't, then retry the instructions in **step 1**. If it
+   `move-analyzer version number`. If it doesn't, then retry the instructions in **step 1**. If it
    does successfully print this output, try closing and re-opening the Visual Studio Code
    application, as it may not have picked up the update to your `PATH`.
 2. If you installed the `move-analyzer` executable to a different location that is outside of your
@@ -67,7 +72,7 @@ bottom-right of your Visual Studio Code screen when opening a Move file, it mean
 
 ## Features
 
-Here are some of the features of the move-analyzer Visual Studio Code extension. To see them, open a
+Here are some of the features of the sui-move-analyzer Visual Studio Code extension. To see them, open a
 Move source file (a file with a `.move` file extension) and:
 
 - See Move keywords and types highlighted in appropriate colors.
@@ -84,5 +89,6 @@ Move source file (a file with a `.move` file extension) and:
   - go to references
   - type on hover
   - outline view showing symbol tree for Move source files
-  - auto completion
-  - sui framework integration
+  - autocomplete
+  - sui commands line tool
+  - sui project template

@@ -1,6 +1,6 @@
 use super::completion;
 use super::goto_definition;
-use super::modules::*;
+use super::project::*;
 use crate::context::MultiProject;
 use crate::utils::path_concat;
 use log::{Level, Metadata, Record};
@@ -44,7 +44,7 @@ fn goto_definition_test() {
         &mut d,
     )
     .unwrap();
-    let mut v = goto_definition::Visitor::new(
+    let mut v = goto_definition::Handler::new(
         concat_current_working_dir("./tests/goto_definition/sources/test.move"),
         1,
         21,
@@ -62,7 +62,7 @@ fn goto_definition_test3() {
         &mut d,
     )
     .unwrap();
-    let mut v = goto_definition::Visitor::new(
+    let mut v = goto_definition::Handler::new(
         concat_current_working_dir("./tests/goto_definition/sources/test.move"),
         1,
         21,
@@ -80,7 +80,7 @@ fn goto_definition_test2() {
         &mut d,
     )
     .unwrap();
-    let mut v = goto_definition::Visitor::new(
+    let mut v = goto_definition::Handler::new(
         concat_current_working_dir("/home/yuyang/projects/test-move/sources/Hello.move"),
         119,
         21,
@@ -96,7 +96,7 @@ fn completion() {
     let mut d = MultiProject::default();
     let m = Project::new("/Users/yuyang/projects/test-move", &mut d).unwrap();
     let mut v =
-        completion::Visitor::new("/Users/yuyang/projects/test-move/sources/some.move", 3, 28);
+        completion::Handler::new("/Users/yuyang/projects/test-move/sources/some.move", 3, 28);
     m.run_full_visitor(&mut v);
     for x in v.result.unwrap().iter() {
         eprintln!("completion items:{:?} {:?} ", x.label, x.kind)
@@ -113,7 +113,7 @@ fn completion3() {
     )
     .unwrap();
     let mut v =
-        completion::Visitor::new("/Users/yuyang/projects/aptos-core/aptos-move/framework/aptos-framework/sources/account.spec.move", 68, 50);
+        completion::Handler::new("/Users/yuyang/projects/aptos-core/aptos-move/framework/aptos-framework/sources/account.spec.move", 68, 50);
     m.run_full_visitor(&mut v);
     for x in v.result.unwrap().iter() {
         eprintln!("completion items:{:?} {:?} ", x.label, x.kind)
@@ -126,21 +126,7 @@ fn goto_definition_test4() {
     let mut d = MultiProject::default();
     let m = Project::new("/Users/yuyang/projects/test-move", &mut d).unwrap();
     let mut v =
-        goto_definition::Visitor::new("/Users/yuyang/projects/test-move/sources/some.move", 4, 25);
-    m.run_full_visitor(&mut v);
-    eprintln!("{:?}", v.result.unwrap());
-}
-
-#[test]
-fn goto_definition_test5() {
-    init_log();
-    let mut d = MultiProject::default();
-    let m = Project::new("/Volumes/sanDisk/projects/test-move2", &mut d).unwrap();
-    let mut v = goto_definition::Visitor::new(
-        "/Volumes/sanDisk/projects/test-move2/sources/some.move",
-        8,
-        23,
-    );
+        goto_definition::Handler::new("/Users/yuyang/projects/test-move/sources/some.move", 4, 25);
     m.run_full_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
 }
@@ -150,7 +136,7 @@ fn completion2() {
     init_log();
     let mut d = MultiProject::default();
     let m = Project::new("/Volumes/sanDisk/projects/test-move2", &mut d).unwrap();
-    let mut v = completion::Visitor::new(
+    let mut v = completion::Handler::new(
         "/Volumes/sanDisk/projects/test-move2/sources/some.move",
         12,
         23,
@@ -159,4 +145,18 @@ fn completion2() {
     for x in v.result.unwrap().iter() {
         eprintln!("completion items:{:?} {:?} ", x.label, x.kind)
     }
+}
+
+#[test]
+fn goto_definition_test5() {
+    init_log();
+    let mut d = MultiProject::default();
+    let m = Project::new("/Volumes/sanDisk/projects/test-move2", &mut d).unwrap();
+    let mut v = goto_definition::Handler::new(
+        "/Volumes/sanDisk/projects/test-move2/sources/some.spec.move",
+        1,
+        10,
+    );
+    m.run_full_visitor(&mut v);
+    eprintln!("{:?}", v.result.unwrap());
 }
