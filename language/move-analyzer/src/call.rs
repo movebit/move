@@ -41,7 +41,6 @@ impl Handler {
     }
 }
 
-impl Handler {}
 impl super::project::ItemOrAccessHandler for Handler {
     fn need_call_tree(&self) -> bool {
         true
