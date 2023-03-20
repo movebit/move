@@ -45,7 +45,24 @@ export async function activate(
     );
     return;
   }
+  context.registerCommand("goto_definition", async (_context, ...args) => {
+    const loc = args[0] as { range: vscode.Range, fpath: string };
+    const t = await vscode.workspace.openTextDocument(loc.fpath);
+    await vscode.window.showTextDocument(t, { selection: loc.range, preserveFocus: false });
+  });
 
+  const d = vscode.languages.registerInlayHintsProvider({ scheme: 'file', language: 'move' },
+    {
+      provideInlayHints(document, range) {
+        const client = context.getClient();
+        if (client === undefined) {
+          return undefined;
+        }
+        const hints = client.sendRequest<vscode.InlayHint[]>('textDocument/inlayHint', { range: range, textDocument: { uri: document.uri.toString() } });
+        return hints;
+      },
+    });
+  extensionContext.subscriptions.push(d);
   // Configure other language features.
   context.configureLanguage();
 

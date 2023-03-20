@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #![allow(dead_code)]
 
-use lsp_types::Position;
+use lsp_types::{Command, Location, Position};
 use move_command_line_common::files::FileHash;
 use move_ir_types::location::*;
 use move_package::source_package::layout::SourcePackageLayout;
@@ -354,4 +354,43 @@ pub fn is_sub_dir(p: PathBuf, mut sub: PathBuf) -> bool {
         }
     }
     false
+}
+
+/// There command should implemented in `LSP` client.
+pub enum MoveAnalyzerClientCommands {
+    GotoDefinition(Location),
+}
+
+impl MoveAnalyzerClientCommands {
+    pub(crate) fn to_lsp_command(self) -> Command {
+        match self {
+            MoveAnalyzerClientCommands::GotoDefinition(x) => Command::new(
+                "Goto Definition".to_string(),
+                "move-analyzer.goto_definition".to_string(),
+                Some(vec![serde_json::to_value(PathAndRange::from(&x)).unwrap()]),
+            ),
+        }
+    }
+}
+use lsp_types::Range;
+
+#[derive(Clone, serde::Serialize)]
+pub struct PathAndRange {
+    range: Range,
+    fpath: String,
+}
+
+impl From<&Location> for PathAndRange {
+    fn from(value: &Location) -> Self {
+        Self {
+            range: value.range,
+            fpath: value
+                .uri
+                .to_file_path()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string(),
+        }
+    }
 }

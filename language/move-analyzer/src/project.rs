@@ -961,7 +961,7 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
     fn need_call_tree(&self) -> bool {
         false
     }
-    fn handle_call_tree(&mut self, _from: FunID, _to: FunID) {}
+    fn handle_call_pair(&mut self, _from: FunID, _to: FunID) {}
 }
 
 #[derive(Clone, serde::Serialize, Debug)]

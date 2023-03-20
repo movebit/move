@@ -35,12 +35,14 @@ extern crate move_ir_types;
 pub mod completion;
 #[macro_use]
 pub mod context;
+pub mod call;
 pub mod code_lens;
 pub mod document_symbol;
 pub mod goto_definition;
 pub mod hover;
 #[cfg(test)]
 mod ide_test;
+pub mod inlay_hitnt;
 pub mod item;
 pub mod move_generate_spec;
 pub mod move_generate_spec_chen;
@@ -54,4 +56,3 @@ pub mod scope;
 pub mod syntax;
 pub mod types;
 pub mod utils;
-pub mod call;

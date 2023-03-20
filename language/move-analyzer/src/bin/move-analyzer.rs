@@ -32,7 +32,7 @@ use move_analyzer::{
     code_lens,
     completion::on_completion_request,
     context::{Context, FileDiags, MultiProject},
-    document_symbol, goto_definition, hover,
+    document_symbol, goto_definition, hover, inlay_hitnt,
     move_generate_spec_file::on_generate_spec_file,
     move_generate_spec_sel::on_generate_spec_sel,
     project::ConvertLoc,
@@ -235,6 +235,10 @@ fn on_request(context: &mut Context, request: &Request) {
         lsp_types::request::CodeLensRequest::METHOD => {
             code_lens::move_get_test_code_lens(context, request);
         }
+        lsp_types::request::InlayHintRequest::METHOD => {
+            inlay_hitnt::on_inlay_hints(context, request);
+        }
+
         "move/generate/spec/file" => {
             on_generate_spec_file(context, request);
         }

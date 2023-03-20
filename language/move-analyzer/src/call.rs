@@ -54,7 +54,7 @@ impl super::project::ItemOrAccessHandler for Handler {
     fn function_or_spec_body_should_visit(&self, _range: &crate::utils::FileRange) -> bool {
         true
     }
-    fn handle_call_tree(&mut self, from: FunID, to: FunID) {
+    fn handle_call_pair(&mut self, from: FunID, to: FunID) {
         self.results.push(Result { from, to });
     }
 }

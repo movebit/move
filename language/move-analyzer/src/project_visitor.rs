@@ -1337,7 +1337,7 @@ impl Project {
                         match item.clone().into() {
                             Item::Fun(_f) => {
                                 let addr = project_context.get_current_addr_and_module_name();
-                                visitor.handle_call_tree(
+                                visitor.handle_call_pair(
                                     FunID {
                                         addr: addr.addr.clone(),
                                         addr_name: "".to_string(), // TODO

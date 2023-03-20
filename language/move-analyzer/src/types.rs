@@ -152,7 +152,15 @@ impl ResolvedType {
     ) {
         match self {
             ResolvedType::UnKnown => {}
-            ResolvedType::Struct(item::ItemStruct { ref mut fields, .. }) => {
+            ResolvedType::Struct(item::ItemStruct {
+                ref mut fields,
+                ref mut type_parameters_ins,
+                ..
+            }) => {
+                for i in 0..type_parameters_ins.len() {
+                    let t = type_parameters_ins.get_mut(i).unwrap();
+                    t.bind_type_parameter(types, project_context);
+                }
                 for i in 0..fields.len() {
                     let t = fields.get_mut(i).unwrap();
                     t.1.bind_type_parameter(types, project_context);
@@ -361,7 +369,7 @@ impl ResolvedType {
                         x
                     }
                     _ => {
-                        log::error!(
+                        log::info !(
                             "looks like impossible addr:0x{:?} module:{:?} item:{:?} x:{} not struct def.",
                             addr.short_str_lossless(),
                             module_name,
