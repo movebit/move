@@ -263,6 +263,17 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
         use move_analyzer::syntax::parse_file_string;
         let file_hash = FileHash::new(content);
         let mut env = CompilationEnv::new(Flags::testing());
+        let defs = parse_file_string(&mut env, file_hash, content);
+        let defs = match defs {
+            std::result::Result::Ok(x) => x,
+            std::result::Result::Err(d) => {
+                log::error!("update file failed,err:{:?}", d);
+                return;
+            }
+        };
+        let (defs, _) = defs;
+        context.projects.update_defs(fpath.clone(), defs);
+        context.ref_caches.clear();
         context
             .projects
             .hash_file
@@ -275,17 +286,6 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             .as_ref()
             .borrow_mut()
             .update(fpath.clone(), content);
-        let defs = parse_file_string(&mut env, file_hash, content);
-        let defs = match defs {
-            std::result::Result::Ok(x) => x,
-            std::result::Result::Err(d) => {
-                log::error!("update file failed,err:{:?}", d);
-                return;
-            }
-        };
-        let (defs, _) = defs;
-        context.projects.update_defs(fpath.clone(), defs);
-        context.ref_caches.clear();
     }
 
     match notification.method.as_str() {

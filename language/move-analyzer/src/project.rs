@@ -38,6 +38,7 @@ pub struct Project {
     pub(crate) manifest_paths: Vec<PathBuf>,
     pub(crate) project_context: ProjectContext,
     pub(crate) manifest_not_exists: HashSet<PathBuf>,
+    pub(crate) manifest_load_failures: HashSet<PathBuf>,
 }
 impl Project {
     pub(crate) fn mk_multi_project_key(&self) -> im::HashSet<PathBuf> {
@@ -49,7 +50,7 @@ impl Project {
         v
     }
     pub fn load_ok(&self) -> bool {
-        self.manifest_not_exists.len() == 0
+        self.manifest_not_exists.len() == 0 && self.manifest_load_failures.len() == 0
     }
 }
 
@@ -65,6 +66,7 @@ impl Project {
             manifest_paths: Default::default(),
             project_context: ProjectContext::new(),
             manifest_not_exists: Default::default(),
+            manifest_load_failures: Default::default(),
         };
         modules.load_project(&working_dir, multi)?;
         let mut dummy = DummyHandler;
@@ -129,7 +131,7 @@ impl Project {
             std::result::Result::Ok(x) => x,
             std::result::Result::Err(err) => {
                 log::error!("parse_move_manifest_from_file failed,err:{:?}", err);
-                self.manifest_not_exists.insert(manifest_path);
+                self.manifest_load_failures.insert(manifest_path);
                 return anyhow::Result::Ok(());
             }
         };
@@ -186,16 +188,7 @@ impl Project {
                     .expect(&format!("'{:?}' can't read_to_string", file.path()));
                 log::info!("load source file {:?}", file.path());
                 let file_hash = FileHash::new(file_content.as_str());
-                // update hash
-                self.hash_file
-                    .as_ref()
-                    .borrow_mut()
-                    .update(file.path().to_path_buf(), file_hash);
-                // update line mapping.
-                self.file_line_mapping
-                    .as_ref()
-                    .borrow_mut()
-                    .update(file.path().to_path_buf(), file_content.as_str());
+
                 // This is a move file.
                 let defs = parse_file_string(&mut env, file_hash, file_content.as_str());
                 let defs = match defs {
@@ -244,6 +237,16 @@ impl Project {
                         .scripts
                         .insert(file.path().clone().to_path_buf(), defs);
                 }
+                // update hash
+                self.hash_file
+                    .as_ref()
+                    .borrow_mut()
+                    .update(file.path().to_path_buf(), file_hash);
+                // update line mapping.
+                self.file_line_mapping
+                    .as_ref()
+                    .borrow_mut()
+                    .update(file.path().to_path_buf(), file_content.as_str());
             }
         }
     }
