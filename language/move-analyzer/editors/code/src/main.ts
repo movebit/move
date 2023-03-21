@@ -45,8 +45,8 @@ export async function activate(
     );
     return;
   }
-  context.registerCommand("goto_definition", async (_context, ...args) => {
-    const loc = args[0] as { range: vscode.Range, fpath: string };
+  context.registerCommand('goto_definition', async (_context, ...args) => {
+    const loc = args[0] as { range: vscode.Range; fpath: string };
     const t = await vscode.workspace.openTextDocument(loc.fpath);
     await vscode.window.showTextDocument(t, { selection: loc.range, preserveFocus: false });
   });
@@ -58,7 +58,8 @@ export async function activate(
         if (client === undefined) {
           return undefined;
         }
-        const hints = client.sendRequest<vscode.InlayHint[]>('textDocument/inlayHint', { range: range, textDocument: { uri: document.uri.toString() } });
+        const hints = client.sendRequest<vscode.InlayHint[]>('textDocument/inlayHint',
+          { range: range, textDocument: { uri: document.uri.toString() } });
         return hints;
       },
     });
