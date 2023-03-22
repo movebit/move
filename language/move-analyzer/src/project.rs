@@ -1,3 +1,4 @@
+use crate::context::send_show_message;
 use crate::context::MultiProject;
 
 // Copyright (c) The Diem Core Contributors
@@ -8,19 +9,29 @@ use super::project_context::*;
 use super::types::*;
 use super::utils::*;
 use anyhow::{Ok, Result};
+use crossbeam::channel::Sender;
+use lsp_server::Connection;
+use lsp_server::Message;
+use lsp_types::MessageType;
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::ast::Definition;
 use move_compiler::parser::ast::*;
 use move_compiler::shared::Identifier;
 use move_compiler::shared::*;
 use move_core_types::account_address::*;
+use move_core_types::effects::Op;
 use move_ir_types::location::Loc;
 use move_ir_types::location::Spanned;
 use move_package::source_package::layout::SourcePackageLayout;
 use move_package::source_package::manifest_parser::*;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
+use std::fs;
+use std::path::Path;
+use std::time::SystemTime;
+
 use std::hash::Hash;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -39,6 +50,7 @@ pub struct Project {
     pub(crate) project_context: ProjectContext,
     pub(crate) manifest_not_exists: HashSet<PathBuf>,
     pub(crate) manifest_load_failures: HashSet<PathBuf>,
+    pub(crate) manifest_mod_time: HashMap<PathBuf, Option<SystemTime>>,
 }
 impl Project {
     pub(crate) fn mk_multi_project_key(&self) -> im::HashSet<PathBuf> {
@@ -55,7 +67,11 @@ impl Project {
 }
 
 impl Project {
-    pub fn new(root_dir: impl Into<PathBuf>, multi: &mut MultiProject) -> Result<Self> {
+    pub fn new(
+        root_dir: impl Into<PathBuf>,
+        multi: &mut MultiProject,
+        report_err: impl FnMut(String) + Clone,
+    ) -> Result<Self> {
         let working_dir = root_dir.into();
         log::info!("scan modules at {:?}", &working_dir);
         let mut modules = Self {
@@ -67,8 +83,9 @@ impl Project {
             project_context: ProjectContext::new(),
             manifest_not_exists: Default::default(),
             manifest_load_failures: Default::default(),
+            manifest_mod_time: Default::default(),
         };
-        modules.load_project(&working_dir, multi)?;
+        modules.load_project(&working_dir, multi, report_err.clone())?;
         let mut dummy = DummyHandler;
         modules.run_full_visitor(&mut dummy);
         Ok(modules)
@@ -105,6 +122,7 @@ impl Project {
         &mut self,
         manifest_path: &PathBuf,
         multi: &mut MultiProject,
+        mut report_err: impl FnMut(String) + Clone,
     ) -> Result<()> {
         let manifest_path = normal_path(&manifest_path.as_path());
         if self.modules.get(&manifest_path).is_some() {
@@ -127,11 +145,24 @@ impl Project {
             self.manifest_not_exists.insert(manifest_path);
             return anyhow::Result::Ok(());
         }
+        {
+            let mut file = manifest_path.clone();
+            file.push(PROJECT_FILE_NAME);
+
+            self.manifest_mod_time
+                .insert(file.clone(), file_modify_time(file.as_path()));
+        }
+
         let manifest = match parse_move_manifest_from_file(&manifest_path) {
             std::result::Result::Ok(x) => x,
             std::result::Result::Err(err) => {
+                report_err(format!(
+                    "parse manifest '{:?} 'failed.\n addr must exactly 32 length or start with '0x' like '0x2'\n{:?}",
+                    manifest_path,
+                    err
+                ));
                 log::error!("parse_move_manifest_from_file failed,err:{:?}", err);
-                self.manifest_load_failures.insert(manifest_path);
+                self.manifest_load_failures.insert(manifest_path.clone());
                 return anyhow::Result::Ok(());
             }
         };
@@ -144,7 +175,10 @@ impl Project {
         {
             use move_package::source_package::parsed_manifest::Dependency;
             let de_path = match &de {
-                Dependency::External(_) => todo!(),
+                Dependency::External(_) => {
+                    // TODO
+                    continue;
+                }
                 Dependency::Internal(x) => move_package::resolution::local_path(&x.kind),
             };
             let p = path_concat(manifest_path.as_path(), &de_path);
@@ -153,7 +187,7 @@ impl Project {
                 &manifest_path,
                 dep_name
             );
-            self.load_project(&p, multi)?;
+            self.load_project(&p, multi, report_err.clone())?;
         }
         Ok(())
     }
@@ -161,7 +195,6 @@ impl Project {
     /// Load move files  locate in sources and tests ...
     pub(crate) fn load_layout_files(&mut self, manifest_path: &PathBuf, kind: SourcePackageLayout) {
         use super::syntax::parse_file_string;
-        use std::fs;
         let mut env = CompilationEnv::new(Flags::testing());
         let mut p = manifest_path.clone();
         p.push(kind.location_str());
@@ -1339,5 +1372,35 @@ impl<'a> AstProvider for ModulesAstProvider<'a> {
     }
     fn layout(&self) -> SourcePackageLayout {
         self.layout
+    }
+}
+
+pub(crate) fn file_modify_time(x: &Path) -> Option<SystemTime> {
+    use std::result::Result::*;
+
+    match x.metadata() {
+        Ok(x) => match x.modified() {
+            Ok(x) => Some(x),
+            Err(_) => None,
+        },
+        Err(_) => None,
+    }
+}
+
+impl Project {
+    pub(crate) fn manifest_beed_modified(&self) -> bool {
+        self.manifest_mod_time.iter().any(|(k, v)| {
+            if file_modify_time(k.as_path()).cmp(v) != Ordering::Equal {
+                eprintln!(
+                    "going to reload project becasue of modify of '{:?}' {:?} {:?}",
+                    k.as_path(),
+                    file_modify_time(k.as_path()),
+                    v
+                );
+                true
+            } else {
+                false
+            }
+        })
     }
 }

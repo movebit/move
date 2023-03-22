@@ -8,7 +8,8 @@ use crate::project::*;
 use crate::references::ReferencesCache;
 use im::HashSet;
 use lsp_server::Connection;
-use lsp_types::notification::Notification;
+use lsp_types::notification::{LogMessage, Notification};
+use lsp_types::MessageType;
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::ast::Definition;
 use move_ir_types::location::Loc;
@@ -85,7 +86,10 @@ impl MultiProject {
                 return anyhow::Result::Err(anyhow::anyhow!("fetch deps failed"));
             }
         }
-        let modules = Project::new(&mani, self);
+        let modules = Project::new(&mani, self, |msg: String| {
+            send_show_message(sender, MessageType::ERROR, msg)
+        });
+
         modules
     }
 
@@ -193,7 +197,7 @@ impl FileDiags {
 static LOAD_DEPS: bool = false;
 
 impl MultiProject {
-    pub fn try_reload_projects_has_not_exists(&mut self) {
+    pub fn try_reload_projects(&mut self, sender: &Connection) {
         let mut all = Vec::new();
         let not_founds = {
             let mut x = Vec::new();
@@ -208,11 +212,22 @@ impl MultiProject {
             }
             x
         };
+        let mut modifies = Vec::new();
+        for (k, p) in self.projects.iter() {
+            if p.manifest_beed_modified() {
+                let root = p.manifest_paths.first().map(|x| x.clone()).unwrap();
+                if not_founds.iter().any(|x| x.2 == root) == false {
+                    modifies.push((k.clone(), root));
+                }
+            } else {
+                eprintln!("not modified {:?}", k);
+            }
+        }
         for (k, not_founds, root_manifest) in not_founds.into_iter() {
             let mut exists_now = false;
             for v in not_founds.iter() {
                 let mut v = v.clone();
-                v.push("Move.toml");
+                v.push(PROJECT_FILE_NAME);
                 if v.exists() {
                     exists_now = true;
                     break;
@@ -221,12 +236,35 @@ impl MultiProject {
             if exists_now == false {
                 continue;
             }
-            eprintln!("reload  {:?}...", root_manifest.as_path());
-            let x = match Project::new(root_manifest, self) {
+            eprintln!("reload  {:?}", root_manifest.as_path());
+            let x = match Project::new(root_manifest, self, |msg| {
+                send_show_message(sender, MessageType::ERROR, msg)
+            }) {
                 Ok(x) => x,
                 Err(_) => {
                     log::error!("reload project failed");
                     return;
+                }
+            };
+            all.push((k, x));
+        }
+        for (k, root_manifest) in modifies.into_iter() {
+            send_show_message(
+                sender,
+                MessageType::INFO,
+                format!("reload {:?}", root_manifest.as_path()),
+            );
+            let x = match Project::new(root_manifest, self, |msg| {
+                send_show_message(sender, MessageType::ERROR, msg);
+            }) {
+                Ok(x) => x,
+                Err(err) => {
+                    send_show_message(
+                        sender,
+                        MessageType::ERROR,
+                        format!("reload project failed,err:{:?}", err),
+                    );
+                    continue;
                 }
             };
             all.push((k, x));

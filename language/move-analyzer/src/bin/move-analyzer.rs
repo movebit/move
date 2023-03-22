@@ -186,7 +186,7 @@ fn main() {
                 }
             }
             recv(context.connection.receiver) -> message => {
-                try_reload_projects_has_not_exists(&mut context);
+                try_reload_projects(&mut context);
                 match message {
                     Ok(Message::Request(request)) => on_request(&mut context, &request),
                     Ok(Message::Response(response)) => on_response(&context, &response),
@@ -210,8 +210,8 @@ fn main() {
     log::error!("Shut down language server '{}'.", exe);
 }
 
-fn try_reload_projects_has_not_exists(context: &mut Context) {
-    context.projects.try_reload_projects_has_not_exists();
+fn try_reload_projects(context: &mut Context) {
+    context.projects.try_reload_projects(&context.connection);
 }
 fn on_request(context: &mut Context, request: &Request) {
     log::info!("receive method:{}", request.method.as_str());
@@ -238,7 +238,6 @@ fn on_request(context: &mut Context, request: &Request) {
         lsp_types::request::InlayHintRequest::METHOD => {
             inlay_hitnt::on_inlay_hints(context, request);
         }
-
         "move/generate/spec/file" => {
             on_generate_spec_file(context, request);
         }
@@ -543,6 +542,11 @@ fn send_not_project_file_error(context: &mut Context, fpath: PathBuf, is_open: b
         }))
         .unwrap();
 }
+
+fn reload_projects(context: &mut Context, mani: PathBuf) {
+    panic!("reload {:?}", mani);
+}
+
 fn send_diag(context: &mut Context, mani: PathBuf, x: Diagnostics) {
     let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
     for x in x.into_codespan_format() {

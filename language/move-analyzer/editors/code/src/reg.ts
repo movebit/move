@@ -154,9 +154,7 @@ class WorkingDir {
     }
 
 }
-
-
-export class Reg {
+class Reg {
 
     /** Regist all the command for sui framework for main.ts */
     static regsui(context: Readonly<Context>): void {
@@ -731,3 +729,5 @@ export class Reg {
     }
 
 }
+
+export { Reg, WorkingDir } 

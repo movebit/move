@@ -30,8 +30,8 @@ macro_rules! impl_convert_loc {
         }
     };
 }
-
 extern crate move_ir_types;
+
 pub mod completion;
 #[macro_use]
 pub mod context;

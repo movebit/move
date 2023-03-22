@@ -220,7 +220,7 @@ pub fn path_concat(p1: &Path, p2: &Path) -> PathBuf {
 /// concat Move.toml file.
 pub fn path_concat_move_toml(p1: &Path, p2: &Path) -> PathBuf {
     let p1_is_move_toml = match p1.to_str() {
-        Some(x) => x.ends_with("Move.toml"),
+        Some(x) => x.ends_with(PROJECT_FILE_NAME),
         None => false,
     };
     if p1_is_move_toml {
@@ -320,7 +320,7 @@ pub fn discover_manifest_and_kind(x: &Path) -> Option<(PathBuf, SourcePackageLay
         manifest_dir.push(x);
     }
     let mut manifest_file = manifest_dir.clone();
-    manifest_file.push("Move.toml");
+    manifest_file.push(PROJECT_FILE_NAME);
     if manifest_file.exists() {
         Some((manifest_dir, layout))
     } else {
@@ -394,3 +394,5 @@ impl From<&Location> for PathAndRange {
         }
     }
 }
+
+pub const PROJECT_FILE_NAME: &str = "Move.toml";

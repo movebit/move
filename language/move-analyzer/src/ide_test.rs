@@ -4,7 +4,10 @@ use super::project::*;
 use crate::context::MultiProject;
 use crate::utils::path_concat;
 use log::{Level, Metadata, Record};
+use move_package::source_package::manifest_parser::parse_move_manifest_from_file;
+use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
 struct SimpleLogger;
 
 impl log::Log for SimpleLogger {
@@ -35,31 +38,13 @@ fn concat_current_working_dir(s: &str) -> PathBuf {
 }
 
 #[test]
-fn goto_definition_test() {
-    init_log();
-    let mut d = MultiProject::default();
-
-    let m = Project::new(
-        concat_current_working_dir("./tests/goto_definition"),
-        &mut d,
-    )
-    .unwrap();
-    let mut v = goto_definition::Handler::new(
-        concat_current_working_dir("./tests/goto_definition/sources/test.move"),
-        1,
-        21,
-    );
-    m.run_full_visitor(&mut v);
-    eprintln!("{:?}", v.result.unwrap());
-}
-
-#[test]
 fn goto_definition_test3() {
     init_log();
     let mut d = MultiProject::default();
     let m = Project::new(
         concat_current_working_dir("./tests/goto_definition"),
         &mut d,
+        report_err,
     )
     .unwrap();
     let mut v = goto_definition::Handler::new(
@@ -78,6 +63,7 @@ fn goto_definition_test2() {
     let m = Project::new(
         concat_current_working_dir("/home/yuyang/projects/test-move"),
         &mut d,
+        report_err,
     )
     .unwrap();
     let mut v = goto_definition::Handler::new(
@@ -94,7 +80,7 @@ fn goto_definition_test2() {
 fn completion() {
     init_log();
     let mut d = MultiProject::default();
-    let m = Project::new("/Users/yuyang/projects/test-move", &mut d).unwrap();
+    let m = Project::new("/Users/yuyang/projects/test-move", &mut d, report_err).unwrap();
     let mut v =
         completion::Handler::new("/Users/yuyang/projects/test-move/sources/some.move", 3, 28);
     m.run_full_visitor(&mut v);
@@ -110,6 +96,7 @@ fn completion3() {
     let m = Project::new(
         "/Users/yuyang/projects/aptos-core/aptos-move/framework/aptos-framework",
         &mut d,
+        report_err,
     )
     .unwrap();
     let mut v =
@@ -124,7 +111,7 @@ fn completion3() {
 fn goto_definition_test4() {
     init_log();
     let mut d = MultiProject::default();
-    let m = Project::new("/Users/yuyang/projects/test-move", &mut d).unwrap();
+    let m = Project::new("/Users/yuyang/projects/test-move", &mut d, report_err).unwrap();
     let mut v =
         goto_definition::Handler::new("/Users/yuyang/projects/test-move/sources/some.move", 4, 25);
     m.run_full_visitor(&mut v);
@@ -135,7 +122,7 @@ fn goto_definition_test4() {
 fn completion2() {
     init_log();
     let mut d = MultiProject::default();
-    let m = Project::new("/Volumes/sanDisk/projects/test-move2", &mut d).unwrap();
+    let m = Project::new("/Volumes/sanDisk/projects/test-move2", &mut d, report_err).unwrap();
     let mut v = completion::Handler::new(
         "/Volumes/sanDisk/projects/test-move2/sources/some.move",
         12,
@@ -151,7 +138,7 @@ fn completion2() {
 fn goto_definition_test5() {
     init_log();
     let mut d = MultiProject::default();
-    let m = Project::new("/Volumes/sanDisk/projects/test-move2", &mut d).unwrap();
+    let m = Project::new("/Volumes/sanDisk/projects/test-move2", &mut d, report_err).unwrap();
     let mut v = goto_definition::Handler::new(
         "/Volumes/sanDisk/projects/test-move2/sources/some.spec.move",
         1,
@@ -159,4 +146,43 @@ fn goto_definition_test5() {
     );
     m.run_full_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
+}
+
+#[test]
+fn goto_definition_test() {
+    init_log();
+    let mut d = MultiProject::default();
+
+    let m = Project::new(
+        PathBuf::from_str("/Volumes/sanDisk/projects/sui/sui_programmability/examples/basics")
+            .unwrap(),
+        &mut d,
+        report_err,
+    )
+    .unwrap();
+    let mut v = goto_definition::Handler::new(
+        concat_current_working_dir("./tests/goto_definition/sources/test.move"),
+        1,
+        21,
+    );
+    m.run_full_visitor(&mut v);
+    eprintln!("{:?}", v.result.unwrap());
+}
+
+fn report_err(msg: String) {
+    log::error!("{}", msg);
+}
+
+#[test]
+
+fn xxxxx() {
+    let s = PathBuf::from_str(
+        "/Volumes/sanDisk/projects/sui/crates/sui-framework/deps/move-stdlib/Move.toml",
+    )
+    .unwrap();
+
+    eprintln!("{:?}", file_modify_time(s.as_path()));
+    std::thread::sleep(std::time::Duration::new(4, 0));
+
+    eprintln!("{:?}", file_modify_time(s.as_path()));
 }
