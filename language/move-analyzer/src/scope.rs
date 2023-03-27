@@ -81,7 +81,7 @@ impl Scope {
     pub(crate) fn enter_item(&mut self, s: Symbol, item: impl Into<Item>) {
         let item = item.into();
         match &item {
-            Item::Var(_, _) | Item::Parameter(_, _) if s.as_str() == "_" => {
+            Item::Var { .. } | Item::Parameter(_, _) if s.as_str() == "_" => {
                 return;
             }
             Item::Use(_) => {

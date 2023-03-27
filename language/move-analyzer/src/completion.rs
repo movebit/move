@@ -470,7 +470,7 @@ impl ItemOrAccessHandler for Handler {
                     Access::ExprVar(var, _) => {
                         if self.match_loc(&var.loc(), services) {
                             let items = project_context.collect_items(|x| match x {
-                                Item::Var(_, _) | Item::Parameter(_, _) => true,
+                                Item::Var { .. } | Item::Parameter(_, _) => true,
                                 _ => false,
                             });
                             push_items(self, &items);
@@ -483,7 +483,7 @@ impl ItemOrAccessHandler for Handler {
                                     push_items(
                                         self,
                                         &project_context.collect_items(|x| match x {
-                                            Item::Var(_, _)
+                                            Item::Var { .. }
                                             | Item::Parameter(_, _)
                                             | Item::Use(_)
                                             | Item::SpecSchema(_, _) => true,
@@ -865,7 +865,7 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
             }
         }
 
-        Item::Var(name, _) => CompletionItem {
+        Item::Var { var: name, .. } => CompletionItem {
             label: String::from(name.0.value.as_str()),
             kind: Some(CompletionItemKind::VARIABLE),
             detail: Some(format!("{}", item)),

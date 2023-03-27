@@ -67,6 +67,7 @@ pub fn init_log() {
 struct Options {}
 
 fn main() {
+    #[cfg(feature = "pprof")]
     cpu_pprof(20);
 
     // For now, move-analyzer only responds to options built-in to clap,
@@ -376,41 +377,6 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
         }
         _ => log::error!("handle notification '{}' from client", notification.method),
     }
-}
-
-#[cfg(not(target_os = "windows"))]
-fn cpu_pprof(_seconds: u64) {
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "pprof")] {
-            use std::fs::File;
-            use std::time::Duration;
-            let guard = pprof::ProfilerGuardBuilder::default()
-                .frequency(1000)
-                .blocklist(&["libc", "libgcc", "pthread", "vdso"])
-                .build()
-                .unwrap();
-            std::thread::spawn(move || loop {
-                std::thread::sleep(Duration::new(_seconds, 0));
-                match guard.report().build() {
-                    Result::Ok(report) => {
-                        let  mut tmp = std::env::temp_dir();
-                        tmp.push("move-analyzer-flamegraph.svg") ;
-                        let file = File::create(tmp.clone()).unwrap();
-                        report.flamegraph(file).unwrap();
-                        eprintln!("pprof file at {:?}",tmp.as_path()) ;
-
-                    }
-                    Result::Err(e) => {
-                        log::error!("build report failed,err:{}", e);
-                    }
-                };
-            });
-        }
-    }
-}
-#[cfg(target_os = "windows")]
-fn cpu_pprof(_seconds: u64) {
-    log::error!("Can't run pprof in Windows");
 }
 
 fn get_package_compile_diagnostics(

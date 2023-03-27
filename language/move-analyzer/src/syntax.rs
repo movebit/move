@@ -1911,7 +1911,20 @@ fn parse_type(context: &mut Context) -> Result<Type, Box<Diagnostic>> {
         }
         Tok::Pipe => {
             let args = parse_comma_list(context, Tok::Pipe, Tok::Pipe, parse_type, "a type")?;
-            let result = parse_type(context)?;
+            let result = match parse_type(context) {
+                Ok(x) => x,
+                // in aptos
+                // I see this.
+                // | d : Key| with no return value.
+                Err(_) => Type {
+                    loc: make_loc(
+                        context.tokens.file_hash(),
+                        start_loc,
+                        context.tokens.start_loc(),
+                    ),
+                    value: Type_::Unit,
+                },
+            };
             return Ok(spanned(
                 context.tokens.file_hash(),
                 start_loc,
@@ -1921,7 +1934,18 @@ fn parse_type(context: &mut Context) -> Result<Type, Box<Diagnostic>> {
         }
         Tok::PipePipe => {
             context.tokens.advance()?;
-            let result = parse_type(context)?;
+            let result = match parse_type(context) {
+                Ok(x) => x,
+
+                Err(_) => Type {
+                    loc: make_loc(
+                        context.tokens.file_hash(),
+                        start_loc,
+                        context.tokens.start_loc(),
+                    ),
+                    value: Type_::Unit,
+                },
+            };
             return Ok(spanned(
                 context.tokens.file_hash(),
                 start_loc,

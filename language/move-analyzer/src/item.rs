@@ -33,12 +33,13 @@ impl std::fmt::Display for ItemStruct {
 #[derive(Clone)]
 pub enum Item {
     Parameter(Var, ResolvedType),
-    // UseModule(ItemUseModule),
-    // UseMember(ItemUseItem),
     Const(ItemConst),
-    Var(Var, ResolvedType),
+    Var {
+        var: Var,
+        ty: ResolvedType,
+        lambda: Option<LambdaExp>,
+    },
     Field(Field, ResolvedType),
-
     Struct(ItemStruct),
     StructNameRef(ItemStructNameRef),
     Fun(ItemFun),
@@ -53,6 +54,12 @@ pub enum Item {
     ModuleName(ItemModuleName),
     Use(Vec<ItemUse>),
     Dummy,
+}
+
+#[derive(Clone)]
+pub struct LambdaExp {
+    pub(crate) bind_list: BindList,
+    pub(crate) exp: Exp,
 }
 
 #[derive(Clone)]
@@ -213,7 +220,7 @@ impl Item {
             Item::Struct(x) => ResolvedType::Struct(x.clone()),
             Item::StructNameRef(x) => ResolvedType::StructRef(x.clone(), Default::default()),
             Item::BuildInType(b) => ResolvedType::BuildInType(*b),
-            Item::Parameter(_, ty) | Item::Var(_, ty) | Item::Const(ItemConst { ty, .. }) => {
+            Item::Parameter(_, ty) | Item::Var { ty, .. } | Item::Const(ItemConst { ty, .. }) => {
                 ty.clone()
             }
             Item::Field(_, ty) => ty.clone(),
@@ -284,7 +291,7 @@ impl Item {
             Item::Const(ItemConst { name, .. }) => name.loc(),
             Item::StructNameRef(ItemStructNameRef { name, .. }) => name.0.loc,
             Item::Fun(f) => f.name.0.loc,
-            Item::Var(name, _) => name.loc(),
+            Item::Var { var: name, .. } => name.loc(),
             Item::Field(f, _) => f.loc(),
             Item::Dummy => UNKNOWN_LOC,
             Item::SpecSchema(name, _) => name.loc,
@@ -419,8 +426,8 @@ impl std::fmt::Display for Item {
                 }
                 std::result::Result::Ok(())
             }
-            Item::Var(name, ty) => {
-                write!(f, "{}:{}", name.0.value.as_str(), ty)
+            Item::Var { var, ty, .. } => {
+                write!(f, "{}:{}", var.0.value.as_str(), ty)
             }
             Item::Field(x, ty) => {
                 write!(f, "{}:{}", x.0.value.as_str(), ty)
@@ -601,7 +608,7 @@ pub enum ItemOrAccess {
 impl ItemOrAccess {
     pub(crate) fn is_local(&self) -> bool {
         let item_is_local = |x: &Item| match x {
-            Item::Var(_, _) => true,
+            Item::Var { .. } => true,
             _ => false,
         };
         match self {

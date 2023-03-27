@@ -352,7 +352,7 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
     }
     fn item_type_defs(ret: &mut Vec<Location>, x: &Item, modules: &super::project::Project) {
         match x {
-            Item::Var(_, ty) | Item::Parameter(_, ty) => {
+            Item::Var { ty, .. } | Item::Parameter(_, ty) => {
                 type_defs(ret, ty, modules);
             }
             Item::Field(_, ty) => {

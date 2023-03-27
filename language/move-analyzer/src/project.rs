@@ -424,7 +424,57 @@ impl Project {
         }
     }
 
-    /// Get A Type for expr if possible otherwise Unknown is return.
+    fn initialize_fun_call(
+        &self,
+        project_context: &ProjectContext,
+        name: &NameAccessChain,
+        type_args: &Option<Vec<Type>>,
+        exprs: &Spanned<Vec<Exp>>,
+    ) -> Option<ResolvedType> {
+        let (fun_type, _) = project_context.find_name_chain_item(name, self);
+        let fun_type = fun_type.unwrap_or_default().to_type().unwrap_or_default();
+        match &fun_type {
+            ResolvedType::Lambda { .. } => Some(fun_type),
+            ResolvedType::Fun(x) => {
+                let type_parameters = &x.type_parameters;
+                let parameters = &x.parameters;
+                let type_args: Option<Vec<ResolvedType>> = if let Some(type_args) = type_args {
+                    Some(
+                        type_args
+                            .iter()
+                            .map(|x| project_context.resolve_type(x, self))
+                            .collect(),
+                    )
+                } else {
+                    None
+                };
+                let mut fun_type = fun_type.clone();
+                let mut types = HashMap::new();
+                if let Some(ref ts) = type_args {
+                    for (para, args) in type_parameters.iter().zip(ts.iter()) {
+                        types.insert(para.0.value, args.clone());
+                    }
+                } else if type_parameters.len() > 0 {
+                    //
+                    let exprs_types: Vec<_> = exprs
+                        .value
+                        .iter()
+                        .map(|e| self.get_expr_type(e, project_context))
+                        .collect();
+                    infer_type_parameter_on_expression(
+                        &mut types,
+                        &parameters.iter().map(|(_, t)| t.clone()).collect(),
+                        &exprs_types,
+                        project_context,
+                    );
+                }
+                fun_type.bind_type_parameter(&types, project_context);
+                Some(fun_type)
+            }
+            _ => None,
+        }
+    }
+    /// Get A Type for exprme if possible otherwise Unknown is return.
     pub(crate) fn get_expr_type(
         &self,
         expr: &Exp,
@@ -487,51 +537,10 @@ impl Project {
                     }
                     _ => {}
                 }
-                let (fun_type, _) = project_context.find_name_chain_item(name, self);
-                let fun_type = fun_type.unwrap_or_default().to_type().unwrap_or_default();
-                match &fun_type {
+                let ty = self.initialize_fun_call(project_context, name, type_args, exprs);
+                match ty.unwrap_or_default() {
+                    ResolvedType::Fun(x) => x.ret_type.as_ref().clone(),
                     ResolvedType::Lambda { ret_ty, .. } => ret_ty.as_ref().clone(),
-                    ResolvedType::Fun(x) => {
-                        let type_parameters = &x.type_parameters;
-                        let parameters = &x.parameters;
-                        let type_args: Option<Vec<ResolvedType>> =
-                            if let Some(type_args) = type_args {
-                                Some(
-                                    type_args
-                                        .iter()
-                                        .map(|x| project_context.resolve_type(x, self))
-                                        .collect(),
-                                )
-                            } else {
-                                None
-                            };
-                        let mut fun_type = fun_type.clone();
-                        let mut types = HashMap::new();
-                        if let Some(ref ts) = type_args {
-                            for (para, args) in type_parameters.iter().zip(ts.iter()) {
-                                types.insert(para.0.value, args.clone());
-                            }
-                        } else if type_parameters.len() > 0 {
-                            //
-                            let exprs_types: Vec<_> = exprs
-                                .value
-                                .iter()
-                                .map(|e| self.get_expr_type(e, project_context))
-                                .collect();
-                            infer_type_parameter_on_expression(
-                                &mut types,
-                                &parameters.iter().map(|(_, t)| t.clone()).collect(),
-                                &exprs_types,
-                                project_context,
-                            );
-                        }
-                        fun_type.bind_type_parameter(&types, project_context);
-                        match &fun_type {
-                            ResolvedType::Fun(x) => x.ret_type.as_ref().clone(),
-                            _ => unreachable!(),
-                        }
-                    }
-
                     _ => ResolvedType::UnKnown,
                 }
             }

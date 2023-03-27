@@ -155,6 +155,7 @@ impl ResolvedType {
         types: &HashMap<Symbol, ResolvedType>,
         project_context: &ProjectContext,
     ) {
+        eprintln!("type {} bind to", self);
         match self {
             ResolvedType::UnKnown => {}
             ResolvedType::Struct(item::ItemStruct {
@@ -174,7 +175,7 @@ impl ResolvedType {
             ResolvedType::BuildInType(_) => {}
             ResolvedType::TParam(name, _) => {
                 if let Some(x) = types.get(&name.value) {
-                    let _ = std::mem::replace(self, x.clone());
+                    *self = x.clone();
                 }
             }
             ResolvedType::Ref(_, ref mut b) => {
@@ -202,7 +203,7 @@ impl ResolvedType {
             }
 
             ResolvedType::StructRef(_, _) => {
-                let _ = std::mem::replace(self, self.clone().struct_ref_to_struct(project_context));
+                *self = self.clone().struct_ref_to_struct(project_context);
                 match self {
                     ResolvedType::Struct(_) => {
                         self.bind_type_parameter(types, project_context);
@@ -213,7 +214,6 @@ impl ResolvedType {
                     _ => unreachable!(),
                 }
             }
-
             ResolvedType::Range => {}
             ResolvedType::Lambda { args, ret_ty } => {
                 for a in args.iter_mut() {

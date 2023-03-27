@@ -76,25 +76,67 @@ impl ProjectContext {
     pub(crate) fn new() -> Self {
         Self::default()
     }
-
-    pub(crate) fn try_fix_local_var_type(&self, name: Symbol, ty: ResolvedType) {
+    /// try fix a local var type
+    /// for syntax like
+    /// ```move
+    /// let x ;
+    /// ...
+    /// x = 1  // fix can happen here.
+    /// ...
+    /// ```
+    /// This function also return a option lambda expr associate with
+    /// like syntax
+    /// ```move
+    /// let add : |u8 , u8| u8
+    /// add = |x , y | x + y
+    /// ```
+    #[must_use]
+    pub(crate) fn try_fix_local_var_ty(
+        &self,
+        name: Symbol,
+        tye: &ResolvedType,
+    ) -> Option<LambdaExp> {
         let mut b = self.scopes.as_ref().borrow_mut();
-        let mut fixed = false;
-        b.iter_mut().rev().for_each(|x| {
-            if !fixed {
-                if let Some(item) = x.items.get_mut(&name) {
-                    match item {
-                        Item::Var(_, t) | Item::Parameter(_, t) => {
-                            if t.is_err() {
-                                *t = ty.clone();
-                                fixed = true;
+        let mut ret = None;
+        {
+            let mut fixed = false;
+            b.iter_mut().rev().for_each(|x| {
+                if !fixed {
+                    if let Some(item) = x.items.get_mut(&name) {
+                        match item {
+                            Item::Var { ty, .. } | Item::Parameter(_, ty) => {
+                                if ty.is_err() {
+                                    *ty = tye.clone();
+                                    fixed = true;
+                                }
                             }
+                            _ => {}
                         }
-                        _ => {}
                     }
                 }
-            }
-        });
+            });
+        }
+        {
+            let mut fixed = false;
+            b.iter_mut().rev().for_each(|x| {
+                if !fixed {
+                    if let Some(item) = x.items.get_mut(&name) {
+                        match item {
+                            Item::Var { ty, lambda, .. } => {
+                                if ty.is_err() {
+                                    *ty = tye.clone();
+                                    fixed = true;
+                                    // try visit lambda expr
+                                    ret = lambda.clone();
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            });
+        }
+        ret
     }
 
     pub(crate) fn set_current_addr_and_module_name(&self, addr: AccountAddress, name: Symbol) {
@@ -460,8 +502,8 @@ impl ProjectContext {
         self.inner_first_visit(|s| {
             if let Some(v) = s.items.get(&name) {
                 match v {
-                    Item::Parameter(_, t) | Item::Var(_, t) => {
-                        ret = Some(t.clone());
+                    Item::Parameter(_, ty) | Item::Var { ty, .. } => {
+                        ret = Some(ty.clone());
                         return true;
                     }
                     _ => {}
@@ -767,7 +809,7 @@ impl ProjectContext {
         self.inner_first_visit(|scope| {
             if let Some(item) = scope.items.get(&name) {
                 match item {
-                    Item::Var(_, _) | Item::Parameter(_, _) => {
+                    Item::Var { .. } | Item::Parameter(_, _) => {
                         r = Some(item.clone());
                         return true;
                     }

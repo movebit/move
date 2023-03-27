@@ -2,6 +2,7 @@ use super::completion;
 use super::goto_definition;
 use super::project::*;
 use crate::context::MultiProject;
+use crate::utils::cpu_pprof;
 use crate::utils::path_concat;
 use log::{Level, Metadata, Record};
 
@@ -159,13 +160,14 @@ fn goto_definition_test() {
 
 #[test]
 fn goto_definition_test5() {
+    cpu_pprof(10);
     init_log();
     let mut d = MultiProject::default();
     let m = Project::new("/Volumes/sanDisk/projects/test-move2", &mut d, report_err).unwrap();
     let mut v = goto_definition::Handler::new(
-        "/Volumes/sanDisk/projects/test-move2/sources/some.move",
-        4,
-        10,
+        "/Volumes/sanDisk/projects/aptos-core/aptos-move/framework/aptos-stdlib/sources/simple_map.move",
+        117,
+        13,
     );
     m.run_full_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
