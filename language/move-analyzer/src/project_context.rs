@@ -834,10 +834,18 @@ impl ProjectContext {
             Type_::Ref(m, ref b) => {
                 ResolvedType::Ref(*m, Box::new(self.resolve_type(b.as_ref(), name_to_addr)))
             }
-            Type_::Fun(_, _) => {
-                log::error!("fun is not first class type.");
-                ResolvedType::UnKnown
+            Type_::Fun(args, ret_ty) => {
+                let args: Vec<_> = args
+                    .iter()
+                    .map(|x| self.resolve_type(x, name_to_addr))
+                    .collect();
+                let ret_ty = self.resolve_type(ret_ty.as_ref(), name_to_addr);
+                ResolvedType::Lambda {
+                    args,
+                    ret_ty: Box::new(ret_ty),
+                }
             }
+
             Type_::Unit => ResolvedType::Unit,
             Type_::Multiple(ref types) => {
                 let types: Vec<_> = types

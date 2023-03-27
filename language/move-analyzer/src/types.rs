@@ -33,6 +33,11 @@ pub enum ResolvedType {
     Fun(ItemFun),
     Vec(Box<ResolvedType>),
 
+    Lambda {
+        args: Vec<ResolvedType>,
+        ret_ty: Box<ResolvedType>,
+    },
+
     /// Spec type
     Range,
 }
@@ -210,6 +215,12 @@ impl ResolvedType {
             }
 
             ResolvedType::Range => {}
+            ResolvedType::Lambda { args, ret_ty } => {
+                for a in args.iter_mut() {
+                    a.bind_type_parameter(types, project_context);
+                }
+                ret_ty.bind_type_parameter(types, project_context);
+            }
         }
     }
 
@@ -244,6 +255,7 @@ impl ResolvedType {
             ResolvedType::Fun(f) => f.name.0.loc,
             ResolvedType::Vec(_) => UNKNOWN_LOC,
             ResolvedType::Range => UNKNOWN_LOC,
+            ResolvedType::Lambda { .. } => UNKNOWN_LOC,
         }
     }
 }
@@ -340,6 +352,25 @@ impl std::fmt::Display for ResolvedType {
             }
             ResolvedType::Range => {
                 write!(f, "range(n..m)")
+            }
+            ResolvedType::Lambda { args, ret_ty } => {
+                write!(f, "|")?;
+                if args.len() > 0 {
+                    let last_index = args.len() - 1;
+                    for (index, a) in args.iter().enumerate() {
+                        write!(f, "{}", a)?;
+                        if index != last_index {
+                            write!(f, ",")?;
+                        }
+                    }
+                }
+                write!(f, "|")?;
+                if matches!(ret_ty.as_ref(), ResolvedType::Unit) == false {
+                    write!(f, ":")?;
+                    write!(f, "{}", ret_ty)
+                } else {
+                    Ok(())
+                }
             }
         }
     }

@@ -1,4 +1,3 @@
-use crate::context::send_show_message;
 use crate::context::MultiProject;
 
 // Copyright (c) The Diem Core Contributors
@@ -9,17 +8,14 @@ use super::project_context::*;
 use super::types::*;
 use super::utils::*;
 use anyhow::{Ok, Result};
-use crossbeam::channel::Sender;
-use lsp_server::Connection;
-use lsp_server::Message;
-use lsp_types::MessageType;
+
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::ast::Definition;
 use move_compiler::parser::ast::*;
 use move_compiler::shared::Identifier;
 use move_compiler::shared::*;
 use move_core_types::account_address::*;
-use move_core_types::effects::Op;
+
 use move_ir_types::location::Loc;
 use move_ir_types::location::Spanned;
 use move_package::source_package::layout::SourcePackageLayout;
@@ -494,6 +490,7 @@ impl Project {
                 let (fun_type, _) = project_context.find_name_chain_item(name, self);
                 let fun_type = fun_type.unwrap_or_default().to_type().unwrap_or_default();
                 match &fun_type {
+                    ResolvedType::Lambda { ret_ty, .. } => ret_ty.as_ref().clone(),
                     ResolvedType::Fun(x) => {
                         let type_parameters = &x.type_parameters;
                         let parameters = &x.parameters;
@@ -948,6 +945,19 @@ pub(crate) fn infer_type_parameter_on_expression(
                 }
             }
             ResolvedType::Range => {}
+            ResolvedType::Lambda { args, ret_ty } => match expr_type {
+                ResolvedType::Lambda {
+                    args: args2,
+                    ret_ty: ret_ty2,
+                } => {
+                    for (a1, a2) in args.iter().zip(args2.iter()) {
+                        bind(ret, a1, a2, project_context);
+                    }
+                    bind(ret, ret_ty.as_ref(), ret_ty2.as_ref(), project_context);
+                }
+
+                _ => {}
+            },
         }
     }
 }

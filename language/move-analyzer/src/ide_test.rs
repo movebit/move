@@ -4,8 +4,7 @@ use super::project::*;
 use crate::context::MultiProject;
 use crate::utils::path_concat;
 use log::{Level, Metadata, Record};
-use move_package::source_package::manifest_parser::parse_move_manifest_from_file;
-use std::path::Path;
+
 use std::path::PathBuf;
 use std::str::FromStr;
 struct SimpleLogger;
@@ -22,6 +21,9 @@ impl log::Log for SimpleLogger {
     fn flush(&self) {}
 }
 
+fn report_err(msg: String) {
+    log::error!("{}", msg);
+}
 const LOGGER: SimpleLogger = SimpleLogger;
 
 pub fn init_log() {
@@ -135,20 +137,6 @@ fn completion2() {
 }
 
 #[test]
-fn goto_definition_test5() {
-    init_log();
-    let mut d = MultiProject::default();
-    let m = Project::new("/Volumes/sanDisk/projects/test-move2", &mut d, report_err).unwrap();
-    let mut v = goto_definition::Handler::new(
-        "/Volumes/sanDisk/projects/test-move2/sources/some.spec.move",
-        1,
-        10,
-    );
-    m.run_full_visitor(&mut v);
-    eprintln!("{:?}", v.result.unwrap());
-}
-
-#[test]
 fn goto_definition_test() {
     init_log();
     let mut d = MultiProject::default();
@@ -169,20 +157,16 @@ fn goto_definition_test() {
     eprintln!("{:?}", v.result.unwrap());
 }
 
-fn report_err(msg: String) {
-    log::error!("{}", msg);
-}
-
 #[test]
-
-fn xxxxx() {
-    let s = PathBuf::from_str(
-        "/Volumes/sanDisk/projects/sui/crates/sui-framework/deps/move-stdlib/Move.toml",
-    )
-    .unwrap();
-
-    eprintln!("{:?}", file_modify_time(s.as_path()));
-    std::thread::sleep(std::time::Duration::new(4, 0));
-
-    eprintln!("{:?}", file_modify_time(s.as_path()));
+fn goto_definition_test5() {
+    init_log();
+    let mut d = MultiProject::default();
+    let m = Project::new("/Volumes/sanDisk/projects/test-move2", &mut d, report_err).unwrap();
+    let mut v = goto_definition::Handler::new(
+        "/Volumes/sanDisk/projects/test-move2/sources/some.move",
+        4,
+        10,
+    );
+    m.run_full_visitor(&mut v);
+    eprintln!("{:?}", v.result.unwrap());
 }

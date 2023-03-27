@@ -8,7 +8,7 @@ use crate::project::*;
 use crate::references::ReferencesCache;
 use im::HashSet;
 use lsp_server::Connection;
-use lsp_types::notification::{LogMessage, Notification};
+use lsp_types::notification::Notification;
 use lsp_types::MessageType;
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::ast::Definition;
@@ -197,7 +197,7 @@ impl FileDiags {
 static LOAD_DEPS: bool = false;
 
 impl MultiProject {
-    pub fn try_reload_projects(&mut self, sender: &Connection) {
+    pub fn try_reload_projects(&mut self, connection: &Connection) {
         let mut all = Vec::new();
         let not_founds = {
             let mut x = Vec::new();
@@ -219,8 +219,6 @@ impl MultiProject {
                 if not_founds.iter().any(|x| x.2 == root) == false {
                     modifies.push((k.clone(), root));
                 }
-            } else {
-                eprintln!("not modified {:?}", k);
             }
         }
         for (k, not_founds, root_manifest) in not_founds.into_iter() {
@@ -238,7 +236,7 @@ impl MultiProject {
             }
             eprintln!("reload  {:?}", root_manifest.as_path());
             let x = match Project::new(root_manifest, self, |msg| {
-                send_show_message(sender, MessageType::ERROR, msg)
+                send_show_message(connection, MessageType::ERROR, msg)
             }) {
                 Ok(x) => x,
                 Err(_) => {
@@ -250,17 +248,17 @@ impl MultiProject {
         }
         for (k, root_manifest) in modifies.into_iter() {
             send_show_message(
-                sender,
+                connection,
                 MessageType::INFO,
-                format!("reload {:?}", root_manifest.as_path()),
+                format!("trying reload {:?}.", root_manifest.as_path()),
             );
             let x = match Project::new(root_manifest, self, |msg| {
-                send_show_message(sender, MessageType::ERROR, msg);
+                send_show_message(connection, MessageType::ERROR, msg);
             }) {
                 Ok(x) => x,
                 Err(err) => {
                     send_show_message(
-                        sender,
+                        connection,
                         MessageType::ERROR,
                         format!("reload project failed,err:{:?}", err),
                     );

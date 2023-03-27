@@ -61,7 +61,7 @@ impl Handler {
             reuslts: Default::default(),
         }
     }
-
+    #[allow(dead_code)]
     fn in_range(&self, loc: Loc, services: &dyn HandleItemService) -> bool {
         services
             .convert_loc_range(&loc)
@@ -311,5 +311,11 @@ fn ty_inlay_hints_label_parts_(
             location: None,
             command: None,
         }),
+        ResolvedType::Lambda { args, ret_ty } => {
+            for a in args.iter() {
+                ty_inlay_hints_label_parts_(ret, a, services);
+            }
+            ty_inlay_hints_label_parts_(ret, ret_ty.as_ref(), services);
+        }
     };
 }

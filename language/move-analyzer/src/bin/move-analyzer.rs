@@ -543,10 +543,6 @@ fn send_not_project_file_error(context: &mut Context, fpath: PathBuf, is_open: b
         .unwrap();
 }
 
-fn reload_projects(context: &mut Context, mani: PathBuf) {
-    panic!("reload {:?}", mani);
-}
-
 fn send_diag(context: &mut Context, mani: PathBuf, x: Diagnostics) {
     let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
     for x in x.into_codespan_format() {

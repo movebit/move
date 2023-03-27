@@ -305,7 +305,6 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
         Some(x) => x,
         None => return,
     };
-
     let _ = modules.run_visitor_for_file(&mut handler, &fpath, false);
     fn type_defs(ret: &mut Vec<Location>, ty: &ResolvedType, modules: &super::project::Project) {
         match ty {
@@ -344,6 +343,11 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
             }
 
             ResolvedType::Range => {}
+            ResolvedType::Lambda { args, ret_ty } => {
+                for a in args.iter().chain(vec![ret_ty.as_ref()]) {
+                    type_defs(ret, a, modules);
+                }
+            }
         }
     }
     fn item_type_defs(ret: &mut Vec<Location>, x: &Item, modules: &super::project::Project) {

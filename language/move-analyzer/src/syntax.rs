@@ -1919,6 +1919,16 @@ fn parse_type(context: &mut Context) -> Result<Type, Box<Diagnostic>> {
                 Type_::Fun(args, Box::new(result)),
             ));
         }
+        Tok::PipePipe => {
+            context.tokens.advance()?;
+            let result = parse_type(context)?;
+            return Ok(spanned(
+                context.tokens.file_hash(),
+                start_loc,
+                context.tokens.previous_end_loc(),
+                Type_::Fun(vec![], Box::new(result)),
+            ));
+        }
         _ => {
             let tn = parse_name_access_chain(context, || "a type name")?;
             let tys = if context.tokens.peek() == Tok::Less {
