@@ -209,15 +209,7 @@ fn ty_inlay_hints_label_parts_(
 
     match ty {
         ResolvedType::UnKnown => {}
-        ResolvedType::Struct(x) => {
-            ret.push(InlayHintLabelPart {
-                value: format!("{}", x.name.0.value.as_str()),
-                tooltip: None,
-                location: None,
-                command: mk_command(x.name.loc()),
-            });
-            type_args(ret, &x.type_parameters_ins);
-        }
+
         ResolvedType::StructRef(x, tys) => {
             ret.push(InlayHintLabelPart {
                 value: format!("{}", x.name.0.value.as_str()),

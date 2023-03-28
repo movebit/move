@@ -848,17 +848,9 @@ impl ProjectContext {
                     }
                     _ => {}
                 }
-
                 let (chain_ty, _) = self.find_name_chain_ty(chain, name_to_addr);
                 let mut chain_ty = chain_ty.unwrap_or_default();
-
                 let chain_ty = match &mut chain_ty {
-                    ResolvedType::Struct(x) => {
-                        x.type_parameters_ins = types;
-                        let mut x = chain_ty.clone();
-                        x.bind_struct_type_parameter(self);
-                        x
-                    }
                     ResolvedType::StructRef(
                         ItemStructNameRef {
                             type_parameters: _type_parameters,

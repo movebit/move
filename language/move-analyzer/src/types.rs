@@ -14,8 +14,7 @@ use std::vec;
 #[derive(Clone)]
 pub enum ResolvedType {
     UnKnown,
-    /// struct { ... }
-    Struct(item::ItemStruct),
+
     StructRef(
         ItemStructNameRef,
         Vec<ResolvedType>, //  Type Args.
@@ -236,7 +235,6 @@ impl ResolvedType {
 impl ResolvedType {
     pub(crate) fn def_loc(&self) -> Loc {
         match self {
-            ResolvedType::Struct(x) => x.name.loc(),
             ResolvedType::TParam(name, _) => name.loc,
             ResolvedType::BuildInType(_) => UNKNOWN_LOC,
             ResolvedType::StructRef(ItemStructNameRef { name, .. }, _) => name.loc(),
@@ -369,7 +367,7 @@ impl std::fmt::Display for ResolvedType {
 }
 
 impl ResolvedType {
-    pub(crate) fn struct_ref_to_struct(self, s: &ProjectContext) -> ResolvedType {
+    pub(crate) fn struct_ref_to_struct(self, s: &ProjectContext) -> ItemStruct {
         match self.clone() {
             Self::StructRef(
                 ItemStructNameRef {

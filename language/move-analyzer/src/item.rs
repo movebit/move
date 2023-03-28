@@ -22,6 +22,8 @@ pub struct ItemStruct {
     pub(crate) type_parameters_ins: Vec<ResolvedType>,
     pub(crate) fields: Vec<(Field, ResolvedType)>, /* TODO If this length is zero,maybe a native. */
     pub(crate) is_test: bool,
+    pub(crate) addr: AccountAddress,
+    pub(crate) module_name: Symbol,
 }
 
 impl std::fmt::Display for ItemStruct {
@@ -217,7 +219,16 @@ impl Item {
     pub(crate) fn to_type(&self) -> Option<ResolvedType> {
         let x = match self {
             Item::TParam(name, ab) => ResolvedType::TParam(name.clone(), ab.clone()),
-            Item::Struct(x) => ResolvedType::Struct(x.clone()),
+            Item::Struct(x) => ResolvedType::StructRef(
+                ItemStructNameRef {
+                    addr: x.addr_and_name.addr,
+                    module_name: x.addr_and_name.name.0.value,
+                    name: x.name,
+                    type_parameters: x.type_parameters.clone(),
+                    is_test: x.is_test,
+                },
+                vec![],
+            ),
             Item::StructNameRef(x) => ResolvedType::StructRef(x.clone(), Default::default()),
             Item::BuildInType(b) => ResolvedType::BuildInType(*b),
             Item::Parameter(_, ty) | Item::Var { ty, .. } | Item::Const(ItemConst { ty, .. }) => {

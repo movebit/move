@@ -15,6 +15,7 @@ use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::ops::Add;
 use std::vec;
 use std::{path::PathBuf, rc::Rc};
 
@@ -331,6 +332,8 @@ impl Project {
                     type_parameters_ins: vec![],
                     fields,
                     is_test: attributes_has_test(&s.attributes).is_test(),
+                    addr,
+                    module_name,
                 }));
                 visitor.handle_item_or_access(self, scopes, &item);
                 scopes.enter_top_item(self, addr, module_name, s.name.value(), item, false)
