@@ -615,6 +615,7 @@ impl Project {
                     }
                     _ => UNKNOWN_TYPE.clone(),
                 };
+                // save infered type.
                 match &mut struct_ty {
                     ResolvedType::Struct(ItemStruct {
                         name: _,

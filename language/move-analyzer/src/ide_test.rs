@@ -160,10 +160,11 @@ fn goto_definition_test() {
 
 #[test]
 fn goto_definition_test5() {
+    init_log();
     cpu_pprof(10);
     init_log();
     let mut d = MultiProject::default();
-    let m = Project::new("/Volumes/sanDisk/projects/test-move2", &mut d, report_err).unwrap();
+    let m = Project::new("/Volumes/sanDisk/projects/test-move", &mut d, report_err).unwrap();
 
     // let mut v = goto_definition::Handler::new(
     //     "/Volumes/sanDisk/projects/aptos-core/aptos-move/framework/aptos-stdlib/sources/simple_map.move",
