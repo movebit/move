@@ -8,6 +8,7 @@ use move_compiler::{parser::ast::*, shared::*};
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::vec;
 
 #[derive(Clone)]
@@ -155,7 +156,6 @@ impl ResolvedType {
         types: &HashMap<Symbol, ResolvedType>,
         project_context: &ProjectContext,
     ) {
-        eprintln!("type {} bind to", self);
         match self {
             ResolvedType::UnKnown => {}
             ResolvedType::Struct(item::ItemStruct {
@@ -163,10 +163,10 @@ impl ResolvedType {
                 ref mut type_parameters_ins,
                 ..
             }) => {
-                for i in 0..type_parameters_ins.len() {
-                    let t = type_parameters_ins.get_mut(i).unwrap();
-                    t.bind_type_parameter(types, project_context);
-                }
+                // for i in 0..type_parameters_ins.len() {
+                //     let t = type_parameters_ins.get_mut(i).unwrap();
+                //     t.bind_type_parameter(types, project_context);
+                // }
                 for i in 0..fields.len() {
                     let t = fields.get_mut(i).unwrap();
                     t.1.bind_type_parameter(types, project_context);
@@ -175,6 +175,7 @@ impl ResolvedType {
             ResolvedType::BuildInType(_) => {}
             ResolvedType::TParam(name, _) => {
                 if let Some(x) = types.get(&name.value) {
+                    eprint!("bind t -> {:?}", x);
                     *self = x.clone();
                 }
             }
@@ -203,6 +204,7 @@ impl ResolvedType {
             }
 
             ResolvedType::StructRef(_, _) => {
+                panic!("1111");
                 *self = self.clone().struct_ref_to_struct(project_context);
                 match self {
                     ResolvedType::Struct(_) => {
@@ -413,6 +415,42 @@ impl ResolvedType {
                 .expect("You are looking for a struct which can't be found,It is possible But should not happen.")
             }
             _ => self,
+        }
+    }
+}
+
+impl Debug for ResolvedType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ResolvedType::UnKnown => write!(f, "{}", self),
+            ResolvedType::Struct(x) => {
+                write!(f, "{}", x.name.value().as_str())?;
+                if x.type_parameters_ins.len() > 0 {
+                    debug_assert!(x.type_parameters_ins.len() == x.type_parameters.len());
+                    write!(f, "{}", "<")?;
+                    for (x, y) in x.type_parameters.iter().zip(x.type_parameters_ins.iter()) {
+                        write!(f, "{}->{:?}\n", x.name.value.as_str(), y);
+                    }
+                    write!(f, "{}", ">")?;
+                }
+                write!(f, "{{\n")?;
+                if x.fields.len() > 0 {
+                    for (name, ty) in x.fields.iter() {
+                        write!(f, "{}->{:?}\n", name.0.value.as_str(), ty);
+                    }
+                }
+                write!(f, "}}\n")
+            }
+            ResolvedType::StructRef(_, _) => todo!(),
+            ResolvedType::BuildInType(_) => write!(f, "{}", self),
+            ResolvedType::TParam(_, _) => write!(f, "{}", self),
+            ResolvedType::Ref(_, t) => write!(f, "&{:?}", t.as_ref()),
+            ResolvedType::Unit => write!(f, "{}", self),
+            ResolvedType::Multiple(_) => todo!(),
+            ResolvedType::Fun(_) => todo!(),
+            ResolvedType::Vec(_) => todo!(),
+            ResolvedType::Lambda { args, ret_ty } => todo!(),
+            ResolvedType::Range => write!(f, "{}", self),
         }
     }
 }
