@@ -128,28 +128,33 @@ impl ItemOrAccessHandler for Handler {
     ) {
         match item {
             ItemOrAccess::Item(item) => match item {
-                Item::Var { var, ty, .. } => {
-                    if ty.is_err() {
-                        return;
-                    }
-                    let var_range = if let Some(from_range) = services.convert_loc_range(&var.loc())
-                    {
-                        from_range
-                    } else {
-                        return;
-                    };
-                    if !self.in_range_range(&var_range) {
-                        return;
-                    }
-                    self.reuslts.push(mk_inlay_hits(
-                        Position {
-                            line: var_range.line_end,
-                            character: var_range.col_end,
-                        },
-                        ty_inlay_hints_label_parts(ty, services),
-                        InlayHintKind::TYPE,
-                    ));
-                }
+                // Item::Var {
+                //     var,
+                //     ty,
+                //     has_decl_ty: false,
+                //     ..
+                // } => {
+                //     if ty.is_err() {
+                //         return;
+                //     }
+                //     let var_range = if let Some(from_range) = services.convert_loc_range(&var.loc())
+                //     {
+                //         from_range
+                //     } else {
+                //         return;
+                //     };
+                //     if !self.in_range_range(&var_range) {
+                //         return;
+                //     }
+                //     self.reuslts.push(mk_inlay_hits(
+                //         Position {
+                //             line: var_range.line_end,
+                //             character: var_range.col_end,
+                //         },
+                //         ty_inlay_hints_label_parts(ty, services),
+                //         InlayHintKind::TYPE,
+                //     ));
+                // }
                 _ => {}
             },
 
@@ -160,10 +165,16 @@ impl ItemOrAccessHandler for Handler {
                     ty,
                     all_fields: _all_fields,
                     item: _item,
+                    has_ref,
                 }) => {
                     if ty.is_err() {
                         return;
                     }
+                    let ty = if let Some(is_mut) = has_ref {
+                        ResolvedType::new_ref(*is_mut, ty.clone())
+                    } else {
+                        ty.clone()
+                    };
                     let from_range =
                         if let Some(from_range) = services.convert_loc_range(&from.loc()) {
                             from_range
@@ -178,7 +189,7 @@ impl ItemOrAccessHandler for Handler {
                             line: from_range.line_end,
                             character: from_range.col_end,
                         },
-                        ty_inlay_hints_label_parts(ty, services),
+                        ty_inlay_hints_label_parts(&ty, services),
                         InlayHintKind::TYPE,
                     ));
                 }
@@ -218,7 +229,7 @@ fn mk_inlay_hits(pos: Position, label: InlayHintLabel, kind: InlayHintKind) -> I
 
 fn para_inlay_hints_parts(name: &Name, services: &dyn HandleItemService) -> InlayHintLabel {
     InlayHintLabel::LabelParts(vec![InlayHintLabelPart {
-        value: format!("{}", name.value.as_str()),
+        value: format!("{}:", name.value.as_str()),
         tooltip: None,
         location: None,
         command: mk_command(name.loc, services),
@@ -230,7 +241,12 @@ fn ty_inlay_hints_label_parts(
     services: &dyn HandleItemService,
 ) -> InlayHintLabel {
     let mut ret = Vec::new();
-
+    ret.push(InlayHintLabelPart {
+        value: ": ".to_string(),
+        tooltip: None,
+        location: None,
+        command: None,
+    });
     ty_inlay_hints_label_parts_(&mut ret, ty, services);
     InlayHintLabel::LabelParts(ret)
 }

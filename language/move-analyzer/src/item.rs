@@ -105,6 +105,7 @@ pub enum Item {
         var: Var,
         ty: ResolvedType,
         lambda: Option<LambdaExp>,
+        has_decl_ty: bool,
     },
     Field(Field, ResolvedType),
     Struct(ItemStruct),
@@ -555,6 +556,9 @@ pub struct AccessFiled {
     /// x is alas a field and a expr.
     /// and a expr can link to a item.
     pub(crate) item: Option<Item>,
+    /// Does this field access contains a ref
+    /// like &xxx.yyy
+    pub(crate) has_ref: Option<bool>,
 }
 
 impl std::fmt::Display for Access {

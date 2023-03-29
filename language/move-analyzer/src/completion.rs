@@ -10,11 +10,13 @@ use super::utils::*;
 use crate::context::Context;
 use lsp_server::*;
 use lsp_types::*;
-use move_compiler::parser::ast::LeadingNameAccess_;
-use move_compiler::parser::ast::ModuleName;
-use move_compiler::parser::keywords::{CONTEXTUAL_KEYWORDS, KEYWORDS, PRIMITIVE_TYPES};
-use move_compiler::shared::Identifier;
-use move_compiler::shared::Name;
+use move_compiler::{
+    parser::{
+        ast::{LeadingNameAccess_, ModuleName},
+        keywords::{CONTEXTUAL_KEYWORDS, KEYWORDS, PRIMITIVE_TYPES},
+    },
+    shared::{Identifier, Name},
+};
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::collections::HashMap;

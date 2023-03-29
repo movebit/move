@@ -736,13 +736,17 @@ impl Project {
             }
             Exp_::Dot(e, name) => {
                 let ty = self.get_expr_type(e, project_context);
+                let ty = match &ty {
+                    ResolvedType::Ref(_, ty) => ty.as_ref(),
+                    _ => &ty,
+                };
                 match ty {
                     ResolvedType::Struct(_, _) => {
                         let s = ty.struct_ref_to_struct(project_context);
                         if let Some(field) = s.find_filed_by_name(name.value) {
                             field.1.clone()
                         } else {
-                            ty
+                            ResolvedType::UnKnown
                         }
                     }
                     _ => ResolvedType::UnKnown,

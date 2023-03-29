@@ -202,6 +202,7 @@ impl Project {
                             &self.project_context,
                             visitor,
                             None,
+                            false,
                         );
                         if visitor.finished() {
                             return;
@@ -563,11 +564,13 @@ impl Project {
         project_context: &ProjectContext,
         visitor: &mut dyn ItemOrAccessHandler,
         expr: Option<&Exp>,
+        has_decl_ty: bool,
     ) {
         log::info!("visit_bind:{:?}", bind);
         match &bind.value {
             Bind_::Var(var) => {
                 let item = ItemOrAccess::Item(Item::Var {
+                    has_decl_ty,
                     var: var.clone(),
                     ty: infer_ty.clone(),
                     lambda: expr
@@ -650,13 +653,14 @@ impl Project {
                             ty: field_ty.clone(),
                             all_fields: struct_item.all_fields(),
                             item: None,
+                            has_ref: None,
                         }));
                         visitor.handle_item_or_access(self, project_context, &item);
                         if visitor.finished() {
                             return;
                         }
                     }
-                    self.visit_bind(bind, &field_ty, project_context, visitor, None);
+                    self.visit_bind(bind, &field_ty, project_context, visitor, None, true);
                 }
             }
         }
@@ -676,6 +680,7 @@ impl Project {
                 return;
             }
         }
+        let has_decl_type = ty.is_some();
         let ty = if let Some(ty) = ty {
             self.visit_type_apply(ty, project_context, visitor);
             if visitor.finished() {
@@ -688,6 +693,7 @@ impl Project {
         } else {
             ResolvedType::UnKnown
         };
+
         for (index, bind) in bind_list.value.iter().enumerate() {
             let ty = ty.nth_ty(index);
             let unknown = ResolvedType::UnKnown;
@@ -704,6 +710,7 @@ impl Project {
                     },
                     None => None,
                 },
+                has_decl_type,
             );
             if visitor.finished() {
                 return;
@@ -781,6 +788,46 @@ impl Project {
             let ty = self.get_expr_type(exp, project_context);
             visitor.handle_expr_typ(exp, ty);
         }
+
+        let handle_dot = |e: &Exp,
+                          field: &Name,
+                          project_context: &ProjectContext,
+                          visitor: &mut dyn ItemOrAccessHandler,
+                          has_ref: Option<bool>| {
+            self.visit_expr(e, project_context, visitor);
+            if visitor.finished() {
+                return;
+            }
+            let struct_ty = self.get_expr_type(e, project_context);
+            let struct_ty = match &struct_ty {
+                ResolvedType::Ref(_, ty) => ty.as_ref(),
+                _ => &struct_ty,
+            };
+            let struct_ty = struct_ty.struct_ref_to_struct(project_context);
+            let all_fields = struct_ty.all_fields();
+            if let Some(def_field) = struct_ty.find_filed_by_name(field.value) {
+                let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
+                    from: Field(field.clone()),
+                    to: def_field.0.clone(),
+                    ty: def_field.1.clone(),
+                    all_fields,
+                    item: None,
+                    has_ref,
+                }));
+                visitor.handle_item_or_access(self, project_context, &item);
+            } else {
+                let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
+                    from: Field(field.clone()),
+                    to: Field(field.clone()),
+                    ty: ResolvedType::UnKnown,
+                    all_fields,
+                    item: None,
+                    has_ref,
+                }));
+                visitor.handle_item_or_access(self, project_context, &item);
+            }
+        };
+
         match &exp.value {
             Exp_::Value(ref v) => {
                 if let Some(name) = get_name_from_value(v) {
@@ -959,6 +1006,7 @@ impl Project {
                             ty: field_type.1.clone(),
                             all_fields,
                             item,
+                            has_ref: None,
                         }));
                         visitor.handle_item_or_access(self, project_context, &item);
                     } else {
@@ -968,6 +1016,7 @@ impl Project {
                             ty: ResolvedType::UnKnown,
                             all_fields,
                             item,
+                            has_ref: None,
                         }));
                         visitor.handle_item_or_access(self, project_context, &item);
                     }
@@ -1144,36 +1193,16 @@ impl Project {
                 }
                 self.visit_expr(right, project_context, visitor);
             }
-            Exp_::Borrow(_, e) => {
-                self.visit_expr(e.as_ref(), project_context, visitor);
-            }
+            Exp_::Borrow(is_mut, e) => match &e.value {
+                Exp_::Dot(e, f) => {
+                    handle_dot(&e, f, project_context, visitor, Some(*is_mut));
+                }
+                _ => {
+                    self.visit_expr(e.as_ref(), project_context, visitor);
+                }
+            },
             Exp_::Dot(e, field) => {
-                self.visit_expr(e.as_ref(), project_context, visitor);
-                if visitor.finished() {
-                    return;
-                }
-                let struct_ty = self.get_expr_type(e, project_context);
-                let struct_ty = struct_ty.struct_ref_to_struct(project_context);
-                let all_fields = struct_ty.all_fields();
-                if let Some(def_field) = struct_ty.find_filed_by_name(field.value) {
-                    let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
-                        from: Field(field.clone()),
-                        to: def_field.0.clone(),
-                        ty: def_field.1.clone(),
-                        all_fields,
-                        item: None,
-                    }));
-                    visitor.handle_item_or_access(self, project_context, &item);
-                } else {
-                    let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
-                        from: Field(field.clone()),
-                        to: Field(field.clone()),
-                        ty: ResolvedType::UnKnown,
-                        all_fields,
-                        item: None,
-                    }));
-                    visitor.handle_item_or_access(self, project_context, &item);
-                }
+                handle_dot(&e, field, project_context, visitor, None);
             }
             Exp_::Index(e, index) => {
                 self.visit_expr(e.as_ref(), project_context, visitor);
@@ -1413,6 +1442,7 @@ impl Project {
                                                 }),
                                                 ty: ty1.clone(),
                                                 lambda: None,
+                                                has_decl_ty: true,
                                             },
                                         );
                                         index = index + 1;
@@ -1430,6 +1460,7 @@ impl Project {
                                             }),
                                             ty: *x.ret_type.clone(),
                                             lambda: None,
+                                            has_decl_ty: true,
                                         },
                                     );
                                 }
@@ -1444,6 +1475,7 @@ impl Project {
                                         var: Var(f.0 .0.clone()),
                                         ty: f.1.clone(),
                                         lambda: None,
+                                        has_decl_ty: true,
                                     },
                                 );
                             }
@@ -1600,6 +1632,7 @@ impl Project {
                     var: Var(name.clone()),
                     ty,
                     lambda: None,
+                    has_decl_ty: true,
                 });
                 visitor.handle_item_or_access(self, project_context, &item);
                 project_context.enter_item(self, name.value, item);
@@ -1618,6 +1651,7 @@ impl Project {
                     var: Var(name.clone()),
                     ty,
                     lambda: None,
+                    has_decl_ty: true,
                 });
                 visitor.handle_item_or_access(self, project_context, &item);
                 project_context.enter_item(self, name.value, item);
@@ -1699,6 +1733,7 @@ impl Project {
                                             ty: ty.clone(),
                                             all_fields: all_fields.clone(),
                                             item: None,
+                                            has_ref: None,
                                         }));
                                     visitor.handle_item_or_access(self, project_context, &item);
                                     if visitor.finished() {
@@ -1712,6 +1747,7 @@ impl Project {
                                             ty: ResolvedType::UnKnown,
                                             all_fields: all_fields.clone(),
                                             item: None,
+                                            has_ref: None,
                                         }));
                                     visitor.handle_item_or_access(self, project_context, &item);
                                     if visitor.finished() {
