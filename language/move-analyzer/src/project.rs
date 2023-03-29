@@ -424,7 +424,7 @@ impl Project {
         }
     }
 
-    fn initialize_fun_call(
+    pub(crate) fn initialize_fun_call(
         &self,
         project_context: &ProjectContext,
         name: &NameAccessChain,
@@ -465,10 +465,9 @@ impl Project {
                         &mut types,
                         &parameters.iter().map(|(_, t)| t.clone()).collect(),
                         &exprs_types,
-                        project_context,
                     );
                 }
-                fun_type.bind_type_parameter(&types, project_context);
+                fun_type.bind_type_parameter(&types);
                 Some(fun_type)
             }
             _ => None,
@@ -546,94 +545,82 @@ impl Project {
             }
 
             Exp_::Pack(name, type_args, fields) => {
-                let (struct_ty, _) = project_context.find_name_chain_item(name, self);
+                let (struct_item, _) = project_context.find_name_chain_item(name, self);
+                let struct_item = match struct_item {
+                    Some(x) => match x {
+                        Item::Struct(x) => x.clone(),
+                        Item::StructNameRef(_) => {
+                            unreachable!()
+                        }
+                        _ => {
+                            return ResolvedType::UnKnown;
+                        }
+                    },
+                    None => return ResolvedType::UnKnown,
+                };
 
-                let struct_ty = struct_ty.unwrap_or_default().to_type().unwrap_or_default();
-                let mut struct_ty = struct_ty.struct_ref_to_struct(project_context);
                 let mut types = HashMap::new();
-                let mut struct_ty = match &struct_ty {
-                    ResolvedType::Struct(ItemStruct {
-                        name: _,
-                        type_parameters,
-                        type_parameters_ins: _,
-                        fields: struct_fields,
-                        is_test: _is_test,
-                    }) => {
-                        let type_args: Option<Vec<ResolvedType>> =
-                            if let Some(type_args) = type_args {
-                                Some(
-                                    type_args
-                                        .iter()
-                                        .map(|x| project_context.resolve_type(x, self))
-                                        .collect(),
-                                )
-                            } else {
-                                None
-                            };
-                        if type_args.is_none() {
-                            // try infer on field.
-                            let fields_exprs: Vec<_> = fields
-                                .iter()
-                                .map(|(field, expr)| {
-                                    (field.clone(), self.get_expr_type(expr, project_context))
-                                })
-                                .collect();
-                            let fields_exp_map = {
-                                let mut m = HashMap::new();
-                                fields_exprs.iter().for_each(|(f, t)| {
-                                    m.insert(f.0.value, t.clone());
-                                });
-                                m
-                            };
-                            let parameters: Vec<_> =
-                                struct_fields.iter().map(|(_, ty)| ty.clone()).collect();
-                            let expression_types: Vec<_> = struct_fields
-                                .iter()
-                                .map(|(f, _)| {
-                                    fields_exp_map
-                                        .get(&f.0.value)
-                                        .unwrap_or(&UNKNOWN_TYPE)
-                                        .clone()
-                                })
-                                .collect();
-
-                            infer_type_parameter_on_expression(
-                                &mut types,
-                                &parameters,
-                                &expression_types,
-                                project_context,
-                            )
-                        }
-                        if let Some(ref ts) = type_args {
-                            for (para, args) in type_parameters.iter().zip(ts.iter()) {
-                                types.insert(para.name.value, args.clone());
-                            }
-                        }
-                        struct_ty.bind_type_parameter(&types, project_context);
-
-                        struct_ty
-                    }
-                    _ => UNKNOWN_TYPE.clone(),
-                };
-                // save infered type.
-                match &mut struct_ty {
-                    ResolvedType::Struct(ItemStruct {
-                        name: _,
-                        ref type_parameters,
-                        ref mut type_parameters_ins,
-                        fields: _,
-                        is_test: _is_test,
-                    }) => {
-                        let ins: Vec<ResolvedType> = type_parameters
+                let type_args: Option<Vec<ResolvedType>> = if let Some(type_args) = type_args {
+                    Some(
+                        type_args
                             .iter()
-                            .map(|x| types.get(&x.name.value).unwrap_or(&UNKNOWN_TYPE).clone())
-                            .collect();
-                        let _ = std::mem::replace(type_parameters_ins, ins);
-                    }
-                    _ => {}
+                            .map(|x| project_context.resolve_type(x, self))
+                            .collect(),
+                    )
+                } else {
+                    None
                 };
 
-                struct_ty
+                if type_args.is_none() {
+                    // try infer on field.
+                    let fields_exprs: Vec<_> = fields
+                        .iter()
+                        .map(|(field, expr)| {
+                            (field.clone(), self.get_expr_type(expr, project_context))
+                        })
+                        .collect();
+                    let fields_exp_map = {
+                        let mut m = HashMap::new();
+                        fields_exprs.iter().for_each(|(f, t)| {
+                            m.insert(f.0.value, t.clone());
+                        });
+                        m
+                    };
+                    let parameters: Vec<_> = struct_item
+                        .fields
+                        .iter()
+                        .map(|(_, ty)| ty.clone())
+                        .collect();
+                    let expression_types: Vec<_> = fields
+                        .iter()
+                        .map(|(f, _)| {
+                            fields_exp_map
+                                .get(&f.0.value)
+                                .unwrap_or(&UNKNOWN_TYPE)
+                                .clone()
+                        })
+                        .collect();
+                    infer_type_parameter_on_expression(&mut types, &parameters, &expression_types)
+                }
+
+                if let Some(ref ts) = type_args {
+                    for (para, args) in struct_item.type_parameters.iter().zip(ts.iter()) {
+                        types.insert(para.name.value, args.clone());
+                    }
+                }
+                ResolvedType::Struct(
+                    struct_item.to_struct_ref(),
+                    struct_item
+                        .type_parameters
+                        .iter()
+                        .map(|x| {
+                            types
+                                .get(&x.name.value)
+                                .map(|x| x.clone())
+                                .unwrap_or_default()
+                        })
+                        .collect(),
+                )
             }
             Exp_::Vector(_, ty, exprs) => {
                 let mut ty = if let Some(ty) = ty {
@@ -749,12 +736,19 @@ impl Project {
             }
             Exp_::Dot(e, name) => {
                 let ty = self.get_expr_type(e, project_context);
-                if let Some(field) = ty.find_filed_by_name(name.value) {
-                    field.1.clone()
-                } else {
-                    ty
+                match ty {
+                    ResolvedType::Struct(_, _) => {
+                        let s = ty.struct_ref_to_struct(project_context);
+                        if let Some(field) = s.find_filed_by_name(name.value) {
+                            field.1.clone()
+                        } else {
+                            ty
+                        }
+                    }
+                    _ => ResolvedType::UnKnown,
                 }
             }
+
             Exp_::Index(e, _index) => {
                 let ty = self.get_expr_type(e, project_context);
                 let ty = match &ty {
@@ -867,10 +861,9 @@ pub(crate) fn infer_type_parameter_on_expression(
     ret: &mut HashMap<Symbol /*  name like T or ... */, ResolvedType>,
     parameters: &Vec<ResolvedType>,
     expression_types: &Vec<ResolvedType>,
-    project_context: &ProjectContext,
 ) {
     for (p, expr_type) in parameters.iter().zip(expression_types.iter()) {
-        bind(ret, &p, expr_type, project_context);
+        bind(ret, &p, expr_type);
     }
     fn bind(
         ret: &mut HashMap<Symbol, ResolvedType>,
@@ -878,47 +871,15 @@ pub(crate) fn infer_type_parameter_on_expression(
         parameter_type: &ResolvedType,
         // a type that is certain.
         expr_type: &ResolvedType,
-        project_context: &ProjectContext,
     ) {
         match &parameter_type {
             ResolvedType::UnKnown => {}
-            ResolvedType::Struct(ItemStruct {
-                fields,
-                type_parameters_ins,
-                ..
-            }) => match &expr_type {
-                ResolvedType::Struct(ItemStruct {
-                    fields: fields2,
-                    type_parameters_ins: type_parameters_ins2,
-                    ..
-                }) => {
-                    type_parameters_ins
-                        .iter()
-                        .zip(type_parameters_ins2.iter())
-                        .for_each(|(x, y)| {
-                            bind(ret, x, y, project_context);
-                        });
-                    for (l, r) in fields.iter().zip(fields2.iter()) {
-                        bind(ret, &l.1, &r.1, project_context);
-                    }
-                }
-                ResolvedType::StructRef(_, _) => {
-                    let expr_type = expr_type.clone().struct_ref_to_struct(project_context);
-                    match &expr_type {
-                        ResolvedType::Struct(_) => {
-                            bind(ret, parameter_type, &expr_type, project_context)
-                        }
-                        _ => unreachable!(),
-                    }
-                }
-                _ => {}
-            },
             ResolvedType::BuildInType(_) => {}
             ResolvedType::TParam(name, _) => {
                 ret.insert(name.value, expr_type.clone());
             }
             ResolvedType::Ref(_, l) => match &expr_type {
-                ResolvedType::Ref(_, r) => bind(ret, l.as_ref(), r.as_ref(), project_context),
+                ResolvedType::Ref(_, r) => bind(ret, l.as_ref(), r.as_ref()),
                 _ => {}
             },
             ResolvedType::Unit => {}
@@ -926,7 +887,7 @@ pub(crate) fn infer_type_parameter_on_expression(
                 ResolvedType::Multiple(y) => {
                     for (index, l) in x.iter().enumerate() {
                         if let Some(r) = y.get(index) {
-                            bind(ret, l, r, project_context);
+                            bind(ret, l, r);
                         } else {
                             break;
                         }
@@ -938,22 +899,19 @@ pub(crate) fn infer_type_parameter_on_expression(
             ResolvedType::Fun(_) => {}
             ResolvedType::Vec(x) => match &expr_type {
                 ResolvedType::Vec(y) => {
-                    bind(ret, x.as_ref(), y.as_ref(), project_context);
+                    bind(ret, x.as_ref(), y.as_ref());
                 }
                 _ => {}
             },
 
-            ResolvedType::StructRef(_, _) => {
-                let parameter_type = parameter_type.clone().struct_ref_to_struct(project_context);
-                match &parameter_type {
-                    ResolvedType::Struct(_) => {
-                        bind(ret, &parameter_type, expr_type, project_context);
-                    }
-                    _ => {
-                        unreachable!("");
+            ResolvedType::Struct(_, ptys) => match expr_type {
+                ResolvedType::Struct(_, etypes) => {
+                    for (p, e) in ptys.iter().zip(etypes.iter()) {
+                        bind(ret, p, e);
                     }
                 }
-            }
+                _ => {}
+            },
             ResolvedType::Range => {}
             ResolvedType::Lambda { args, ret_ty } => match expr_type {
                 ResolvedType::Lambda {
@@ -961,11 +919,10 @@ pub(crate) fn infer_type_parameter_on_expression(
                     ret_ty: ret_ty2,
                 } => {
                     for (a1, a2) in args.iter().zip(args2.iter()) {
-                        bind(ret, a1, a2, project_context);
+                        bind(ret, a1, a2);
                     }
-                    bind(ret, ret_ty.as_ref(), ret_ty2.as_ref(), project_context);
+                    bind(ret, ret_ty.as_ref(), ret_ty2.as_ref());
                 }
-
                 _ => {}
             },
         }
@@ -1014,10 +971,15 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
     // handle expr type.
     fn handle_expr_typ(&mut self, _exp: &Exp, _ty: ResolvedType) {}
 
-    fn need_call_tree(&self) -> bool {
+    fn need_call_pair(&self) -> bool {
         false
     }
     fn handle_call_pair(&mut self, _from: FunID, _to: FunID) {}
+    fn need_para_arg_pair(&self) -> bool {
+        false
+    }
+    fn handle_para_arg_pair(&mut self, _services: &dyn HandleItemService, _para: Name, _exp: &Exp) {
+    }
 }
 
 #[derive(Clone, serde::Serialize, Debug)]

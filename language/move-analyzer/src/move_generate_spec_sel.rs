@@ -22,7 +22,7 @@ pub fn on_generate_spec_sel(context: &Context, request: &Request) {
             .unwrap();
     };
     let parameters = match ReqParametersPath::try_from(parameters) {
-        Ok(x) => x,
+        Ok(p) => p,
         Err(_) => {
             send_err(context, "not a valid path".to_string());
             return;

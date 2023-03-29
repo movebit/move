@@ -1,8 +1,4 @@
-use super::context::Context;
-use super::goto_definition;
-use super::item::*;
-use super::project::*;
-use super::utils::*;
+use super::{context::Context, goto_definition, item::*, project::*, utils::*};
 use im::HashMap;
 use lsp_server::*;
 use lsp_types::*;

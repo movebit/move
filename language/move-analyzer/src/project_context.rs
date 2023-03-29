@@ -851,7 +851,7 @@ impl ProjectContext {
                 let (chain_ty, _) = self.find_name_chain_ty(chain, name_to_addr);
                 let mut chain_ty = chain_ty.unwrap_or_default();
                 let chain_ty = match &mut chain_ty {
-                    ResolvedType::StructRef(
+                    ResolvedType::Struct(
                         ItemStructNameRef {
                             type_parameters: _type_parameters,
                             ..

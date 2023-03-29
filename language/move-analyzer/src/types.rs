@@ -1,11 +1,13 @@
 use super::item::*;
-use crate::item::{self, ItemFun};
 use crate::project_context::ProjectContext;
+use crate::{item::ItemFun, project::ERR_ADDRESS};
 use enum_iterator::Sequence;
 use move_command_line_common::files::FileHash;
-use move_compiler::shared::Identifier;
-use move_compiler::{parser::ast::*, shared::*};
-use move_ir_types::location::Loc;
+use move_compiler::{
+    parser::ast::*,
+    shared::{Identifier, *},
+};
+use move_ir_types::location::{Loc, Spanned};
 use move_symbol_pool::Symbol;
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -14,11 +16,7 @@ use std::vec;
 #[derive(Clone)]
 pub enum ResolvedType {
     UnKnown,
-
-    StructRef(
-        ItemStructNameRef,
-        Vec<ResolvedType>, //  Type Args.
-    ),
+    Struct(ItemStructNameRef, Vec<ResolvedType>),
     BuildInType(BuildInType),
     /// T : drop
     TParam(Name, Vec<Ability>),
@@ -69,21 +67,6 @@ impl ResolvedType {
         }
     }
 
-    pub(crate) fn find_filed_by_name(&self, name: Symbol) -> Option<&'_ (Field, ResolvedType)> {
-        match self {
-            ResolvedType::Struct(item::ItemStruct { fields, .. }) => {
-                for f in fields.iter() {
-                    if f.0.value() == name {
-                        return Some(f);
-                    }
-                }
-                None
-            }
-            ResolvedType::Ref(_, x) => x.as_ref().find_filed_by_name(name),
-            _ => None,
-        }
-    }
-
     #[inline]
     pub(crate) fn new_unit() -> Self {
         ResolvedType::Unit
@@ -130,39 +113,9 @@ impl ResolvedType {
     }
 
     /// bind type parameter to concrete type
-    pub(crate) fn bind_struct_type_parameter(&mut self, project_context: &ProjectContext) {
-        match self {
-            Self::Struct(x) => {
-                let mut m = HashMap::new();
-                x.type_parameters
-                    .iter()
-                    .zip(x.type_parameters_ins.iter())
-                    .for_each(|(name, ty)| {
-                        m.insert(name.name.value, ty.clone());
-                    });
-                self.bind_type_parameter(&m, project_context);
-            }
-            Self::StructRef(_, _) => {
-                unreachable!()
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    /// bind type parameter to concrete type
-    pub(crate) fn bind_type_parameter(
-        &mut self,
-        types: &HashMap<Symbol, ResolvedType>,
-        project_context: &ProjectContext,
-    ) {
+    pub(crate) fn bind_type_parameter(&mut self, types: &HashMap<Symbol, ResolvedType>) {
         match self {
             ResolvedType::UnKnown => {}
-            ResolvedType::Struct(item::ItemStruct { ref mut fields, .. }) => {
-                for i in 0..fields.len() {
-                    let t = fields.get_mut(i).unwrap();
-                    t.1.bind_type_parameter(types, project_context);
-                }
-            }
             ResolvedType::BuildInType(_) => {}
             ResolvedType::TParam(name, _) => {
                 if let Some(x) = types.get(&name.value) {
@@ -170,64 +123,39 @@ impl ResolvedType {
                 }
             }
             ResolvedType::Ref(_, ref mut b) => {
-                b.as_mut().bind_type_parameter(types, project_context);
+                b.as_mut().bind_type_parameter(types);
             }
             ResolvedType::Unit => {}
             ResolvedType::Multiple(ref mut xs) => {
                 for i in 0..xs.len() {
                     let t = xs.get_mut(i).unwrap();
-                    t.bind_type_parameter(types, project_context);
+                    t.bind_type_parameter(types);
                 }
             }
             ResolvedType::Fun(x) => {
                 let xs = &mut x.parameters;
                 for i in 0..xs.len() {
                     let t = xs.get_mut(i).unwrap();
-                    t.1.bind_type_parameter(types, project_context);
+                    t.1.bind_type_parameter(types);
                 }
-                x.ret_type
-                    .as_mut()
-                    .bind_type_parameter(types, project_context);
+                x.ret_type.as_mut().bind_type_parameter(types);
             }
             ResolvedType::Vec(ref mut b) => {
-                b.as_mut().bind_type_parameter(types, project_context);
+                b.as_mut().bind_type_parameter(types);
             }
 
-            ResolvedType::StructRef(_, _) => {
-                *self = self.clone().struct_ref_to_struct(project_context);
-                match self {
-                    ResolvedType::Struct(_) => {
-                        self.bind_type_parameter(types, project_context);
-                    }
-                    ResolvedType::StructRef(_, _) => {
-                        // This must be toplevel type resolve.
-                    }
-                    _ => unreachable!(),
+            ResolvedType::Struct(_, ts) => {
+                for index in 0..ts.len() {
+                    ts.get_mut(index).unwrap().bind_type_parameter(types);
                 }
             }
             ResolvedType::Range => {}
             ResolvedType::Lambda { args, ret_ty } => {
                 for a in args.iter_mut() {
-                    a.bind_type_parameter(types, project_context);
+                    a.bind_type_parameter(types);
                 }
-                ret_ty.bind_type_parameter(types, project_context);
+                ret_ty.bind_type_parameter(types);
             }
-        }
-    }
-
-    pub(crate) fn all_fields(&self) -> HashMap<Symbol, (Name, ResolvedType)> {
-        match match self {
-            ResolvedType::Ref(_, x) => x.as_ref(),
-            _ => self,
-        } {
-            ResolvedType::Struct(x) => {
-                let mut m = HashMap::new();
-                for (name, ty) in x.fields.iter() {
-                    m.insert(name.0.value.clone(), (name.0.clone(), ty.clone()));
-                }
-                m
-            }
-            _ => Default::default(),
         }
     }
 }
@@ -237,7 +165,7 @@ impl ResolvedType {
         match self {
             ResolvedType::TParam(name, _) => name.loc,
             ResolvedType::BuildInType(_) => UNKNOWN_LOC,
-            ResolvedType::StructRef(ItemStructNameRef { name, .. }, _) => name.loc(),
+            ResolvedType::Struct(ItemStructNameRef { name, .. }, _) => name.loc(),
             ResolvedType::UnKnown => UNKNOWN_LOC,
             ResolvedType::Ref(_, _) => UNKNOWN_LOC,
             ResolvedType::Unit => UNKNOWN_LOC,
@@ -282,7 +210,7 @@ impl BuildInType {
             BuildInType::Address => "address",
             BuildInType::Signer => "signer",
             BuildInType::String => "vector<u8>",
-            BuildInType::NumType => "u8",
+            BuildInType::NumType => "u8|u16...",
         }
     }
 
@@ -314,8 +242,7 @@ impl std::fmt::Display for ResolvedType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ResolvedType::UnKnown => write!(f, "unknown"),
-            ResolvedType::Struct(x) => write!(f, "{}", x),
-            ResolvedType::StructRef(ItemStructNameRef { name, .. }, _) => {
+            ResolvedType::Struct(ItemStructNameRef { name, .. }, _) => {
                 write!(f, "{}", name.value().as_str())
             }
             ResolvedType::BuildInType(x) => write!(f, "{}", x.to_static_str()),
@@ -367,9 +294,9 @@ impl std::fmt::Display for ResolvedType {
 }
 
 impl ResolvedType {
-    pub(crate) fn struct_ref_to_struct(self, s: &ProjectContext) -> ItemStruct {
+    pub(crate) fn struct_ref_to_struct(&self, s: &ProjectContext) -> ItemStruct {
         match self.clone() {
-            Self::StructRef(
+            Self::Struct(
                 ItemStructNameRef {
                     addr,
                     module_name,
@@ -381,28 +308,17 @@ impl ResolvedType {
             ) => {
                 s.query_item(addr, module_name, name.0.value, |x| match x {
                     Item::Struct(item) => {
-                        let mut x = ResolvedType::Struct(item.clone());
-                        match &mut x {
-                            ResolvedType::Struct(x) => x.type_parameters_ins = v,
-                            _ => unreachable!(),
-                        }
-                        x.bind_struct_type_parameter(s);
-                        x
+                        let mut item = item.clone();
+                        item.type_parameters_ins = v;
+                        item.bind_type_parameter(None );
+                        item
                     }
                     _ => {
-                        log::info !(
-                            "looks like impossible addr:0x{:?} module:{:?} item:{:?} x:{} not struct def.",
-                            addr.short_str_lossless(),
-                            module_name,
-                            name,
-                            x
-                        );
-                        self
+                        unimplemented!()
                     }
-                })
-                .expect("You are looking for a struct which can't be found,It is possible But should not happen.")
+                }) .expect("You are looking for a struct which can't be found,It is possible But should not happen.")
             }
-            _ => self,
+            _ => { ItemStruct { name: StructName(Spanned { loc : UNKNOWN_LOC , value  :Symbol::from("")}), type_parameters: vec![ ], type_parameters_ins: vec![ ], fields: vec![ ], is_test: false , addr:  * ERR_ADDRESS, module_name: Symbol::from("") } },
         }
     }
 }

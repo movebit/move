@@ -8,6 +8,7 @@ use move_compiler::shared::Identifier;
 use move_compiler::shared::TName;
 use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::AccountAddress;
+
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
@@ -24,6 +25,70 @@ pub struct ItemStruct {
     pub(crate) is_test: bool,
     pub(crate) addr: AccountAddress,
     pub(crate) module_name: Symbol,
+}
+
+impl ItemStruct {
+    pub(crate) fn to_struct_ref(&self) -> ItemStructNameRef {
+        ItemStructNameRef {
+            addr: self.addr,
+            module_name: self.module_name,
+            name: self.name,
+            type_parameters: self.type_parameters.clone(),
+            is_test: self.is_test,
+        }
+    }
+    pub(crate) fn find_filed_by_name(&self, name: Symbol) -> Option<&(Field, ResolvedType)> {
+        for f in self.fields.iter() {
+            if f.0 .0.value.as_str() == name.as_str() {
+                return Some(f);
+            }
+        }
+        None
+    }
+    pub(crate) fn all_fields(&self) -> HashMap<Symbol, (Name, ResolvedType)> {
+        let mut m = HashMap::new();
+        self.fields.iter().for_each(|f| {
+            m.insert(f.0 .0.value, (f.0 .0.clone(), f.1.clone()));
+        });
+        m
+    }
+}
+
+impl ItemStruct {
+    pub(crate) fn bind_type_parameter(
+        &mut self,
+        types: Option<&HashMap<Symbol, ResolvedType>>, //  types maybe infered from somewhere or use sepcified.
+    ) {
+        let mut m = HashMap::new();
+
+        debug_assert!(
+            self.type_parameters_ins.len() == 0
+                || self.type_parameters_ins.len() == self.type_parameters.len()
+        );
+        let types = if let Some(types) = types {
+            self.type_parameters.iter().for_each(|x| {
+                self.type_parameters_ins.push(
+                    types
+                        .get(&x.name.value)
+                        .map(|x| x.clone())
+                        .unwrap_or_default(),
+                )
+            });
+            types
+        } else {
+            for (k, v) in self
+                .type_parameters
+                .iter()
+                .zip(self.type_parameters_ins.iter())
+            {
+                m.insert(k.name.value, v.clone());
+            }
+            &m
+        };
+        self.fields
+            .iter_mut()
+            .for_each(|f| f.1.bind_type_parameter(types));
+    }
 }
 
 impl std::fmt::Display for ItemStruct {
@@ -219,17 +284,8 @@ impl Item {
     pub(crate) fn to_type(&self) -> Option<ResolvedType> {
         let x = match self {
             Item::TParam(name, ab) => ResolvedType::TParam(name.clone(), ab.clone()),
-            Item::Struct(x) => ResolvedType::StructRef(
-                ItemStructNameRef {
-                    addr: x.addr_and_name.addr,
-                    module_name: x.addr_and_name.name.0.value,
-                    name: x.name,
-                    type_parameters: x.type_parameters.clone(),
-                    is_test: x.is_test,
-                },
-                vec![],
-            ),
-            Item::StructNameRef(x) => ResolvedType::StructRef(x.clone(), Default::default()),
+            Item::Struct(x) => ResolvedType::Struct(x.to_struct_ref(), Default::default()),
+            Item::StructNameRef(x) => ResolvedType::Struct(x.clone(), Default::default()),
             Item::BuildInType(b) => ResolvedType::BuildInType(*b),
             Item::Parameter(_, ty) | Item::Var { ty, .. } | Item::Const(ItemConst { ty, .. }) => {
                 ty.clone()

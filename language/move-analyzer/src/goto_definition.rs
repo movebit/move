@@ -309,7 +309,7 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
     fn type_defs(ret: &mut Vec<Location>, ty: &ResolvedType, modules: &super::project::Project) {
         match ty {
             ResolvedType::UnKnown => {}
-            ResolvedType::StructRef(x, _) => {
+            ResolvedType::Struct(x, _) => {
                 if let Some(r) = modules.convert_loc_range(&x.name.loc()) {
                     ret.push(r.mk_location());
                 }

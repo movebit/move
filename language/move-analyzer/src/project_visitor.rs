@@ -15,7 +15,6 @@ use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::ops::Add;
 use std::vec;
 use std::{path::PathBuf, rc::Rc};
 
@@ -608,64 +607,57 @@ impl Project {
                         }
                     }
                 }
-                let mut struct_ty = struct_ty.struct_ref_to_struct(project_context);
-                match &struct_ty.clone() {
-                    ResolvedType::Struct(ItemStruct {
-                        name: _name,
-                        type_parameters,
-                        type_parameters_ins: _type_parameters_ins,
-                        fields: _fields,
-                        is_test: _is_test,
-                    }) => {
-                        let struct_ty = if let Some(tys) = tys {
-                            let tys: Vec<_> = tys
-                                .iter()
-                                .map(|x| project_context.resolve_type(x, self))
-                                .collect();
-                            let mut m = HashMap::new();
-                            type_parameters.iter().zip(tys.iter()).for_each(|(t, ty)| {
-                                m.insert(t.name.value, ty.clone());
-                            });
-                            struct_ty.bind_type_parameter(&mut m, project_context);
-                            struct_ty
-                        } else {
-                            // use
-                            infer_ty.clone()
-                        };
-                        for (field, bind) in field_binds.iter() {
-                            let field_and_ty = struct_ty.find_filed_by_name(field.0.value);
-                            let field_ty = if let Some(x) = field_and_ty {
-                                if infer_ty.is_ref() {
-                                    ResolvedType::new_ref(false, x.1.clone())
-                                } else {
-                                    x.1.clone()
-                                }
-                            } else {
-                                ResolvedType::UnKnown
-                            };
-                            {
-                                let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
-                                    from: field.clone(),
-                                    to: if let Some(x) = field_and_ty {
-                                        x.0.clone()
-                                    } else {
-                                        field.clone()
-                                    },
-                                    ty: field_ty.clone(),
-                                    all_fields: struct_ty.all_fields(),
-                                    item: None,
-                                }));
-                                visitor.handle_item_or_access(self, project_context, &item);
-                                if visitor.finished() {
-                                    return;
-                                }
-                            }
-                            self.visit_bind(bind, &field_ty, project_context, visitor, None);
-                        }
-                        //
-                    }
-                    _ => {}
+                let mut struct_item = struct_ty.struct_ref_to_struct(project_context);
+                let struct_item = if let Some(tys) = tys {
+                    let tys: Vec<_> = tys
+                        .iter()
+                        .map(|x| project_context.resolve_type(x, self))
+                        .collect();
+                    let mut m = HashMap::new();
+                    struct_item
+                        .type_parameters
+                        .iter()
+                        .zip(tys.iter())
+                        .for_each(|(t, ty)| {
+                            m.insert(t.name.value, ty.clone());
+                        });
+                    struct_item.bind_type_parameter(Some(&m));
+                    struct_item
+                } else {
+                    // use
+                    infer_ty.clone().struct_ref_to_struct(project_context)
                 };
+
+                for (field, bind) in field_binds.iter() {
+                    let field_and_ty = struct_item.find_filed_by_name(field.0.value);
+                    let field_ty = if let Some(x) = field_and_ty {
+                        if infer_ty.is_ref() {
+                            ResolvedType::new_ref(false, x.1.clone())
+                        } else {
+                            x.1.clone()
+                        }
+                    } else {
+                        ResolvedType::UnKnown
+                    };
+                    {
+                        let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
+                            from: field.clone(),
+                            to: if let Some(x) = field_and_ty {
+                                x.0.clone()
+                            } else {
+                                field.clone()
+                            },
+                            ty: field_ty.clone(),
+                            all_fields: struct_item.all_fields(),
+                            item: None,
+                        }));
+                        visitor.handle_item_or_access(self, project_context, &item);
+                        if visitor.finished() {
+                            return;
+                        }
+                    }
+                    self.visit_bind(bind, &field_ty, project_context, visitor, None);
+                }
             }
         }
     }
@@ -833,7 +825,7 @@ impl Project {
                     visitor.handle_item_or_access(self, project_context, &item);
                 } else {
                     let (item, module) = project_context.find_name_chain_item(chain, self);
-                    if visitor.need_call_tree() {
+                    if visitor.need_call_pair() {
                         match item.clone().unwrap_or_default() {
                             Item::Fun(_f) => {
                                 let addr = project_context.get_current_addr_and_module_name();
@@ -855,10 +847,14 @@ impl Project {
                             _ => {}
                         }
                     }
+
                     // try visit lambda expr.
-                    match item.clone().unwrap_or_default() {
+                    match self
+                        .initialize_fun_call(project_context, chain, types, exprs)
+                        .unwrap_or_default()
+                    {
                         // TODO we maybe need infer type parameter first.
-                        Item::Fun(x) => {
+                        ResolvedType::Fun(x) => {
                             let unkown = (
                                 Var(Spanned {
                                     loc: UNKNOWN_LOC,
@@ -869,6 +865,9 @@ impl Project {
                             for (index, e) in exprs.value.iter().enumerate() {
                                 let ty = x.parameters.get(index).unwrap_or(&unkown);
                                 self.try_fix_local_var_and_visit_lambda(e, &ty.1, visitor);
+                                if visitor.need_para_arg_pair() {
+                                    visitor.handle_para_arg_pair(self, ty.0 .0.clone(), e);
+                                }
                             }
                         }
                         _ => {}
@@ -910,8 +909,16 @@ impl Project {
                 if visitor.finished() {
                     return;
                 }
-                let (ty, _) = project_context.find_name_chain_item(chain, self);
-                let ty = ty.unwrap_or_default().to_type().unwrap_or_default();
+                let (struct_item, _) = project_context.find_name_chain_item(chain, self);
+                let mut struct_item = match struct_item {
+                    Some(x) => match x {
+                        Item::Struct(x) => x,
+                        _ => {
+                            return;
+                        }
+                    },
+                    None => return,
+                };
                 if let Some(types) = types {
                     for t in types.iter() {
                         self.visit_type_apply(t, project_context, visitor);
@@ -919,10 +926,16 @@ impl Project {
                             return;
                         }
                     }
+                    let types: Vec<_> = types
+                        .iter()
+                        .map(|ty| project_context.resolve_type(ty, self))
+                        .collect();
+                    struct_item.type_parameters_ins = types;
+                    struct_item.bind_type_parameter(None);
                 }
                 for f in fields.iter() {
-                    let field_type = ty.find_filed_by_name(f.0.value());
-                    let all_fields = ty.all_fields();
+                    let field_type = struct_item.find_filed_by_name(f.0.value());
+                    let all_fields = struct_item.all_fields();
                     let item = match &f.1.value {
                         Exp_::Name(chain, _) => match &chain.value {
                             NameAccessChain_::One(x) => {
@@ -1807,7 +1820,12 @@ impl Project {
                 }
             }
             Type_::Ref(_, ty) => self.visit_type_apply(ty, project_context, visitor),
-            Type_::Fun(_, _) => {}
+            Type_::Fun(args, ret_ty) => {
+                for a in args.iter() {
+                    self.visit_type_apply(a, project_context, visitor);
+                }
+                self.visit_type_apply(ret_ty.as_ref(), project_context, visitor);
+            }
             Type_::Unit => {}
             Type_::Multiple(types) => {
                 for t in types.iter() {
