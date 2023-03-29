@@ -107,6 +107,7 @@ export class Context {
   async startClient(): Promise<void> {
     const executable: lc.Executable = {
       command: this.configuration.serverPath,
+      options: { shell: true },
     };
     const serverOptions: lc.ServerOptions = {
       run: executable,
@@ -141,6 +142,12 @@ export class Context {
     // Wait for the Move Language Server initialization to complete,
     // especially the first symbol table parsing is completed
     await this.client.onReady();
+    this.client.onDidChangeState((e) => {
+      if (e.newState === lc.State.Stopped) {
+        // TODO
+        // void vscode.window.showErrorMessage("move-analyzer stoped maybe you need restart vscode.");
+      }
+    });
   }
 
   /**

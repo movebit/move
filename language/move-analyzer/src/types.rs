@@ -3,8 +3,10 @@ use crate::item::{self, ItemFun};
 use crate::project_context::ProjectContext;
 use enum_iterator::Sequence;
 use move_command_line_common::files::FileHash;
-use move_compiler::shared::Identifier;
-use move_compiler::{parser::ast::*, shared::*};
+use move_compiler::{
+    parser::ast::*,
+    shared::{Identifier, *},
+};
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::collections::HashMap;
@@ -284,7 +286,7 @@ impl BuildInType {
             BuildInType::Address => "address",
             BuildInType::Signer => "signer",
             BuildInType::String => "vector<u8>",
-            BuildInType::NumType => "u8",
+            BuildInType::NumType => "u8|u16...",
         }
     }
 

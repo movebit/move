@@ -424,7 +424,7 @@ impl Project {
         }
     }
 
-    fn initialize_fun_call(
+    pub(crate) fn initialize_fun_call(
         &self,
         project_context: &ProjectContext,
         name: &NameAccessChain,
@@ -1014,10 +1014,15 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
     // handle expr type.
     fn handle_expr_typ(&mut self, _exp: &Exp, _ty: ResolvedType) {}
 
-    fn need_call_tree(&self) -> bool {
+    fn need_call_pair(&self) -> bool {
         false
     }
     fn handle_call_pair(&mut self, _from: FunID, _to: FunID) {}
+    fn need_para_arg_pair(&self) -> bool {
+        false
+    }
+    fn handle_para_arg_pair(&mut self, _services: &dyn HandleItemService, _para: Name, _exp: &Exp) {
+    }
 }
 
 #[derive(Clone, serde::Serialize, Debug)]

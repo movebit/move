@@ -830,7 +830,7 @@ impl Project {
                     visitor.handle_item_or_access(self, project_context, &item);
                 } else {
                     let (item, module) = project_context.find_name_chain_item(chain, self);
-                    if visitor.need_call_tree() {
+                    if visitor.need_call_pair() {
                         match item.clone().unwrap_or_default() {
                             Item::Fun(_f) => {
                                 let addr = project_context.get_current_addr_and_module_name();
@@ -852,10 +852,14 @@ impl Project {
                             _ => {}
                         }
                     }
+
                     // try visit lambda expr.
-                    match item.clone().unwrap_or_default() {
+                    match self
+                        .initialize_fun_call(project_context, chain, types, exprs)
+                        .unwrap_or_default()
+                    {
                         // TODO we maybe need infer type parameter first.
-                        Item::Fun(x) => {
+                        ResolvedType::Fun(x) => {
                             let unkown = (
                                 Var(Spanned {
                                     loc: UNKNOWN_LOC,
@@ -866,6 +870,9 @@ impl Project {
                             for (index, e) in exprs.value.iter().enumerate() {
                                 let ty = x.parameters.get(index).unwrap_or(&unkown);
                                 self.try_fix_local_var_and_visit_lambda(e, &ty.1, visitor);
+                                if visitor.need_para_arg_pair() {
+                                    visitor.handle_para_arg_pair(self, ty.0 .0.clone(), e);
+                                }
                             }
                         }
                         _ => {}
@@ -1804,7 +1811,12 @@ impl Project {
                 }
             }
             Type_::Ref(_, ty) => self.visit_type_apply(ty, project_context, visitor),
-            Type_::Fun(_, _) => {}
+            Type_::Fun(args, ret_ty) => {
+                for a in args.iter() {
+                    self.visit_type_apply(a, project_context, visitor);
+                }
+                self.visit_type_apply(ret_ty.as_ref(), project_context, visitor);
+            }
             Type_::Unit => {}
             Type_::Multiple(types) => {
                 for t in types.iter() {

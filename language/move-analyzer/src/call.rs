@@ -1,8 +1,6 @@
 use super::context::*;
 use super::project::*;
-use lsp_server::Message;
-use lsp_server::Request;
-use lsp_server::Response;
+use lsp_server::{Message, Request, Response};
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -42,7 +40,7 @@ impl Handler {
 }
 
 impl super::project::ItemOrAccessHandler for Handler {
-    fn need_call_tree(&self) -> bool {
+    fn need_call_pair(&self) -> bool {
         true
     }
     fn visit_fun_or_spec_body(&self) -> bool {

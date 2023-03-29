@@ -4,15 +4,16 @@ use super::project::*;
 use super::project_context::*;
 use super::types::ResolvedType;
 
-use crate::utils::path_concat;
-use crate::utils::FileRange;
-use crate::utils::GetPosition;
-use crate::utils::GetPositionStruct;
-use crate::utils::MoveAnalyzerClientCommands;
+use crate::utils::{
+    path_concat, FileRange, GetPosition, GetPositionStruct, MoveAnalyzerClientCommands,
+};
 use lsp_server::*;
 
 use lsp_types::*;
-use move_compiler::shared::Identifier;
+use move_compiler::{
+    parser::ast::Exp_,
+    shared::{Identifier, Name},
+};
 use move_ir_types::location::Loc;
 use std::path::PathBuf;
 
@@ -81,6 +82,44 @@ impl Handler {
 }
 
 impl ItemOrAccessHandler for Handler {
+    fn need_para_arg_pair(&self) -> bool {
+        true
+    }
+    fn handle_para_arg_pair(
+        &mut self,
+        services: &dyn HandleItemService,
+        para: move_compiler::shared::Name,
+        exp: &move_compiler::parser::ast::Exp,
+    ) {
+        match &exp.value {
+            Exp_::Name(x, _) => match &x.value {
+                move_compiler::parser::ast::NameAccessChain_::One(x) => {
+                    if x.value.as_str() == para.value.as_str() {
+                        return;
+                    }
+                }
+                move_compiler::parser::ast::NameAccessChain_::Two(_, _) => {}
+                move_compiler::parser::ast::NameAccessChain_::Three(_, _) => {}
+            },
+            _ => {}
+        }
+        let l = services.convert_loc_range(&exp.loc);
+        let l = match l {
+            Some(x) => x,
+            None => {
+                return;
+            }
+        };
+
+        self.reuslts.push(mk_inlay_hits(
+            Position {
+                line: l.line_start,
+                character: l.col_start,
+            },
+            para_inlay_hints_parts(&para, services),
+            InlayHintKind::PARAMETER,
+        ));
+    }
     fn handle_item_or_access(
         &mut self,
         services: &dyn HandleItemService,
@@ -89,7 +128,28 @@ impl ItemOrAccessHandler for Handler {
     ) {
         match item {
             ItemOrAccess::Item(item) => match item {
-                // Item::Var(var, ty) => {}
+                Item::Var { var, ty, .. } => {
+                    if ty.is_err() {
+                        return;
+                    }
+                    let var_range = if let Some(from_range) = services.convert_loc_range(&var.loc())
+                    {
+                        from_range
+                    } else {
+                        return;
+                    };
+                    if !self.in_range_range(&var_range) {
+                        return;
+                    }
+                    self.reuslts.push(mk_inlay_hits(
+                        Position {
+                            line: var_range.line_end,
+                            character: var_range.col_end,
+                        },
+                        ty_inlay_hints_label_parts(ty, services),
+                        InlayHintKind::TYPE,
+                    ));
+                }
                 _ => {}
             },
 
@@ -156,13 +216,31 @@ fn mk_inlay_hits(pos: Position, label: InlayHintLabel, kind: InlayHintKind) -> I
     }
 }
 
+fn para_inlay_hints_parts(name: &Name, services: &dyn HandleItemService) -> InlayHintLabel {
+    InlayHintLabel::LabelParts(vec![InlayHintLabelPart {
+        value: format!("{}", name.value.as_str()),
+        tooltip: None,
+        location: None,
+        command: mk_command(name.loc, services),
+    }])
+}
+
 fn ty_inlay_hints_label_parts(
     ty: &ResolvedType,
     services: &dyn HandleItemService,
 ) -> InlayHintLabel {
     let mut ret = Vec::new();
+
     ty_inlay_hints_label_parts_(&mut ret, ty, services);
     InlayHintLabel::LabelParts(ret)
+}
+
+fn mk_command(loc: Loc, services: &dyn HandleItemService) -> Option<Command> {
+    if let Some(r) = services.convert_loc_range(&loc) {
+        Some(MoveAnalyzerClientCommands::GotoDefinition(r.mk_location()).to_lsp_command())
+    } else {
+        None
+    }
 }
 
 fn ty_inlay_hints_label_parts_(
@@ -170,13 +248,6 @@ fn ty_inlay_hints_label_parts_(
     ty: &ResolvedType,
     services: &dyn HandleItemService,
 ) {
-    let mk_command = |loc: Loc| {
-        if let Some(r) = services.convert_loc_range(&loc) {
-            Some(MoveAnalyzerClientCommands::GotoDefinition(r.mk_location()).to_lsp_command())
-        } else {
-            None
-        }
-    };
     let type_args = |ret: &mut Vec<InlayHintLabelPart>, types: &Vec<ResolvedType>| {
         if types.len() == 0 {
             return;
@@ -214,7 +285,7 @@ fn ty_inlay_hints_label_parts_(
                 value: format!("{}", x.name.0.value.as_str()),
                 tooltip: None,
                 location: None,
-                command: mk_command(x.name.loc()),
+                command: mk_command(x.name.loc(), services),
             });
             type_args(ret, &x.type_parameters_ins);
         }
@@ -223,7 +294,7 @@ fn ty_inlay_hints_label_parts_(
                 value: format!("{}", x.name.0.value.as_str()),
                 tooltip: None,
                 location: None,
-                command: mk_command(x.name.loc()),
+                command: mk_command(x.name.loc(), services),
             });
             type_args(ret, tys);
         }
@@ -237,11 +308,11 @@ fn ty_inlay_hints_label_parts_(
             value: format!("{}", x.value.as_str()),
             tooltip: None,
             location: None,
-            command: mk_command(x.loc),
+            command: mk_command(x.loc, services),
         }),
         ResolvedType::Ref(is_mut, ty) => {
             ret.push(InlayHintLabelPart {
-                value: format!("&{}", if *is_mut { "mut" } else { "" }),
+                value: format!("&{}", if *is_mut { "mut " } else { "" }),
                 tooltip: None,
                 location: None,
                 command: None,

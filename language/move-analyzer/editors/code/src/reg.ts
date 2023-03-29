@@ -730,4 +730,4 @@ class Reg {
 
 }
 
-export { Reg, WorkingDir } 
+export { Reg, WorkingDir };
