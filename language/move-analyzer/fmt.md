@@ -66,11 +66,11 @@ Implement a formatter you have to deal all the data structure.
 
 Another complex thing about formatter is `Comments`.
 Most programming language support two forms of comments.
+
 * Line comment       // This a is comment.
 * Block comment     /*  This a is comment. */
 
 The tricky part is `Block comment`. 
-
 
 `Block comment` can write anywhere in source code.
 
@@ -107,7 +107,7 @@ function(a) {
 `TokenTree` mainly contains two category.
 
 * `SimpleToken` in previous code snippet,`if`,`return`,`a` are `SimpleToken`.
-* `Nested` in previous code snippet,`()` and `{}` will form a `Nested` Token.
+* `Nested` in previous code snippet, paired `()` and paired `{}` will form a `Nested` Token.
 
 So a source program may represents like this.
 
@@ -139,23 +139,22 @@ if(tok == Tok::LParent){ // current token is `(`
 ...
 ~~~
 
-Right now verything look fine.
+Right now verything looks fine.
+
 But There are some token can be both `SimpleToken` or `Nested`.
 
-typical for a language support type parameter like `Vec<X>`.
+Typical for a language support type parameter like `Vec<X>`.
 
 A Token `<` can be `type parameter sign` or `mathematic less than`.
 
-This can be solved by consule the `AST` before parse `TokenTree`.
+This can be solved by consult the `AST` before parse `TokenTree`.
 
-because we are writting a formatter for existed programming language.
+because we are writting a formatter for exist programming language.
+
 It is always easy for us to get the real `AST`.
-We can traval the `AST` the decode a token is either a `SimpleToken` or `Nested`.
+
+We can traval the `AST` the decide `<` is either a `SimpleToken` or `Nested`.
 
 ## how to generate base on `TokenTree`.
 
 `Vec<TokenTree>` is a tree type, It is very easy to decide how many ident,etc.
-
-
-
-
