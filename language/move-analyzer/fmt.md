@@ -10,6 +10,7 @@ first of all a language AST always has a lot of variant data structure.
 like move expression.
 
 ~~~
+pub enum Exp_ {
     Value(Value),
     // move(x)
     Move(Var),
@@ -56,6 +57,9 @@ like move expression.
     ExpList(Vec<Exp>),
     // ()
     Unit,
+    
+    ...
+}
 ~~~
 This is just `Expression` variants.
 
@@ -141,7 +145,7 @@ if(tok == Tok::LParent){ // current token is `(`
 
 Right now verything looks fine.
 
-But There are some token can be both `SimpleToken` or `Nested`.
+But There are some token can be both `SimpleToken` and `Nested`.
 
 Typical for a language support type parameter like `Vec<X>`.
 

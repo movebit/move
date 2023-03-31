@@ -8,7 +8,15 @@ pub enum TokenTree {
     Nested {
         elements: Vec<TokenTree>,
         kind: NestKind,
+        delimiter: Option<Delimiter>,
     },
+}
+
+pub enum Delimiter {
+    /// a `,`
+    Comma,
+    /// a `;`
+    Simicolon,
 }
 
 pub fn dump_token_tree(tree: &Vec<TokenTree>) -> String {
