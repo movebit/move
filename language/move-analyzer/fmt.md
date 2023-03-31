@@ -88,9 +88,9 @@ In order to keep user's comments you have to keep comments in AST like below.
 ~~~
 This will make things below ugly.
 
-* Ast Definition.
-* parse AST.
-* all routine that accept AST.
+* AST Definition.
+* Parse AST.
+* All routine that accept AST.
 
 In general We need keep a `Vec<Comment>` in every AST structure.
 
@@ -119,7 +119,7 @@ So a source program may represents like this.
 pub enum TokenTree {
     SimpleToken {
         content: String,
-        pos: u32,
+        pos: u32,  // start position of file buffer.
     },
     Nested {
         elements: Vec<TokenTree>,
@@ -162,3 +162,7 @@ We can traval the `AST` the decide `<` is either a `SimpleToken` or `Nested`.
 ## how to generate base on `TokenTree`.
 
 `Vec<TokenTree>` is a tree type, It is very easy to decide how many ident,etc.
+
+And comment can pour into `result` base on the `pos` relate to `SimpleToken`.`pos`.
+
+

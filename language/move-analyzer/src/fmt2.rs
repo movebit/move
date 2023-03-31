@@ -72,6 +72,7 @@ impl<'a> Parser<'a> {
         Ok(TokenTree::Nested {
             elements: ret,
             kind,
+            delimiter: None,
         })
     }
 }
