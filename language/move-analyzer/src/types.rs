@@ -26,7 +26,6 @@ pub enum ResolvedType {
     /// ()
     Unit,
     /// (t1, t2, ... , tn)
-    /// Used for return values and expression blocks
     Multiple(Vec<ResolvedType>),
     Fun(ItemFun),
     Vec(Box<ResolvedType>),

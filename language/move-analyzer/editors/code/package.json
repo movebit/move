@@ -1,15 +1,15 @@
 {
-	"name": "move-analyzer",
-	"displayName": "move-analyzer",
-	"description": "A language server and basic grammar for the Move programming language.",
-	"publisher": "move",
+	"name": "sui-move-analyzer",
+	"displayName": "sui-move-analyzer",
+	"description": "A language server and basic grammar for the Sui Move programming language.",
+	"publisher": "MoveBit",
 	"icon": "images/move.png",
 	"license": "Apache-2.0",
-	"version": "0.0.11",
+	"version": "0.0.13",
 	"preview": true,
-	"homepage": "https://github.com/move-language/move",
+	"homepage": "https://movebit.xyz",
 	"repository": {
-		"url": "https://github.com/move-language/move.git",
+		"url": "https://github.com/movebit/move.git",
 		"type": "git"
 	},
 	"bugs": {
@@ -159,7 +159,7 @@
 		],
 		"configuration": {
 			"type": "object",
-			"title": "Move Analyzer",
+			"title": "Sui Move Analyzer",
 			"properties": {
 				"move-analyzer.server.path": {
 					"type": "string",
