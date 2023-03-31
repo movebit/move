@@ -69,7 +69,7 @@ impl<'a> Parser<'a> {
             ret.extend(self.parse_tokens()?.into_iter());
         }
         self.lexer.advance()?;
-        Ok(TokenTree::Nest {
+        Ok(TokenTree::Nested {
             elements: ret,
             kind,
         })

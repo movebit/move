@@ -5,7 +5,7 @@ pub enum TokenTree {
         content: String,
         pos: u32,
     },
-    Nest {
+    Nested {
         elements: Vec<TokenTree>,
         kind: NestKind,
     },
