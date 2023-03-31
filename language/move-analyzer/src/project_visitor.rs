@@ -1071,7 +1071,7 @@ impl Project {
             }
             Exp_::Block(b) => self.visit_block(b, project_context, visitor),
             Exp_::Lambda(_, _) => {
-                // TODO have lambda expression  in ast structure.
+                // TODO have lambda expression in ast structure.
                 // But I don't find in msl spec.
                 // for bind in binds.value.iter() {
                 //     self.visit_bind(bind, &ResolvedType::UnKnown, scopes, visitor);

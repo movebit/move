@@ -55,5 +55,6 @@ pub mod project_visitor;
 pub mod references;
 pub mod scope;
 pub mod syntax;
+pub mod token_tree;
 pub mod types;
 pub mod utils;

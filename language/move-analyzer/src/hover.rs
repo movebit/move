@@ -24,7 +24,7 @@ pub fn on_hover_request(context: &Context, request: &Request) {
         fpath.as_path(),
     );
     log::info!(
-        "request is hover,fpath:{:?}  line:{} col:{}",
+        "request is hover,fpath:{:?} line:{} col:{}",
         fpath.as_path(),
         line,
         col,

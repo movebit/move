@@ -1,3 +1,8 @@
+### 2023-3-30
+分析lambda表达式
+增加参数名的inlay hints
+增加变量的类型的inlay hints
+
 ### 2023-3-23
 Move.toml修改后自动加载
 增加字段的inlay hints

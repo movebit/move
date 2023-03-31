@@ -128,33 +128,33 @@ impl ItemOrAccessHandler for Handler {
     ) {
         match item {
             ItemOrAccess::Item(item) => match item {
-                // Item::Var {
-                //     var,
-                //     ty,
-                //     has_decl_ty: false,
-                //     ..
-                // } => {
-                //     if ty.is_err() {
-                //         return;
-                //     }
-                //     let var_range = if let Some(from_range) = services.convert_loc_range(&var.loc())
-                //     {
-                //         from_range
-                //     } else {
-                //         return;
-                //     };
-                //     if !self.in_range_range(&var_range) {
-                //         return;
-                //     }
-                //     self.reuslts.push(mk_inlay_hits(
-                //         Position {
-                //             line: var_range.line_end,
-                //             character: var_range.col_end,
-                //         },
-                //         ty_inlay_hints_label_parts(ty, services),
-                //         InlayHintKind::TYPE,
-                //     ));
-                // }
+                Item::Var {
+                    var,
+                    ty,
+                    has_decl_ty: false,
+                    ..
+                } => {
+                    if ty.is_err() {
+                        return;
+                    }
+                    let var_range = if let Some(from_range) = services.convert_loc_range(&var.loc())
+                    {
+                        from_range
+                    } else {
+                        return;
+                    };
+                    if !self.in_range_range(&var_range) {
+                        return;
+                    }
+                    self.reuslts.push(mk_inlay_hits(
+                        Position {
+                            line: var_range.line_end,
+                            character: var_range.col_end,
+                        },
+                        ty_inlay_hints_label_parts(ty, services),
+                        InlayHintKind::TYPE,
+                    ));
+                }
                 _ => {}
             },
 

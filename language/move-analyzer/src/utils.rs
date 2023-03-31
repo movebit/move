@@ -296,55 +296,66 @@ pub fn discover_manifest_and_kind(x: &Path) -> Option<(PathBuf, SourcePackageLay
     // We should be able at least pop one.
     x.pop()?;
     let mut layout = None;
-
     while x.len() > 0 {
-        layout = x
-            .last()
-            .map(|x| match x.as_os_str().to_str().unwrap() {
-                "tests" => Some(SourcePackageLayout::Tests),
-                "sources" => Some(SourcePackageLayout::Sources),
-                "scripts" => Some(SourcePackageLayout::Scripts),
-                _ => return None,
-            })
-            .flatten();
-        if layout.is_some() {
-            break;
+        while x.len() > 0 {
+            layout = x
+                .last()
+                .map(|x| match x.as_os_str().to_str().unwrap() {
+                    "tests" => Some(SourcePackageLayout::Tests),
+                    "sources" => Some(SourcePackageLayout::Sources),
+                    "scripts" => Some(SourcePackageLayout::Scripts),
+                    _ => return None,
+                })
+                .flatten();
+            if layout.is_some() {
+                break;
+            }
+            x.pop();
         }
-        x.pop();
+        let layout = layout?;
+        // Pop tests or sources ...
+        x.pop()?;
+        let mut manifest_dir = PathBuf::new();
+        for x in x.iter() {
+            manifest_dir.push(x);
+        }
+        // check if manifest exists.
+        let mut manifest_file = manifest_dir.clone();
+        manifest_file.push(PROJECT_FILE_NAME);
+        if manifest_file.exists() {
+            return Some((manifest_dir, layout));
+        }
     }
-    let layout = layout?;
-    // Pop tests or sources ...
-    x.pop()?;
-    let mut manifest_dir = PathBuf::new();
-    for x in x.iter() {
-        manifest_dir.push(x);
-    }
-    let mut manifest_file = manifest_dir.clone();
-    manifest_file.push(PROJECT_FILE_NAME);
-    if manifest_file.exists() {
-        Some((manifest_dir, layout))
-    } else {
-        None
-    }
+    None
 }
 
 #[test]
 fn discover_manifest_and_kind_test() {
-    let (manifest_dir, kind) = discover_manifest_and_kind(
+    let (_, kind) = discover_manifest_and_kind(
         PathBuf::from("/Users/yuyang/projects/test-move2/scripts/aaa.move").as_path(),
     )
     .unwrap();
-    eprintln!("path:{:?} kind:{:?}", manifest_dir, kind);
-    let (manifest_dir, kind) = discover_manifest_and_kind(
+    assert!(kind == SourcePackageLayout::Scripts);
+    let (_, kind) = discover_manifest_and_kind(
         PathBuf::from("/Users/yuyang/projects/test-move2/sources/some.move").as_path(),
     )
     .unwrap();
-    eprintln!("path:{:?} kind:{:?}", manifest_dir, kind);
-    let (manifest_dir, kind) = discover_manifest_and_kind(
+    assert!(kind == SourcePackageLayout::Sources);
+    let (_, kind) = discover_manifest_and_kind(
         PathBuf::from("/Users/yuyang/projects/test-move2/sources/configs/some.move").as_path(),
     )
     .unwrap();
-    eprintln!("path:{:?} kind:{:?}", manifest_dir, kind);
+    assert!(kind == SourcePackageLayout::Sources);
+    let (_, kind) = discover_manifest_and_kind(
+        PathBuf::from("/Users/yuyang/projects/test-move2/sources/tests/some.move").as_path(),
+    )
+    .unwrap();
+    assert!(kind == SourcePackageLayout::Sources);
+    let (_, kind) = discover_manifest_and_kind(
+        PathBuf::from("/Users/yuyang/projects/test-move2/tests/some.move").as_path(),
+    )
+    .unwrap();
+    assert!(kind == SourcePackageLayout::Tests);
 }
 
 pub fn is_sub_dir(p: PathBuf, mut sub: PathBuf) -> bool {

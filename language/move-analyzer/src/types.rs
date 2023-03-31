@@ -210,7 +210,7 @@ impl BuildInType {
             BuildInType::Address => "address",
             BuildInType::Signer => "signer",
             BuildInType::String => "vector<u8>",
-            BuildInType::NumType => "u8|u16...",
+            BuildInType::NumType => "u256",
         }
     }
 
