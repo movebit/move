@@ -1,15 +1,10 @@
-# This a project modified from https://github.com/move-language/move 
 
 # sui-move-analyzer
 
+### This a project modified from https://github.com/move-language/move 
+
 ## sui-move-analyzer Introduction
 The **sui-move-analyzer** is a Visual Studio Code plugin based on **move-analyzer** improved for **Move & Sui Move** by [MoveBit](https://movebit.xyz). Just now, we used this plugin in our dev member's daily work, and it's an alpha release.
-
-## The changelogs:
-* Added semantic analysis to the Move language and Sui Move, and enhanced some features of the plug-in, such as go-to-definition, auto-completion, finding references, etc.;
-* Added semantic analysis to MSL (Move Specification Language), supports features such as go-to-definition and auto-completion, and supports go-to-definition from MSL code to Move code;
-* Integrated common Sui development commands into Command Palette, support Sui Code Snippets automatic completion (currently only init function);
-* Support parallel development of multiple projects under the same directory;
 
 ## How to Install (Must Read)
 
@@ -26,7 +21,7 @@ The `sui-move-analyzer` language server is a Rust program that is part of the
    is recommended for people who do not work on core Move.
    1. If you don't already have a Rust toolchain installed, you should install
       [Rustup](https://rustup.rs/), which will install the latest stable Rust toolchain.
-   2. Invoke `cargo install --git https://github.com/movebit/move --branch move-analyzer2 move-analyzer` to install the
+   2. Invoke `cargo install --git https://github.com/movebit/move --branch move-analyzer2-release move-analyzer` to install the
       `move-analyzer` language server in your Cargo binary directory. On macOS and Linux, this is
       usually `~/.cargo/bin`. You'll want to make sure this location is in your `PATH` environment
       variable.
@@ -92,3 +87,23 @@ Move source file (a file with a `.move` file extension) and:
   - autocomplete
   - sui commands line tool
   - sui project template
+
+## The changelogs:
+
+### 2023/03/31 0.0.16
+
+* Added inlay hint to variable;
+* Added inlay hint to parameter;
+* Added inlay hint to statement;
+* Auto reload move.toml when modified;
+
+### 2023/03/16 0.0.15
+
+* Added semantic analysis to the Move language and Sui Move, and enhanced some features of the plug-in, such as go-to-definition, auto-completion, finding references, etc.;
+* Added semantic analysis to MSL (Move Specification Language), supports features such as go-to-definition and auto-completion, and supports go-to-definition from MSL code to Move code;
+* Integrated common Sui development commands into Command Palette, support Sui Code Snippets automatic completion (currently only init function);
+* Support parallel development of multiple projects under the same directory;
+
+
+
+
