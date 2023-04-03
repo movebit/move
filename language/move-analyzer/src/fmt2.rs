@@ -1,78 +1,44 @@
 #![allow(dead_code)]
+use std::cell::RefCell;
+use std::rc::Rc;
 
-use super::token_tree::*;
-use move_compiler::diagnostics::Diagnostic;
-use move_compiler::parser::ast::Definition;
-use move_compiler::parser::lexer::{Lexer, Tok};
-struct Parser<'a> {
-    lexer: Lexer<'a>,
-    defs: Vec<Definition>,
+use crate::token_tree::TokenTree;
+struct Format {
+    config: FormatConfig,
+    depth: Rc<RefCell<usize>>,
+    token_tree: Vec<TokenTree>,
 }
 
-#[derive(Clone, Copy)]
-pub enum NestKind {
-    /// ()
-    ParentTheses,
-    /// []  
-    Bracket,
-    /// {}
-    Brace,
-    /// type parameter like  A<B>
-    Type,
-    /// lambda like |a , b|
-    Lambda,
+pub struct FormatConfig {
+    pub ident_size: usize,
 }
 
-impl NestKind {
-    pub(crate) fn is_nest_start(tok: Tok) -> Option<Self> {
-        unimplemented!()
-    }
-    pub(crate) fn start_tok(self) -> Tok {
-        unimplemented!()
-    }
-    pub(crate) fn end_tok(self) -> Tok {
-        unimplemented!()
-    }
-}
-
-impl<'a> Parser<'a> {
-    fn new(lexer: Lexer<'a>, defs: Vec<Definition>) -> Self {
-        Self { lexer, defs }
-    }
-}
-
-impl<'a> Parser<'a> {
-    fn parse_tokens(&mut self) -> Result<Vec<TokenTree>, Box<Diagnostic>> {
-        let mut ret = vec![];
-        while self.lexer.peek() != Tok::EOF {
-            if let Some(kind) = NestKind::is_nest_start(self.lexer.peek()) {
-                ret.push(self.parse_nest(kind)?);
-                continue;
-            }
-            ret.push(TokenTree::SimpleToken {
-                content: self.lexer.content().to_string(),
-                pos: self.lexer.start_loc() as u32,
-            });
+impl Format {
+    fn new(config: FormatConfig, token_tree: Vec<TokenTree>) -> Self {
+        Self {
+            config,
+            depth: Default::default(),
+            token_tree,
         }
-        Ok(ret)
     }
+}
 
-    fn is_nest_start(&self) -> Option<NestKind> {
+impl Format {
+    fn increment_depth(&self) -> DepthGuard {
+        let old = *self.depth.as_ref().borrow();
+        *self.depth.as_ref().borrow_mut() = old + 1;
+        DepthGuard(self.depth.clone())
+    }
+    pub fn format_token_trees(&mut self) -> String {
         unimplemented!()
     }
+}
 
-    fn parse_nest(&mut self, kind: NestKind) -> Result<TokenTree, Box<Diagnostic>> {
-        debug_assert!(self.lexer.peek() == kind.start_tok());
-        self.lexer.advance()?;
-        let mut ret = vec![];
-        while self.lexer.peek() != kind.end_tok() && self.lexer.peek() != Tok::EOF {
-            ret.extend(self.parse_tokens()?.into_iter());
-        }
-        self.lexer.advance()?;
-        Ok(TokenTree::Nested {
-            elements: ret,
-            kind,
-            delimiter: None,
-        })
+struct DepthGuard(Rc<RefCell<usize>>);
+
+impl Drop for DepthGuard {
+    fn drop(&mut self) {
+        let old = *self.0.as_ref().borrow();
+        *self.0.as_ref().borrow_mut() = old - 1;
     }
 }

@@ -58,13 +58,12 @@ pub fn format(input: &str, config: FormatConfig) -> std::result::Result<String, 
 }
 
 struct Format {
-    comments: std::vec::IntoIter<Comment>,
     config: FormatConfig,
     depth: Rc<RefCell<usize>>,
 }
 
 impl Format {
-    fn new(config: FormatConfig, comments: std::vec::IntoIter<Comment>) -> Self {
+    fn new(config: FormatConfig) -> Self {
         Self {
             config,
             comments,
@@ -210,7 +209,9 @@ impl Format {
     }
 }
 
-pub struct FormatConfig {}
+pub struct FormatConfig {
+    pub ident_size: usize,
+}
 
 struct DepthGuard(Rc<RefCell<usize>>);
 

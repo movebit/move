@@ -97,6 +97,8 @@ In general We need keep a `Vec<Comment>` in every AST structure.
 
 Is there a way to slove this puzzle.
 
+## TokenTree solution
+
 The key idea about this post to simplfy `AST` to far more simpler tree type which I call it `TokenTree`.
 ~~~
 function(a) {
@@ -153,7 +155,7 @@ A Token `<` can be `type parameter sign` or `mathematic less than`.
 
 This can be solved by consult the `AST` before parse `TokenTree`.
 
-because we are writting a formatter for exist programming language.
+Because we are writting a formatter for exist programming language.
 
 It is always easy for us to get the real `AST`.
 
