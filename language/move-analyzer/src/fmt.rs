@@ -20,7 +20,7 @@ struct Format {
     config: FormatConfig,
     depth: Rc<RefCell<usize>>,
     token_tree: Vec<TokenTree>,
-    comments: MatchedFileCommentMap,
+    comments: Vec<(u32, String)>,
     line_mapping: FileLineMapping,
     path: PathBuf,
 }
@@ -41,7 +41,7 @@ impl Format {
             config,
             depth: Default::default(),
             token_tree,
-            comments,
+            comments: comments.into_iter().map(|(k, v)| (k, v)).collect(),
             line_mapping,
             path,
         }
