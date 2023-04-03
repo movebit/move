@@ -41,7 +41,6 @@ impl Format {
             config,
             depth: Default::default(),
             token_tree,
-           
             comments,
             line_mapping,
             path,
@@ -53,28 +52,30 @@ impl Format {
         DepthGuard(self.depth.clone())
     }
 
-    pub fn format_token_trees(self) -> String {
-     
-        self.result
-    } 
+    pub fn format_token_trees(mut self) -> String {
+        let mut ret = String::new();
+        let length = self.token_tree.len();
+        let mut index = 0;
+        while index < length {
+            self.format_token_trees_(&mut ret, self.token_tree.get(index).unwrap());
+            index += 1;
+        }
+        ret
+    }
 
-    fn format_token_trees_(&mut self, token: &TokenTree) {
+    fn format_token_trees_(&self, ret: &mut String, token: &TokenTree) {
         match token {
-            TokenTree::Nested {
-                elements,
-                kind,
-                delimiter,
-            } => {
+            TokenTree::Nested { elements, kind } => {
                 //Iter
             }
             TokenTree::SimpleToken { content, pos } => {
                 //Add to string
-                self.result.push_str(&content.as_str());
+                ret.push_str(&content.as_str());
             }
         }
     }
-    fn indent(&mut self) {
-        self.result.push_str(&indent(*self.depth.as_ref().borrow()));
+    fn indent(&mut self, ret: &mut String) {
+        ret.push_str(&indent(*self.depth.as_ref().borrow()));
     }
 
     fn translate_line(&self, pos: u32) -> u32 {
