@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::result::Result::*;
+use std::string;
 
 use move_command_line_common::files::FileHash;
 use move_compiler::diagnostics::Diagnostics;
@@ -10,6 +11,7 @@ use move_compiler::parser::lexer::Lexer;
 use move_compiler::parser::syntax::parse_file_string;
 use move_compiler::shared::CompilationEnv;
 use move_compiler::{Flags, MatchedFileCommentMap};
+use stderrlog::new;
 
 use crate::move_generate_spec::indent;
 use crate::token_tree::TokenTree;
@@ -18,14 +20,13 @@ struct Format {
     config: FormatConfig,
     depth: Rc<RefCell<usize>>,
     token_tree: Vec<TokenTree>,
-    result: String,
     comments: MatchedFileCommentMap,
     line_mapping: FileLineMapping,
     path: PathBuf,
 }
 
 pub struct FormatConfig {
-    pub ident_size: usize,
+    pub ident_size: u32,
 }
 
 impl Format {
@@ -40,7 +41,7 @@ impl Format {
             config,
             depth: Default::default(),
             token_tree,
-            result: String::new(),
+           
             comments,
             line_mapping,
             path,
@@ -51,10 +52,27 @@ impl Format {
         *self.depth.as_ref().borrow_mut() = old + 1;
         DepthGuard(self.depth.clone())
     }
-    pub fn format_token_trees(self) -> String {
-        unimplemented!()
-    }
 
+    pub fn format_token_trees(self) -> String {
+     
+        self.result
+    } 
+
+    fn format_token_trees_(&mut self, token: &TokenTree) {
+        match token {
+            TokenTree::Nested {
+                elements,
+                kind,
+                delimiter,
+            } => {
+                //Iter
+            }
+            TokenTree::SimpleToken { content, pos } => {
+                //Add to string
+                self.result.push_str(&content.as_str());
+            }
+        }
+    }
     fn indent(&mut self) {
         self.result.push_str(&indent(*self.depth.as_ref().borrow()));
     }
