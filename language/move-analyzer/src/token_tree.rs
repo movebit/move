@@ -38,7 +38,7 @@ impl NestKind_ {
 pub enum TokenTree {
     SimpleToken {
         content: String,
-        pos: u32,
+        pos: u32, // start offset in file buffer.
     },
     Nested {
         elements: Vec<TokenTree>,
@@ -54,23 +54,23 @@ pub enum Delimiter {
     Semicolon,
 }
 
-struct Parser<'a> {
+pub struct Parser<'a> {
     lexer: Lexer<'a>,
-    defs: Vec<Definition>,
+    defs: &'a Vec<Definition>,
 }
 
 impl<'a> Parser<'a> {
-    fn new(lexer: Lexer<'a>, defs: Vec<Definition>) -> Self {
+    pub(crate) fn new(lexer: Lexer<'a>, defs: &'a Vec<Definition>) -> Self {
         Self { lexer, defs }
     }
 }
 
 impl<'a> Parser<'a> {
-    fn parse_tokens(&mut self) -> Result<Vec<TokenTree>, Box<Diagnostic>> {
+    pub(crate) fn parse_tokens(&mut self) -> Vec<TokenTree> {
         let mut ret = vec![];
         while self.lexer.peek() != Tok::EOF {
             if let Some(kind) = NestKind_::is_nest_start(self.lexer.peek()) {
-                ret.push(self.parse_nest(kind)?);
+                ret.push(self.parse_nest(kind));
                 continue;
             }
             ret.push(TokenTree::SimpleToken {
@@ -78,25 +78,25 @@ impl<'a> Parser<'a> {
                 pos: self.lexer.start_loc() as u32,
             });
         }
-        Ok(ret)
+        ret
     }
 
     fn is_nest_start(&self) -> Option<NestKind_> {
         unimplemented!()
     }
 
-    fn parse_nest(&mut self, kind: NestKind_) -> Result<TokenTree, Box<Diagnostic>> {
+    fn parse_nest(&mut self, kind: NestKind_) -> TokenTree {
         debug_assert!(self.lexer.peek() == kind.start_tok());
-        self.lexer.advance()?;
+        self.lexer.advance().unwrap();
         let mut ret = vec![];
         while self.lexer.peek() != kind.end_tok() && self.lexer.peek() != Tok::EOF {
-            ret.extend(self.parse_tokens()?.into_iter());
+            ret.extend(self.parse_tokens().into_iter());
         }
-        self.lexer.advance()?;
-        Ok(TokenTree::Nested {
+        self.lexer.advance();
+        TokenTree::Nested {
             elements: ret,
             kind: unimplemented!(),
             delimiter: None,
-        })
+        }
     }
 }
