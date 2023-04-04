@@ -5,7 +5,12 @@ use super::utils::FileLineMapping;
 use move_command_line_common::files::FileHash;
 use move_compiler::{
     diagnostics::Diagnostic,
-    parser::lexer::{Lexer, Tok},
+    parser::{
+        lexer::{Lexer, Tok},
+        syntax::parse_file_string,
+    },
+    shared::CompilationEnv,
+    Flags,
 };
 use std::path::Path;
 
@@ -26,6 +31,16 @@ fn scan_dir() {
             let p = x.into_path();
             eprintln!("try format:{:?}", p);
             let content = std::fs::read_to_string(&p).unwrap();
+            {
+                let mut env = CompilationEnv::new(Flags::testing());
+                match parse_file_string(&mut env, FileHash::empty(), &content) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        eprintln!("file '{:?}' skipeed because of parse not ok", p.as_path());
+                        continue;
+                    }
+                }
+            }
             let t1 = extract_tokens(content.as_str())
                 .expect("test file should be about to lexer,err:{:?}");
             let conten2 = super::fmt::format(p.as_path(), FormatConfig { indent_size: 2 }).unwrap();

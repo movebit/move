@@ -126,7 +126,7 @@ impl Format {
                 //Add signer
             }
             //Add to string
-            TokenTree::SimpleToken { content, pos } => {
+            TokenTree::SimpleToken { content, pos, tok } => {
                 // //Add comment
                 // for (pos_, string_) in &self.comments[self.comment_index.get()..] {
                 //     if (pos_ < pos) {

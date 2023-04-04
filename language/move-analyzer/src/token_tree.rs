@@ -61,6 +61,7 @@ pub enum TokenTree {
     SimpleToken {
         content: String,
         pos: u32, // start offset in file buffer.
+        tok: Tok,
     },
     Nested {
         elements: Vec<TokenTree>,
@@ -100,6 +101,7 @@ impl<'a> Parser<'a> {
             ret.push(TokenTree::SimpleToken {
                 content: self.lexer.content().to_string(),
                 pos: self.lexer.start_loc() as u32,
+                tok: self.lexer.peek(),
             });
             self.lexer.advance().unwrap();
         }
@@ -152,6 +154,7 @@ impl<'a> Parser<'a> {
             ret.push(TokenTree::SimpleToken {
                 content: self.lexer.content().to_string(),
                 pos: self.lexer.start_loc() as u32,
+                tok: self.lexer.peek(),
             });
             self.lexer.advance().unwrap();
         }
