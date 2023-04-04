@@ -14,15 +14,14 @@ use move_compiler::{
 };
 use std::path::Path;
 
-const YUYANG: bool = true;
-
 #[test]
 fn scan_dir() {
-    for x in walkdir::WalkDir::new(Path::new(if YUYANG {
-        "/Users/yuyang/projects/sui/sui_programmability/examples"
-    } else {
-        "/Users/yuyang/projects/sui/sui_programmability/examples"
-    })) {
+    for x in walkdir::WalkDir::new(match std::env::var("MOVE_FMT_TEST_DIR") {
+        Ok(x) => x,
+        Err(_) => {
+            return;
+        }
+    }) {
         let x = match x {
             Ok(x) => x,
             Err(_) => todo!(),
@@ -36,7 +35,7 @@ fn scan_dir() {
                 match parse_file_string(&mut env, FileHash::empty(), &content) {
                     Ok(_) => {}
                     Err(_) => {
-                        eprintln!("file '{:?}' skipeed because of parse not ok", p.as_path());
+                        eprintln!("file '{:?}' skipped because of parse not ok", p.as_path());
                         continue;
                     }
                 }
@@ -59,7 +58,7 @@ fn scan_dir() {
                 assert_eq!(
                     t1.content,
                     t2.content,
-                    "format wrong file:{:?} line:{} col:{}",
+                    "format not ok,file:{:?} line:{} col:{}",
                     p.as_path(),
                     // +1 in vscode UI line and col start with 1
                     t1.line + 1,
@@ -81,14 +80,14 @@ struct ExtractToken {
 
 fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Box<Diagnostic>> {
     let p = Path::new(".").to_path_buf();
-    let mut t = FileLineMapping::default();
-    t.update(p.clone(), &content);
+    let mut line_mapping = FileLineMapping::default();
+    line_mapping.update(p.clone(), &content);
     let filehash = FileHash::empty();
     let mut lexer = Lexer::new(&content, filehash);
     let mut ret = Vec::new();
     lexer.advance()?;
     while lexer.peek() != Tok::EOF {
-        let loc = t
+        let loc = line_mapping
             .translate(&p, lexer.start_loc() as u32, lexer.start_loc() as u32)
             .unwrap();
 

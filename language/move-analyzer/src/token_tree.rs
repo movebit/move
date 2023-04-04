@@ -4,7 +4,7 @@ use move_compiler::parser::ast::*;
 use move_compiler::parser::lexer::{Lexer, Tok};
 use move_compiler::{diagnostics::Diagnostic, parser::ast::Definition};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum NestKind_ {
     /// ()
     ParentTheses,
@@ -151,6 +151,10 @@ impl<'a> Parser<'a> {
             if self.lexer.peek() == kind.end_tok() {
                 break;
             }
+            if kind == NestKind_::Type && self.lexer.peek() == Tok::GreaterGreater {
+                self.adjust_token(Tok::Greater);
+                break;
+            }
             ret.push(TokenTree::SimpleToken {
                 content: self.lexer.content().to_string(),
                 pos: self.lexer.start_loc() as u32,
@@ -172,6 +176,17 @@ impl<'a> Parser<'a> {
     }
 }
 
+impl<'a> Parser<'a> {
+    // While parsing a list and expecting a ">" token to mark the end, replace
+    // a ">>" token with the expected ">". This handles the situation where there
+    // are nested type parameters that result in two adjacent ">" tokens, e.g.,
+    // "A<B<C>>".
+    fn adjust_token(&mut self, end_token: Tok) {
+        if self.lexer.peek() == Tok::GreaterGreater && end_token == Tok::Greater {
+            self.lexer.replace_token(Tok::Greater, 1);
+        }
+    }
+}
 impl<'a> Parser<'a> {
     fn collect_type_and_lambda_pair(&mut self) {
         for d in self.defs.iter() {
