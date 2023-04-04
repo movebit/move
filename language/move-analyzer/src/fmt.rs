@@ -169,8 +169,9 @@ pub fn format(p: impl AsRef<Path>, config: FormatConfig) -> Result<String, Diagn
     let lexer = Lexer::new(&content, filehash);
     let mut parse = super::token_tree::Parser::new(lexer, &defs);
     let token_tree = parse.parse_tokens();
-    let mut t = FileLineMapping::default();
-    t.update(p.to_path_buf(), &content);
-    let f = Format::new(config, token_tree, comments, t, p.to_path_buf());
+
+    let mut line_mapping = FileLineMapping::default();
+    line_mapping.update(p.to_path_buf(), &content);
+    let f = Format::new(config, token_tree, comments, line_mapping, p.to_path_buf());
     Ok(f.format_token_trees())
 }

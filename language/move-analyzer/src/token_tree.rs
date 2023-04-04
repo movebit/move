@@ -77,19 +77,21 @@ pub struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     pub(crate) fn new(lexer: Lexer<'a>, defs: &'a Vec<Definition>) -> Self {
-        Self {
+        let mut x = Self {
             lexer,
             defs,
             type_lambda_pair: Default::default(),
             type_lambda_pair_index: 0,
-        }
+        };
+        x.collect_type_and_lambda_pair();
+        x
     }
 }
 
 impl<'a> Parser<'a> {
     pub(crate) fn parse_tokens(&mut self) -> Vec<TokenTree> {
-        self.collect_type_and_lambda_pair();
         let mut ret = vec![];
+        self.lexer.advance().unwrap();
         while self.lexer.peek() != Tok::EOF {
             if let Some(kind) = self.is_nest_start() {
                 ret.push(self.parse_nested(kind));
@@ -139,8 +141,19 @@ impl<'a> Parser<'a> {
         let start = self.lexer.start_loc();
         self.lexer.advance().unwrap();
         let mut ret = vec![];
-        while self.lexer.peek() != kind.end_tok() && self.lexer.peek() != Tok::EOF {
-            ret.extend(self.parse_tokens().into_iter());
+        while self.lexer.peek() != Tok::EOF {
+            if let Some(kind) = self.is_nest_start() {
+                ret.push(self.parse_nested(kind));
+                continue;
+            }
+            if self.lexer.peek() == kind.end_tok() {
+                break;
+            }
+            ret.push(TokenTree::SimpleToken {
+                content: self.lexer.content().to_string(),
+                pos: self.lexer.start_loc() as u32,
+            });
+            self.lexer.advance().unwrap();
         }
         debug_assert_eq!(self.lexer.peek(), kind.end_tok());
         let end = self.lexer.start_loc();
@@ -161,8 +174,9 @@ impl<'a> Parser<'a> {
         for d in self.defs.iter() {
             collect_definition(self, d);
         }
+
         self.type_lambda_pair.sort_by(|x, y| {
-            debug_assert!(x.0.cmp(&y.0) != Ordering::Equal);
+            debug_assert!(x.0.cmp(&y.0) != Ordering::Equal, "{:?}?{:?}", x, y);
             if x.0.cmp(&y.0) == Ordering::Greater {
                 Ordering::Greater
             } else {
