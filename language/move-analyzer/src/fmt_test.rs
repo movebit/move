@@ -1,10 +1,10 @@
-use crate::fmt::FormatConfig;
+use crate::{fmt::FormatConfig, token_tree::TokenTree};
 
 use super::utils::FileLineMapping;
 
 use move_command_line_common::files::FileHash;
 use move_compiler::{
-    diagnostics::Diagnostic,
+    diagnostics::{Diagnostic, Diagnostics},
     parser::{
         lexer::{Lexer, Tok},
         syntax::parse_file_string,
@@ -12,17 +12,18 @@ use move_compiler::{
     shared::CompilationEnv,
     Flags,
 };
+use std::fmt::format;
 use std::path::Path;
-
-const YUYANG: bool = false;
 
 #[test]
 fn scan_dir() {
-    for x in walkdir::WalkDir::new(Path::new(if YUYANG {
-        "/Users/yuyang/projects/sui/sui_programmability/examples"
-    } else {
-        "C:/I-Git/sui/sui/sui_programmability/examples"
-    })) {
+    for x in walkdir::WalkDir::new(match std::env::var("MOVE_FMT_TEST_DIR") {
+        Ok(x) => x,
+        Err(_) => {
+            eprintln!("MOVE_FMT_TEST_DIR env var not set this test skipped.");
+            return;
+        }
+    }) {
         let x = match x {
             Ok(x) => x,
             Err(_) => todo!(),
@@ -36,7 +37,7 @@ fn scan_dir() {
                 match parse_file_string(&mut env, FileHash::empty(), &content) {
                     Ok(_) => {}
                     Err(_) => {
-                        eprintln!("file '{:?}' skipeed because of parse not ok", p.as_path());
+                        eprintln!("file '{:?}' skipped because of parse not ok", p.as_path());
                         continue;
                     }
                 }
@@ -48,7 +49,7 @@ fn scan_dir() {
                 Ok(x) => x,
                 Err(err) => {
                     unreachable!(
-                        "should be able to lexer after lexer:err{:?} , content2:\n{}\n",
+                        "should be able to parse after format:err{:?} , content2:\n{}\n",
                         err, conten2
                     );
                 }
@@ -59,7 +60,7 @@ fn scan_dir() {
                 assert_eq!(
                     t1.content,
                     t2.content,
-                    "format wrong file:{:?} line:{} col:{}",
+                    "format not ok,file:{:?} line:{} col:{}",
                     p.as_path(),
                     // +1 in vscode UI line and col start with 1
                     t1.line + 1,
@@ -79,25 +80,67 @@ struct ExtractToken {
     col: u32,
 }
 
-fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Box<Diagnostic>> {
+fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Box<Diagnostics>> {
     let p = Path::new(".").to_path_buf();
-    let mut t = FileLineMapping::default();
-    t.update(p.clone(), &content);
+    let mut line_mapping = FileLineMapping::default();
+    line_mapping.update(p.clone(), &content);
     let filehash = FileHash::empty();
+    let mut env = CompilationEnv::new(Flags::testing());
+    let (defs, comments) = parse_file_string(&mut env, filehash, content)?;
     let mut lexer = Lexer::new(&content, filehash);
     let mut ret = Vec::new();
-    lexer.advance()?;
-    while lexer.peek() != Tok::EOF {
-        let loc = t
-            .translate(&p, lexer.start_loc() as u32, lexer.start_loc() as u32)
-            .unwrap();
+    let mut parse = super::token_tree::Parser::new(lexer, &defs);
+    let token_tree = parse.parse_tokens();
+    let mut line_mapping = FileLineMapping::default();
+    line_mapping.update(p.to_path_buf(), &content);
+    fn collect_token_tree(ret: &mut Vec<ExtractToken>, m: &FileLineMapping, t: &TokenTree) {
+        match t {
+            TokenTree::SimpleToken {
+                content,
+                pos,
+                tok: _tok,
+            } => {
+                let loc = m
+                    .translate(&Path::new(".").to_path_buf(), *pos, *pos)
+                    .unwrap();
 
-        ret.push(ExtractToken {
-            content: lexer.content().to_string(),
-            line: loc.line_start,
-            col: loc.col_start,
-        });
-        lexer.advance()?;
+                ret.push(ExtractToken {
+                    content: content.clone(),
+                    line: loc.line_start,
+                    col: loc.col_start,
+                });
+            }
+            TokenTree::Nested { elements, kind } => {
+                let start_loc = m
+                    .translate(
+                        &Path::new(".").to_path_buf(),
+                        kind.start_pos,
+                        kind.start_pos,
+                    )
+                    .unwrap();
+                ret.push(ExtractToken {
+                    content: format!("{:?}", kind.kind.start_tok()),
+                    line: start_loc.line_start,
+                    col: start_loc.col_start,
+                });
+
+                for token in elements.iter() {
+                    collect_token_tree(ret, m, token);
+                }
+                let end_loc = m
+                    .translate(&Path::new(".").to_path_buf(), kind.end_pos, kind.end_pos)
+                    .unwrap();
+                ret.push(ExtractToken {
+                    content: format!("{:?}", kind.kind.end_tok()),
+                    line: end_loc.line_start,
+                    col: end_loc.col_start,
+                });
+            }
+        }
     }
+    for token in token_tree.iter() {
+        collect_token_tree(&mut ret, &line_mapping, token);
+    }
+
     Ok(ret)
 }
