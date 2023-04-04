@@ -21,9 +21,9 @@ pub enum NestKind_ {
 
 #[derive(Clone, Copy)]
 pub struct NestKind {
-    kind: NestKind_,
-    start_pos: u32,
-    end_pos: u32,
+    pub(crate) kind: NestKind_,
+    pub(crate) start_pos: u32,
+    pub(crate) end_pos: u32,
 }
 
 impl NestKind_ {

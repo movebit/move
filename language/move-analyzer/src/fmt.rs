@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use std::cell::RefCell;
+use std::cell::{self, RefCell};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::result::Result::*;
@@ -11,10 +11,11 @@ use move_compiler::parser::lexer::Lexer;
 use move_compiler::parser::syntax::parse_file_string;
 use move_compiler::shared::CompilationEnv;
 use move_compiler::{Flags, MatchedFileCommentMap};
+use std::cell::Cell;
 use stderrlog::new;
 
 use crate::move_generate_spec::indent;
-use crate::token_tree::TokenTree;
+use crate::token_tree::{NestKind_, TokenTree};
 use crate::utils::FileLineMapping;
 struct Format {
     config: FormatConfig,
@@ -23,6 +24,7 @@ struct Format {
     comments: Vec<(u32, String)>,
     line_mapping: FileLineMapping,
     path: PathBuf,
+    comment_index: Cell<usize>,
 }
 
 pub struct FormatConfig {
@@ -38,6 +40,7 @@ impl Format {
         path: PathBuf,
     ) -> Self {
         Self {
+            comment_index: Default::default(),
             config,
             depth: Default::default(),
             token_tree,
@@ -65,11 +68,73 @@ impl Format {
 
     fn format_token_trees_(&self, ret: &mut String, token: &TokenTree) {
         match token {
+            //Iter Nested
             TokenTree::Nested { elements, kind } => {
-                //Iter
+                //Add comment
+                for (pos_, string_) in &self.comments[self.comment_index.get()..] {
+                    if (pos_ < &kind.start_pos) {
+                        ret.push_str(string_.as_str());
+                        //TODO: Change line in different system
+                        //ret.push_str("\n");
+                        self.comment_index.set(self.comment_index.get() + 1);
+                    } else {
+                        break;
+                    }
+                }
+                //Add signer
+                match kind.kind {
+                    NestKind_::Brace => {
+                        ret.push_str("{");
+                    }
+                    NestKind_::Lambda => {
+                        ret.push_str("|");
+                    }
+                    NestKind_::Type => {
+                        ret.push_str("<");
+                    }
+                    NestKind_::ParentTheses => {
+                        ret.push_str("(");
+                    }
+                    NestKind_::Bracket => {
+                        ret.push_str("[");
+                    }
+                }
+                for i in elements {
+                    self.format_token_trees_(ret, i);
+                }
+                match kind.kind {
+                    NestKind_::Brace => {
+                        ret.push_str("}");
+                    }
+                    NestKind_::Lambda => {
+                        ret.push_str("|");
+                    }
+                    NestKind_::Type => {
+                        ret.push_str(">");
+                    }
+                    NestKind_::ParentTheses => {
+                        ret.push_str(")");
+                    }
+                    NestKind_::Bracket => {
+                        ret.push_str("]");
+                    }
+                }
+                //Add signer
             }
+            //Add to string
             TokenTree::SimpleToken { content, pos } => {
-                //Add to string
+                //Add comment
+                for (pos_, string_) in &self.comments[self.comment_index.get()..] {
+                    if (pos_ < pos) {
+                        ret.push_str(string_.as_str());
+                        //TODO: Change line in different system
+                        //ret.push_str("\n");
+                        self.comment_index.set(self.comment_index.get() + 1);
+                    } else {
+                        break;
+                    }
+                }
+                //Push simpletoken
                 ret.push_str(&content.as_str());
             }
         }
