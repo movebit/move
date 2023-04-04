@@ -3,8 +3,9 @@ use crate::{fmt::FormatConfig, token_tree::TokenTree};
 use super::utils::FileLineMapping;
 
 use move_command_line_common::files::FileHash;
+use move_compiler::diagnostics::Diagnostic;
 use move_compiler::{
-    diagnostics::{Diagnostic, Diagnostics},
+    diagnostics::Diagnostics,
     parser::{
         lexer::{Lexer, Tok},
         syntax::parse_file_string,
@@ -12,7 +13,7 @@ use move_compiler::{
     shared::CompilationEnv,
     Flags,
 };
-use std::fmt::format;
+
 use std::path::Path;
 
 #[test]
@@ -49,13 +50,12 @@ fn scan_dir() {
                 Ok(x) => x,
                 Err(err) => {
                     unreachable!(
-                        "should be able to parse after format:err{:?} , content2:\n{}\n",
+                        "should be able to parse after format:err{:?},after format:\n{}\n",
                         err, conten2
                     );
                 }
             };
 
-            // TODO fix >> may make multi line after format.
             for (t1, t2) in t1.iter().zip(t2.iter()) {
                 assert_eq!(
                     t1.content,
@@ -80,13 +80,30 @@ struct ExtractToken {
     col: u32,
 }
 
-fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Box<Diagnostics>> {
+fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
     let p = Path::new(".").to_path_buf();
     let mut line_mapping = FileLineMapping::default();
     line_mapping.update(p.clone(), &content);
     let filehash = FileHash::empty();
     let mut env = CompilationEnv::new(Flags::testing());
-    let (defs, comments) = parse_file_string(&mut env, filehash, content)?;
+    let (defs, comments) = match parse_file_string(&mut env, filehash, content) {
+        Ok(x) => x,
+        Err(d) => {
+            let mut ret = Vec::with_capacity(d.len());
+            for x in d.into_codespan_format() {
+                let (s, msg, (loc, m), _, notes) = x;
+                let loc = line_mapping.translate(&p, loc.start(), loc.end()).unwrap();
+                ret.push(format!(
+                    "{}:{} {}",
+                    loc.line_start,
+                    loc.col_start,
+                    format!("{}\n{}", msg, m)
+                ));
+            }
+
+            return Err(ret);
+        }
+    };
     let mut lexer = Lexer::new(&content, filehash);
     let mut ret = Vec::new();
     let mut parse = super::token_tree::Parser::new(lexer, &defs);
