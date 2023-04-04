@@ -28,7 +28,7 @@ struct Format {
 }
 
 pub struct FormatConfig {
-    pub ident_size: u32,
+    pub indent_size: u32,
 }
 
 impl Format {
@@ -49,6 +49,8 @@ impl Format {
             path,
         }
     }
+
+    #[must_use]
     fn increment_depth(&self) -> DepthGuard {
         let old = *self.depth.as_ref().borrow();
         *self.depth.as_ref().borrow_mut() = old + 1;
@@ -71,6 +73,8 @@ impl Format {
             //Iter Nested
             TokenTree::Nested { elements, kind } => {
                 //Add comment
+                let _gurard = self.increment_depth();
+
                 for (pos_, string_) in &self.comments[self.comment_index.get()..] {
                     if (pos_ < &kind.start_pos) {
                         ret.push_str(string_.as_str());
@@ -139,6 +143,8 @@ impl Format {
             }
         }
     }
+
+    /// 缩进
     fn indent(&mut self, ret: &mut String) {
         ret.push_str(&indent(*self.depth.as_ref().borrow()));
     }
@@ -151,6 +157,8 @@ impl Format {
     }
 }
 
+/// A RAII type  
+#[must_use]
 struct DepthGuard(Rc<RefCell<usize>>);
 
 impl Drop for DepthGuard {
@@ -170,8 +178,8 @@ pub fn format(p: impl AsRef<Path>, config: FormatConfig) -> Result<String, Diagn
     let mut parse = super::token_tree::Parser::new(lexer, &defs);
     let token_tree = parse.parse_tokens();
 
-    let mut line_mapping = FileLineMapping::default();
-    line_mapping.update(p.to_path_buf(), &content);
-    let f = Format::new(config, token_tree, comments, line_mapping, p.to_path_buf());
+    let mut t = FileLineMapping::default();
+    t.update(p.to_path_buf(), &content);
+    let f = Format::new(config, token_tree, comments, t, p.to_path_buf());
     Ok(f.format_token_trees())
 }

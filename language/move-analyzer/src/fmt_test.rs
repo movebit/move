@@ -28,7 +28,7 @@ fn scan_dir() {
             let content = std::fs::read_to_string(&p).unwrap();
             let t1 = extract_tokens(content.as_str())
                 .expect("test file should be about to lexer,err:{:?}");
-            let conten2 = super::fmt::format(p.as_path(), FormatConfig { ident_size: 2 }).unwrap();
+            let conten2 = super::fmt::format(p.as_path(), FormatConfig { indent_size: 2 }).unwrap();
             let t2 = match extract_tokens(conten2.as_str()) {
                 Ok(x) => x,
                 Err(err) => {
