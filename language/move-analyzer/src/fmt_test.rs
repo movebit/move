@@ -46,8 +46,9 @@ fn scan_dir() {
                     t2.content,
                     "format wrong file:{:?} line:{} col:{}",
                     p.as_path(),
-                    t1.line,
-                    t2.col
+                    // +1 in vscode UI line and col start with 1
+                    t1.line + 1,
+                    t2.col + 1
                 );
             }
             assert_eq!(t1.len(), t2.len(), "{:?} token length should equal", p);
