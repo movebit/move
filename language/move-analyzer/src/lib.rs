@@ -39,6 +39,8 @@ pub mod call;
 pub mod code_lens;
 pub mod document_symbol;
 pub mod fmt;
+#[cfg(test)]
+mod fmt_test;
 pub mod goto_definition;
 pub mod hover;
 #[cfg(test)]

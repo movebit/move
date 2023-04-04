@@ -3,7 +3,6 @@ use std::cmp::Ordering;
 use move_compiler::parser::ast::*;
 use move_compiler::parser::lexer::{Lexer, Tok};
 use move_compiler::{diagnostics::Diagnostic, parser::ast::Definition};
-use url::form_urlencoded::Parse;
 
 #[derive(Clone, Copy)]
 pub enum NestKind_ {
@@ -21,20 +20,40 @@ pub enum NestKind_ {
 
 #[derive(Clone, Copy)]
 pub struct NestKind {
-    kind: NestKind_,
-    start_pos: u32,
-    end_pos: u32,
+    pub(crate) kind: NestKind_,
+    pub(crate) start_pos: u32,
+    pub(crate) end_pos: u32,
 }
 
 impl NestKind_ {
-    pub(crate) fn is_nest_start(tok: Tok) -> Option<Self> {
-        unimplemented!()
+    pub(crate) fn is_nest_start(tok: Tok) -> Option<NestKind_> {
+        match tok {
+            Tok::LParen => Some(Self::ParentTheses),
+            Tok::LBracket => Some(Self::Bracket),
+            Tok::LBrace => Some(Self::Brace),
+            Tok::Less => Some(Self::Type),
+            Tok::Pipe => Some(Self::Lambda),
+            _ => None,
+        }
     }
-    pub(crate) fn start_tok(self) -> Tok {
-        unimplemented!()
+
+    pub(crate) const fn start_tok(self) -> Tok {
+        match self {
+            NestKind_::ParentTheses => Tok::LParen,
+            NestKind_::Bracket => Tok::LBracket,
+            NestKind_::Brace => Tok::LBrace,
+            NestKind_::Type => Tok::Less,
+            NestKind_::Lambda => Tok::Pipe,
+        }
     }
     pub(crate) fn end_tok(self) -> Tok {
-        unimplemented!()
+        match self {
+            NestKind_::ParentTheses => Tok::RParen,
+            NestKind_::Bracket => Tok::RBracket,
+            NestKind_::Brace => Tok::RBrace,
+            NestKind_::Type => Tok::Greater,
+            NestKind_::Lambda => Tok::Pipe,
+        }
     }
 }
 
@@ -52,8 +71,8 @@ pub enum TokenTree {
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
     defs: &'a Vec<Definition>,
-
     type_lambda_pair: Vec<(u32, u32)>,
+    type_lambda_pair_index: usize,
 }
 
 impl<'a> Parser<'a> {
@@ -62,6 +81,7 @@ impl<'a> Parser<'a> {
             lexer,
             defs,
             type_lambda_pair: Default::default(),
+            type_lambda_pair_index: 0,
         }
     }
 }
@@ -72,7 +92,7 @@ impl<'a> Parser<'a> {
         let mut ret = vec![];
         while self.lexer.peek() != Tok::EOF {
             if let Some(kind) = self.is_nest_start() {
-                ret.push(self.parse_nest(kind));
+                ret.push(self.parse_nested(kind));
                 continue;
             }
             ret.push(TokenTree::SimpleToken {
@@ -84,23 +104,54 @@ impl<'a> Parser<'a> {
         ret
     }
 
-    fn is_nest_start(&self) -> Option<NestKind_> {
-        unimplemented!()
+    fn is_nest_start(&mut self) -> Option<NestKind_> {
+        let t = match NestKind_::is_nest_start(self.lexer.peek()) {
+            Some(x) => x,
+            None => return None,
+        };
+        match t {
+            NestKind_::Type | NestKind_::Lambda => {
+                let pos = self.lexer.start_loc() as u32;
+                // try drop
+                for (start, _end) in &self.type_lambda_pair[self.type_lambda_pair_index..] {
+                    if (*start) > pos {
+                        //
+                        self.type_lambda_pair_index = self.type_lambda_pair_index + 1;
+                    } else {
+                        break;
+                    }
+                }
+                for (start, end) in &self.type_lambda_pair[self.type_lambda_pair_index..] {
+                    if pos >= *start && pos <= *end {
+                        return Some(t);
+                    } else {
+                        return None;
+                    }
+                }
+                return None;
+            }
+            _ => return Some(t),
+        }
     }
 
-    fn parse_nest(&mut self, kind: NestKind_) -> TokenTree {
+    fn parse_nested(&mut self, kind: NestKind_) -> TokenTree {
         debug_assert!(self.lexer.peek() == kind.start_tok());
+        let start = self.lexer.start_loc();
         self.lexer.advance().unwrap();
         let mut ret = vec![];
         while self.lexer.peek() != kind.end_tok() && self.lexer.peek() != Tok::EOF {
             ret.extend(self.parse_tokens().into_iter());
         }
         debug_assert_eq!(self.lexer.peek(), kind.end_tok());
-
+        let end = self.lexer.start_loc();
         self.lexer.advance().unwrap();
         TokenTree::Nested {
             elements: ret,
-            kind: unimplemented!(),
+            kind: NestKind {
+                kind,
+                start_pos: start as u32,
+                end_pos: end as u32,
+            },
         }
     }
 }
