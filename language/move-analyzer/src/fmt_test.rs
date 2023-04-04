@@ -14,14 +14,14 @@ use move_compiler::{
 };
 use std::path::Path;
 
-const YUYANG: bool = true;
+const YUYANG: bool = false;
 
 #[test]
 fn scan_dir() {
     for x in walkdir::WalkDir::new(Path::new(if YUYANG {
         "/Users/yuyang/projects/sui/sui_programmability/examples"
     } else {
-        "/Users/yuyang/projects/sui/sui_programmability/examples"
+        "C:/I-Git/sui/sui/sui_programmability/examples"
     })) {
         let x = match x {
             Ok(x) => x,

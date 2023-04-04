@@ -89,6 +89,8 @@ impl Format {
                 match kind.kind {
                     NestKind_::Brace => {
                         ret.push_str("{");
+                        ret.push_str("|n");
+                        ret.push_str(&indent(*self.depth.as_ref().borrow() + 1));
                     }
                     NestKind_::Lambda => {
                         ret.push_str("|");
@@ -140,6 +142,12 @@ impl Format {
                 // }
                 //Push simpletoken
                 ret.push_str(&content.as_str());
+                if (content.as_str().contains(";")) {
+                    ret.push_str("|n");
+                    ret.push_str(&indent(*self.depth.as_ref().borrow()));
+                } else {
+                    ret.push_str(" ");
+                }
             }
         }
     }
