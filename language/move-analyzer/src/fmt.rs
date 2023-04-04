@@ -75,16 +75,16 @@ impl Format {
                 //Add comment
                 let _gurard = self.increment_depth();
 
-                for (pos_, string_) in &self.comments[self.comment_index.get()..] {
-                    if (pos_ < &kind.start_pos) {
-                        ret.push_str(string_.as_str());
-                        //TODO: Change line in different system
-                        //ret.push_str("\n");
-                        self.comment_index.set(self.comment_index.get() + 1);
-                    } else {
-                        break;
-                    }
-                }
+                // for (pos_, string_) in &self.comments[self.comment_index.get()..] {
+                //     if (pos_ < &kind.start_pos) {
+                //         ret.push_str(string_.as_str());
+                //         //TODO: Change line in different system
+                //         //ret.push_str("\n");
+                //         self.comment_index.set(self.comment_index.get() + 1);
+                //     } else {
+                //         break;
+                //     }
+                // }
                 //Add signer
                 match kind.kind {
                     NestKind_::Brace => {
@@ -127,17 +127,17 @@ impl Format {
             }
             //Add to string
             TokenTree::SimpleToken { content, pos } => {
-                //Add comment
-                for (pos_, string_) in &self.comments[self.comment_index.get()..] {
-                    if (pos_ < pos) {
-                        ret.push_str(string_.as_str());
-                        //TODO: Change line in different system
-                        //ret.push_str("\n");
-                        self.comment_index.set(self.comment_index.get() + 1);
-                    } else {
-                        break;
-                    }
-                }
+                // //Add comment
+                // for (pos_, string_) in &self.comments[self.comment_index.get()..] {
+                //     if (pos_ < pos) {
+                //         ret.push_str(string_.as_str());
+                //         //TODO: Change line in different system
+                //         //ret.push_str("\n");
+                //         self.comment_index.set(self.comment_index.get() + 1);
+                //     } else {
+                //         break;
+                //     }
+                // }
                 //Push simpletoken
                 ret.push_str(&content.as_str());
             }

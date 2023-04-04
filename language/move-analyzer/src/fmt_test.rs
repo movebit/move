@@ -42,8 +42,8 @@ fn scan_dir() {
             // TODO fix >> may make multi line after format.
             for (t1, t2) in t1.iter().zip(t2.iter()) {
                 assert_eq!(
-                    t1,
-                    t2,
+                    t1.content,
+                    t2.content,
                     "format wrong file:{:?} line:{} col:{}",
                     p.as_path(),
                     t1.line,
