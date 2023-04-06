@@ -495,7 +495,7 @@ impl CommentExtrator {
         enum State {
             Init,
             OneSlash,
-            Comment,
+            InlineComment,
         }
         impl Default for State {
             fn default() -> Self {
@@ -527,7 +527,7 @@ impl CommentExtrator {
                 },
                 State::OneSlash => {
                     if *c == SLASH {
-                        state = State::Comment;
+                        state = State::InlineComment;
                         comment.push(SLASH);
                         comment.push(SLASH);
                     } else {
@@ -535,7 +535,7 @@ impl CommentExtrator {
                     }
                     col += 1;
                 }
-                State::Comment => {
+                State::InlineComment => {
                     if *c == NEW_LINE || index == last_index {
                         if *c != NEW_LINE {
                             comment.push(*c);
