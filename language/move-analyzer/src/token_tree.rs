@@ -1,8 +1,8 @@
 use std::cmp::Ordering;
 
+use move_compiler::parser::ast::Definition;
 use move_compiler::parser::ast::*;
 use move_compiler::parser::lexer::{Lexer, Tok};
-use move_compiler::{diagnostics::Diagnostic, parser::ast::Definition};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum NestKind_ {
@@ -398,7 +398,7 @@ impl<'a> Parser<'a> {
                 match &m.value {
                     SpecBlockMember_::Condition {
                         kind,
-                        properties,
+                        properties: _,
                         exp,
                         additional_exps,
                     } => {
@@ -407,7 +407,7 @@ impl<'a> Parser<'a> {
                         additional_exps.iter().for_each(|e| collect_expr(p, e));
                     }
                     SpecBlockMember_::Function {
-                        uninterpreted,
+                        uninterpreted: _,
                         name,
                         signature,
                         body,
@@ -420,9 +420,9 @@ impl<'a> Parser<'a> {
                         }
                     }
                     SpecBlockMember_::Variable {
-                        is_global,
-                        name,
-                        type_parameters,
+                        is_global: _,
+                        name: _,
+                        type_parameters: _,
                         type_,
                         init,
                     } => {
@@ -436,25 +436,25 @@ impl<'a> Parser<'a> {
                     }
 
                     SpecBlockMember_::Let {
-                        name,
-                        post_state,
+                        name: _,
+                        post_state: _,
                         def,
                     } => collect_expr(p, def),
                     SpecBlockMember_::Update { lhs, rhs } => {
                         collect_expr(p, lhs);
                         collect_expr(p, rhs);
                     }
-                    SpecBlockMember_::Include { properties, exp } => {
+                    SpecBlockMember_::Include { properties: _, exp } => {
                         collect_expr(p, exp);
                     }
                     SpecBlockMember_::Apply {
-                        exp,
-                        patterns,
-                        exclusion_patterns,
+                        exp: _,
+                        patterns: _,
+                        exclusion_patterns: _,
                     } => p
                         .type_lambda_pair
                         .push((spec_block.loc.start(), spec_block.loc.end())),
-                    SpecBlockMember_::Pragma { properties } => {}
+                    SpecBlockMember_::Pragma { properties: _ } => {}
                 }
             }
         }
@@ -472,4 +472,106 @@ impl<'a> Parser<'a> {
             p.type_lambda_pair.push((ty.loc.start(), ty.loc.end()))
         }
     }
+}
+
+#[derive(Default, Debug)]
+pub struct CommentExtrator {
+    comments: Vec<Comment>,
+}
+
+#[derive(Debug)]
+pub struct Comment {
+    pub(crate) line: u32,
+    #[allow(dead_code)]
+    pub(crate) col: u32,
+    pub(crate) content: String,
+}
+
+impl CommentExtrator {
+    pub(crate) fn new(content: &str) -> Self {
+        if content.len() == 0 {
+            return Self::default();
+        }
+        enum State {
+            Init,
+            OneSlash,
+            Comment,
+        }
+        impl Default for State {
+            fn default() -> Self {
+                Self::Init
+            }
+        }
+        let mut line = 0;
+        let mut col = 0;
+        let mut state = State::default();
+        const NEW_LINE: u8 = 10;
+        const SLASH: u8 = 47;
+        let mut comments = Vec::new();
+        let mut comment = Vec::new();
+        let last_index = content.as_bytes().len() - 1;
+        for (index, c) in content.as_bytes().iter().enumerate() {
+            match state {
+                State::Init => match *c {
+                    NEW_LINE => {
+                        line += 1;
+                        col = 0;
+                    }
+                    SLASH => {
+                        state = State::OneSlash;
+                        col += 1;
+                    }
+                    _ => {
+                        col += 1;
+                    }
+                },
+                State::OneSlash => {
+                    if *c == SLASH {
+                        state = State::Comment;
+                        comment.push(SLASH);
+                        comment.push(SLASH);
+                    } else {
+                        state = State::Init;
+                    }
+                    col += 1;
+                }
+                State::Comment => {
+                    if *c == NEW_LINE || index == last_index {
+                        if *c != NEW_LINE {
+                            comment.push(*c);
+                        }
+                        // ending
+                        let col_ = col - (comment.len() as u32);
+                        comments.push(Comment {
+                            line,
+                            col: col_,
+                            content: String::from_utf8(comment.clone()).unwrap(),
+                        });
+                        line += 1;
+                        col = 0;
+                        comment = Vec::new();
+                        state = State::Init;
+                    } else {
+                        comment.push(*c);
+                        col += 1;
+                    }
+                }
+            };
+        }
+        Self { comments }
+    }
+}
+
+#[test]
+fn test_comment_extrator() {
+    let x = CommentExtrator::new(
+        r#"
+        // 111
+        // 222
+        fdfdf
+        // bb
+        
+    "#,
+    );
+    eprintln!("c:{:?}", x);
 }

@@ -85,24 +85,36 @@ impl ItemOrAccessHandler for Handler {
     fn need_para_arg_pair(&self) -> bool {
         true
     }
+
     fn handle_para_arg_pair(
         &mut self,
         services: &dyn HandleItemService,
         para: move_compiler::shared::Name,
         exp: &move_compiler::parser::ast::Exp,
     ) {
-        match &exp.value {
-            Exp_::Name(x, _) => match &x.value {
-                move_compiler::parser::ast::NameAccessChain_::One(x) => {
-                    if x.value.as_str() == para.value.as_str() {
-                        return;
+        let equal_parameter = |exp: &move_compiler::parser::ast::Exp| -> bool {
+            match &exp.value {
+                Exp_::Name(x, _) => match &x.value {
+                    move_compiler::parser::ast::NameAccessChain_::One(x) => {
+                        if x.value.as_str() == para.value.as_str() {
+                            return true;
+                        }
                     }
-                }
-                move_compiler::parser::ast::NameAccessChain_::Two(_, _) => {}
-                move_compiler::parser::ast::NameAccessChain_::Three(_, _) => {}
-            },
-            _ => {}
+                    move_compiler::parser::ast::NameAccessChain_::Two(_, _) => {}
+                    move_compiler::parser::ast::NameAccessChain_::Three(_, _) => {}
+                },
+                _ => {}
+            }
+
+            return false;
+        };
+        if match &exp.value {
+            Exp_::Borrow(_, e) => equal_parameter(&e),
+            _ => equal_parameter(exp),
+        } {
+            return;
         }
+
         let l = services.convert_loc_range(&exp.loc);
         let l = match l {
             Some(x) => x,

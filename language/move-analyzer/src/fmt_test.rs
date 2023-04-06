@@ -3,13 +3,9 @@ use crate::{fmt::FormatConfig, token_tree::TokenTree};
 use super::utils::FileLineMapping;
 
 use move_command_line_common::files::FileHash;
-use move_compiler::diagnostics::Diagnostic;
+
 use move_compiler::{
-    diagnostics::Diagnostics,
-    parser::{
-        lexer::{Lexer, Tok},
-        syntax::parse_file_string,
-    },
+    parser::{lexer::Lexer, syntax::parse_file_string},
     shared::CompilationEnv,
     Flags,
 };
@@ -60,11 +56,13 @@ fn scan_dir() {
                 assert_eq!(
                     t1.content,
                     t2.content,
-                    "format not ok,file:{:?} line:{} col:{}",
+                    "format not ok,file:{:?} line:{} col:{},after format line:{} col:{}",
                     p.as_path(),
                     // +1 in vscode UI line and col start with 1
                     t1.line + 1,
-                    t2.col + 1
+                    t1.col + 1,
+                    t2.line + 1,
+                    t2.col + 1,
                 );
             }
             assert_eq!(t1.len(), t2.len(), "{:?} token length should equal", p);
@@ -86,12 +84,12 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
     line_mapping.update(p.clone(), &content);
     let filehash = FileHash::empty();
     let mut env = CompilationEnv::new(Flags::testing());
-    let (defs, comments) = match parse_file_string(&mut env, filehash, content) {
+    let (defs, _comments) = match parse_file_string(&mut env, filehash, content) {
         Ok(x) => x,
         Err(d) => {
             let mut ret = Vec::with_capacity(d.len());
             for x in d.into_codespan_format() {
-                let (s, msg, (loc, m), _, notes) = x;
+                let (_s, msg, (loc, m), _, _notes) = x;
                 let loc = line_mapping.translate(&p, loc.start(), loc.end()).unwrap();
                 ret.push(format!(
                     "{}:{} {}",
@@ -104,7 +102,7 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
             return Err(ret);
         }
     };
-    let mut lexer = Lexer::new(&content, filehash);
+    let lexer = Lexer::new(&content, filehash);
     let mut ret = Vec::new();
     let mut parse = super::token_tree::Parser::new(lexer, &defs);
     let token_tree = parse.parse_tokens();
