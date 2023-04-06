@@ -1,9 +1,8 @@
 #![allow(dead_code)]
-use std::cell::{self, RefCell};
+use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::result::Result::*;
-use std::string;
 
 use move_command_line_common::files::FileHash;
 use move_compiler::diagnostics::Diagnostics;
@@ -12,7 +11,6 @@ use move_compiler::parser::syntax::parse_file_string;
 use move_compiler::shared::CompilationEnv;
 use move_compiler::{Flags, MatchedFileCommentMap};
 use std::cell::Cell;
-use stderrlog::new;
 
 use crate::move_generate_spec::indent;
 use crate::token_tree::{NestKind_, TokenTree};
@@ -30,8 +28,6 @@ struct Format {
 pub struct FormatConfig {
     pub indent_size: u32,
 }
-
-
 
 impl Format {
     fn new(
@@ -59,7 +55,7 @@ impl Format {
         DepthGuard(self.depth.clone())
     }
 
-    pub fn format_token_trees(mut self) -> String {
+    pub fn format_token_trees(self) -> String {
         let mut ret = String::new();
         let length = self.token_tree.len();
         let mut index = 0;
@@ -166,12 +162,9 @@ impl Format {
                     move_compiler::parser::lexer::Tok::ByteStringValue => {
                         ret.push_str("");
                     }
-                    move_compiler::parser::lexer::Tok::Identifier => 
-                    {
-                        match content as &str{
-                            "has" => {}
-                            _ => {}
-                        }
+                    move_compiler::parser::lexer::Tok::Identifier => match content as &str {
+                        "has" => {}
+                        _ => {}
                     },
                     move_compiler::parser::lexer::Tok::Exclaim => {
                         ret.push_str("");
