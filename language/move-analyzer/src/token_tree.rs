@@ -476,12 +476,12 @@ impl<'a> Parser<'a> {
 
 #[derive(Default, Debug)]
 pub struct CommentExtrator {
-    comments: Vec<Comment>,
+    pub(crate) comments: Vec<Comment>,
 }
 
 #[derive(Debug)]
 pub struct Comment {
-    pub(crate) offset: u32,
+    pub(crate) start_offset: u32,
     pub(crate) content: String,
 }
 
@@ -532,7 +532,7 @@ impl CommentExtrator {
                             comment.push(*c);
                         }
                         comments.push(Comment {
-                            offset: (index as u32) - (comment.len() as u32),
+                            start_offset: (index as u32) - (comment.len() as u32),
                             content: String::from_utf8(comment.clone()).unwrap(),
                         });
                         comment = Vec::new();
@@ -551,6 +551,7 @@ impl CommentExtrator {
 #[test]
 fn test_comment_extrator() {
     let x = CommentExtrator::new(
+        // TODO add more test.
         r#"
     // 111
 // 222
@@ -559,5 +560,13 @@ fdfdf
 
     "#,
     );
-    eprintln!("c:{:?}", x);
+    let v = vec![
+        "// 111".to_string(),
+        "// 222".to_string(),
+        "// bb".to_string(),
+    ];
+    for (c1, c2) in v.iter().zip(x.comments.iter()) {
+        assert_eq!(c1.as_str(), c2.content.as_str());
+    }
+    assert_eq!(v.len(), x.comments.len());
 }
