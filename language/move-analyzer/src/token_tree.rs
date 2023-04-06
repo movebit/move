@@ -481,9 +481,7 @@ pub struct CommentExtrator {
 
 #[derive(Debug)]
 pub struct Comment {
-    pub(crate) line: u32,
-    #[allow(dead_code)]
-    pub(crate) col: u32,
+    pub(crate) offset: u32,
     pub(crate) content: String,
 }
 
@@ -503,8 +501,7 @@ impl CommentExtrator {
                 Self::Init
             }
         }
-        let mut line = 0;
-        let mut col = 0;
+
         let mut state = State::default();
         const NEW_LINE: u8 = 10;
         const SLASH: u8 = 47;
@@ -514,17 +511,11 @@ impl CommentExtrator {
         for (index, c) in content.as_bytes().iter().enumerate() {
             match state {
                 State::Init => match *c {
-                    NEW_LINE => {
-                        line += 1;
-                        col = 0;
-                    }
+                    NEW_LINE => {}
                     SLASH => {
                         state = State::OneSlash;
-                        col += 1;
                     }
-                    _ => {
-                        col += 1;
-                    }
+                    _ => {}
                 },
                 State::OneSlash => {
                     if *c == SLASH {
@@ -534,27 +525,20 @@ impl CommentExtrator {
                     } else {
                         state = State::Init;
                     }
-                    col += 1;
                 }
                 State::InlineComment => {
                     if *c == NEW_LINE || index == last_index {
                         if *c != NEW_LINE {
                             comment.push(*c);
                         }
-                        // ending
-                        let col_ = col - (comment.len() as u32);
                         comments.push(Comment {
-                            line,
-                            col: col_,
+                            offset: (index as u32) - (comment.len() as u32),
                             content: String::from_utf8(comment.clone()).unwrap(),
                         });
-                        line += 1;
-                        col = 0;
                         comment = Vec::new();
                         state = State::Init;
                     } else {
                         comment.push(*c);
-                        col += 1;
                     }
                 }
             };
@@ -566,14 +550,9 @@ impl CommentExtrator {
 
 #[test]
 fn test_comment_extrator() {
-    let x = CommentExtrator::new(
-        r#"
-        // 111
-        // 222
-        fdfdf
-        // bb
-        
-    "#,
-    );
+    let s = include_str!("./comment_test.txt");
+    eprintln!("xxxx:{}", s);
+
+    let x = CommentExtrator::new(s);
     eprintln!("c:{:?}", x);
 }
