@@ -492,6 +492,7 @@ impl CommentExtrator {
         if content.len() == 0 {
             return Self::default();
         }
+        #[derive(Clone, Copy, PartialEq, Eq)]
         enum State {
             Init,
             OneSlash,
