@@ -558,6 +558,7 @@ impl CommentExtrator {
                 }
             };
         }
+        assert!(state == State::Init);
         Self { comments }
     }
 }
