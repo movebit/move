@@ -550,9 +550,14 @@ impl CommentExtrator {
 
 #[test]
 fn test_comment_extrator() {
-    let s = include_str!("./comment_test.txt");
-    eprintln!("xxxx:{}", s);
+    let x = CommentExtrator::new(
+        r#"
+    // 111
+// 222
+fdfdf
+// bb
 
-    let x = CommentExtrator::new(s);
+    "#,
+    );
     eprintln!("c:{:?}", x);
 }
