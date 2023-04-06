@@ -572,6 +572,7 @@ fn test_comment_extrator() {
         // 222
         fdfdf
         // bb
+        " //2222 "
         
     "#,
     );

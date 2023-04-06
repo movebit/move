@@ -145,7 +145,7 @@ impl Format {
                 //         self.comment_index.set(self.comment_index.get() + 1);
                 //     } else {
                 //         break;
-                //     }
+                //     } 
                 // }
                 //Push simpletoken
 
@@ -163,7 +163,7 @@ impl Format {
                         ret.push_str("");
                     }
                     move_compiler::parser::lexer::Tok::Identifier => match content as &str {
-                        "has" => {}
+                        "has" => {ret.push_str(" ");}
                         _ => {}
                     },
                     move_compiler::parser::lexer::Tok::Exclaim => {
