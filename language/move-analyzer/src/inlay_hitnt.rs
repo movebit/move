@@ -57,7 +57,7 @@ impl Handler {
                 line_start: range.start.line,
                 col_start: range.end.character,
                 line_end: range.end.line,
-                col_end: range.end.character + 1,
+                col_end: range.end.character,
             },
             reuslts: Default::default(),
         }

@@ -13,13 +13,13 @@ use move_compiler::{Flags, MatchedFileCommentMap};
 use std::cell::Cell;
 
 use crate::move_generate_spec::indent;
-use crate::token_tree::{CommentExtrator, NestKind_, TokenTree};
+use crate::token_tree::{Comment, CommentExtrator, NestKind_, TokenTree};
 use crate::utils::FileLineMapping;
 struct Format {
     config: FormatConfig,
     depth: Rc<RefCell<usize>>,
     token_tree: Vec<TokenTree>,
-    comments: CommentExtrator,
+    comments: Vec<Comment>,
     line_mapping: FileLineMapping,
     path: PathBuf,
     comment_index: Cell<usize>,
@@ -42,7 +42,7 @@ impl Format {
             config,
             depth: Default::default(),
             token_tree,
-            comments,
+            comments: comments.comments,
             line_mapping,
             path,
         }
@@ -187,7 +187,7 @@ pub fn format(p: impl AsRef<Path>, config: FormatConfig) -> Result<String, Diagn
     let lexer = Lexer::new(&content, filehash);
     let mut parse = super::token_tree::Parser::new(lexer, &defs);
     let token_tree = parse.parse_tokens();
-    let ce = CommentExtrator::new(content.as_str());
+    let ce = CommentExtrator::new(content.as_str()).unwrap();
     let mut t = FileLineMapping::default();
     t.update(p.to_path_buf(), &content);
     let f = Format::new(config, token_tree, ce, t, p.to_path_buf());
