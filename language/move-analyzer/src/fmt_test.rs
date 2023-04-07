@@ -45,10 +45,10 @@ fn xxx() {
 fn test_on_file(p: impl AsRef<Path>) {
     let p = p.as_ref();
     eprintln!("try format:{:?}", p);
-    let content = std::fs::read_to_string(&p).unwrap();
+    let content_origin = std::fs::read_to_string(&p).unwrap();
     {
         let mut env = CompilationEnv::new(Flags::testing());
-        match parse_file_string(&mut env, FileHash::empty(), &content) {
+        match parse_file_string(&mut env, FileHash::empty(), &content_origin) {
             Ok(_) => {}
             Err(_) => {
                 eprintln!("file '{:?}' skipped because of parse not ok", p);
@@ -56,18 +56,19 @@ fn test_on_file(p: impl AsRef<Path>) {
             }
         }
     }
-    let t1 = extract_tokens(content.as_str()).expect("test file should be about to lexer,err:{:?}");
-    let content2 = super::fmt::format(p, FormatConfig { indent_size: 2 }).unwrap();
-    let t2 = match extract_tokens(content2.as_str()) {
+    let tokens_origin = extract_tokens(content_origin.as_str())
+        .expect("test file should be about to lexer,err:{:?}");
+    let content_format = super::fmt::format(p, FormatConfig { indent_size: 2 }).unwrap();
+    let tokens_format = match extract_tokens(content_format.as_str()) {
         Ok(x) => x,
         Err(err) => {
             unreachable!(
                 "should be able to parse after format:err{:?},after format:\n\n################{}###############",
-                err, content2
+                err, content_format
             );
         }
     };
-    for (t1, t2) in t1.iter().zip(t2.iter()) {
+    for (t1, t2) in tokens_origin.iter().zip(tokens_format.iter()) {
         assert_eq!(
             t1.content,
             t2.content,
@@ -80,15 +81,24 @@ fn test_on_file(p: impl AsRef<Path>) {
             t2.col + 1,
         );
     }
-    assert_eq!(t1.len(), t2.len(), "{:?} tokens count should equal", p);
-    let comment1 = extract_comments(&content).unwrap();
-    let comment2 = extract_comments(&content2).unwrap();
-    for (index, (c1, c2)) in comment1.iter().zip(comment2.iter()).enumerate() {
+    assert_eq!(
+        tokens_origin.len(),
+        tokens_format.len(),
+        "{:?} tokens count should equal",
+        p
+    );
+    let comments_origin = extract_comments(&content_origin).unwrap();
+    let comments_format = extract_comments(&content_format).unwrap();
+    for (index, (c1, c2)) in comments_origin
+        .iter()
+        .zip(comments_format.iter())
+        .enumerate()
+    {
         assert_eq!(c1, c2, "comment {} not ok.", index);
     }
     assert_eq!(
-        comment1.len(),
-        comment2.len(),
+        comments_origin.len(),
+        comments_format.len(),
         "{:?} comments count should equal",
         p,
     );
@@ -170,7 +180,7 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
                     )
                     .unwrap();
                 ret.push(ExtractToken {
-                    content: format!("{:?}", kind.kind.start_tok()),
+                    content: format!("{}", kind.kind.start_tok()),
                     line: start_loc.line_start,
                     col: start_loc.col_start,
                 });
@@ -182,7 +192,7 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
                     .translate(&Path::new(".").to_path_buf(), kind.end_pos, kind.end_pos)
                     .unwrap();
                 ret.push(ExtractToken {
-                    content: format!("{:?}", kind.kind.end_tok()),
+                    content: format!("{}", kind.kind.end_tok()),
                     line: end_loc.line_start,
                     col: end_loc.col_start,
                 });

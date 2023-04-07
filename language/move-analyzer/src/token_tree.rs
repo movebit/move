@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 use move_compiler::parser::ast::Definition;
 use move_compiler::parser::ast::*;
 use move_compiler::parser::lexer::{Lexer, Tok};
+use move_compiler::shared::Identifier;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, serde::Serialize)]
 pub enum NestKind_ {
@@ -61,6 +62,7 @@ impl NestKind_ {
 pub enum TokenTree {
     SimpleToken {
         content: String,
+        #[serde(skip_serializing)]
         pos: u32, // start offset in file buffer.
         #[serde(skip_serializing)]
         tok: Tok,
@@ -239,14 +241,7 @@ impl<'a> Parser<'a> {
         }
 
         fn collect_struct(p: &mut Parser, s: &StructDefinition) {
-            match &s.fields {
-                StructFields::Defined(fs) => {
-                    for f in fs.iter() {
-                        collect_ty(p, &f.1);
-                    }
-                }
-                StructFields::Native(_) => {}
-            }
+            p.type_lambda_pair.push((s.loc.start(), s.loc.end()));
         }
         fn collect_seq_item(p: &mut Parser, s: &SequenceItem) {
             match &s.value {
@@ -291,12 +286,10 @@ impl<'a> Parser<'a> {
                     };
                     es.value.iter().for_each(|e| collect_expr(p, e));
                 }
-                Exp_::Pack(_, tys, es) => {
-                    if let Some(tys) = tys {
-                        for ty in tys.iter() {
-                            collect_ty(p, ty);
-                        }
-                    };
+                Exp_::Pack(name, tys, es) => {
+                    if let Some(e) = es.get(0) {
+                        p.type_lambda_pair.push((name.loc.end(), e.0.loc().start()));
+                    }
                     es.iter().for_each(|e| collect_expr(p, &e.1));
                 }
                 Exp_::Vector(_, tys, es) => {
@@ -490,7 +483,12 @@ pub struct Comment {
 impl Comment {
     /// format comment
     /// exampls `//   this is a comment` to `// this is a comment`,etc.
-    pub(crate) fn format(&self) -> String {
+    pub(crate) fn format(
+        &self,
+        convert_line: impl Fn(
+            u32, // offset
+        ) -> u32, // line number
+    ) -> String {
         unimplemented!()
     }
 }
@@ -650,7 +648,7 @@ mod comment_test {
         let mut parse = Parser::new(lexer, &defs);
         let token_tree = parse.parse_tokens();
         let s = serde_json::to_string(&token_tree).unwrap();
-        // chech this using some online json tool.
+        // check this using some online json tool.
         eprintln!("json:{}", s);
     }
 
