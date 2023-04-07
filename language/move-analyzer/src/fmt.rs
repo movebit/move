@@ -175,6 +175,7 @@ impl Format {
                 //     }
                 // }
                 // Check Token Type and React
+                ahs == hss
                 match tok {
                     move_compiler::parser::lexer::Tok::EOF => {
                         ret.push_str("");
@@ -373,7 +374,7 @@ impl Format {
                 //Back push
                 match next_token {
                     None => {}
-                    Some(_) => {
+                    Some(temp_token) => {
                         match tok {
                             move_compiler::parser::lexer::Tok::EOF => {
                                 ret.push_str("");
@@ -393,6 +394,9 @@ impl Format {
                                         ret.push_str(" ");
                                     }
                                     "entry" => {
+                                        ret.push_str(" ");
+                                    }
+                                    "phantom" => {
                                         ret.push_str(" ");
                                     }
                                     _ => {
