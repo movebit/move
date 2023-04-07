@@ -80,7 +80,7 @@ fn test_on_file(p: impl AsRef<Path>) {
             t2.col + 1,
         );
     }
-    assert_eq!(t1.len(), t2.len(), "{:?} tokens length should equal", p);
+    assert_eq!(t1.len(), t2.len(), "{:?} tokens count should equal", p);
     let comment1 = extract_comments(&content).unwrap();
     let comment2 = extract_comments(&content2).unwrap();
     for (index, (c1, c2)) in comment1.iter().zip(comment2.iter()).enumerate() {
@@ -89,7 +89,7 @@ fn test_on_file(p: impl AsRef<Path>) {
     assert_eq!(
         comment1.len(),
         comment2.len(),
-        "{:?} comments length should equal",
+        "{:?} comments count should equal",
         p,
     );
     eprintln!("{:?} format ok.", p);
