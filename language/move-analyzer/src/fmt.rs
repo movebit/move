@@ -142,6 +142,9 @@ impl Format {
                             },
                         }
                         ret.push_str("}");
+                        if (*self.depth.as_ref().borrow() == 0) {
+                            ret.push_str("\n");
+                        }
                     }
                     NestKind_::Lambda => {
                         ret.push_str("|");
