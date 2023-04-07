@@ -13,13 +13,13 @@ use move_compiler::{Flags, MatchedFileCommentMap};
 use std::cell::Cell;
 
 use crate::move_generate_spec::indent;
-use crate::token_tree::{NestKind_, TokenTree};
+use crate::token_tree::{Comment, CommentExtrator, NestKind_, TokenTree};
 use crate::utils::FileLineMapping;
 struct Format {
     config: FormatConfig,
     depth: Rc<RefCell<usize>>,
     token_tree: Vec<TokenTree>,
-    comments: Vec<(u32, String)>,
+    comments: Vec<Comment>,
     line_mapping: FileLineMapping,
     path: PathBuf,
     comment_index: Cell<usize>,
@@ -33,7 +33,7 @@ impl Format {
     fn new(
         config: FormatConfig,
         token_tree: Vec<TokenTree>,
-        comments: MatchedFileCommentMap,
+        comments: CommentExtrator,
         line_mapping: FileLineMapping,
         path: PathBuf,
     ) -> Self {
@@ -42,7 +42,7 @@ impl Format {
             config,
             depth: Default::default(),
             token_tree,
-            comments: comments.into_iter().map(|(k, v)| (k, v)).collect(),
+            comments: comments.comments,
             line_mapping,
             path,
         }
@@ -409,13 +409,13 @@ pub fn format(p: impl AsRef<Path>, config: FormatConfig) -> Result<String, Diagn
     let content = std::fs::read_to_string(p).unwrap();
     let mut env = CompilationEnv::new(Flags::testing());
     let filehash = FileHash::empty();
-    let (defs, comments) = parse_file_string(&mut env, filehash, &content)?;
+    let (defs, _) = parse_file_string(&mut env, filehash, &content)?;
     let lexer = Lexer::new(&content, filehash);
     let mut parse = super::token_tree::Parser::new(lexer, &defs);
     let token_tree = parse.parse_tokens();
-
+    let ce = CommentExtrator::new(content.as_str()).unwrap();
     let mut t = FileLineMapping::default();
     t.update(p.to_path_buf(), &content);
-    let f = Format::new(config, token_tree, comments, t, p.to_path_buf());
+    let f = Format::new(config, token_tree, ce, t, p.to_path_buf());
     Ok(f.format_token_trees())
 }

@@ -1,4 +1,7 @@
-use crate::{fmt::FormatConfig, token_tree::TokenTree};
+use crate::{
+    fmt::FormatConfig,
+    token_tree::{CommentExtrator, CommentExtratorErr, TokenTree},
+};
 
 use super::utils::FileLineMapping;
 
@@ -27,55 +30,88 @@ fn scan_dir() {
         };
         if x.file_type().is_file() && x.file_name().to_str().unwrap().ends_with(".move") {
             let p = x.into_path();
-            eprintln!("try format:{:?}", p);
-            let content = std::fs::read_to_string(&p).unwrap();
-            {
-                let mut env = CompilationEnv::new(Flags::testing());
-                match parse_file_string(&mut env, FileHash::empty(), &content) {
-                    Ok(_) => {}
-                    Err(_) => {
-                        eprintln!("file '{:?}' skipped because of parse not ok", p.as_path());
-                        continue;
-                    }
-                }
-            }
-            let t1 = extract_tokens(content.as_str())
-                .expect("test file should be about to lexer,err:{:?}");
-            let conten2 = super::fmt::format(p.as_path(), FormatConfig { indent_size: 2 }).unwrap();
-            let t2 = match extract_tokens(conten2.as_str()) {
-                Ok(x) => x,
-                Err(err) => {
-                    unreachable!(
-                        "should be able to parse after format:err{:?},after format:\n\n################{}###############",
-                        err, conten2
-                    );
-                }
-            };
-
-            for (t1, t2) in t1.iter().zip(t2.iter()) {
-                assert_eq!(
-                    t1.content,
-                    t2.content,
-                    "format not ok,file:{:?} line:{} col:{},after format line:{} col:{}",
-                    p.as_path(),
-                    // +1 in vscode UI line and col start with 1
-                    t1.line + 1,
-                    t1.col + 1,
-                    t2.line + 1,
-                    t2.col + 1,
-                );
-            }
-            assert_eq!(t1.len(), t2.len(), "{:?} token length should equal", p);
-            eprintln!("{:?} format ok.", p);
+            test_on_file(p.as_path());
         }
     }
 }
 
+#[test]
+fn xxx() {
+    test_on_file(&Path::new(
+        "/Volumes/sanDisk/projects/sui/sui_programmability/examples/basics/sources/counter.move",
+    ));
+}
+
+fn test_on_file(p: impl AsRef<Path>) {
+    let p = p.as_ref();
+    eprintln!("try format:{:?}", p);
+    let content = std::fs::read_to_string(&p).unwrap();
+    {
+        let mut env = CompilationEnv::new(Flags::testing());
+        match parse_file_string(&mut env, FileHash::empty(), &content) {
+            Ok(_) => {}
+            Err(_) => {
+                eprintln!("file '{:?}' skipped because of parse not ok", p);
+                return;
+            }
+        }
+    }
+    let t1 = extract_tokens(content.as_str()).expect("test file should be about to lexer,err:{:?}");
+    let content2 = super::fmt::format(p, FormatConfig { indent_size: 2 }).unwrap();
+    let t2 = match extract_tokens(content2.as_str()) {
+        Ok(x) => x,
+        Err(err) => {
+            unreachable!(
+                "should be able to parse after format:err{:?},after format:\n\n################{}###############",
+                err, content2
+            );
+        }
+    };
+    for (t1, t2) in t1.iter().zip(t2.iter()) {
+        assert_eq!(
+            t1.content,
+            t2.content,
+            "format not ok,file:{:?} line:{} col:{},after format line:{} col:{}",
+            p,
+            // +1 in vscode UI line and col start with 1
+            t1.line + 1,
+            t1.col + 1,
+            t2.line + 1,
+            t2.col + 1,
+        );
+    }
+    assert_eq!(t1.len(), t2.len(), "{:?} tokens length should equal", p);
+    let comment1 = extract_comments(&content).unwrap();
+    let comment2 = extract_comments(&content2).unwrap();
+    for (index, (c1, c2)) in comment1.iter().zip(comment2.iter()).enumerate() {
+        assert_eq!(c1, c2, "comment {} not ok.", index);
+    }
+    assert_eq!(
+        comment1.len(),
+        comment2.len(),
+        "{:?} comments length should equal",
+        p,
+    );
+    eprintln!("{:?} format ok.", p);
+}
 #[derive(Clone, PartialEq, Eq, Debug)]
 struct ExtractToken {
     content: String,
     line: u32,
     col: u32,
+}
+
+fn extract_comments(content: &str) -> Result<Vec<String>, CommentExtratorErr> {
+    let c = CommentExtrator::new(content)?;
+    let c: Vec<_> = c
+        .comments
+        .into_iter()
+        .map(|x| x.content)
+        .map(|x| x.replacen(" ", "", usize::MAX))
+        .map(|x| x.replacen("\t", "", usize::MAX))
+        .map(|x| x.replacen("\n", "", usize::MAX))
+        .collect();
+    return Ok(c);
 }
 
 fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {

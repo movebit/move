@@ -476,88 +476,202 @@ impl<'a> Parser<'a> {
 
 #[derive(Default, Debug)]
 pub struct CommentExtrator {
-    comments: Vec<Comment>,
+    pub(crate) comments: Vec<Comment>,
 }
 
 #[derive(Debug)]
 pub struct Comment {
-    pub(crate) offset: u32,
+    pub(crate) start_offset: u32,
     pub(crate) content: String,
 }
 
-impl CommentExtrator {
-    pub(crate) fn new(content: &str) -> Self {
-        if content.len() == 0 {
-            return Self::default();
-        }
-        #[derive(Clone, Copy, PartialEq, Eq)]
-        enum State {
-            Init,
-            OneSlash,
-            InlineComment,
-        }
-        impl Default for State {
-            fn default() -> Self {
-                Self::Init
-            }
-        }
+/// A comment extractor ,extrat all comment from move file
+/// include the start  and end tokens `//`,`*/`,etc.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommentExtratorErr {
+    NewLineInQuote,
+    NotTermialState(ExtratorCommentState),
+}
 
-        let mut state = State::default();
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ExtratorCommentState {
+    /// init state
+    Init,
+    /// `/` has been seen,maybe a comment.
+    OneSlash,
+    /// `//` has been seen,inline comment.
+    InlineComment,
+    /// `/*` has been seen,block comment.
+    BlockComment,
+    /// in state `BlockComment`,`*` has been seen,maybe exit the `BlockComment`.
+    OneStar,
+    /// `"` has been seen.
+    Quote,
+}
+
+impl CommentExtrator {
+    pub(crate) fn new(content: &str) -> Result<Self, CommentExtratorErr> {
+        if content.len() == 0 {
+            return Ok(Self::default());
+        }
+        let content = content.as_bytes();
+
+        let mut state = ExtratorCommentState::Init;
         const NEW_LINE: u8 = 10;
         const SLASH: u8 = 47;
+        const STAR: u8 = 42;
+        const BLACK_SLASH: u8 = 92;
+        const QUOTE: u8 = 34;
         let mut comments = Vec::new();
         let mut comment = Vec::new();
-        let last_index = content.as_bytes().len() - 1;
-        for (index, c) in content.as_bytes().iter().enumerate() {
+        let last_index = content.len() - 1;
+        let mut index = 0;
+        let make_comment = |state: &mut ExtratorCommentState,
+                            comments: &mut Vec<Comment>,
+                            comment: &mut Vec<u8>,
+                            index: usize| {
+            comments.push(Comment {
+                start_offset: (index as u32) - (comment.len() as u32),
+                content: String::from_utf8(comment.clone()).unwrap(),
+            });
+            comment.clear();
+            *state = ExtratorCommentState::Init;
+        };
+        macro_rules! make_comment {
+            () => {
+                make_comment(&mut state, &mut comments, &mut comment, index);
+            };
+        }
+        while index <= last_index {
+            let c = content.get(index).unwrap();
             match state {
-                State::Init => match *c {
-                    NEW_LINE => {}
+                ExtratorCommentState::Init => match *c {
                     SLASH => {
-                        state = State::OneSlash;
+                        state = ExtratorCommentState::OneSlash;
+                    }
+                    QUOTE => {
+                        state = ExtratorCommentState::Quote;
                     }
                     _ => {}
                 },
-                State::OneSlash => {
+                ExtratorCommentState::OneSlash => {
                     if *c == SLASH {
-                        state = State::InlineComment;
+                        state = ExtratorCommentState::InlineComment;
                         comment.push(SLASH);
                         comment.push(SLASH);
+                    } else if *c == STAR {
+                        comment.push(SLASH);
+                        comment.push(STAR);
+                        state = ExtratorCommentState::BlockComment;
                     } else {
-                        state = State::Init;
+                        state = ExtratorCommentState::Init;
                     }
                 }
-                State::InlineComment => {
-                    if *c == NEW_LINE || index == last_index {
-                        if *c != NEW_LINE {
-                            comment.push(*c);
-                        }
-                        comments.push(Comment {
-                            offset: (index as u32) - (comment.len() as u32),
-                            content: String::from_utf8(comment.clone()).unwrap(),
-                        });
-                        comment = Vec::new();
-                        state = State::Init;
+                ExtratorCommentState::BlockComment => {
+                    if *c == STAR {
+                        state = ExtratorCommentState::OneStar;
                     } else {
                         comment.push(*c);
                     }
                 }
+                ExtratorCommentState::OneStar => {
+                    if *c == SLASH {
+                        comment.push(STAR);
+                        comment.push(SLASH);
+                        make_comment!();
+                    } else {
+                        comment.push(STAR);
+                        comment.push(*c);
+                        state = ExtratorCommentState::BlockComment;
+                    }
+                }
+                ExtratorCommentState::InlineComment => {
+                    if *c == NEW_LINE || index == last_index {
+                        if *c != NEW_LINE {
+                            comment.push(*c);
+                        }
+                        make_comment!();
+                    } else {
+                        comment.push(*c);
+                    }
+                }
+                ExtratorCommentState::Quote => {
+                    // handle \"
+                    if *c == BLACK_SLASH
+                        && content.get(index + 1).map(|x| *x == QUOTE).unwrap_or(false)
+                    {
+                        index += 2;
+                        continue;
+                    } else if *c == QUOTE {
+                        state = ExtratorCommentState::Init;
+                    } else if *c == NEW_LINE {
+                        return Err(CommentExtratorErr::NewLineInQuote);
+                    }
+                }
             };
+            index += 1;
         }
-        assert!(state == State::Init);
-        Self { comments }
+        if state != ExtratorCommentState::Init {
+            return Err(CommentExtratorErr::NotTermialState(state));
+        }
+        Ok(Self { comments })
     }
 }
 
-#[test]
-fn test_comment_extrator() {
-    let x = CommentExtrator::new(
-        r#"
-    // 111
-// 222
-fdfdf
-// bb
+#[cfg(test)]
+mod comment_test {
+    use super::*;
+    #[test]
+    fn test_comment_extrator_ok() {
+        let x = CommentExtrator::new(
+            r#"
+        // 111
+    // 222
+    fdfdf
+    // bb
+    /* ***** '" 1121 */
+    " \" // iii "
+    "// fff"
+    /// ggg
+        "#,
+        )
+        .unwrap();
+        let v = vec![
+            "// 111",
+            "// 222",
+            "// bb",
+            "/* ***** '\" 1121 */",
+            "/// ggg",
+        ];
+        for (c1, c2) in v.iter().zip(x.comments.iter()) {
+            assert_eq!(*c1, c2.content.as_str());
+        }
+        assert_eq!(v.len(), x.comments.len());
+    }
 
-    "#,
-    );
-    eprintln!("c:{:?}", x);
+    #[test]
+    fn test_comment_extrator_err() {
+        let v = vec![
+            (
+                r#" \" "#,
+                CommentExtratorErr::NotTermialState(ExtratorCommentState::Quote),
+            ),
+            (
+                r#" \" 
+                "#,
+                CommentExtratorErr::NewLineInQuote,
+            ),
+            (
+                r#" /*  "#,
+                CommentExtratorErr::NotTermialState(ExtratorCommentState::BlockComment),
+            ),
+        ];
+
+        for (c, err) in v.iter() {
+            match CommentExtrator::new(*c) {
+                Ok(_) => unreachable!(),
+                Err(x) => assert_eq!(x, *err),
+            }
+        }
+    }
 }
