@@ -38,7 +38,7 @@ fn scan_dir() {
 #[test]
 fn xxx() {
     test_on_file(&Path::new(
-        "/Volumes/sanDisk/projects/sui/sui_programmability/examples/basics/sources/counter.move",
+        "/Volumes/sanDisk/projects/sui/sui_programmability/examples/basics/sources/lock.move",
     ));
 }
 
@@ -63,7 +63,7 @@ fn test_on_file(p: impl AsRef<Path>) {
         Ok(x) => x,
         Err(err) => {
             unreachable!(
-                "should be able to parse after format:err{:?},after format:\n\n################{}###############",
+                "should be able to parse after format:err{:?},after format:\n\n################\n{}\n###############",
                 err, content_format
             );
         }

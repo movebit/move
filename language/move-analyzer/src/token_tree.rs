@@ -286,18 +286,14 @@ impl<'a> Parser<'a> {
                     };
                     es.value.iter().for_each(|e| collect_expr(p, e));
                 }
-                Exp_::Pack(name, tys, es) => {
+                Exp_::Pack(name, _tys, es) => {
                     if let Some(e) = es.get(0) {
                         p.type_lambda_pair.push((name.loc.end(), e.0.loc().start()));
                     }
                     es.iter().for_each(|e| collect_expr(p, &e.1));
                 }
-                Exp_::Vector(_, tys, es) => {
-                    if let Some(tys) = tys {
-                        for ty in tys.iter() {
-                            collect_ty(p, ty);
-                        }
-                    };
+                Exp_::Vector(name_loc, tys, es) => {
+                    p.type_lambda_pair.push((name_loc.end(), es.loc.start()));
                     es.value.iter().for_each(|e| collect_expr(p, e));
                 }
                 Exp_::IfElse(c, then_, eles_) => {
