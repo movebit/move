@@ -42,6 +42,12 @@ fn xxx() {
     ));
 }
 
+#[test]
+fn xxx_chen() {
+    test_on_file(&Path::new(
+        "/Volumes/sanDisk/projects/sui/sui_programmability/examples/basics/sources/lock.move",
+    ));
+}
 fn test_on_file(p: impl AsRef<Path>) {
     let p = p.as_ref();
     eprintln!("try format:{:?}", p);

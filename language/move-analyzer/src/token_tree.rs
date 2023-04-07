@@ -702,3 +702,15 @@ mod comment_test {
         }
     }
 }
+
+pub(crate) fn need_space(current: Tok, next: Option<Tok>) -> bool {
+    if next.is_none() {
+        return false;
+    }
+    match (current, next.unwrap()) {
+        (Tok::Identifier, Tok::Identifier) => true,
+
+        (Tok::As, _) => true,
+        _ => false,
+    }
+}
