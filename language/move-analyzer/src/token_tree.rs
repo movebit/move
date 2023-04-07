@@ -4,7 +4,7 @@ use move_compiler::parser::ast::Definition;
 use move_compiler::parser::ast::*;
 use move_compiler::parser::lexer::{Lexer, Tok};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, serde::Serialize)]
 pub enum NestKind_ {
     /// ()
     ParentTheses,
@@ -18,7 +18,7 @@ pub enum NestKind_ {
     Lambda,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, serde::Serialize)]
 pub struct NestKind {
     pub(crate) kind: NestKind_,
     pub(crate) start_pos: u32,
@@ -57,10 +57,12 @@ impl NestKind_ {
     }
 }
 
+#[derive(Clone, serde::Serialize)]
 pub enum TokenTree {
     SimpleToken {
         content: String,
         pos: u32, // start offset in file buffer.
+        #[serde(skip_serializing)]
         tok: Tok,
     },
     Nested {
@@ -117,8 +119,8 @@ impl<'a> Parser<'a> {
             NestKind_::Type | NestKind_::Lambda => {
                 let pos = self.lexer.start_loc() as u32;
                 // try drop
-                for (start, _end) in &self.type_lambda_pair[self.type_lambda_pair_index..] {
-                    if (*start) > pos {
+                for (_, end) in &self.type_lambda_pair[self.type_lambda_pair_index..] {
+                    if end < &pos {
                         //
                         self.type_lambda_pair_index = self.type_lambda_pair_index + 1;
                     } else {
@@ -126,7 +128,7 @@ impl<'a> Parser<'a> {
                     }
                 }
                 for (start, end) in &self.type_lambda_pair[self.type_lambda_pair_index..] {
-                    if pos >= *start && pos <= *end {
+                    if &pos >= start && &pos <= end {
                         return Some(t);
                     } else {
                         return None;
@@ -485,6 +487,13 @@ pub struct Comment {
     pub(crate) content: String,
 }
 
+impl Comment {
+    /// format comment
+    /// exampls `//   this is a comment` to `// this is a comment`,etc.
+    pub(crate) fn format(&self) -> String {
+        unimplemented!()
+    }
+}
 /// A comment extractor ,extrat all comment from move file
 /// include the start  and end tokens `//`,`*/`,etc.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -620,7 +629,31 @@ impl CommentExtrator {
 
 #[cfg(test)]
 mod comment_test {
+    use move_command_line_common::files::FileHash;
+    use move_compiler::{parser::syntax::parse_file_string, shared::CompilationEnv, Flags};
+
     use super::*;
+    #[test]
+    fn token_tree_to_json() {
+        let content = r#"
+            module 0x1::xxx{
+                struct X {
+                    dddddd : BBB<x,y,z>,
+                    zzzzzz : BBB<x,y,z>,
+                }
+            }
+        "#;
+        let filehash = FileHash::empty();
+        let mut env = CompilationEnv::new(Flags::testing());
+        let (defs, _) = parse_file_string(&mut env, filehash, content).unwrap();
+        let lexer = Lexer::new(&content, filehash);
+        let mut parse = Parser::new(lexer, &defs);
+        let token_tree = parse.parse_tokens();
+        let s = serde_json::to_string(&token_tree).unwrap();
+        // chech this using some online json tool.
+        eprintln!("json:{}", s);
+    }
+
     #[test]
     fn test_comment_extrator_ok() {
         let x = CommentExtrator::new(
