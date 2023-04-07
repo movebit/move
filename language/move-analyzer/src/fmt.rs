@@ -145,10 +145,9 @@ impl Format {
                 //         self.comment_index.set(self.comment_index.get() + 1);
                 //     } else {
                 //         break;
-                //     } 
+                //     }
                 // }
-                //Push simpletoken
-
+                // Check Token Type and React
                 match tok {
                     move_compiler::parser::lexer::Tok::EOF => {
                         ret.push_str("");
@@ -163,7 +162,9 @@ impl Format {
                         ret.push_str("");
                     }
                     move_compiler::parser::lexer::Tok::Identifier => match content as &str {
-                        "has" => {ret.push_str(" ");}
+                        "has" => {
+                            ret.push_str(" ");
+                        }
                         _ => {}
                     },
                     move_compiler::parser::lexer::Tok::Exclaim => {
@@ -365,6 +366,15 @@ impl Format {
                     move_compiler::parser::lexer::Tok::AtSign => {
                         ret.push_str("");
                     }
+                    _ => {ret.push_str(" ");}
+                }
+                //Push simpletoken
+                ret.push_str(&content.as_str());
+                if content.as_str().contains(";") {
+                    ret.push_str("\n");
+                    ret.push_str(&indent(*self.depth.as_ref().borrow()));
+                } else {
+                    ret.push_str(" ");
                 }
             }
         }
