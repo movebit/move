@@ -165,7 +165,226 @@ impl Format {
                         "has" => {
                             ret.push_str(" ");
                         }
-                        _ => {}
+                        _ => {
+                            ret.push_str("");
+                        }
+                    },
+                    move_compiler::parser::lexer::Tok::Exclaim => {
+                        ret.push_str("");
+                    }
+                    move_compiler::parser::lexer::Tok::ExclaimEqual => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Percent => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Amp => {
+                        ret.push_str("");
+                    }
+                    move_compiler::parser::lexer::Tok::AmpAmp => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::AmpMut => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::LParen => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::RParen => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::LBracket => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::RBracket => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Star => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Plus => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Comma => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Minus => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Period => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::PeriodPeriod => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Slash => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Colon => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::ColonColon => {
+                        ret.push_str("");
+                    }
+                    move_compiler::parser::lexer::Tok::Semicolon => {}
+                    move_compiler::parser::lexer::Tok::Less => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::LessEqual => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::LessLess => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Equal => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::EqualEqual => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::EqualEqualGreater => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::LessEqualEqualGreater => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Greater => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::GreaterEqual => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::GreaterGreater => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Caret => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Abort => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Acquires => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::As => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Break => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Continue => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Copy => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Else => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::False => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::If => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Invariant => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Let => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Loop => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Module => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Move => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Native => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Public => {
+                        ret.push_str("\n");
+                        ret.push_str(&indent(*self.depth.as_ref().borrow()));
+                    }
+                    move_compiler::parser::lexer::Tok::Struct => {
+                        ret.push_str("\n");
+                        ret.push_str(&indent(*self.depth.as_ref().borrow()));
+                    }
+                    move_compiler::parser::lexer::Tok::True => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Use => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::While => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::LBrace => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Pipe => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::PipePipe => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::RBrace => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Fun => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Script => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Const => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::Friend => {
+                        ret.push_str(" ");
+                    }
+                    move_compiler::parser::lexer::Tok::NumSign => {
+                        ret.push_str("");
+                    }
+                    move_compiler::parser::lexer::Tok::AtSign => {
+                        ret.push_str("");
+                    }
+                    _ => {
+                        ret.push_str("");
+                    }
+                }
+                //Push simpletoken
+                ret.push_str(&content.as_str());
+                if content.as_str().contains(";") {
+                    ret.push_str("\n");
+                    ret.push_str(&indent(*self.depth.as_ref().borrow()));
+                } else {
+                    //ret.push_str(" ");
+                }
+                //Back push
+                match tok {
+                    move_compiler::parser::lexer::Tok::EOF => {
+                        ret.push_str("");
+                    }
+                    move_compiler::parser::lexer::Tok::NumValue => {
+                        ret.push_str("");
+                    }
+                    move_compiler::parser::lexer::Tok::NumTypedValue => {
+                        ret.push_str("");
+                    }
+                    move_compiler::parser::lexer::Tok::ByteStringValue => {
+                        ret.push_str("");
+                    }
+                    move_compiler::parser::lexer::Tok::Identifier => match content as &str {
+                        "has" => {
+                            ret.push_str(" ");
+                        }
+                        _ => {
+                            ret.push_str("");
+                        }
                     },
                     move_compiler::parser::lexer::Tok::Exclaim => {
                         ret.push_str("");
@@ -316,7 +535,7 @@ impl Format {
                     move_compiler::parser::lexer::Tok::Public => {
                         ret.insert_str(ret.len() - 6, "\n");
                         ret.insert_str(ret.len() - 6, &indent(*self.depth.as_ref().borrow()));
-                        ret.push_str(" ");
+                        ret.push_str("\n");
                     }
                     move_compiler::parser::lexer::Tok::Return => {
                         ret.push_str(" ");
@@ -366,15 +585,9 @@ impl Format {
                     move_compiler::parser::lexer::Tok::AtSign => {
                         ret.push_str("");
                     }
-                    _ => {ret.push_str(" ");}
-                }
-                //Push simpletoken
-                ret.push_str(&content.as_str());
-                if content.as_str().contains(";") {
-                    ret.push_str("\n");
-                    ret.push_str(&indent(*self.depth.as_ref().borrow()));
-                } else {
-                    ret.push_str(" ");
+                    _ => {
+                        ret.push_str(" ");
+                    }
                 }
             }
         }
