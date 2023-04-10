@@ -308,18 +308,6 @@ impl Format {
                 // Check Token Type and React
                 //ret.push_str(" ");
                 match tok {
-                    move_compiler::parser::lexer::Tok::EOF => {
-                        ret.push_str("");
-                    }
-                    move_compiler::parser::lexer::Tok::NumValue => {
-                        ret.push_str("");
-                    }
-                    move_compiler::parser::lexer::Tok::NumTypedValue => {
-                        ret.push_str("");
-                    }
-                    move_compiler::parser::lexer::Tok::ByteStringValue => {
-                        ret.push_str("");
-                    }
                     move_compiler::parser::lexer::Tok::Identifier => match content as &str {
                         "has" => {
                             ret.push_str(" ");
@@ -328,9 +316,7 @@ impl Format {
                             ret.push_str("");
                         }
                     },
-                    move_compiler::parser::lexer::Tok::Exclaim => {
-                        ret.push_str("");
-                    }
+
                     move_compiler::parser::lexer::Tok::ExclaimEqual => {
                         ret.push_str(" ");
                     }
@@ -380,9 +366,7 @@ impl Format {
                     move_compiler::parser::lexer::Tok::Colon => {
                         //ret.push_str(" ");
                     }
-                    move_compiler::parser::lexer::Tok::ColonColon => {
-                        ret.push_str("");
-                    }
+
                     move_compiler::parser::lexer::Tok::Semicolon => {}
                     move_compiler::parser::lexer::Tok::Less => {
                         ret.push_str(" ");
@@ -474,9 +458,7 @@ impl Format {
                         ret.push_str("\n");
                         ret.push_str(&indent(*self.depth.as_ref().borrow()));
                     }
-                    _ => {
-                        ret.push_str("");
-                    }
+                    _ => {}
                 }
                 //Push simpletoken
                 ret.push_str(&content.as_str());
@@ -558,6 +540,7 @@ pub(crate) fn need_space(current: Tok, next: Tok) -> bool {
     match (TokType::from(current), TokType::from(next)) {
         (TokType::Alphabet, TokType::Alphabet) => true,
         (TokType::MathSign, _) => true,
+        (TokType::Sign, TokType::Alphabet) => true,
         _ => false,
     }
 }
