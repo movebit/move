@@ -19,6 +19,10 @@ pub enum NestKind_ {
     Lambda,
 }
 
+pub enum Delimiter {
+    Semicolon,
+    Comma,
+}
 #[derive(Clone, Copy, serde::Serialize)]
 pub struct NestKind {
     pub(crate) kind: NestKind_,

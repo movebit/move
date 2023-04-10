@@ -19,8 +19,7 @@ use lsp_types::{
 
 use move_analyzer::call;
 use move_command_line_common::files::FileHash;
-use move_compiler::diagnostics::Diagnostics;
-use move_compiler::{shared::*, PASS_TYPING};
+use move_compiler::{diagnostics::Diagnostics, shared::*, PASS_TYPING};
 
 use std::sync::{Arc, Mutex};
 use std::{
