@@ -187,7 +187,15 @@ impl Format {
             //Iter Nested
             TokenTree::Nested { elements, kind } => {
                 //Add comment
+                let mut _has_test_sign = 0;
                 let _gurard = self.increment_depth();
+
+                if ret.len() > 1 {
+                    if { ret.get(ret.len() - 1..).unwrap() == "#" } {
+                        _has_test_sign = 1;
+                    }
+                }
+
                 for temp_comment in &self.comments[self.comment_index.get()..] {
                     if (temp_comment.start_offset < kind.start_pos) {
                         ret.push_str(temp_comment.content.as_str());
@@ -271,13 +279,18 @@ impl Format {
                     }
                 }
                 //Add signer
+                if (_has_test_sign == 1) {
+                    ret.push_str("\n");
+                    ret.push_str(&indent(*self.depth.as_ref().borrow()));
+                    _has_test_sign = 0;
+                }
             }
             //Add to string
             TokenTree::SimpleToken { content, pos, tok } => {
                 //Add comment
                 for temp_comment in &self.comments[self.comment_index.get()..] {
                     if (temp_comment.start_offset < *pos) {
-                        if (ret.len() > 1) {
+                        if ret.len() > 1 {
                             if { ret.get(ret.len() - 1..).unwrap() == "}" } {
                                 ret.push_str("\n");
                                 ret.push_str(&indent(*self.depth.as_ref().borrow()));
