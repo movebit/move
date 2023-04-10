@@ -200,6 +200,9 @@ impl<'a> Parser<'a> {
         for d in self.defs.iter() {
             collect_definition(self, d);
         }
+        self.type_lambda_pair
+            .iter()
+            .for_each(|x| debug_assert!(x.0 <= x.1));
 
         self.type_lambda_pair.sort_by(|x, y| {
             debug_assert!(x.0.cmp(&y.0) != Ordering::Equal, "{:?}?{:?}", x, y);
@@ -449,8 +452,14 @@ impl<'a> Parser<'a> {
         }
 
         fn collect_function(p: &mut Parser, d: &Function) {
-            p.type_lambda_pair
-                .push((d.name.0.loc.start(), d.signature.return_type.loc.end()));
+            p.type_lambda_pair.push((
+                d.name.0.loc.start(),
+                match &d.body.value {
+                    FunctionBody_::Defined(x) => d.body.loc.start(),
+                    FunctionBody_::Native => d.loc.end(),
+                },
+            ));
+
             match &d.body.value {
                 FunctionBody_::Defined(s) => collect_seq(p, s),
                 FunctionBody_::Native => {}
@@ -629,9 +638,11 @@ mod comment_test {
     fn token_tree_to_json() {
         let content = r#"
             module 0x1::xxx{
-                struct X {
-                    dddddd : BBB<x,y,z>,
-                    zzzzzz : BBB<x,y,z>,
+                public entry fun lock<T: store + key>(
+                    obj: T,
+                    lock: &mut Lock<T>,
+                    key: &Key<T>,
+                ) {
                 }
             }
         "#;
