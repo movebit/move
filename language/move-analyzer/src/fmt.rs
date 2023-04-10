@@ -78,7 +78,7 @@ impl Format {
 
     fn format_token_trees_(
         &self,
-        ret: &mut String,
+        ret: & /* 1 */ mut String,
         token: &TokenTree,
         next_token: Option<&TokenTree>,
     ) {
@@ -183,6 +183,7 @@ impl Format {
                 //     }
                 // }
                 // Check Token Type and React
+
                 match tok {
                     move_compiler::parser::lexer::Tok::EOF => {
                         ret.push_str("");

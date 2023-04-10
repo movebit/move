@@ -274,16 +274,10 @@ impl<'a> Parser<'a> {
                 Exp_::Move(_) => {}
                 Exp_::Copy(_) => {}
                 Exp_::Name(_, tys) => {
-                    if let Some(tys) = tys {
-                        tys.iter().for_each(|ty| collect_ty(p, ty));
-                    }
+                    p.type_lambda_pair.push((e.loc.start(), e.loc.end()));
                 }
-                Exp_::Call(_, _, tys, es) => {
-                    if let Some(tys) = tys {
-                        for ty in tys.iter() {
-                            collect_ty(p, ty);
-                        }
-                    };
+                Exp_::Call(name, _, _tys, es) => {
+                    p.type_lambda_pair.push((name.loc.end(), es.loc.start()));
                     es.value.iter().for_each(|e| collect_expr(p, e));
                 }
                 Exp_::Pack(name, _tys, es) => {
@@ -292,7 +286,7 @@ impl<'a> Parser<'a> {
                     }
                     es.iter().for_each(|e| collect_expr(p, &e.1));
                 }
-                Exp_::Vector(name_loc, tys, es) => {
+                Exp_::Vector(name_loc, _tys, es) => {
                     p.type_lambda_pair.push((name_loc.end(), es.loc.start()));
                     es.value.iter().for_each(|e| collect_expr(p, e));
                 }
@@ -404,7 +398,7 @@ impl<'a> Parser<'a> {
                         body,
                     } => {
                         p.type_lambda_pair
-                            .push((name.0.loc.start(), signature.return_type.loc.end()));
+                            .push((name.0.loc.end(), signature.return_type.loc.end()));
                         match &body.value {
                             FunctionBody_::Defined(s) => collect_seq(p, s),
                             FunctionBody_::Native => {}
@@ -412,17 +406,17 @@ impl<'a> Parser<'a> {
                     }
                     SpecBlockMember_::Variable {
                         is_global: _,
-                        name: _,
+                        name,
                         type_parameters: _,
-                        type_,
+                        type_: _,
                         init,
                     } => {
                         if let Some(init) = init {
                             p.type_lambda_pair
-                                .push((type_.loc.start(), init.loc.start() - 1))
+                                .push((name.loc.start(), init.loc.start() - 1))
                         } else {
                             p.type_lambda_pair
-                                .push((type_.loc.start(), spec_block.loc.end()));
+                                .push((name.loc.start(), spec_block.loc.end()));
                         }
                     }
 
