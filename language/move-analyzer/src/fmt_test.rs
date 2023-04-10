@@ -102,12 +102,12 @@ fn test_on_file(p: impl AsRef<Path>) {
     {
         assert_eq!(c1, c2, "comment {} not ok.", index);
     }
-    // assert_eq!(
-    //     comments_origin.len(),
-    //     comments_format.len(),
-    //     "{:?} comments count should equal",
-    //     p,
-    // );
+    assert_eq!(
+        comments_origin.len(),
+        comments_format.len(),
+        "{:?} comments count should equal",
+        p,
+    );
     eprintln!("{:?} format ok. \n{}\n", p, content_format);
 }
 #[derive(Clone, PartialEq, Eq, Debug)]
