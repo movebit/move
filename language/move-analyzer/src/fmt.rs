@@ -198,7 +198,6 @@ impl Format {
                         break;
                     }
                 }
-
                 let length = Self::analyzer_token_tree_length(elements);
                 let (delimiter, has_colon) = Self::analyzer_token_tree_delimiter(elements);
 
@@ -231,7 +230,11 @@ impl Format {
 
                 //Add signer
                 for i in 0..elements.len() {
-                    self.format_token_trees_(ret, elements.get(i).unwrap(), elements.get(i + 1));
+                    let t = elements.get(i).unwrap();
+                    let next_t = elements.get(i + 1);
+                    self.format_token_trees_(ret, t, elements.get(i + 1));
+                    //  /// ;  }
+                    // check if need new line.
                 }
                 match kind.kind {
                     NestKind_::Brace => {
@@ -341,6 +344,8 @@ impl Format {
                         move_compiler::parser::lexer::Tok::EOF => {}
                         move_compiler::parser::lexer::Tok::AmpMut => {}
                         move_compiler::parser::lexer::Tok::Semicolon => {
+                            /// fdfdf \n
+                            /// ;
                             ret.push_str("\n");
                             ret.push_str(&indent(*self.depth.as_ref().borrow()));
                         }
