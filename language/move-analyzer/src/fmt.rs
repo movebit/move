@@ -38,13 +38,13 @@ impl From<Tok> for TokType {
     fn from(value: Tok) -> Self {
         match value {
             Tok::EOF => unreachable!(), // EOF not in `TokenTree`.
-            Tok::NumValue => TokType::Specical,
+            Tok::NumValue => TokType::Value,
             Tok::NumTypedValue => TokType::Value,
             Tok::ByteStringValue => TokType::Value,
             Tok::Exclaim => TokType::Sign,
             Tok::ExclaimEqual => TokType::MathSign,
             Tok::Percent => TokType::MathSign,
-            Tok::Amp => TokType::Sign,
+            Tok::Amp => TokType::Specical,
             Tok::AmpAmp => TokType::MathSign,
             Tok::LParen => TokType::Sign,
             Tok::RParen => TokType::Sign,
@@ -54,11 +54,11 @@ impl From<Tok> for TokType {
             Tok::Plus => TokType::MathSign,
             Tok::Comma => TokType::Sign,
             Tok::Minus => TokType::Sign,
-            Tok::Period => TokType::Sign,
-            Tok::PeriodPeriod => TokType::Sign,
+            Tok::Period => TokType::Specical,
+            Tok::PeriodPeriod => TokType::Specical,
             Tok::Slash => TokType::Sign,
             Tok::Colon => TokType::Sign,
-            Tok::ColonColon => TokType::Sign,
+            Tok::ColonColon => TokType::Specical,
             Tok::Semicolon => TokType::Sign,
             Tok::Less => TokType::MathSign,
             Tok::LessEqual => TokType::MathSign,
@@ -230,7 +230,6 @@ impl Format {
                 }
 
                 //Add signer
-
                 for i in 0..elements.len() {
                     self.format_token_trees_(ret, elements.get(i).unwrap(), elements.get(i + 1));
                 }
@@ -278,22 +277,11 @@ impl Format {
                 //Add comment
                 for temp_comment in &self.comments[self.comment_index.get()..] {
                     if (temp_comment.start_offset < *pos) {
-                        match next_token {
-                            None => {}
-                            Some(temp_token) => match temp_token {
-                                TokenTree::SimpleToken {
-                                    content: (_),
-                                    pos: (_),
-                                    tok: (temp_tok),
-                                } => {
-                                    if (comment_need_changeline(*tok, temp_tok.clone())) {
-                                        ret.push_str("\n");
-                                    }
-                                }
-                                _ => {
-                                    ret.push_str("\n");
-                                }
-                            },
+                        if (ret.len() > 1) {
+                            if { ret.get(ret.len() - 1..).unwrap() == "}" } {
+                                ret.push_str("\n");
+                                ret.push_str(&indent(*self.depth.as_ref().borrow()));
+                            }
                         }
 
                         ret.push_str(temp_comment.content.as_str());
@@ -307,158 +295,37 @@ impl Format {
                 }
                 // Check Token Type and React
                 //ret.push_str(" ");
-                match tok {
-                    move_compiler::parser::lexer::Tok::Identifier => match content as &str {
-                        "has" => {
-                            ret.push_str(" ");
+                match next_token {
+                    None => {}
+                    Some(temp_token) => match tok {
+                        move_compiler::parser::lexer::Tok::EOF => {}
+                        move_compiler::parser::lexer::Tok::AmpMut => {}
+                        move_compiler::parser::lexer::Tok::Public => {
+                            ret.push_str("\n");
+                            ret.push_str(&indent(*self.depth.as_ref().borrow()));
                         }
-                        _ => {
-                            ret.push_str("");
+                        move_compiler::parser::lexer::Tok::Struct => {
+                            ret.push_str("\n");
+                            ret.push_str(&indent(*self.depth.as_ref().borrow()));
                         }
+                        move_compiler::parser::lexer::Tok::NumSign => {
+                            ret.push_str("\n");
+                            ret.push_str("\n");
+                            ret.push_str(&indent(*self.depth.as_ref().borrow()));
+                        }
+                        _ => match temp_token {
+                            TokenTree::SimpleToken {
+                                content: (_),
+                                pos: (_),
+                                tok: (temp_tok),
+                            } => {
+                                if (need_space_perfix(*tok, temp_tok.clone())) {
+                                    ret.push_str(" ");
+                                }
+                            }
+                            _ => {}
+                        },
                     },
-
-                    move_compiler::parser::lexer::Tok::ExclaimEqual => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Percent => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Amp => {
-                        ret.push_str("");
-                    }
-                    move_compiler::parser::lexer::Tok::AmpAmp => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::AmpMut => {
-                        //ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::LParen => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::RParen => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::LBracket => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::RBracket => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Star => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Plus => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Comma => {
-                        //ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Minus => {
-                        ret.push_str(" ");
-                    }
-
-                    move_compiler::parser::lexer::Tok::PeriodPeriod => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Slash => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Colon => {
-                        //ret.push_str(" ");
-                    }
-
-                    move_compiler::parser::lexer::Tok::Semicolon => {}
-                    move_compiler::parser::lexer::Tok::Less => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::LessEqual => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::LessLess => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Equal => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::EqualEqual => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::EqualEqualGreater => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::LessEqualEqualGreater => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Greater => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::GreaterEqual => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::GreaterGreater => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Caret => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Abort => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Acquires => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::As => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Break => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Continue => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Copy => {}
-                    move_compiler::parser::lexer::Tok::Else => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::False => {
-                        ret.push_str(" ");
-                    }
-
-                    move_compiler::parser::lexer::Tok::Public => {
-                        ret.push_str("\n");
-                        ret.push_str(&indent(*self.depth.as_ref().borrow()));
-                    }
-                    move_compiler::parser::lexer::Tok::Struct => {
-                        ret.push_str("\n");
-                        ret.push_str(&indent(*self.depth.as_ref().borrow()));
-                    }
-                    move_compiler::parser::lexer::Tok::True => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Use => {
-                        //ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::While => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::LBrace => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Pipe => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::PipePipe => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::RBrace => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::NumSign => {
-                        ret.push_str("\n");
-                        ret.push_str("\n");
-                        ret.push_str(&indent(*self.depth.as_ref().borrow()));
-                    }
-                    _ => {}
                 }
                 //Push simpletoken
                 ret.push_str(&content.as_str());
@@ -471,9 +338,8 @@ impl Format {
                 match next_token {
                     None => {}
                     Some(temp_token) => match tok {
-                        move_compiler::parser::lexer::Tok::EOF => {
-                            unimplemented!()
-                        }
+                        move_compiler::parser::lexer::Tok::EOF => {}
+                        move_compiler::parser::lexer::Tok::AmpMut => {}
                         move_compiler::parser::lexer::Tok::Semicolon => {
                             ret.push_str("\n");
                             ret.push_str(&indent(*self.depth.as_ref().borrow()));
@@ -484,7 +350,7 @@ impl Format {
                                 pos: (_),
                                 tok: (temp_tok),
                             } => {
-                                if (need_space(*tok, temp_tok.clone())) {
+                                if (need_space_suffix(*tok, temp_tok.clone())) {
                                     ret.push_str(" ");
                                 }
                             }
@@ -536,11 +402,21 @@ pub fn format(p: impl AsRef<Path>, config: FormatConfig) -> Result<String, Diagn
     Ok(f.format_token_trees())
 }
 
-pub(crate) fn need_space(current: Tok, next: Tok) -> bool {
+pub(crate) fn need_space_suffix(current: Tok, next: Tok) -> bool {
     match (TokType::from(current), TokType::from(next)) {
         (TokType::Alphabet, TokType::Alphabet) => true,
         (TokType::MathSign, _) => true,
         (TokType::Sign, TokType::Alphabet) => true,
+        (TokType::Alphabet, TokType::Value) => true,
+        _ => false,
+    }
+}
+
+pub(crate) fn need_space_perfix(current: Tok, next: Tok) -> bool {
+    match (TokType::from(current), TokType::from(next)) {
+        //(TokType::Alphabet, TokType::Alphabet) => true,
+        (TokType::MathSign, _) => true,
+        //(TokType::Sign, TokType::Alphabet) => true,
         _ => false,
     }
 }

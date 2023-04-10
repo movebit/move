@@ -26,6 +26,11 @@ pub struct NestKind {
     pub(crate) end_pos: u32,
 }
 
+pub enum Delimiter {
+    Semicolon,
+    Comma,
+}
+
 impl NestKind_ {
     pub(crate) fn is_nest_start(tok: Tok) -> Option<NestKind_> {
         match tok {
