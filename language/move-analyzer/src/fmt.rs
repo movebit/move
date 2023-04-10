@@ -131,10 +131,10 @@ impl Format {
         token_tree: &Vec<TokenTree>,
     ) -> (
         Option<Delimiter>, // if this is a `Delimiter::Semicolon` we can know this is a function body or etc.
-        bool,              //
+        bool,              // has a `:`
     ) {
         let mut d = None;
-        let mut has_comma = false;
+        let mut has_colon = false;
         for t in token_tree.iter() {
             match t {
                 TokenTree::SimpleToken { content, pos, tok } => match content.as_str() {
@@ -145,14 +145,14 @@ impl Format {
                         d = Some(Delimiter::Comma);
                     }
                     ":" => {
-                        has_comma = true;
+                        has_colon = true;
                     }
                     _ => {}
                 },
                 TokenTree::Nested { .. } => {}
             }
         }
-        return (d, has_comma);
+        return (d, has_colon);
     }
 
     /// analyzer How long is list of token_tree
@@ -200,7 +200,7 @@ impl Format {
                 }
 
                 let length = Self::analyzer_token_tree_length(elements);
-                let (delimiter, has_comma) = Self::analyzer_token_tree_delimiter(elements);
+                let (delimiter, has_colon) = Self::analyzer_token_tree_delimiter(elements);
 
                 //If brace, change line?
                 match kind.kind {
