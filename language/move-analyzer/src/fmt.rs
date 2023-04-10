@@ -6,7 +6,7 @@ use std::result::Result::*;
 
 use move_command_line_common::files::FileHash;
 use move_compiler::diagnostics::Diagnostics;
-use move_compiler::parser::lexer::Lexer;
+use move_compiler::parser::lexer::{Lexer, Tok};
 use move_compiler::parser::syntax::parse_file_string;
 use move_compiler::shared::CompilationEnv;
 use move_compiler::{Flags, MatchedFileCommentMap};
@@ -25,6 +25,12 @@ struct Format {
     comment_index: Cell<usize>,
 }
 
+pub enum TokType {
+    Alphabet,
+    MathSign,
+    BoolSign,
+    Specical,
+}
 pub struct FormatConfig {
     pub indent_size: u32,
 }
@@ -133,7 +139,9 @@ impl Format {
                             }
                             Some(temp_token) => match temp_token {
                                 TokenTree::SimpleToken { content, pos, tok } => {
-                                    if (!content.as_str().contains(";")) {
+                                    if (!content.as_str().contains(";")
+                                        || ret.chars().last().unwrap() == ',')
+                                    {
                                         ret.push_str("\n");
                                         ret.push_str(&indent(*self.depth.as_ref().borrow()));
                                     }
@@ -142,7 +150,7 @@ impl Format {
                             },
                         }
                         ret.push_str("}");
-                        if (*self.depth.as_ref().borrow() == 0) {
+                        if (*self.depth.as_ref().borrow() <= 1) {
                             ret.push_str("\n");
                         }
                     }
@@ -175,7 +183,6 @@ impl Format {
                 //     }
                 // }
                 // Check Token Type and React
-                ahs == hss
                 match tok {
                     move_compiler::parser::lexer::Tok::EOF => {
                         ret.push_str("");
@@ -239,9 +246,7 @@ impl Format {
                     move_compiler::parser::lexer::Tok::Minus => {
                         ret.push_str(" ");
                     }
-                    move_compiler::parser::lexer::Tok::Period => {
-                        ret.push_str(" ");
-                    }
+
                     move_compiler::parser::lexer::Tok::PeriodPeriod => {
                         ret.push_str(" ");
                     }
@@ -310,27 +315,7 @@ impl Format {
                     move_compiler::parser::lexer::Tok::False => {
                         ret.push_str(" ");
                     }
-                    move_compiler::parser::lexer::Tok::If => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Invariant => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Let => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Loop => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Module => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Move => {
-                        ret.push_str(" ");
-                    }
-                    move_compiler::parser::lexer::Tok::Native => {
-                        ret.push_str(" ");
-                    }
+
                     move_compiler::parser::lexer::Tok::Public => {
                         ret.push_str("\n");
                         ret.push_str(&indent(*self.depth.as_ref().borrow()));
@@ -360,6 +345,11 @@ impl Format {
                     move_compiler::parser::lexer::Tok::RBrace => {
                         ret.push_str(" ");
                     }
+                    move_compiler::parser::lexer::Tok::NumSign => {
+                        ret.push_str("\n");
+                        ret.push_str("\n");
+                        ret.push_str(&indent(*self.depth.as_ref().borrow()));
+                    }
                     _ => {
                         ret.push_str("");
                     }
@@ -388,22 +378,18 @@ impl Format {
                             move_compiler::parser::lexer::Tok::ByteStringValue => {
                                 ret.push_str("");
                             }
-                            move_compiler::parser::lexer::Tok::Identifier => {
-                                match content as &str {
-                                    "has" => {
+                            move_compiler::parser::lexer::Tok::Identifier => match temp_token {
+                                TokenTree::SimpleToken {
+                                    content: (_),
+                                    pos: (_),
+                                    tok: (temp_tok),
+                                } => {
+                                    if (need_space(*tok, temp_tok.clone())) {
                                         ret.push_str(" ");
-                                    }
-                                    "entry" => {
-                                        ret.push_str(" ");
-                                    }
-                                    "phantom" => {
-                                        ret.push_str(" ");
-                                    }
-                                    _ => {
-                                        ret.push_str("");
                                     }
                                 }
-                            }
+                                _ => {}
+                            },
                             move_compiler::parser::lexer::Tok::Exclaim => {
                                 ret.push_str("");
                             }
@@ -446,9 +432,7 @@ impl Format {
                             move_compiler::parser::lexer::Tok::Minus => {
                                 ret.push_str(" ");
                             }
-                            move_compiler::parser::lexer::Tok::Period => {
-                                ret.push_str(" ");
-                            }
+
                             move_compiler::parser::lexer::Tok::PeriodPeriod => {
                                 ret.push_str(" ");
                             }
@@ -643,3 +627,18 @@ pub fn format(p: impl AsRef<Path>, config: FormatConfig) -> Result<String, Diagn
     let f = Format::new(config, token_tree, ce, t, p.to_path_buf());
     Ok(f.format_token_trees())
 }
+
+pub(crate) fn need_space(current: Tok, next: Tok) -> bool {
+    match (current, next) {
+        (Tok::Identifier, Tok::Identifier) => true,
+        (Tok::Identifier, Tok::Fun) => true,
+        _ => false,
+    }
+}
+
+// pub(crate) fn no_need_space_str(current: &str, next: &str) -> bool {
+//     if (current.as_bytes().get(0).unwrap().is_ascii_alphabetic()) {
+//         return true;
+//     }
+//     false
+// }
