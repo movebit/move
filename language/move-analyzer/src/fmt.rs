@@ -33,48 +33,50 @@ pub enum TokType {
     Value,
 }
 
-pub fn get_tok_type(tok: Tok) -> TokType {
-    match tok {
-        Tok::EOF => TokType::Specical,
-        Tok::NumValue => TokType::Specical,
-        Tok::NumTypedValue => TokType::Value,
-        Tok::ByteStringValue => TokType::Value,
-        Tok::Exclaim => TokType::Sign,
-        Tok::ExclaimEqual => TokType::MathSign,
-        Tok::Percent => TokType::MathSign,
-        Tok::Amp => TokType::Sign,
-        Tok::AmpAmp => TokType::MathSign,
-        Tok::LParen => TokType::Sign,
-        Tok::RParen => TokType::Sign,
-        Tok::LBracket => TokType::Sign,
-        Tok::RBracket => TokType::Sign,
-        Tok::Star => TokType::MathSign,
-        Tok::Plus => TokType::MathSign,
-        Tok::Comma => TokType::Sign,
-        Tok::Minus => TokType::Sign,
-        Tok::Period => TokType::Sign,
-        Tok::PeriodPeriod => TokType::Sign,
-        Tok::Slash => TokType::Sign,
-        Tok::Colon => TokType::Sign,
-        Tok::ColonColon => TokType::Sign,
-        Tok::Semicolon => TokType::Sign,
-        Tok::Less => TokType::MathSign,
-        Tok::LessEqual => TokType::MathSign,
-        Tok::LessLess => TokType::MathSign,
-        Tok::Equal => TokType::MathSign,
-        Tok::EqualEqual => TokType::MathSign,
-        Tok::EqualEqualGreater => TokType::MathSign,
-        Tok::LessEqualEqualGreater => TokType::MathSign,
-        Tok::Greater => TokType::MathSign,
-        Tok::GreaterEqual => TokType::MathSign,
-        Tok::GreaterGreater => TokType::MathSign,
-        Tok::LBrace => TokType::Sign,
-        Tok::Pipe => TokType::Sign,
-        Tok::PipePipe => TokType::Sign,
-        Tok::RBrace => TokType::Sign,
-        Tok::NumSign => TokType::Sign,
-        Tok::AtSign => TokType::Sign,
-        _ => TokType::Alphabet,
+impl From<Tok> for TokType {
+    fn from(value: Tok) -> Self {
+        match value {
+            Tok::EOF => unreachable!(), // EOF not in `TokenTree`.
+            Tok::NumValue => TokType::Specical,
+            Tok::NumTypedValue => TokType::Value,
+            Tok::ByteStringValue => TokType::Value,
+            Tok::Exclaim => TokType::Sign,
+            Tok::ExclaimEqual => TokType::MathSign,
+            Tok::Percent => TokType::MathSign,
+            Tok::Amp => TokType::Sign,
+            Tok::AmpAmp => TokType::MathSign,
+            Tok::LParen => TokType::Sign,
+            Tok::RParen => TokType::Sign,
+            Tok::LBracket => TokType::Sign,
+            Tok::RBracket => TokType::Sign,
+            Tok::Star => TokType::MathSign,
+            Tok::Plus => TokType::MathSign,
+            Tok::Comma => TokType::Sign,
+            Tok::Minus => TokType::Sign,
+            Tok::Period => TokType::Sign,
+            Tok::PeriodPeriod => TokType::Sign,
+            Tok::Slash => TokType::Sign,
+            Tok::Colon => TokType::Sign,
+            Tok::ColonColon => TokType::Sign,
+            Tok::Semicolon => TokType::Sign,
+            Tok::Less => TokType::MathSign,
+            Tok::LessEqual => TokType::MathSign,
+            Tok::LessLess => TokType::MathSign,
+            Tok::Equal => TokType::MathSign,
+            Tok::EqualEqual => TokType::MathSign,
+            Tok::EqualEqualGreater => TokType::MathSign,
+            Tok::LessEqualEqualGreater => TokType::MathSign,
+            Tok::Greater => TokType::MathSign,
+            Tok::GreaterEqual => TokType::MathSign,
+            Tok::GreaterGreater => TokType::MathSign,
+            Tok::LBrace => TokType::Sign,
+            Tok::Pipe => TokType::Sign,
+            Tok::PipePipe => TokType::Sign,
+            Tok::RBrace => TokType::Sign,
+            Tok::NumSign => TokType::Sign,
+            Tok::AtSign => TokType::Sign,
+            _ => TokType::Alphabet,
+        }
     }
 }
 
@@ -677,7 +679,7 @@ pub fn format(p: impl AsRef<Path>, config: FormatConfig) -> Result<String, Diagn
 }
 
 pub(crate) fn need_space(current: Tok, next: Tok) -> bool {
-    match (get_tok_type(current), get_tok_type(next)) {
+    match (TokType::from(current), TokType::from(next)) {
         (TokType::Alphabet, TokType::Alphabet) => true,
         _ => false,
     }

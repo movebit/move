@@ -1106,6 +1106,7 @@ impl ToString for AddressSpace {
         }
     }
 }
+
 impl From<AccountAddress> for AddressSpace {
     fn from(x: AccountAddress) -> Self {
         Self::Addr(x)
