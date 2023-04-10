@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use std::cell::RefCell;
+use std::ops::Add;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::result::Result::*;
@@ -13,7 +14,7 @@ use move_compiler::{Flags, MatchedFileCommentMap};
 use std::cell::Cell;
 
 use crate::move_generate_spec::indent;
-use crate::token_tree::{Comment, CommentExtrator, NestKind_, TokenTree};
+use crate::token_tree::{Comment, CommentExtrator, Delimiter, NestKind_, TokenTree};
 use crate::utils::FileLineMapping;
 struct Format {
     config: FormatConfig,
