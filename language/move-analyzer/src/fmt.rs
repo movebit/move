@@ -140,7 +140,7 @@ impl Format {
                     if (temp_comment.start_offset < kind.start_pos) {
                         ret.push_str(temp_comment.content.as_str());
                         //TODO: Change line in different system
-                        //ret.push_str("\n");
+                        ret.push_str("\n");
                         self.comment_index.set(self.comment_index.get() + 1);
                     } else {
                         break;
@@ -219,19 +219,38 @@ impl Format {
             }
             //Add to string
             TokenTree::SimpleToken { content, pos, tok } => {
-                // //Add comment
+                //Add comment
                 for temp_comment in &self.comments[self.comment_index.get()..] {
                     if (temp_comment.start_offset < *pos) {
+                        match next_token {
+                            None => {}
+                            Some(temp_token) => match temp_token {
+                                TokenTree::SimpleToken {
+                                    content: (_),
+                                    pos: (_),
+                                    tok: (temp_tok),
+                                } => {
+                                    if (comment_need_changeline(*tok, temp_tok.clone())) {
+                                        ret.push_str("\n");
+                                    }
+                                }
+                                _ => {
+                                    ret.push_str("\n");
+                                }
+                            },
+                        }
+
                         ret.push_str(temp_comment.content.as_str());
                         //TODO: Change line in different system
-                        //ret.push_str("\n");
+                        ret.push_str("\n");
+                        ret.push_str(&indent(*self.depth.as_ref().borrow()));
                         self.comment_index.set(self.comment_index.get() + 1);
                     } else {
                         break;
                     }
                 }
                 // Check Token Type and React
-
+                //ret.push_str(" ");
                 match tok {
                     move_compiler::parser::lexer::Tok::EOF => {
                         ret.push_str("");
@@ -680,6 +699,13 @@ pub fn format(p: impl AsRef<Path>, config: FormatConfig) -> Result<String, Diagn
 pub(crate) fn need_space(current: Tok, next: Tok) -> bool {
     match (TokType::from(current), TokType::from(next)) {
         (TokType::Alphabet, TokType::Alphabet) => true,
+        _ => false,
+    }
+}
+
+pub(crate) fn comment_need_changeline(current: Tok, next: Tok) -> bool {
+    match (TokType::from(current), TokType::from(next)) {
+        (TokType::Sign, TokType::Alphabet) => true,
         _ => false,
     }
 }
