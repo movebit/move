@@ -125,6 +125,57 @@ impl Format {
         ret
     }
 
+    /// analyzer a `Nested` token tree.
+    fn analyzer_token_tree_delimiter(
+        token_tree: &Vec<TokenTree>,
+    ) -> (
+        Option<Delimiter>, // if this is a `Delimiter::Semicolon` we can know this is a function body or etc.
+        bool,              // has a `:`
+    ) {
+        let mut d = None;
+        let mut has_colon = false;
+        for t in token_tree.iter() {
+            match t {
+                TokenTree::SimpleToken { content, pos, tok } => match content.as_str() {
+                    ";" => {
+                        d = Some(Delimiter::Semicolon);
+                    }
+                    "," => {
+                        d = Some(Delimiter::Comma);
+                    }
+                    ":" => {
+                        has_colon = true;
+                    }
+                    _ => {}
+                },
+                TokenTree::Nested { .. } => {}
+            }
+        }
+        return (d, has_colon);
+    }
+
+    /// analyzer How long is list of token_tree
+    fn analyzer_token_tree_length(token_tree: &Vec<TokenTree>) -> usize {
+        let mut ret = usize::default();
+        fn analyzer_token_tree_length_(ret: &mut usize, token_tree: &TokenTree) {
+            match token_tree {
+                TokenTree::SimpleToken { content, .. } => {
+                    *ret = *ret + content.len();
+                }
+                TokenTree::Nested { elements, .. } => {
+                    for t in elements.iter() {
+                        analyzer_token_tree_length_(ret, t);
+                    }
+                    *ret = *ret + 2; // for delimiter.
+                }
+            }
+        }
+        for t in token_tree.iter() {
+            analyzer_token_tree_length_(&mut ret, t);
+        }
+        ret
+    }
+
     fn format_token_trees_(
         &self,
         ret: & /* 1 */ mut String,
@@ -146,6 +197,10 @@ impl Format {
                         break;
                     }
                 }
+
+                let length = Self::analyzer_token_tree_length(elements);
+                let (delimiter, has_colon) = Self::analyzer_token_tree_delimiter(elements);
+
                 //If brace, change line?
                 match kind.kind {
                     NestKind_::Brace => {
