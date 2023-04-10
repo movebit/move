@@ -488,225 +488,27 @@ impl Format {
                 //Back push
                 match next_token {
                     None => {}
-                    Some(temp_token) => {
-                        match tok {
-                            move_compiler::parser::lexer::Tok::EOF => {
-                                ret.push_str("");
-                            }
-                            move_compiler::parser::lexer::Tok::NumValue => {
-                                ret.push_str("");
-                            }
-                            move_compiler::parser::lexer::Tok::NumTypedValue => {
-                                ret.push_str("");
-                            }
-                            move_compiler::parser::lexer::Tok::ByteStringValue => {
-                                ret.push_str("");
-                            }
-                            move_compiler::parser::lexer::Tok::Identifier => match temp_token {
-                                TokenTree::SimpleToken {
-                                    content: (_),
-                                    pos: (_),
-                                    tok: (temp_tok),
-                                } => {
-                                    if (need_space(*tok, temp_tok.clone())) {
-                                        ret.push_str(" ");
-                                    }
-                                }
-                                _ => {}
-                            },
-                            move_compiler::parser::lexer::Tok::Exclaim => {
-                                ret.push_str("");
-                            }
-                            move_compiler::parser::lexer::Tok::ExclaimEqual => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Percent => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Amp => {
-                                ret.push_str("");
-                            }
-                            move_compiler::parser::lexer::Tok::AmpAmp => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::AmpMut => {
-                                //ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::LParen => {
-                                ret.push_str("");
-                            }
-                            move_compiler::parser::lexer::Tok::RParen => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::LBracket => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::RBracket => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Star => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Plus => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Comma => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Minus => {
-                                ret.push_str(" ");
-                            }
-
-                            move_compiler::parser::lexer::Tok::PeriodPeriod => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Slash => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Colon => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::ColonColon => {
-                                ret.push_str("");
-                            }
-                            move_compiler::parser::lexer::Tok::Semicolon => {
-                                ret.push_str("\n");
-                                ret.push_str(&indent(*self.depth.as_ref().borrow()));
-                            }
-                            move_compiler::parser::lexer::Tok::Less => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::LessEqual => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::LessLess => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Equal => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::EqualEqual => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::EqualEqualGreater => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::LessEqualEqualGreater => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Greater => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::GreaterEqual => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::GreaterGreater => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Caret => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Abort => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Acquires => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::As => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Break => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Continue => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Copy => {
-                                //ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Else => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::False => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::If => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Invariant => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Let => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Loop => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Module => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Move => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Native => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Public => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Return => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Spec => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Struct => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::True => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Use => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::While => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::LBrace => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Pipe => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::PipePipe => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::RBrace => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Fun => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Script => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Const => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::Friend => {
-                                ret.push_str(" ");
-                            }
-                            move_compiler::parser::lexer::Tok::NumSign => {
-                                ret.push_str("");
-                            }
-                            move_compiler::parser::lexer::Tok::AtSign => {
-                                ret.push_str("");
-                            }
-                            _ => {
-                                ret.push_str(" ");
-                            }
+                    Some(temp_token) => match tok {
+                        move_compiler::parser::lexer::Tok::EOF => {
+                            unimplemented!()
                         }
-                    }
+                        move_compiler::parser::lexer::Tok::Semicolon => {
+                            ret.push_str("\n");
+                            ret.push_str(&indent(*self.depth.as_ref().borrow()));
+                        }
+                        _ => match temp_token {
+                            TokenTree::SimpleToken {
+                                content: (_),
+                                pos: (_),
+                                tok: (temp_tok),
+                            } => {
+                                if (need_space(*tok, temp_tok.clone())) {
+                                    ret.push_str(" ");
+                                }
+                            }
+                            _ => {}
+                        },
+                    },
                 }
             }
         }
@@ -755,6 +557,7 @@ pub fn format(p: impl AsRef<Path>, config: FormatConfig) -> Result<String, Diagn
 pub(crate) fn need_space(current: Tok, next: Tok) -> bool {
     match (TokType::from(current), TokType::from(next)) {
         (TokType::Alphabet, TokType::Alphabet) => true,
+        (TokType::MathSign, _) => true,
         _ => false,
     }
 }
