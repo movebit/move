@@ -36,7 +36,7 @@ pub enum TokType {
 pub fn get_tok_type(tok: Tok) -> TokType {
     match tok {
         Tok::EOF => TokType::Specical,
-        Tok::NumValue => TokType::Specical,
+        Tok::NumValue => TokType::Value,
         Tok::NumTypedValue => TokType::Value,
         Tok::ByteStringValue => TokType::Value,
         Tok::Exclaim => TokType::Sign,
@@ -134,17 +134,16 @@ impl Format {
             TokenTree::Nested { elements, kind } => {
                 //Add comment
                 let _gurard = self.increment_depth();
-
-                // for (pos_, string_) in &self.comments[self.comment_index.get()..] {
-                //     if (pos_ < &kind.start_pos) {
-                //         ret.push_str(string_.as_str());
-                //         //TODO: Change line in different system
-                //         //ret.push_str("\n");
-                //         self.comment_index.set(self.comment_index.get() + 1);
-                //     } else {
-                //         break;
-                //     }
-                // }
+                for temp_comment in &self.comments[self.comment_index.get()..] {
+                    if (temp_comment.start_offset < kind.start_pos) {
+                        ret.push_str(temp_comment.content.as_str());
+                        //TODO: Change line in different system
+                        //ret.push_str("\n");
+                        self.comment_index.set(self.comment_index.get() + 1);
+                    } else {
+                        break;
+                    }
+                }
                 //If brace, change line?
                 match kind.kind {
                     NestKind_::Brace => {
@@ -219,16 +218,16 @@ impl Format {
             //Add to string
             TokenTree::SimpleToken { content, pos, tok } => {
                 // //Add comment
-                // for (pos_, string_) in &self.comments[self.comment_index.get()..] {
-                //     if (pos_ < pos) {
-                //         ret.push_str(string_.as_str());
-                //         //TODO: Change line in different system
-                //         //ret.push_str("\n");
-                //         self.comment_index.set(self.comment_index.get() + 1);
-                //     } else {
-                //         break;
-                //     }
-                // }
+                for temp_comment in &self.comments[self.comment_index.get()..] {
+                    if (temp_comment.start_offset < *pos) {
+                        ret.push_str(temp_comment.content.as_str());
+                        //TODO: Change line in different system
+                        //ret.push_str("\n");
+                        self.comment_index.set(self.comment_index.get() + 1);
+                    } else {
+                        break;
+                    }
+                }
                 // Check Token Type and React
 
                 match tok {
