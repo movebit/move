@@ -13,12 +13,11 @@ use move_compiler::shared::CompilationEnv;
 use move_compiler::Flags;
 use std::cell::Cell;
 
-use crate::move_generate_spec::indent;
 use crate::token_tree::{Comment, CommentExtrator, Delimiter, TokenTree};
 use crate::utils::FileLineMapping;
 struct Format {
     config: FormatConfig,
-    depth: Rc<RefCell<usize>>,
+    depth: Cell<usize>,
     token_tree: Vec<TokenTree>,
     comments: Vec<Comment>,
     line_mapping: FileLineMapping,
@@ -28,7 +27,7 @@ struct Format {
 }
 
 pub struct FormatConfig {
-    pub indent_size: u32,
+    pub indent_size: usize,
 }
 
 impl Format {
@@ -51,11 +50,13 @@ impl Format {
         }
     }
 
-    #[must_use]
-    fn increment_depth(&self) -> DepthGuard {
-        let old = *self.depth.as_ref().borrow();
-        *self.depth.as_ref().borrow_mut() = old + 1;
-        DepthGuard(self.depth.clone())
+    fn inc_depth(&self) {
+        let old = self.depth.get();
+        self.depth.set(old + 1);
+    }
+    fn dec_depth(&self) {
+        let old = self.depth.get();
+        self.depth.set(old - 1);
     }
 
     pub fn format_token_trees(self) -> String {
@@ -141,8 +142,8 @@ impl Format {
         match token {
             //Iter Nested
             TokenTree::Nested { elements, kind } => {
-                let _gurard = self.increment_depth();
                 //Add comment
+                self.inc_depth();
                 for temp_comment in &self.comments[self.comment_index.get()..] {
                     if temp_comment.start_offset < kind.start_pos {
                         self.push_str(temp_comment.content.as_str());
@@ -212,8 +213,12 @@ impl Format {
     }
 
     /// 缩进
-    fn indent(&mut self) {
-        self.push_str(&indent(*self.depth.as_ref().borrow()));
+    fn indent(&self) {
+        self.push_str(
+            " ".to_string()
+                .repeat(self.depth.get() * self.config.indent_size)
+                .as_str(),
+        );
     }
 
     fn translate_line(&self, pos: u32) -> u32 {
@@ -221,17 +226,6 @@ impl Format {
             .translate(&self.path, pos, pos)
             .unwrap()
             .line_start
-    }
-}
-
-/// A RAII type  
-#[must_use]
-struct DepthGuard(Rc<RefCell<usize>>);
-
-impl Drop for DepthGuard {
-    fn drop(&mut self) {
-        let old = *self.0.as_ref().borrow();
-        *self.0.as_ref().borrow_mut() = old - 1;
     }
 }
 
