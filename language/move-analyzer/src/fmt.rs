@@ -196,14 +196,7 @@ impl Format {
             //Iter Nested
             TokenTree::Nested { elements, kind } => {
                 //Add comment
-                let mut _has_test_sign = 0;
                 let _gurard = self.increment_depth();
-
-                if ret.len() > 1 {
-                    if { ret.get(ret.len() - 1..).unwrap() == "#" } {
-                        _has_test_sign = 1;
-                    }
-                }
 
                 for temp_comment in &self.comments[self.comment_index.get()..] {
                     if (temp_comment.start_offset < kind.start_pos) {
@@ -215,36 +208,13 @@ impl Format {
                         break;
                     }
                 }
+
                 let length = Self::analyzer_token_tree_length(elements);
                 let (delimiter, has_colon) = Self::analyzer_token_tree_delimiter(elements);
 
                 //If brace, change line?
-                match kind.kind {
-                    NestKind_::Brace => {
-                        if (ret.chars().last().unwrap() == ':'
-                            && format!("{}", kind.kind.start_tok()).as_str() == "{")
-                        {
-                            ret.push_str(format!("{}", kind.kind.start_tok()).as_str());
-                        } else {
-                            ret.push_str(format!("{}", kind.kind.start_tok()).as_str());
-                            ret.push_str("\n");
-                            ret.push_str(&indent(*self.depth.as_ref().borrow()));
-                        }
-                    }
-                    NestKind_::Lambda => {
-                        ret.push_str("|");
-                    }
-                    NestKind_::Type => {
-                        ret.push_str("<");
-                    }
-                    NestKind_::ParentTheses => {
-                        ret.push_str("(");
-                    }
-                    NestKind_::Bracket => {
-                        ret.push_str("[");
-                    }
-                }
 
+                ret.push_str(kind.kind.start_tok().to_string().as_str());
                 //Add signer
                 for i in 0..elements.len() {
                     let t = elements.get(i).unwrap();
@@ -253,49 +223,8 @@ impl Format {
                     //  /// ;  }
                     // check if need new line.
                 }
-                match kind.kind {
-                    NestKind_::Brace => {
-                        match next_token {
-                            None => {
-                                ret.push_str("\n");
-                                ret.push_str(&indent(*self.depth.as_ref().borrow()));
-                            }
-                            Some(temp_token) => match temp_token {
-                                TokenTree::SimpleToken { content, pos, tok } => {
-                                    if (!content.as_str().contains(";")
-                                        || ret.chars().last().unwrap() == ',')
-                                    {
-                                        ret.push_str("\n");
-                                        ret.push_str(&indent(*self.depth.as_ref().borrow()));
-                                    }
-                                }
-                                _ => {}
-                            },
-                        }
-                        ret.push_str("}");
-                        if (*self.depth.as_ref().borrow() <= 1) {
-                            ret.push_str("\n");
-                        }
-                    }
-                    NestKind_::Lambda => {
-                        ret.push_str("|");
-                    }
-                    NestKind_::Type => {
-                        ret.push_str(">");
-                    }
-                    NestKind_::ParentTheses => {
-                        ret.push_str(")");
-                    }
-                    NestKind_::Bracket => {
-                        ret.push_str("]");
-                    }
-                }
+                ret.push_str(kind.kind.end_tok().to_string().as_str())
                 //Add signer
-                if (_has_test_sign == 1) {
-                    ret.push_str("\n");
-                    ret.push_str(&indent(*self.depth.as_ref().borrow()));
-                    _has_test_sign = 0;
-                }
             }
             //Add to string
             TokenTree::SimpleToken { content, pos, tok } => {
@@ -319,25 +248,9 @@ impl Format {
                     }
                 }
                 // Check Token Type and React
-                //ret.push_str(" ");
                 match next_token {
                     None => {}
                     Some(temp_token) => match tok {
-                        move_compiler::parser::lexer::Tok::EOF => {}
-                        move_compiler::parser::lexer::Tok::AmpMut => {}
-                        move_compiler::parser::lexer::Tok::Public => {
-                            ret.push_str("\n");
-                            ret.push_str(&indent(*self.depth.as_ref().borrow()));
-                        }
-                        move_compiler::parser::lexer::Tok::Struct => {
-                            ret.push_str("\n");
-                            ret.push_str(&indent(*self.depth.as_ref().borrow()));
-                        }
-                        move_compiler::parser::lexer::Tok::NumSign => {
-                            ret.push_str("\n");
-                            ret.push_str("\n");
-                            ret.push_str(&indent(*self.depth.as_ref().borrow()));
-                        }
                         _ => match temp_token {
                             TokenTree::SimpleToken {
                                 content: (_),
@@ -360,31 +273,6 @@ impl Format {
                 //     //ret.push_str(" ");
                 // }
                 //Back push
-                match next_token {
-                    None => {}
-                    Some(temp_token) => match tok {
-                        move_compiler::parser::lexer::Tok::EOF => {}
-                        move_compiler::parser::lexer::Tok::AmpMut => {}
-                        move_compiler::parser::lexer::Tok::Semicolon => {
-                            /// fdfdf \n
-                            /// ;
-                            ret.push_str("\n");
-                            ret.push_str(&indent(*self.depth.as_ref().borrow()));
-                        }
-                        _ => match temp_token {
-                            TokenTree::SimpleToken {
-                                content: (_),
-                                pos: (_),
-                                tok: (temp_tok),
-                            } => {
-                                if (need_space_suffix(*tok, temp_tok.clone())) {
-                                    ret.push_str(" ");
-                                }
-                            }
-                            _ => {}
-                        },
-                    },
-                }
             }
         }
     }
@@ -441,9 +329,9 @@ pub(crate) fn need_space_suffix(current: Tok, next: Tok) -> bool {
 
 pub(crate) fn need_space_perfix(current: Tok, next: Tok) -> bool {
     match (TokType::from(current), TokType::from(next)) {
-        //(TokType::Alphabet, TokType::Alphabet) => true,
+        (TokType::Alphabet, TokType::Alphabet) => true,
         (TokType::MathSign, _) => true,
-        //(TokType::Sign, TokType::Alphabet) => true,
+        (TokType::Sign, TokType::Alphabet) => true,
         _ => false,
     }
 }
