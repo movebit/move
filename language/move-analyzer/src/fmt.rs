@@ -115,12 +115,21 @@ impl Format {
         let mut ret = String::new();
         let length = self.token_tree.len();
         let mut index = 0;
+        let mut pound_sign = None;
         while index < length {
-            self.format_token_trees_(
-                &mut ret,
-                self.token_tree.get(index).unwrap(),
-                self.token_tree.get(index + 1),
-            );
+            let t = self.token_tree.get(index).unwrap();
+            match t {
+                TokenTree::SimpleToken { tok, .. } => {
+                    if *tok == Tok::NumSign {
+                        pound_sign = Some(index)
+                    }
+                }
+                TokenTree::Nested { .. } => {}
+            }
+            self.format_token_trees_(&mut ret, t, self.token_tree.get(index + 1));
+            if pound_sign.map(|x| (x + 1) == index).unwrap_or_default() {
+                //TODO new line here
+            }
             index += 1;
         }
         ret
