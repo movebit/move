@@ -10,7 +10,7 @@ use move_compiler::diagnostics::Diagnostics;
 use move_compiler::parser::lexer::{Lexer, Tok};
 use move_compiler::parser::syntax::parse_file_string;
 use move_compiler::shared::CompilationEnv;
-use move_compiler::{Flags};
+use move_compiler::Flags;
 use std::cell::Cell;
 
 use crate::move_generate_spec::indent;
@@ -148,7 +148,11 @@ impl Format {
         let mut has_colon = false;
         for t in token_tree.iter() {
             match t {
-                TokenTree::SimpleToken { content, pos: _, tok: _ } => match content.as_str() {
+                TokenTree::SimpleToken {
+                    content,
+                    pos: _,
+                    tok: _,
+                } => match content.as_str() {
                     ";" => {
                         d = Some(Delimiter::Semicolon);
                     }
