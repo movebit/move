@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use std::cell::RefCell;
-use std::ops::Add;
+
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::result::Result::*;
@@ -10,11 +10,11 @@ use move_compiler::diagnostics::Diagnostics;
 use move_compiler::parser::lexer::{Lexer, Tok};
 use move_compiler::parser::syntax::parse_file_string;
 use move_compiler::shared::CompilationEnv;
-use move_compiler::{Flags, MatchedFileCommentMap};
+use move_compiler::{Flags};
 use std::cell::Cell;
 
 use crate::move_generate_spec::indent;
-use crate::token_tree::{Comment, CommentExtrator, Delimiter, NestKind_, TokenTree};
+use crate::token_tree::{Comment, CommentExtrator, Delimiter, TokenTree};
 use crate::utils::FileLineMapping;
 struct Format {
     config: FormatConfig,
@@ -146,7 +146,7 @@ impl Format {
         let mut has_colon = false;
         for t in token_tree.iter() {
             match t {
-                TokenTree::SimpleToken { content, pos, tok } => match content.as_str() {
+                TokenTree::SimpleToken { content, pos: _, tok: _ } => match content.as_str() {
                     ";" => {
                         d = Some(Delimiter::Semicolon);
                     }
@@ -199,7 +199,7 @@ impl Format {
                 let _gurard = self.increment_depth();
 
                 for temp_comment in &self.comments[self.comment_index.get()..] {
-                    if (temp_comment.start_offset < kind.start_pos) {
+                    if temp_comment.start_offset < kind.start_pos {
                         ret.push_str(temp_comment.content.as_str());
                         //TODO: Change line in different system
                         ret.push_str("\n");
@@ -209,8 +209,8 @@ impl Format {
                     }
                 }
 
-                let length = Self::analyzer_token_tree_length(elements);
-                let (delimiter, has_colon) = Self::analyzer_token_tree_delimiter(elements);
+                let _length = Self::analyzer_token_tree_length(elements);
+                let (_delimiter, _has_colon) = Self::analyzer_token_tree_delimiter(elements);
 
                 //If brace, change line?
 
@@ -218,7 +218,7 @@ impl Format {
                 //Add signer
                 for i in 0..elements.len() {
                     let t = elements.get(i).unwrap();
-                    let next_t = elements.get(i + 1);
+                    let _next_t = elements.get(i + 1);
                     self.format_token_trees_(ret, t, elements.get(i + 1));
                     //  /// ;  }
                     // check if need new line.
@@ -230,9 +230,9 @@ impl Format {
             TokenTree::SimpleToken { content, pos, tok } => {
                 //Add comment
                 for temp_comment in &self.comments[self.comment_index.get()..] {
-                    if (temp_comment.start_offset < *pos) {
+                    if temp_comment.start_offset < *pos {
                         if ret.len() > 1 {
-                            if { ret.get(ret.len() - 1..).unwrap() == "}" } {
+                            if ret.get(ret.len() - 1..).unwrap() == "}" {
                                 ret.push_str("\n");
                                 ret.push_str(&indent(*self.depth.as_ref().borrow()));
                             }
@@ -253,11 +253,11 @@ impl Format {
                     Some(temp_token) => match tok {
                         _ => match temp_token {
                             TokenTree::SimpleToken {
-                                content: (_),
-                                pos: (_),
-                                tok: (temp_tok),
+                                content: _,
+                                pos: _,
+                                tok: temp_tok,
                             } => {
-                                if (need_space_perfix(*tok, temp_tok.clone())) {
+                                if need_space_perfix(*tok, temp_tok.clone()) {
                                     ret.push_str(" ");
                                 }
                             }

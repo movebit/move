@@ -282,7 +282,7 @@ impl<'a> Parser<'a> {
                 Exp_::Value(_) => {}
                 Exp_::Move(_) => {}
                 Exp_::Copy(_) => {}
-                Exp_::Name(_, tys) => {
+                Exp_::Name(_, _tys) => {
                     p.type_lambda_pair.push((e.loc.start(), e.loc.end()));
                 }
                 Exp_::Call(name, _, _tys, es) => {
@@ -457,7 +457,7 @@ impl<'a> Parser<'a> {
             p.type_lambda_pair.push((
                 d.name.0.loc.start(),
                 match &d.body.value {
-                    FunctionBody_::Defined(x) => d.body.loc.start(),
+                    FunctionBody_::Defined(_x) => d.body.loc.start(),
                     FunctionBody_::Native => d.loc.end(),
                 },
             ));
@@ -490,7 +490,7 @@ impl Comment {
     /// exampls `//   this is a comment` to `// this is a comment`,etc.
     pub(crate) fn format(
         &self,
-        convert_line: impl Fn(
+        _convert_line: impl Fn(
             u32, // offset
         ) -> u32, // line number
     ) -> String {
