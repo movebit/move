@@ -18,6 +18,7 @@ use lsp_types::{
 };
 
 use move_analyzer::call;
+use move_analyzer::lsp_fmt;
 use move_command_line_common::files::FileHash;
 use move_compiler::{diagnostics::Diagnostics, shared::*, PASS_TYPING};
 
@@ -151,6 +152,7 @@ fn main() {
         code_lens_provider: Some(lsp_types::CodeLensOptions {
             resolve_provider: Some(true),
         }),
+        document_formatting_provider: Some(OneOf::Left(true)),
         // semantic_tokens_provider: Some(
         //     lsp_types::SemanticTokensServerCapabilities::SemanticTokensOptions(
         //         lsp_types::SemanticTokensOptions {
@@ -237,6 +239,9 @@ fn on_request(context: &mut Context, request: &Request) {
         }
         lsp_types::request::InlayHintRequest::METHOD => {
             inlay_hitnt::on_inlay_hints(context, request);
+        }
+        lsp_types::request::Formatting::METHOD => {
+            lsp_fmt::on_fmt_request(context, request);
         }
         "move/generate/spec/file" => {
             on_generate_spec_file(context, request);

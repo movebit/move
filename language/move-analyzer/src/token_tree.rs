@@ -26,6 +26,7 @@ pub struct NestKind {
     pub(crate) end_pos: u32,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Delimiter {
     Semicolon,
     Comma,
@@ -281,7 +282,7 @@ impl<'a> Parser<'a> {
                 Exp_::Value(_) => {}
                 Exp_::Move(_) => {}
                 Exp_::Copy(_) => {}
-                Exp_::Name(_, tys) => {
+                Exp_::Name(_, _tys) => {
                     p.type_lambda_pair.push((e.loc.start(), e.loc.end()));
                 }
                 Exp_::Call(name, _, _tys, es) => {
@@ -456,7 +457,7 @@ impl<'a> Parser<'a> {
             p.type_lambda_pair.push((
                 d.name.0.loc.start(),
                 match &d.body.value {
-                    FunctionBody_::Defined(x) => d.body.loc.start(),
+                    FunctionBody_::Defined(_x) => d.body.loc.start(),
                     FunctionBody_::Native => d.loc.end(),
                 },
             ));
@@ -489,7 +490,7 @@ impl Comment {
     /// exampls `//   this is a comment` to `// this is a comment`,etc.
     pub(crate) fn format(
         &self,
-        convert_line: impl Fn(
+        _convert_line: impl Fn(
             u32, // offset
         ) -> u32, // line number
     ) -> String {
@@ -537,22 +538,18 @@ impl CommentExtrator {
         let mut comment = Vec::new();
         let last_index = content.len() - 1;
         let mut index = 0;
-        let make_comment = |state: &mut ExtratorCommentState,
-                            comments: &mut Vec<Comment>,
-                            comment: &mut Vec<u8>,
-                            index: usize| {
-            comments.push(Comment {
-                start_offset: (index as u32) - (comment.len() as u32),
-                content: String::from_utf8(comment.clone()).unwrap(),
-            });
-            comment.clear();
-            *state = ExtratorCommentState::Init;
-        };
+
         macro_rules! make_comment {
             () => {
-                make_comment(&mut state, &mut comments, &mut comment, index);
+                comments.push(Comment {
+                    start_offset: (index as u32) + 1 - (comment.len() as u32),
+                    content: String::from_utf8(comment.clone()).unwrap(),
+                });
+                comment.clear();
+                state = ExtratorCommentState::Init;
             };
         }
+
         while index <= last_index {
             let c = content.get(index).unwrap();
             match state {
