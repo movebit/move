@@ -32,6 +32,7 @@ pub enum TokType {
     Sign,
     Specical,
     Value,
+    Amp,
 }
 
 impl From<Tok> for TokType {
@@ -39,12 +40,13 @@ impl From<Tok> for TokType {
         match value {
             Tok::EOF => unreachable!(), // EOF not in `TokenTree`.
             Tok::NumValue => TokType::Value,
+            Tok::AmpMut => TokType::Amp,
             Tok::NumTypedValue => TokType::Value,
             Tok::ByteStringValue => TokType::Value,
             Tok::Exclaim => TokType::Sign,
             Tok::ExclaimEqual => TokType::MathSign,
             Tok::Percent => TokType::MathSign,
-            Tok::Amp => TokType::Specical,
+            Tok::Amp => TokType::Amp,
             Tok::AmpAmp => TokType::MathSign,
             Tok::LParen => TokType::Sign,
             Tok::RParen => TokType::Sign,
@@ -195,9 +197,8 @@ impl Format {
         match token {
             //Iter Nested
             TokenTree::Nested { elements, kind } => {
-                //Add comment
                 let _gurard = self.increment_depth();
-
+                //Add comment
                 for temp_comment in &self.comments[self.comment_index.get()..] {
                     if (temp_comment.start_offset < kind.start_pos) {
                         ret.push_str(temp_comment.content.as_str());
@@ -212,10 +213,8 @@ impl Format {
                 let length = Self::analyzer_token_tree_length(elements);
                 let (delimiter, has_colon) = Self::analyzer_token_tree_delimiter(elements);
 
-                //If brace, change line?
-
                 ret.push_str(kind.kind.start_tok().to_string().as_str());
-                //Add signer
+                //Iter
                 for i in 0..elements.len() {
                     let t = elements.get(i).unwrap();
                     let next_t = elements.get(i + 1);
@@ -247,6 +246,10 @@ impl Format {
                         break;
                     }
                 }
+
+                //Push simpletoken
+                ret.push_str(&content.as_str());
+
                 // Check Token Type and React
                 match next_token {
                     None => {}
@@ -257,22 +260,14 @@ impl Format {
                                 pos: (_),
                                 tok: (temp_tok),
                             } => {
-                                if (need_space_perfix(*tok, temp_tok.clone())) {
+                                if need_space_suffix(*tok, temp_tok.clone()) {
                                     ret.push_str(" ");
                                 }
                             }
-                            _ => {}
+                            TokenTree::Nested { elements, kind } => {}
                         },
                     },
                 }
-                //Push simpletoken
-                ret.push_str(&content.as_str());
-                // if content.as_str().contains(";") {
-
-                // } else {
-                //     //ret.push_str(" ");
-                // }
-                //Back push
             }
         }
     }
@@ -321,6 +316,8 @@ pub(crate) fn need_space_suffix(current: Tok, next: Tok) -> bool {
     match (TokType::from(current), TokType::from(next)) {
         (TokType::Alphabet, TokType::Alphabet) => true,
         (TokType::MathSign, _) => true,
+        (_, TokType::MathSign) => true,
+        (_, TokType::Amp) => true,
         (TokType::Sign, TokType::Alphabet) => true,
         (TokType::Alphabet, TokType::Value) => true,
         _ => false,
