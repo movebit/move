@@ -30,7 +30,7 @@ pub enum TokType {
     Alphabet,
     MathSign,
     Sign,
-    Specical,
+    Use,
     Value,
     Amp,
 }
@@ -56,11 +56,11 @@ impl From<Tok> for TokType {
             Tok::Plus => TokType::MathSign,
             Tok::Comma => TokType::Sign,
             Tok::Minus => TokType::Sign,
-            Tok::Period => TokType::Specical,
-            Tok::PeriodPeriod => TokType::Specical,
+            Tok::Period => TokType::Use,
+            Tok::PeriodPeriod => TokType::MathSign,
             Tok::Slash => TokType::Sign,
             Tok::Colon => TokType::Sign,
-            Tok::ColonColon => TokType::Specical,
+            Tok::ColonColon => TokType::Use,
             Tok::Semicolon => TokType::Sign,
             Tok::Less => TokType::MathSign,
             Tok::LessEqual => TokType::MathSign,
@@ -266,7 +266,7 @@ impl Format {
                                 pos: _,
                                 tok: temp_tok,
                             } => {
-                                if (need_space_perfix(*tok, temp_tok.clone())) {
+                                if (need_space_suffix(*tok, temp_tok.clone())) {
                                     ret.push_str(" ");
                                 }
                             }
@@ -330,14 +330,14 @@ pub(crate) fn need_space_suffix(current: Tok, next: Tok) -> bool {
     }
 }
 
-pub(crate) fn need_space_perfix(current: Tok, next: Tok) -> bool {
-    match (TokType::from(current), TokType::from(next)) {
-        (TokType::Alphabet, TokType::Alphabet) => true,
-        (TokType::MathSign, _) => true,
-        (TokType::Sign, TokType::Alphabet) => true,
-        _ => false,
-    }
-}
+// pub(crate) fn need_space_perfix(current: Tok, next: Tok) -> bool {
+//     match (TokType::from(current), TokType::from(next)) {
+//         (TokType::Alphabet, TokType::Alphabet) => true,
+//         (TokType::MathSign, _) => true,
+//         (TokType::Sign, TokType::Alphabet) => true,
+//         _ => false,
+//     }
+// }
 
 pub(crate) fn comment_need_changeline(current: Tok, next: Tok) -> bool {
     match (TokType::from(current), TokType::from(next)) {
