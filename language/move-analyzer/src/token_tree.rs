@@ -26,6 +26,7 @@ pub struct NestKind {
     pub(crate) end_pos: u32,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Delimiter {
     Semicolon,
     Comma,
@@ -537,22 +538,18 @@ impl CommentExtrator {
         let mut comment = Vec::new();
         let last_index = content.len() - 1;
         let mut index = 0;
-        let make_comment = |state: &mut ExtratorCommentState,
-                            comments: &mut Vec<Comment>,
-                            comment: &mut Vec<u8>,
-                            index: usize| {
-            comments.push(Comment {
-                start_offset: (index as u32) - (comment.len() as u32),
-                content: String::from_utf8(comment.clone()).unwrap(),
-            });
-            comment.clear();
-            *state = ExtratorCommentState::Init;
-        };
+
         macro_rules! make_comment {
             () => {
-                make_comment(&mut state, &mut comments, &mut comment, index);
+                comments.push(Comment {
+                    start_offset: (index as u32) + 1 - (comment.len() as u32),
+                    content: String::from_utf8(comment.clone()).unwrap(),
+                });
+                comment.clear();
+                state = ExtratorCommentState::Init;
             };
         }
+
         while index <= last_index {
             let c = content.get(index).unwrap();
             match state {

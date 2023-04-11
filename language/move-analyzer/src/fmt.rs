@@ -188,7 +188,7 @@ impl Format {
 
     fn format_token_trees_(
         &self,
-        ret: & /* 1 */ mut String,
+        ret: &mut String,
         token: &TokenTree,
         next_token: Option<&TokenTree>,
     ) {
