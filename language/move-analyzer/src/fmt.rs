@@ -173,7 +173,7 @@ impl Format {
                         self.push_str(temp_comment.content.as_str());
                         //TODO: Change line in different system
                         self.push_str("\n");
-                        self.push_str(&indent(*self.depth.as_ref().borrow()));
+                        self.indent();
                         self.comment_index.set(self.comment_index.get() + 1);
                     } else {
                         break;
@@ -181,7 +181,7 @@ impl Format {
                 }
 
                 //Push simpletoken
-                ret.push_str(&content.as_str());
+                self.push_str(&content.as_str());
 
                 // Check Token Type and React
                 match next_token {
@@ -194,7 +194,7 @@ impl Format {
                                 tok: temp_tok,
                             } => {
                                 if (need_space_suffix(*tok, temp_tok.clone())) {
-                                    ret.push_str(" ");
+                                    self.push_str(" ");
                                 }
                             }
                             TokenTree::Nested { elements, kind } => {}
@@ -212,8 +212,8 @@ impl Format {
     }
 
     /// 缩进
-    fn indent(&mut self, ret: &mut String) {
-        ret.push_str(&indent(*self.depth.as_ref().borrow()));
+    fn indent(&mut self) {
+        self.push_str(&indent(*self.depth.as_ref().borrow()));
     }
 
     fn translate_line(&self, pos: u32) -> u32 {
@@ -263,14 +263,14 @@ pub(crate) fn need_space_suffix(current: Tok, next: Tok) -> bool {
         (TokType::Alphabet, TokType::Sign) => todo!(),
         (TokType::Alphabet, TokType::NoNeedSpace) => todo!(),
         (TokType::Alphabet, TokType::String) => todo!(),
-        (TokType::Alphabet, TokType::AmpMut) => todo!(),
+        (TokType::Alphabet, TokType::Amp) => todo!(),
         (TokType::Alphabet, TokType::Semicolon) => todo!(),
         (TokType::Sign, TokType::MathSign) => todo!(),
         (TokType::Sign, TokType::Sign) => todo!(),
         (TokType::Sign, TokType::NoNeedSpace) => todo!(),
         (TokType::Sign, TokType::Number) => todo!(),
         (TokType::Sign, TokType::String) => todo!(),
-        (TokType::Sign, TokType::AmpMut) => todo!(),
+        (TokType::Sign, TokType::Amp) => todo!(),
         (TokType::Sign, TokType::Semicolon) => todo!(),
         (TokType::NoNeedSpace, TokType::Alphabet) => todo!(),
         (TokType::NoNeedSpace, TokType::MathSign) => todo!(),
@@ -278,7 +278,7 @@ pub(crate) fn need_space_suffix(current: Tok, next: Tok) -> bool {
         (TokType::NoNeedSpace, TokType::NoNeedSpace) => todo!(),
         (TokType::NoNeedSpace, TokType::Number) => todo!(),
         (TokType::NoNeedSpace, TokType::String) => todo!(),
-        (TokType::NoNeedSpace, TokType::AmpMut) => todo!(),
+        (TokType::NoNeedSpace, TokType::Amp) => todo!(),
         (TokType::NoNeedSpace, TokType::Semicolon) => todo!(),
         (TokType::Number, TokType::Alphabet) => todo!(),
         (TokType::Number, TokType::MathSign) => todo!(),
@@ -286,7 +286,7 @@ pub(crate) fn need_space_suffix(current: Tok, next: Tok) -> bool {
         (TokType::Number, TokType::NoNeedSpace) => todo!(),
         (TokType::Number, TokType::Number) => todo!(),
         (TokType::Number, TokType::String) => todo!(),
-        (TokType::Number, TokType::AmpMut) => todo!(),
+        (TokType::Number, TokType::Amp) => todo!(),
         (TokType::Number, TokType::Semicolon) => todo!(),
         (TokType::String, TokType::Alphabet) => todo!(),
         (TokType::String, TokType::MathSign) => todo!(),
@@ -294,23 +294,23 @@ pub(crate) fn need_space_suffix(current: Tok, next: Tok) -> bool {
         (TokType::String, TokType::NoNeedSpace) => todo!(),
         (TokType::String, TokType::Number) => todo!(),
         (TokType::String, TokType::String) => todo!(),
-        (TokType::String, TokType::AmpMut) => todo!(),
+        (TokType::String, TokType::Amp) => todo!(),
         (TokType::String, TokType::Semicolon) => todo!(),
-        (TokType::AmpMut, TokType::Alphabet) => todo!(),
-        (TokType::AmpMut, TokType::MathSign) => todo!(),
-        (TokType::AmpMut, TokType::Sign) => todo!(),
-        (TokType::AmpMut, TokType::NoNeedSpace) => todo!(),
-        (TokType::AmpMut, TokType::Number) => todo!(),
-        (TokType::AmpMut, TokType::String) => todo!(),
-        (TokType::AmpMut, TokType::AmpMut) => todo!(),
-        (TokType::AmpMut, TokType::Semicolon) => todo!(),
+        (TokType::Amp, TokType::Alphabet) => todo!(),
+        (TokType::Amp, TokType::MathSign) => todo!(),
+        (TokType::Amp, TokType::Sign) => todo!(),
+        (TokType::Amp, TokType::NoNeedSpace) => todo!(),
+        (TokType::Amp, TokType::Number) => todo!(),
+        (TokType::Amp, TokType::String) => todo!(),
+        (TokType::Amp, TokType::Amp) => todo!(),
+        (TokType::Amp, TokType::Semicolon) => todo!(),
         (TokType::Semicolon, TokType::Alphabet) => todo!(),
         (TokType::Semicolon, TokType::MathSign) => todo!(),
         (TokType::Semicolon, TokType::Sign) => todo!(),
         (TokType::Semicolon, TokType::NoNeedSpace) => todo!(),
         (TokType::Semicolon, TokType::Number) => todo!(),
         (TokType::Semicolon, TokType::String) => todo!(),
-        (TokType::Semicolon, TokType::AmpMut) => todo!(),
+        (TokType::Semicolon, TokType::Amp) => todo!(),
         (TokType::Semicolon, TokType::Semicolon) => todo!(),
     };
 
@@ -327,8 +327,8 @@ pub(crate) fn need_space_suffix(current: Tok, next: Tok) -> bool {
         Number,
         /// b"hello world"
         String,
-        /// &mut
-        AmpMut,
+        /// & and &mut
+        Amp,
         ///
         Semicolon,
     }
@@ -374,7 +374,7 @@ pub(crate) fn need_space_suffix(current: Tok, next: Tok) -> bool {
                 Tok::RBrace => TokType::Sign,
                 Tok::NumSign => TokType::Sign,
                 Tok::AtSign => TokType::Sign,
-                Tok::AmpMut => TokType::AmpMut,
+                Tok::AmpMut => TokType::Amp,
                 _ => TokType::Alphabet,
             }
         }
