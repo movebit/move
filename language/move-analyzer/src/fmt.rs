@@ -89,18 +89,31 @@ impl Format {
 
     fn need_new_line(
         kind: NestKind_,
-        delimitor: Option<Delimiter>,
+        delimiter: Option<Delimiter>,
         _has_colon: bool,
         current: &TokenTree,
         next: Option<&TokenTree>,
     ) -> bool {
         //
-        if next.map(|x| x.simple_str()).flatten() == delimitor.map(|x| x.to_static_str()) {
+        if next.map(|x| x.simple_str()).flatten() == delimiter.map(|x| x.to_static_str()) {
             return false;
         }
         let next_tok = next.map(|x| match x {
-            TokenTree::SimpleToken { content, pos, tok } => tok.clone(),
-            TokenTree::Nested { elements, kind } => kind.kind.start_tok(),
+            TokenTree::SimpleToken {
+                content: _,
+                pos: _,
+                tok,
+            } => tok.clone(),
+            TokenTree::Nested { elements: _, kind } => kind.kind.start_tok(),
+        });
+
+        let next_content = next.map(|x| match x {
+            TokenTree::SimpleToken {
+                content,
+                pos: _,
+                tok: _,
+            } => content.clone(),
+            TokenTree::Nested { elements: _, kind } => kind.kind.start_tok().to_string(),
         });
 
         // special case for `}}`
@@ -126,7 +139,20 @@ impl Format {
                     | Tok::Native
                     | Tok::Move
                     | Tok::Module
-                    | Tok::Loop => true,
+                    | Tok::Loop
+                    | Tok::Let
+                    | Tok::Invariant
+                    | Tok::If
+                    | Tok::Continue
+                    | Tok::Break
+                    | Tok::Abort => true,
+                    Tok::Identifier
+                        if next_content
+                            .map(|x| x.as_str() == "entry")
+                            .unwrap_or_default() =>
+                    {
+                        true
+                    }
                     _ => false,
                 },
                 None => true,
@@ -142,7 +168,8 @@ impl Format {
             TokenTree::Nested { elements, kind } => {
                 self.inc_depth();
                 const MAX: usize = 30;
-                let length = self.analyzer_token_tree_length(elements, MAX);
+                let length = self.analyze_token_tree_length(elements, MAX);
+                let (delimiter, has_colon) = Self::analyze_token_tree_delimiter(elements);
                 let new_line_mode = {
                     // more rules.
                     let nested_in_struct_definition = self
@@ -150,9 +177,13 @@ impl Format {
                         .iter()
                         .any(|x| kind.start_pos >= x.0 && kind.end_pos <= x.1)
                         && kind.kind == NestKind_::Brace;
-                    length > MAX || nested_in_struct_definition
+                    length > MAX
+                        || delimiter
+                            .map(|x| x == Delimiter::Semicolon)
+                            .unwrap_or_default()
+                        || nested_in_struct_definition
                 };
-                let (delimiter, has_colon) = Self::analyzer_token_tree_delimiter(elements);
+
                 self.format_token_trees_(&kind.start_token_tree(), None);
                 if new_line_mode {
                     self.new_line(Some(kind.start_pos));
@@ -171,6 +202,7 @@ impl Format {
                         pound_sign = None;
                         continue;
                     }
+
                     // need new line.
                     if new_line_mode {
                         let d = delimiter.map(|x| x.to_static_str());
@@ -183,6 +215,7 @@ impl Format {
                         }
                     }
                 }
+                self.add_comments(kind.end_pos);
                 self.dec_depth();
                 if new_line_mode {
                     self.new_line(Some(kind.end_pos));
@@ -285,7 +318,7 @@ impl Format {
     }
 
     /// analyzer a `Nested` token tree.
-    fn analyzer_token_tree_delimiter(
+    fn analyze_token_tree_delimiter(
         token_tree: &Vec<TokenTree>,
     ) -> (
         Option<Delimiter>, // if this is a `Delimiter::Semicolon` we can know this is a function body or etc.
@@ -321,7 +354,7 @@ impl Format {
     }
 
     /// analyzer How long is list of token_tree
-    fn analyzer_token_tree_length(&self, token_tree: &Vec<TokenTree>, max: usize) -> usize {
+    fn analyze_token_tree_length(&self, token_tree: &Vec<TokenTree>, max: usize) -> usize {
         let mut ret = usize::default();
         fn analyzer_token_tree_length_(ret: &mut usize, token_tree: &TokenTree, max: usize) {
             match token_tree {
@@ -354,7 +387,9 @@ impl Format {
             let cur_line = self.cur_line.get();
             let mut call_new_line = false;
             for c in &self.comments[self.comments_index.get()..] {
-                if self.translate_line(add_line_comment) == self.translate_line(c.start_offset) {
+                if self.translate_line(add_line_comment) == self.translate_line(c.start_offset)
+                    && c.start_offset < add_line_comment
+                {
                     if (self.translate_line(c.start_offset) - self.cur_line.get()) > 1 {
                         self.new_line(None);
                     }
