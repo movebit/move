@@ -166,7 +166,6 @@ impl Format {
     fn format_token_trees_(&self, token: &TokenTree, next_token: Option<&TokenTree>) {
         match token {
             TokenTree::Nested { elements, kind } => {
-                self.inc_depth();
                 const MAX: usize = 30;
                 let length = self.analyze_token_tree_length(elements, MAX);
                 let (delimiter, has_colon) = Self::analyze_token_tree_delimiter(elements);
@@ -185,6 +184,7 @@ impl Format {
                 };
 
                 self.format_token_trees_(&kind.start_token_tree(), None);
+                self.inc_depth();
                 if new_line_mode {
                     self.new_line(Some(kind.start_pos));
                 }
