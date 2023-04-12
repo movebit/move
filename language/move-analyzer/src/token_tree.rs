@@ -109,7 +109,11 @@ pub enum TokenTree {
 impl TokenTree {
     pub(crate) fn end_pos(&self) -> u32 {
         match self {
-            TokenTree::SimpleToken { content, pos, tok: _ } => pos + (content.len() as u32),
+            TokenTree::SimpleToken {
+                content,
+                pos,
+                tok: _,
+            } => pos + (content.len() as u32),
             TokenTree::Nested { elements: _, kind } => kind.end_pos,
         }
     }

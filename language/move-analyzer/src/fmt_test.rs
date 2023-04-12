@@ -150,7 +150,6 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
                     format!("{}\n{}", msg, m)
                 ));
             }
-
             return Err(ret);
         }
     };
