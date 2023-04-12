@@ -49,10 +49,19 @@ fn xxx_chen() {
     ));
 }
 
+#[test]
+fn xxx_content() {
+    test_content(Path::new(s));
+}
+
 fn test_on_file(p: impl AsRef<Path>) {
     let p = p.as_ref();
     eprintln!("try format:{:?}", p);
     let content_origin = std::fs::read_to_string(&p).unwrap();
+    test_content(p, content_origin);
+}
+
+fn test_content(p: &Path, content_origin: String) {
     {
         let mut env = CompilationEnv::new(Flags::testing());
         match parse_file_string(&mut env, FileHash::empty(), &content_origin) {
