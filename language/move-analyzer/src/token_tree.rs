@@ -26,12 +26,38 @@ pub struct NestKind {
     pub(crate) end_pos: u32,
 }
 
+impl NestKind {
+    pub(crate) fn start_token_tree(&self) -> TokenTree {
+        TokenTree::SimpleToken {
+            content: self.kind.start_tok().to_string(),
+            pos: self.start_pos,
+            tok: self.kind.start_tok(),
+        }
+    }
+
+    pub(crate) fn end_token_tree(&self) -> TokenTree {
+        TokenTree::SimpleToken {
+            content: self.kind.end_tok().to_string(),
+            pos: self.end_pos,
+            tok: self.kind.end_tok(),
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Delimiter {
     Semicolon,
     Comma,
 }
 
+impl Delimiter {
+    pub(crate) fn to_static_str(self) -> &'static str {
+        match self {
+            Delimiter::Semicolon => ";",
+            Delimiter::Comma => ",",
+        }
+    }
+}
 impl NestKind_ {
     pub(crate) fn is_nest_start(tok: Tok) -> Option<NestKind_> {
         match tok {
@@ -53,6 +79,7 @@ impl NestKind_ {
             NestKind_::Lambda => Tok::Pipe,
         }
     }
+
     pub(crate) fn end_tok(self) -> Tok {
         match self {
             NestKind_::ParentTheses => Tok::RParen,
@@ -79,11 +106,42 @@ pub enum TokenTree {
     },
 }
 
+impl TokenTree {
+    pub(crate) fn end_pos(&self) -> u32 {
+        match self {
+            TokenTree::SimpleToken { content, pos, tok: _ } => pos + (content.len() as u32),
+            TokenTree::Nested { elements: _, kind } => kind.end_pos,
+        }
+    }
+
+    pub(crate) fn is_pound(&self) -> bool {
+        match self {
+            TokenTree::SimpleToken { tok, .. } => *tok == Tok::NumSign,
+            TokenTree::Nested { .. } => false,
+        }
+    }
+
+    pub(crate) fn simple_str(&self) -> Option<&str> {
+        match self {
+            TokenTree::SimpleToken {
+                content,
+                pos: _,
+                tok: _,
+            } => Some(content.as_str()),
+            TokenTree::Nested {
+                elements: _,
+                kind: _,
+            } => None,
+        }
+    }
+}
+
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
     defs: &'a Vec<Definition>,
     type_lambda_pair: Vec<(u32, u32)>,
     type_lambda_pair_index: usize,
+    pub(crate) struct_definitions: Vec<(u32, u32)>,
 }
 
 impl<'a> Parser<'a> {
@@ -93,6 +151,7 @@ impl<'a> Parser<'a> {
             defs,
             type_lambda_pair: Default::default(),
             type_lambda_pair_index: 0,
+            struct_definitions: vec![],
         };
         x.collect_type_and_lambda_pair();
         x
@@ -251,7 +310,9 @@ impl<'a> Parser<'a> {
 
         fn collect_struct(p: &mut Parser, s: &StructDefinition) {
             p.type_lambda_pair.push((s.loc.start(), s.loc.end()));
+            p.struct_definitions.push((s.loc.start(), s.loc.end()));
         }
+
         fn collect_seq_item(p: &mut Parser, s: &SequenceItem) {
             match &s.value {
                 SequenceItem_::Seq(e) => collect_expr(p, &e),
@@ -485,6 +546,13 @@ pub struct Comment {
     pub(crate) content: String,
 }
 
+/// TODO more. doc comment etc.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum CommentKind {
+    InlineComment,
+    BlockComment,
+}
+
 impl Comment {
     /// format comment
     /// exampls `//   this is a comment` to `// this is a comment`,etc.
@@ -495,6 +563,13 @@ impl Comment {
         ) -> u32, // line number
     ) -> String {
         unimplemented!()
+    }
+    pub(crate) fn comment_kind(&self) -> CommentKind {
+        if self.content.starts_with("//") {
+            CommentKind::InlineComment
+        } else {
+            CommentKind::BlockComment
+        }
     }
 }
 /// A comment extractor ,extrat all comment from move file
@@ -598,6 +673,7 @@ impl CommentExtrator {
                         if *c != NEW_LINE {
                             comment.push(*c);
                         }
+
                         make_comment!();
                     } else {
                         comment.push(*c);
@@ -707,17 +783,5 @@ mod comment_test {
                 Err(x) => assert_eq!(x, *err),
             }
         }
-    }
-}
-
-pub(crate) fn need_space(current: Tok, next: Option<Tok>) -> bool {
-    if next.is_none() {
-        return false;
-    }
-    match (current, next.unwrap()) {
-        (Tok::Identifier, Tok::Identifier) => true,
-
-        (Tok::As, _) => true,
-        _ => false,
     }
 }

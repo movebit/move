@@ -2,7 +2,7 @@
 use std::cell::RefCell;
 
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
+
 use std::result::Result::*;
 
 use move_command_line_common::files::FileHash;
@@ -13,7 +13,7 @@ use move_compiler::shared::CompilationEnv;
 use move_compiler::Flags;
 use std::cell::Cell;
 
-use crate::token_tree::{Comment, CommentExtrator, Delimiter, TokenTree};
+use crate::token_tree::{Comment, CommentExtrator, CommentKind, Delimiter, NestKind_, TokenTree};
 use crate::utils::FileLineMapping;
 struct Format {
     config: FormatConfig,
@@ -22,8 +22,10 @@ struct Format {
     comments: Vec<Comment>,
     line_mapping: FileLineMapping,
     path: PathBuf,
-    comment_index: Cell<usize>,
+    comments_index: Cell<usize>,
     ret: RefCell<String>,
+    cur_line: Cell<u32>,
+    struct_definitions: Vec<(u32, u32)>,
 }
 
 pub struct FormatConfig {
@@ -37,9 +39,10 @@ impl Format {
         comments: CommentExtrator,
         line_mapping: FileLineMapping,
         path: PathBuf,
+        struct_definitions: Vec<(u32, u32)>,
     ) -> Self {
         Self {
-            comment_index: Default::default(),
+            comments_index: Default::default(),
             config,
             depth: Default::default(),
             token_tree,
@@ -47,9 +50,209 @@ impl Format {
             line_mapping,
             path,
             ret: Default::default(),
+            cur_line: Default::default(),
+            struct_definitions,
         }
     }
 
+    pub fn format_token_trees(self) -> String {
+        let length = self.token_tree.len();
+        let mut index = 0;
+        let mut pound_sign = None;
+        while index < length {
+            let t = self.token_tree.get(index).unwrap();
+            if t.is_pound() {
+                pound_sign = Some(index);
+            }
+            self.format_token_trees_(t, self.token_tree.get(index + 1));
+            if pound_sign.map(|x| (x + 1) == index).unwrap_or_default() {
+                self.new_line(Some(t.end_pos()));
+                pound_sign = None;
+            }
+            // top level
+            match t {
+                TokenTree::SimpleToken {
+                    content: _,
+                    pos: _,
+                    tok: _,
+                } => {}
+                TokenTree::Nested { elements: _, kind } => {
+                    if kind.kind == NestKind_::Brace {
+                        self.new_line(Some(t.end_pos()));
+                    }
+                }
+            }
+            index += 1;
+        }
+        self.ret.into_inner()
+    }
+
+    fn need_new_line(
+        kind: NestKind_,
+        delimitor: Option<Delimiter>,
+        _has_colon: bool,
+        current: &TokenTree,
+        next: Option<&TokenTree>,
+    ) -> bool {
+        //
+        if next.map(|x| x.simple_str()).flatten() == delimitor.map(|x| x.to_static_str()) {
+            return false;
+        }
+        let next_tok = next.map(|x| match x {
+            TokenTree::SimpleToken { content, pos, tok } => tok.clone(),
+            TokenTree::Nested { elements, kind } => kind.kind.start_tok(),
+        });
+
+        // special case for `}}`
+        if match current {
+            TokenTree::SimpleToken {
+                content: _,
+                pos: _,
+                tok: _,
+            } => false,
+            TokenTree::Nested { elements: _, kind } => kind.kind == NestKind_::Brace,
+        } && kind == NestKind_::Brace
+            && match next_tok {
+                Some(x) => match x {
+                    Tok::Friend
+                    | Tok::Const
+                    | Tok::Fun
+                    | Tok::While
+                    | Tok::Use
+                    | Tok::Struct
+                    | Tok::Spec
+                    | Tok::Return
+                    | Tok::Public
+                    | Tok::Native
+                    | Tok::Move
+                    | Tok::Module
+                    | Tok::Loop => true,
+                    _ => false,
+                },
+                None => true,
+            }
+        {
+            return true;
+        }
+        false
+    }
+
+    fn format_token_trees_(&self, token: &TokenTree, next_token: Option<&TokenTree>) {
+        match token {
+            TokenTree::Nested { elements, kind } => {
+                self.inc_depth();
+                const MAX: usize = 30;
+                let length = self.analyzer_token_tree_length(elements, MAX);
+                let new_line_mode = {
+                    // more rules.
+                    let nested_in_struct_definition = self
+                        .struct_definitions
+                        .iter()
+                        .any(|x| kind.start_pos >= x.0 && kind.end_pos <= x.1)
+                        && kind.kind == NestKind_::Brace;
+                    length > MAX || nested_in_struct_definition
+                };
+                let (delimiter, has_colon) = Self::analyzer_token_tree_delimiter(elements);
+                self.format_token_trees_(&kind.start_token_tree(), None);
+                if new_line_mode {
+                    self.new_line(Some(kind.start_pos));
+                }
+                let mut pound_sign = None;
+                let len = elements.len();
+                for index in 0..len {
+                    let t = elements.get(index).unwrap();
+                    if t.is_pound() {
+                        pound_sign = Some(index)
+                    }
+                    let next_t = elements.get(index + 1);
+                    self.format_token_trees_(t, elements.get(index + 1));
+                    if pound_sign.map(|x| (x + 1) == index).unwrap_or_default() {
+                        self.new_line(Some(t.end_pos()));
+                        pound_sign = None;
+                        continue;
+                    }
+                    // need new line.
+                    if new_line_mode {
+                        let d = delimiter.map(|x| x.to_static_str());
+                        let t_str = t.simple_str();
+                        if (Self::need_new_line(kind.kind, delimiter, has_colon, t, next_t)
+                            || d == t_str)
+                            && index != len - 1
+                        {
+                            self.new_line(Some(t.end_pos()));
+                        }
+                    }
+                }
+                self.dec_depth();
+                if new_line_mode {
+                    self.new_line(Some(kind.end_pos));
+                }
+                self.format_token_trees_(&kind.end_token_tree(), None);
+            }
+
+            //Add to string
+            TokenTree::SimpleToken { content, pos, tok } => {
+                self.add_comments(*pos);
+                if (self.translate_line(*pos) - self.cur_line.get()) > 1 {
+                    self.new_line(None);
+                }
+                self.push_str(&content.as_str());
+                self.cur_line.set(self.translate_line(*pos));
+                if need_space_suffix(
+                    *tok,
+                    match next_token {
+                        Some(x) => match x {
+                            TokenTree::SimpleToken {
+                                content: _,
+                                pos: _,
+                                tok,
+                            } => Some(*tok),
+                            TokenTree::Nested {
+                                elements: _,
+                                kind: _,
+                            } => None,
+                        },
+                        None => None,
+                    },
+                ) {
+                    self.push_str(" ");
+                }
+            }
+        }
+    }
+
+    fn add_comments(&self, pos: u32) {
+        for c in &self.comments[self.comments_index.get()..] {
+            if c.start_offset < pos {
+                if (self.translate_line(c.start_offset) - self.cur_line.get()) > 1 {
+                    self.new_line(None);
+                }
+                self.push_str(c.content.as_str());
+                let kind = c.comment_kind();
+                match kind {
+                    CommentKind::InlineComment => {
+                        self.new_line(None);
+                    }
+                    CommentKind::BlockComment => {
+                        let end = c.start_offset + (c.content.len() as u32);
+                        let line_start = self.translate_line(c.start_offset);
+                        let line_end = self.translate_line(end);
+                        if line_start != line_end {
+                            self.new_line(None);
+                        }
+                    }
+                }
+                self.comments_index.set(self.comments_index.get() + 1);
+                self.cur_line
+                    .set(self.translate_line(c.start_offset + (c.content.len() as u32) - 1));
+            } else {
+                break;
+            }
+        }
+    }
+}
+
+impl Format {
     fn inc_depth(&self) {
         let old = self.depth.get();
         self.depth.set(old + 1);
@@ -57,160 +260,6 @@ impl Format {
     fn dec_depth(&self) {
         let old = self.depth.get();
         self.depth.set(old - 1);
-    }
-
-    pub fn format_token_trees(self) -> String {
-        let length = self.token_tree.len();
-        let mut index = 0;
-        let mut pound_sign = None;
-
-        while index < length {
-            let t = self.token_tree.get(index).unwrap();
-            match t {
-                TokenTree::SimpleToken { tok, .. } => {
-                    if *tok == Tok::NumSign {
-                        pound_sign = Some(index)
-                    }
-                }
-                TokenTree::Nested { .. } => {}
-            }
-            self.format_token_trees_(t, self.token_tree.get(index + 1));
-            if pound_sign.map(|x| (x + 1) == index).unwrap_or_default() {
-                //TODO new line here
-            }
-            index += 1;
-        }
-        self.ret.into_inner()
-    }
-
-    /// analyzer a `Nested` token tree.
-    fn analyzer_token_tree_delimiter(
-        token_tree: &Vec<TokenTree>,
-    ) -> (
-        Option<Delimiter>, // if this is a `Delimiter::Semicolon` we can know this is a function body or etc.
-        bool,              // has a `:`
-    ) {
-        let mut d = None;
-        let mut has_colon = false;
-        for t in token_tree.iter() {
-            match t {
-                TokenTree::SimpleToken {
-                    content,
-                    pos: _,
-                    tok: _,
-                } => match content.as_str() {
-                    ";" => {
-                        d = Some(Delimiter::Semicolon);
-                    }
-                    "," => {
-                        d = Some(Delimiter::Comma);
-                    }
-                    ":" => {
-                        has_colon = true;
-                    }
-                    _ => {}
-                },
-                TokenTree::Nested { .. } => {}
-            }
-        }
-        return (d, has_colon);
-    }
-
-    /// analyzer How long is list of token_tree
-    fn analyzer_token_tree_length(token_tree: &Vec<TokenTree>) -> usize {
-        let mut ret = usize::default();
-        fn analyzer_token_tree_length_(ret: &mut usize, token_tree: &TokenTree) {
-            match token_tree {
-                TokenTree::SimpleToken { content, .. } => {
-                    *ret = *ret + content.len();
-                }
-                TokenTree::Nested { elements, .. } => {
-                    for t in elements.iter() {
-                        analyzer_token_tree_length_(ret, t);
-                    }
-                    *ret = *ret + 2; // for delimiter.
-                }
-            }
-        }
-        for t in token_tree.iter() {
-            analyzer_token_tree_length_(&mut ret, t);
-        }
-        ret
-    }
-
-    fn format_token_trees_(&self, token: &TokenTree, next_token: Option<&TokenTree>) {
-        match token {
-            //Iter Nested
-            TokenTree::Nested { elements, kind } => {
-                //Add comment
-                self.inc_depth();
-                for temp_comment in &self.comments[self.comment_index.get()..] {
-                    if temp_comment.start_offset < kind.start_pos {
-                        self.push_str(temp_comment.content.as_str());
-                        //TODO: Change line in different system
-                        self.push_str("\n");
-                        self.indent();
-                        self.comment_index.set(self.comment_index.get() + 1);
-                    } else {
-                        break;
-                    }
-                }
-                let length = Self::analyzer_token_tree_length(elements);
-                let (delimiter, has_colon) = Self::analyzer_token_tree_delimiter(elements);
-
-                self.push_str(kind.kind.start_tok().to_string().as_str());
-                self.inc_depth();
-                //Iter
-                for i in 0..elements.len() {
-                    let t = elements.get(i).unwrap();
-                    let _next_t = elements.get(i + 1);
-
-                    self.format_token_trees_(t, elements.get(i + 1));
-
-                }
-                self.dec_depth();
-                self.push_str(kind.kind.end_tok().to_string().as_str());
-
-                //Add signer
-            }
-            //Add to string
-            TokenTree::SimpleToken { content, pos, tok } => {
-                //Add comment
-                for temp_comment in &self.comments[self.comment_index.get()..] {
-                    if temp_comment.start_offset < *pos {
-                        self.push_str(temp_comment.content.as_str());
-                        //TODO: Change line in different system
-                        self.push_str("\n");
-                        self.indent();
-                        self.comment_index.set(self.comment_index.get() + 1);
-                    } else {
-                        break;
-                    }
-                }
-
-                //Push simpletoken
-                self.push_str(&content.as_str());
-
-                // Check Token Type and React
-                match next_token {
-                    None => {}
-                    Some(temp_token) => match tok {
-                        _ => match temp_token {
-                            TokenTree::SimpleToken {
-                                content: _,
-                                pos: _,
-                                tok: temp_tok,
-                            } => {
-                                if (need_space_suffix(*tok, temp_tok.clone())) {
-                                    self.push_str(" ");
-                                }
-                            }
-                            TokenTree::Nested { elements, kind } => {}
-                        },
-                    },
-                }
-            }
-        }
     }
     fn push_str(&self, s: &str) {
         self.ret.borrow_mut().push_str(s);
@@ -234,6 +283,113 @@ impl Format {
             .unwrap()
             .line_start
     }
+
+    /// analyzer a `Nested` token tree.
+    fn analyzer_token_tree_delimiter(
+        token_tree: &Vec<TokenTree>,
+    ) -> (
+        Option<Delimiter>, // if this is a `Delimiter::Semicolon` we can know this is a function body or etc.
+        bool,              // has a `:`
+    ) {
+        let mut d = None;
+        let mut has_colon = false;
+        for t in token_tree.iter() {
+            match t {
+                TokenTree::SimpleToken {
+                    content,
+                    pos: _,
+                    tok: _,
+                } => match content.as_str() {
+                    ";" => {
+                        d = Some(Delimiter::Semicolon);
+                    }
+                    "," => {
+                        if d.is_none() {
+                            // Somehow `;` has high priority.
+                            d = Some(Delimiter::Comma);
+                        }
+                    }
+                    ":" => {
+                        has_colon = true;
+                    }
+                    _ => {}
+                },
+                TokenTree::Nested { .. } => {}
+            }
+        }
+        return (d, has_colon);
+    }
+
+    /// analyzer How long is list of token_tree
+    fn analyzer_token_tree_length(&self, token_tree: &Vec<TokenTree>, max: usize) -> usize {
+        let mut ret = usize::default();
+        fn analyzer_token_tree_length_(ret: &mut usize, token_tree: &TokenTree, max: usize) {
+            match token_tree {
+                TokenTree::SimpleToken { content, .. } => {
+                    *ret = *ret + content.len();
+                }
+                TokenTree::Nested { elements, .. } => {
+                    for t in elements.iter() {
+                        analyzer_token_tree_length_(ret, t, max);
+                        if *ret > max {
+                            return;
+                        }
+                    }
+                    *ret = *ret + 2; // for delimiter.
+                }
+            }
+        }
+        for t in token_tree.iter() {
+            analyzer_token_tree_length_(&mut ret, t, max);
+            if ret > max {
+                return ret;
+            }
+        }
+        ret
+    }
+
+    fn new_line(&self, add_line_comment: Option<u32>) {
+        if let Some(add_line_comment) = add_line_comment {
+            // emit same line comments.
+            let cur_line = self.cur_line.get();
+            let mut call_new_line = false;
+            for c in &self.comments[self.comments_index.get()..] {
+                if self.translate_line(add_line_comment) == self.translate_line(c.start_offset) {
+                    if (self.translate_line(c.start_offset) - self.cur_line.get()) > 1 {
+                        self.new_line(None);
+                    }
+                    self.push_str(c.content.as_str());
+                    let kind = c.comment_kind();
+                    match kind {
+                        CommentKind::InlineComment => {
+                            self.new_line(None);
+                            call_new_line = true;
+                        }
+                        CommentKind::BlockComment => {
+                            let end = c.start_offset + (c.content.len() as u32);
+                            let line_start = self.translate_line(c.start_offset);
+                            let line_end = self.translate_line(end);
+                            if line_start != line_end {
+                                self.new_line(None);
+                                call_new_line = true;
+                            }
+                        }
+                    }
+                    self.comments_index.set(self.comments_index.get() + 1);
+                    self.cur_line
+                        .set(self.translate_line(c.start_offset + (c.content.len() as u32) - 1));
+                } else {
+                    break;
+                }
+            }
+            if cur_line != self.cur_line.get() || call_new_line {
+                return;
+            }
+        }
+
+        self.push_str("\n");
+        self.indent();
+    }
 }
 
 pub fn format(p: impl AsRef<Path>, config: FormatConfig) -> Result<String, Diagnostics> {
@@ -248,12 +404,23 @@ pub fn format(p: impl AsRef<Path>, config: FormatConfig) -> Result<String, Diagn
     let ce = CommentExtrator::new(content.as_str()).unwrap();
     let mut t = FileLineMapping::default();
     t.update(p.to_path_buf(), &content);
-    let f = Format::new(config, token_tree, ce, t, p.to_path_buf());
+    let f = Format::new(
+        config,
+        token_tree,
+        ce,
+        t,
+        p.to_path_buf(),
+        // TODO don't use clone
+        parse.struct_definitions.clone(),
+    );
     Ok(f.format_token_trees())
 }
 
-pub(crate) fn need_space_suffix(current: Tok, next: Tok) -> bool {
-    return match (TokType::from(current), TokType::from(next)) {
+pub(crate) fn need_space_suffix(current: Tok, next: Option<Tok>) -> bool {
+    if next.is_none() {
+        return false;
+    }
+    return match (TokType::from(current), TokType::from(next.unwrap())) {
         (TokType::Alphabet, TokType::Alphabet) => true,
         (TokType::MathSign, _) => true,
         (TokType::Sign, TokType::Alphabet) => true,
@@ -293,7 +460,7 @@ pub(crate) fn need_space_suffix(current: Tok, next: Tok) -> bool {
                 Tok::Exclaim => TokType::Sign,
                 Tok::ExclaimEqual => TokType::MathSign,
                 Tok::Percent => TokType::MathSign,
-                Tok::Amp => TokType::NoNeedSpace,
+                Tok::Amp => TokType::Amp,
                 Tok::AmpAmp => TokType::MathSign,
                 Tok::LParen => TokType::Sign,
                 Tok::RParen => TokType::Sign,
