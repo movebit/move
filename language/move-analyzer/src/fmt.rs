@@ -458,7 +458,10 @@ pub(crate) fn need_space_suffix(current: Tok, next: Option<Tok>) -> bool {
     return match (TokType::from(current), TokType::from(next.unwrap())) {
         (TokType::Alphabet, TokType::Alphabet) => true,
         (TokType::MathSign, _) => true,
+        (TokType::Sign, TokType::Alphabet) => true,
         (_, TokType::MathSign) => true,
+        (_, TokType::Amp) => true,
+        (TokType::Colon, _) => true,
         _ => false,
     };
 
@@ -475,10 +478,12 @@ pub(crate) fn need_space_suffix(current: Tok, next: Option<Tok>) -> bool {
         Number,
         /// b"hello world"
         String,
-        /// &mut
-        AmpMut,
+        /// & and &mut
+        Amp,
         ///
         Semicolon,
+        ///:
+        Colon,
     }
     impl From<Tok> for TokType {
         fn from(value: Tok) -> Self {
@@ -490,7 +495,7 @@ pub(crate) fn need_space_suffix(current: Tok, next: Option<Tok>) -> bool {
                 Tok::Exclaim => TokType::Sign,
                 Tok::ExclaimEqual => TokType::MathSign,
                 Tok::Percent => TokType::MathSign,
-                Tok::Amp => TokType::NoNeedSpace,
+                Tok::Amp => TokType::Amp,
                 Tok::AmpAmp => TokType::MathSign,
                 Tok::LParen => TokType::Sign,
                 Tok::RParen => TokType::Sign,
@@ -503,7 +508,7 @@ pub(crate) fn need_space_suffix(current: Tok, next: Option<Tok>) -> bool {
                 Tok::Period => TokType::NoNeedSpace,
                 Tok::PeriodPeriod => TokType::NoNeedSpace,
                 Tok::Slash => TokType::Sign,
-                Tok::Colon => TokType::Sign,
+                Tok::Colon => TokType::Colon,
                 Tok::ColonColon => TokType::NoNeedSpace,
                 Tok::Semicolon => TokType::Semicolon,
                 Tok::Less => TokType::MathSign,
@@ -522,7 +527,7 @@ pub(crate) fn need_space_suffix(current: Tok, next: Option<Tok>) -> bool {
                 Tok::RBrace => TokType::Sign,
                 Tok::NumSign => TokType::Sign,
                 Tok::AtSign => TokType::Sign,
-                Tok::AmpMut => TokType::AmpMut,
+                Tok::AmpMut => TokType::Amp,
                 _ => TokType::Alphabet,
             }
         }
