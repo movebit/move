@@ -149,6 +149,7 @@ impl Format {
                         self.push_str(temp_comment.content.as_str());
                         //TODO: Change line in different system
                         self.push_str("\n");
+                        self.indent();
                         self.comment_index.set(self.comment_index.get() + 1);
                     } else {
                         break;
@@ -156,14 +157,20 @@ impl Format {
                 }
                 let length = Self::analyzer_token_tree_length(elements);
                 let (delimiter, has_colon) = Self::analyzer_token_tree_delimiter(elements);
+
                 self.push_str(kind.kind.start_tok().to_string().as_str());
+                self.inc_depth();
                 //Iter
                 for i in 0..elements.len() {
                     let t = elements.get(i).unwrap();
                     let _next_t = elements.get(i + 1);
+
                     self.format_token_trees_(t, elements.get(i + 1));
+
                 }
-                self.push_str(kind.kind.end_tok().to_string().as_str())
+                self.dec_depth();
+                self.push_str(kind.kind.end_tok().to_string().as_str());
+
                 //Add signer
             }
             //Add to string
@@ -249,63 +256,11 @@ pub(crate) fn need_space_suffix(current: Tok, next: Tok) -> bool {
     return match (TokType::from(current), TokType::from(next)) {
         (TokType::Alphabet, TokType::Alphabet) => true,
         (TokType::MathSign, _) => true,
+        (TokType::Sign, TokType::Alphabet) => true,
         (_, TokType::MathSign) => true,
         (_, TokType::Amp) => true,
-        (TokType::Sign, TokType::Alphabet) => true,
-        (TokType::Alphabet, TokType::Number) => true,
-        (TokType::Alphabet, TokType::MathSign) => todo!(),
-        (TokType::Alphabet, TokType::Sign) => todo!(),
-        (TokType::Alphabet, TokType::NoNeedSpace) => todo!(),
-        (TokType::Alphabet, TokType::String) => todo!(),
-        (TokType::Alphabet, TokType::Amp) => todo!(),
-        (TokType::Alphabet, TokType::Semicolon) => todo!(),
-        (TokType::Sign, TokType::MathSign) => todo!(),
-        (TokType::Sign, TokType::Sign) => todo!(),
-        (TokType::Sign, TokType::NoNeedSpace) => todo!(),
-        (TokType::Sign, TokType::Number) => todo!(),
-        (TokType::Sign, TokType::String) => todo!(),
-        (TokType::Sign, TokType::Amp) => todo!(),
-        (TokType::Sign, TokType::Semicolon) => todo!(),
-        (TokType::NoNeedSpace, TokType::Alphabet) => todo!(),
-        (TokType::NoNeedSpace, TokType::MathSign) => todo!(),
-        (TokType::NoNeedSpace, TokType::Sign) => todo!(),
-        (TokType::NoNeedSpace, TokType::NoNeedSpace) => todo!(),
-        (TokType::NoNeedSpace, TokType::Number) => todo!(),
-        (TokType::NoNeedSpace, TokType::String) => todo!(),
-        (TokType::NoNeedSpace, TokType::Amp) => todo!(),
-        (TokType::NoNeedSpace, TokType::Semicolon) => todo!(),
-        (TokType::Number, TokType::Alphabet) => todo!(),
-        (TokType::Number, TokType::MathSign) => todo!(),
-        (TokType::Number, TokType::Sign) => todo!(),
-        (TokType::Number, TokType::NoNeedSpace) => todo!(),
-        (TokType::Number, TokType::Number) => todo!(),
-        (TokType::Number, TokType::String) => todo!(),
-        (TokType::Number, TokType::Amp) => todo!(),
-        (TokType::Number, TokType::Semicolon) => todo!(),
-        (TokType::String, TokType::Alphabet) => todo!(),
-        (TokType::String, TokType::MathSign) => todo!(),
-        (TokType::String, TokType::Sign) => todo!(),
-        (TokType::String, TokType::NoNeedSpace) => todo!(),
-        (TokType::String, TokType::Number) => todo!(),
-        (TokType::String, TokType::String) => todo!(),
-        (TokType::String, TokType::Amp) => todo!(),
-        (TokType::String, TokType::Semicolon) => todo!(),
-        (TokType::Amp, TokType::Alphabet) => todo!(),
-        (TokType::Amp, TokType::MathSign) => todo!(),
-        (TokType::Amp, TokType::Sign) => todo!(),
-        (TokType::Amp, TokType::NoNeedSpace) => todo!(),
-        (TokType::Amp, TokType::Number) => todo!(),
-        (TokType::Amp, TokType::String) => todo!(),
-        (TokType::Amp, TokType::Amp) => todo!(),
-        (TokType::Amp, TokType::Semicolon) => todo!(),
-        (TokType::Semicolon, TokType::Alphabet) => todo!(),
-        (TokType::Semicolon, TokType::MathSign) => todo!(),
-        (TokType::Semicolon, TokType::Sign) => todo!(),
-        (TokType::Semicolon, TokType::NoNeedSpace) => todo!(),
-        (TokType::Semicolon, TokType::Number) => todo!(),
-        (TokType::Semicolon, TokType::String) => todo!(),
-        (TokType::Semicolon, TokType::Amp) => todo!(),
-        (TokType::Semicolon, TokType::Semicolon) => todo!(),
+        (TokType::Colon, _) => true,
+        _ => false,
     };
 
     pub enum TokType {
@@ -325,6 +280,8 @@ pub(crate) fn need_space_suffix(current: Tok, next: Tok) -> bool {
         Amp,
         ///
         Semicolon,
+        ///:
+        Colon,
     }
     impl From<Tok> for TokType {
         fn from(value: Tok) -> Self {
@@ -349,7 +306,7 @@ pub(crate) fn need_space_suffix(current: Tok, next: Tok) -> bool {
                 Tok::Period => TokType::NoNeedSpace,
                 Tok::PeriodPeriod => TokType::NoNeedSpace,
                 Tok::Slash => TokType::Sign,
-                Tok::Colon => TokType::Sign,
+                Tok::Colon => TokType::Colon,
                 Tok::ColonColon => TokType::NoNeedSpace,
                 Tok::Semicolon => TokType::Semicolon,
                 Tok::Less => TokType::MathSign,
