@@ -12,7 +12,9 @@ import * as Path from 'path';
  * This provides a more strongly typed interface to the configuration values specified in this
  * extension's `package.json`, under the key `"contributes.configuration.properties"`.
  */
-export class Configuration {
+
+
+class Configuration {
     private readonly configuration: vscode.WorkspaceConfiguration;
 
     constructor() {
@@ -48,7 +50,28 @@ export class Configuration {
         if (process.platform === 'win32' && !serverPath.endsWith('.exe')) {
             serverPath = serverPath + '.exe';
         }
-
         return Path.resolve(serverPath);
     }
+    inlay_hints_config(): InlayHintsConfig {
+        const p = this.configuration.get<boolean>('inlay.hints.parameter');
+        const ft = this.configuration.get<boolean>('inlay.hints.field.type');
+        const dv = this.configuration.get<boolean>('inlay.hints.declare.var');
+        return new InlayHintsConfig(ft ? ft : false, p ? p : false, dv ? dv : false);
+    }
 }
+
+class InlayHintsConfig {
+    field_type: boolean;
+    parameter: boolean;
+    declare_var: boolean;
+    constructor(fieldType: boolean,
+        parameter: boolean,
+        declareVar: boolean,) {
+        this.field_type = fieldType;
+        this.parameter = parameter;
+        this.declare_var = declareVar;
+    }
+}
+
+
+export { Configuration, InlayHintsConfig };

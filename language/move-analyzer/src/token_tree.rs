@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
+use std::collections::HashSet;
 
-use im::{HashMap, HashSet};
 use move_compiler::parser::ast::Definition;
 use move_compiler::parser::ast::*;
 use move_compiler::parser::lexer::{Lexer, Tok};
@@ -146,8 +146,9 @@ pub struct Parser<'a> {
     defs: &'a Vec<Definition>,
     type_lambda_pair: Vec<(u32, u32)>,
     type_lambda_pair_index: usize,
-    pub(crate) struct_definitions: Vec<(u32, u32)>,
-    pub(crate) bin_op: HashSet<u32>,
+    struct_definitions: Vec<(u32, u32)>,
+    bin_op: HashSet<u32>,
+    fun_body: HashSet<(u32, u32)>,
 }
 
 impl<'a> Parser<'a> {
@@ -159,14 +160,22 @@ impl<'a> Parser<'a> {
             type_lambda_pair_index: 0,
             struct_definitions: vec![],
             bin_op: Default::default(),
+            fun_body: Default::default(),
         };
-        x.collect_type_and_lambda_pair();
+        x.collect_various_information();
         x
     }
 }
 
+pub struct ParseResult {
+    pub(crate) token_tree: Vec<TokenTree>,
+    pub(crate) struct_definitions: Vec<(u32, u32)>,
+    pub(crate) bin_op: HashSet<u32>,
+    pub(crate) fun_body: HashSet<(u32, u32)>,
+}
+
 impl<'a> Parser<'a> {
-    pub(crate) fn parse_tokens(&mut self) -> Vec<TokenTree> {
+    pub(crate) fn parse_tokens(mut self) -> ParseResult {
         let mut ret = vec![];
         self.lexer.advance().unwrap();
         while self.lexer.peek() != Tok::EOF {
@@ -181,7 +190,19 @@ impl<'a> Parser<'a> {
             });
             self.lexer.advance().unwrap();
         }
-        ret
+        let Parser {
+            struct_definitions,
+            bin_op,
+            fun_body,
+            ..
+        } = self;
+
+        ParseResult {
+            token_tree: ret,
+            struct_definitions,
+            bin_op,
+            fun_body,
+        }
     }
 
     fn is_nest_start(&mut self) -> Option<NestKind_> {
@@ -263,8 +284,9 @@ impl<'a> Parser<'a> {
         }
     }
 }
+
 impl<'a> Parser<'a> {
-    fn collect_type_and_lambda_pair(&mut self) {
+    fn collect_various_information(&mut self) {
         for d in self.defs.iter() {
             collect_definition(self, d);
         }
@@ -309,7 +331,9 @@ impl<'a> Parser<'a> {
                     ModuleMember::Struct(x) => collect_struct(p, x),
                     ModuleMember::Use(_) => {}
                     ModuleMember::Friend(_) => {}
-                    ModuleMember::Constant(_) => {}
+                    ModuleMember::Constant(x) => {
+                        collect_const(p, x);
+                    }
                     ModuleMember::Spec(s) => collect_spec(p, s),
                 }
             }
@@ -521,6 +545,10 @@ impl<'a> Parser<'a> {
                 }
             }
         }
+        fn collect_const(p: &mut Parser, c: &Constant) {
+            collect_ty(p, &c.signature);
+            collect_expr(p, &c.value);
+        }
 
         fn collect_function(p: &mut Parser, d: &Function) {
             p.type_lambda_pair.push((
@@ -532,7 +560,10 @@ impl<'a> Parser<'a> {
             ));
 
             match &d.body.value {
-                FunctionBody_::Defined(s) => collect_seq(p, s),
+                FunctionBody_::Defined(s) => {
+                    p.fun_body.insert((d.body.loc.start(), d.body.loc.end()));
+                    collect_seq(p, s);
+                }
                 FunctionBody_::Native => {}
             }
         }
@@ -753,7 +784,7 @@ mod comment_test {
         let (defs, _) = parse_file_string(&mut env, filehash, content).unwrap();
         let lexer = Lexer::new(&content, filehash);
         let mut parse = Parser::new(lexer, &defs);
-        let token_tree = parse.parse_tokens();
+        let token_tree = parse.parse_tokens().token_tree;
         let s = serde_json::to_string(&token_tree).unwrap();
         // check this using some online json tool.
         eprintln!("json:{}", s);

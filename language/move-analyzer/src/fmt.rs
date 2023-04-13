@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use std::cell::RefCell;
 
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use std::result::Result::*;
@@ -13,7 +14,9 @@ use move_compiler::shared::CompilationEnv;
 use move_compiler::Flags;
 use std::cell::Cell;
 
-use crate::token_tree::{Comment, CommentExtrator, CommentKind, Delimiter, NestKind_, TokenTree};
+use crate::token_tree::{
+    Comment, CommentExtrator, CommentKind, Delimiter, NestKind_, ParseResult, TokenTree,
+};
 use crate::utils::FileLineMapping;
 struct Format {
     config: FormatConfig,
@@ -21,11 +24,13 @@ struct Format {
     token_tree: Vec<TokenTree>,
     comments: Vec<Comment>,
     line_mapping: FileLineMapping,
-    path: PathBuf,
+
     comments_index: Cell<usize>,
     ret: RefCell<String>,
     cur_line: Cell<u32>,
     struct_definitions: Vec<(u32, u32)>,
+    fun_body: HashSet<(u32, u32)>,
+    bin_op: HashSet<u32>,
 }
 
 pub struct FormatConfig {
@@ -35,12 +40,16 @@ pub struct FormatConfig {
 impl Format {
     fn new(
         config: FormatConfig,
-        token_tree: Vec<TokenTree>,
         comments: CommentExtrator,
         line_mapping: FileLineMapping,
-        path: PathBuf,
-        struct_definitions: Vec<(u32, u32)>,
+        p: ParseResult,
     ) -> Self {
+        let ParseResult {
+            token_tree,
+            struct_definitions,
+            bin_op,
+            fun_body,
+        } = p;
         Self {
             comments_index: Default::default(),
             config,
@@ -48,10 +57,11 @@ impl Format {
             token_tree,
             comments: comments.comments,
             line_mapping,
-            path,
             ret: Default::default(),
             cur_line: Default::default(),
             struct_definitions,
+            fun_body,
+            bin_op,
         }
     }
 
@@ -169,20 +179,35 @@ impl Format {
                 const MAX: usize = 30;
                 let length = self.analyze_token_tree_length(elements, MAX);
                 let (delimiter, has_colon) = Self::analyze_token_tree_delimiter(elements);
-                let new_line_mode = {
+                let mut new_line_mode = {
                     // more rules.
                     let nested_in_struct_definition = self
                         .struct_definitions
                         .iter()
                         .any(|x| kind.start_pos >= x.0 && kind.end_pos <= x.1)
                         && kind.kind == NestKind_::Brace;
+
+                    let fun_body = self.fun_body.contains(&(kind.start_pos, kind.end_pos))
+                        && kind.kind == NestKind_::Brace;
+
                     length > MAX
                         || delimiter
                             .map(|x| x == Delimiter::Semicolon)
                             .unwrap_or_default()
                         || nested_in_struct_definition
+                        || fun_body
                 };
-
+                match kind.kind {
+                    NestKind_::ParentTheses
+                    | NestKind_::Bracket
+                    | NestKind_::Type
+                    | NestKind_::Lambda => {
+                        if delimiter.is_none() {
+                            new_line_mode = false;
+                        }
+                    }
+                    NestKind_::Brace => {}
+                }
                 self.format_token_trees_(&kind.start_token_tree(), None);
                 self.inc_depth();
                 if new_line_mode {
@@ -324,6 +349,11 @@ impl Format {
 }
 
 impl Format {
+    /// if a bin operation is actual a binary operation.
+    /// like `&`,`*`.
+    fn bin_is_bin(&self, pos: u32) -> bool {
+        self.bin_op.contains(&pos)
+    }
     fn inc_depth(&self) {
         let old = self.depth.get();
         self.depth.set(old + 1);
@@ -360,8 +390,9 @@ impl Format {
     }
 
     fn translate_line(&self, pos: u32) -> u32 {
+        let p: PathBuf = Path::new(".").to_path_buf();
         self.line_mapping
-            .translate(&self.path, pos, pos)
+            .translate(&p, pos, pos)
             .unwrap()
             .line_start
     }
@@ -480,27 +511,18 @@ impl Format {
     }
 }
 
-pub fn format(p: impl AsRef<Path>, config: FormatConfig) -> Result<String, Diagnostics> {
-    let p = p.as_ref();
-    let content = std::fs::read_to_string(p).unwrap();
+pub fn format(content: impl AsRef<str>, config: FormatConfig) -> Result<String, Diagnostics> {
+    let content = content.as_ref();
     let mut env = CompilationEnv::new(Flags::testing());
     let filehash = FileHash::empty();
     let (defs, _) = parse_file_string(&mut env, filehash, &content)?;
     let lexer = Lexer::new(&content, filehash);
-    let mut parse = super::token_tree::Parser::new(lexer, &defs);
-    let token_tree = parse.parse_tokens();
-    let ce = CommentExtrator::new(content.as_str()).unwrap();
+    let parse = super::token_tree::Parser::new(lexer, &defs);
+    let parse_result = parse.parse_tokens();
+    let ce = CommentExtrator::new(content).unwrap();
     let mut t = FileLineMapping::default();
-    t.update(p.to_path_buf(), &content);
-    let f = Format::new(
-        config,
-        token_tree,
-        ce,
-        t,
-        p.to_path_buf(),
-        // TODO don't use clone
-        parse.struct_definitions.clone(),
-    );
+    t.update(Path::new(".").to_path_buf(), &content);
+    let f = Format::new(config, ce, t, parse_result);
     Ok(f.format_token_trees())
 }
 
