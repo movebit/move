@@ -466,6 +466,7 @@ pub(crate) fn need_space_suffix(current: Tok, next: Option<Tok>) -> bool {
         (TokType::Sign, TokType::Alphabet) => true,
         (_, TokType::MathSign) => true,
         (_, TokType::Amp) => true,
+        (_, TokType::AmpMut) => true,
         (TokType::Colon, _) => true,
         _ => false,
     };
@@ -483,7 +484,7 @@ pub(crate) fn need_space_suffix(current: Tok, next: Option<Tok>) -> bool {
         Number,
         /// b"hello world"
         String,
-        /// & 
+        /// &
         Amp,
         /// &mut
         AmpMut,
