@@ -260,6 +260,9 @@ impl Format {
                 if (self.translate_line(c.start_offset) - self.cur_line.get()) > 1 {
                     self.new_line(None);
                 }
+                //TODO: If the comment is in the same line with the latest token
+                //1 don't change line
+                //2 if find \n move it after the comment
                 self.push_str(c.content.as_str());
                 let kind = c.comment_kind();
                 match kind {
@@ -274,6 +277,7 @@ impl Format {
                             self.new_line(None);
                         }
                     }
+                    CommentKind::DoubleDashInlineComment => {}
                 }
                 self.comments_index.set(self.comments_index.get() + 1);
                 self.cur_line
@@ -409,6 +413,7 @@ impl Format {
                                 call_new_line = true;
                             }
                         }
+                        CommentKind::DoubleDashInlineComment => {}
                     }
                     self.comments_index.set(self.comments_index.get() + 1);
                     self.cur_line
@@ -478,8 +483,10 @@ pub(crate) fn need_space_suffix(current: Tok, next: Option<Tok>) -> bool {
         Number,
         /// b"hello world"
         String,
-        /// & and &mut
+        /// & 
         Amp,
+        /// &mut
+        AmpMut,
         ///
         Semicolon,
         ///:

@@ -553,7 +553,11 @@ pub struct Comment {
 /// TODO more. doc comment etc.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum CommentKind {
+    /// "//"
+    DoubleDashInlineComment,
+    /// "///"
     InlineComment,
+    /// "/**/"
     BlockComment,
 }
 
@@ -590,7 +594,9 @@ pub enum ExtratorCommentState {
     Init,
     /// `/` has been seen,maybe a comment.
     OneSlash,
-    /// `//` has been seen,inline comment.
+    /// `//` has been seen, maybe doubledash inline comment or tripledash inline comment.
+    DoubleDashInlineComment,
+    /// `///` has been seen,inline comment.
     InlineComment,
     /// `/*` has been seen,block comment.
     BlockComment,
@@ -643,7 +649,7 @@ impl CommentExtrator {
                 },
                 ExtratorCommentState::OneSlash => {
                     if *c == SLASH {
-                        state = ExtratorCommentState::InlineComment;
+                        state = ExtratorCommentState::DoubleDashInlineComment;
                         comment.push(SLASH);
                         comment.push(SLASH);
                     } else if *c == STAR {
@@ -670,6 +676,20 @@ impl CommentExtrator {
                         comment.push(STAR);
                         comment.push(*c);
                         state = ExtratorCommentState::BlockComment;
+                    }
+                }
+                ExtratorCommentState::DoubleDashInlineComment => {
+                    if *c == SLASH {
+                        state = ExtratorCommentState::InlineComment;
+                        comment.push(SLASH);
+                    } else if *c == NEW_LINE || index == last_index {
+                        if *c != NEW_LINE {
+                            comment.push(*c);
+                        }
+
+                        make_comment!();
+                    } else {
+                        comment.push(*c);
                     }
                 }
                 ExtratorCommentState::InlineComment => {
