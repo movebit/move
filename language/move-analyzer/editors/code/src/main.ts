@@ -2,6 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+
 import { Configuration } from './configuration';
 import { Context } from './context';
 import { Extension } from './extension';
@@ -75,10 +76,14 @@ export async function activate(
 
 
   // send inlay hints 
-  const client = context.getClient();
-  if (client !== undefined) {
-    void client.sendRequest('move/lsp/client/inlay_hints/config', configuration.inlay_hints_config());
-  }
+  const reload_inlay_hints = function () {
+    const client = context.getClient();
+    if (client !== undefined) {
+      void client.sendRequest('move/lsp/client/inlay_hints/config', configuration.inlay_hints_config());
+    }
+  };
+  reload_inlay_hints();
+  vscode.workspace.onDidChangeConfiguration(() => { log.info("reload_inlay_hints ...  "); reload_inlay_hints(); });
 }
 
 

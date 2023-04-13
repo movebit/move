@@ -253,6 +253,7 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
         "move/lsp/client/inlay_hints/config" => {
             let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
                 .expect("could not deserialize inlay hints request");
+            eprintln!("call inlay_hints config {:?}", parameters);
             *inlay_hints_config = parameters;
         }
         _ => log::error!("handle request '{}' from client", request.method),
@@ -383,9 +384,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 }
             };
         }
-        lsp_types::notification::DidChangeConfiguration::METHOD => {
-            eprintln!("!!! {:?}", notification.params)
-        }
+
         _ => log::error!("handle notification '{}' from client", notification.method),
     }
 }

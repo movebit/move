@@ -410,7 +410,7 @@ fn ty_inlay_hints_label_parts_(
     };
 }
 
-#[derive(Clone, Copy, serde::Deserialize)]
+#[derive(Clone, Copy, serde::Deserialize, Debug)]
 pub struct InlayHintsConfig {
     field_type: bool,
     parameter: bool,
