@@ -75,24 +75,24 @@ fn test_on_file(p: impl AsRef<Path>) {
         }
     };
     for (t1, t2) in tokens_origin.iter().zip(tokens_format.iter()) {
-        // assert_eq!(
-        //     t1.content,
-        //     t2.content,
-        //     "format not ok,file:{:?} line:{} col:{},after format line:{} col:{}",
-        //     p,
-        //     // +1 in vscode UI line and col start with 1
-        //     t1.line + 1,
-        //     t1.col + 1,
-        //     t2.line + 1,
-        //     t2.col + 1,
-        // );
+        assert_eq!(
+            t1.content,
+            t2.content,
+            "format not ok,file:{:?} line:{} col:{},after format line:{} col:{}",
+            p,
+            // +1 in vscode UI line and col start with 1
+            t1.line + 1,
+            t1.col + 1,
+            t2.line + 1,
+            t2.col + 1,
+        );
     }
-    // assert_eq!(
-    //     tokens_origin.len(),
-    //     tokens_format.len(),
-    //     "{:?} tokens count should equal",
-    //     p
-    // );
+    assert_eq!(
+        tokens_origin.len(),
+        tokens_format.len(),
+        "{:?} tokens count should equal",
+        p
+    );
     let comments_origin = extract_comments(&content_origin).unwrap();
     let comments_format = extract_comments(&content_format).unwrap();
     for (index, (c1, c2)) in comments_origin
@@ -102,12 +102,12 @@ fn test_on_file(p: impl AsRef<Path>) {
     {
         assert_eq!(c1, c2, "comment {} not ok.", index);
     }
-    // assert_eq!(
-    //     comments_origin.len(),
-    //     comments_format.len(),
-    //     "{:?} comments count should equal",
-    //     p,
-    // );
+    assert_eq!(
+        comments_origin.len(),
+        comments_format.len(),
+        "{:?} comments count should equal",
+        p,
+    );
     eprintln!("{:?} format ok. \n{}\n", p, content_format);
 }
 #[derive(Clone, PartialEq, Eq, Debug)]

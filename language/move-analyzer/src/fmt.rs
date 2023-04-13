@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use std::cell::RefCell;
 
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use std::result::Result::*;
@@ -26,7 +27,8 @@ struct Format {
     ret: RefCell<String>,
     cur_line: Cell<u32>,
     struct_definitions: Vec<(u32, u32)>,
-    new_line_state: Cell<bool>,
+    fun_body: HashSet<(u32, u32)>,
+    bin_op: HashSet<u32>,
 }
 
 pub struct FormatConfig {
@@ -41,6 +43,8 @@ impl Format {
         line_mapping: FileLineMapping,
         path: PathBuf,
         struct_definitions: Vec<(u32, u32)>,
+        fun_body: HashSet<(u32, u32)>,
+        bin_op: HashSet<u32>,
     ) -> Self {
         Self {
             comments_index: Default::default(),
@@ -53,6 +57,8 @@ impl Format {
             ret: Default::default(),
             cur_line: Default::default(),
             struct_definitions,
+            fun_body,
+            bin_op,
         }
     }
 
@@ -171,7 +177,7 @@ impl Format {
                 const MAX: usize = 30;
                 let length = self.analyze_token_tree_length(elements, MAX);
                 let (delimiter, has_colon) = Self::analyze_token_tree_delimiter(elements);
-                let new_line_mode = {
+                let mut new_line_mode = {
                     // more rules.
                     let nested_in_struct_definition = self
                         .struct_definitions
@@ -184,7 +190,17 @@ impl Format {
                             .unwrap_or_default()
                         || nested_in_struct_definition
                 };
-
+                match kind.kind {
+                    NestKind_::ParentTheses
+                    | NestKind_::Bracket
+                    | NestKind_::Type
+                    | NestKind_::Lambda => {
+                        if delimiter.is_none() {
+                            new_line_mode = false;
+                        }
+                    }
+                    NestKind_::Brace => {}
+                }
                 self.format_token_trees_(&kind.start_token_tree(), None);
                 self.inc_depth();
                 if new_line_mode {
@@ -259,7 +275,7 @@ impl Format {
     fn add_comments(&self, pos: u32) {
         for c in &self.comments[self.comments_index.get()..] {
             if c.start_offset < pos {
-                if (self.translate_line(c.start_offset) - self.cur_line.get()) > 0 {
+                if (self.translate_line(c.start_offset) - self.cur_line.get()) > 1 {
                     self.new_line(None);
                 }
                 //TODO: If the comment is in the same line with the latest token
