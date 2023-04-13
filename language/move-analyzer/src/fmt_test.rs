@@ -62,9 +62,18 @@ fn test_on_file(p: impl AsRef<Path>) {
             }
         }
     }
-    let tokens_origin = extract_tokens(content_origin.as_str())
-        .expect("test file should be about to lexer,err:{:?}");
-    let content_format = super::fmt::format(p, FormatConfig { indent_size: 2 }).unwrap();
+    let content_origin = std::fs::read_to_string(p).unwrap();
+    test_content(content_origin.as_str(), p);
+}
+
+fn test_content(content_origin: &str, p: impl AsRef<Path>) {
+    let p = p.as_ref();
+
+    let tokens_origin =
+        extract_tokens(content_origin).expect("test file should be about to lexer,err:{:?}");
+
+    let content_format =
+        super::fmt::format(content_origin, FormatConfig { indent_size: 2 }).unwrap();
     let tokens_format = match extract_tokens(content_format.as_str()) {
         Ok(x) => x,
         Err(err) => {
@@ -110,6 +119,7 @@ fn test_on_file(p: impl AsRef<Path>) {
     );
     eprintln!("{:?} format ok. \n{}\n", p, content_format);
 }
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 struct ExtractToken {
     content: String,
@@ -156,7 +166,7 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
     let lexer = Lexer::new(&content, filehash);
     let mut ret = Vec::new();
     let mut parse = super::token_tree::Parser::new(lexer, &defs);
-    let token_tree = parse.parse_tokens();
+    let token_tree = parse.parse_tokens().token_tree;
     let mut line_mapping = FileLineMapping::default();
     line_mapping.update(p.to_path_buf(), &content);
     fn collect_token_tree(ret: &mut Vec<ExtractToken>, m: &FileLineMapping, t: &TokenTree) {
