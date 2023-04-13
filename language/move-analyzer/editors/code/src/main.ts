@@ -73,6 +73,12 @@ export async function activate(
   // Regist all the sui commands.
   Reg.regsui(context);
 
+
+  // send inlay hints 
+  const client = context.getClient();
+  if (client !== undefined) {
+    void client.sendRequest('move/lsp/client/inlay_hints/config', configuration.inlay_hints_config());
+  }
 }
 
 
