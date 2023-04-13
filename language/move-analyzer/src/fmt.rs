@@ -249,6 +249,25 @@ impl Format {
                     self.new_line(Some(kind.end_pos));
                 }
                 self.format_token_trees_(&kind.end_token_tree(), None);
+                if need_space_nested(
+                    kind.kind,
+                    match next_token {
+                        Some(x) => match x {
+                            TokenTree::SimpleToken {
+                                content: _,
+                                pos: _,
+                                tok,
+                            } => Some(*tok),
+                            TokenTree::Nested {
+                                elements: _,
+                                kind: _,
+                            } => None,
+                        },
+                        None => None,
+                    },
+                ) {
+                    self.push_str(" ");
+                }
             }
 
             //Add to string
@@ -259,7 +278,7 @@ impl Format {
                 }
                 self.push_str(&content.as_str());
                 self.cur_line.set(self.translate_line(*pos));
-                if need_space_suffix(
+                if need_space_simpletoken(
                     *tok,
                     match next_token {
                         Some(x) => match x {
@@ -294,7 +313,7 @@ impl Format {
                 self.push_str(c.content.as_str());
                 let kind = c.comment_kind();
                 match kind {
-                    CommentKind::InlineComment => {
+                    CommentKind::DocComment => {
                         self.new_line(None);
                     }
                     CommentKind::BlockComment => {
@@ -305,7 +324,7 @@ impl Format {
                             self.new_line(None);
                         }
                     }
-                    CommentKind::DoubleDashInlineComment => {}
+                    CommentKind::InlineComment => {}
                 }
                 self.comments_index.set(self.comments_index.get() + 1);
                 self.cur_line
@@ -428,7 +447,7 @@ impl Format {
                     self.push_str(c.content.as_str());
                     let kind = c.comment_kind();
                     match kind {
-                        CommentKind::InlineComment => {
+                        CommentKind::DocComment => {
                             self.new_line(None);
                             call_new_line = true;
                         }
@@ -441,7 +460,7 @@ impl Format {
                                 call_new_line = true;
                             }
                         }
-                        CommentKind::DoubleDashInlineComment => {}
+                        CommentKind::InlineComment => {}
                     }
                     self.comments_index.set(self.comments_index.get() + 1);
                     self.cur_line
@@ -475,7 +494,78 @@ pub fn format(content: impl AsRef<str>, config: FormatConfig) -> Result<String, 
     Ok(f.format_token_trees())
 }
 
-pub(crate) fn need_space_suffix(current: Tok, next: Option<Tok>) -> bool {
+pub enum TokType {
+    /// abc like token,
+    Alphabet,
+    /// + - ...
+    MathSign,
+    ///
+    Sign,
+    // specials no need space at all.
+    NoNeedSpace,
+    /// numbers 0x1 ...
+    Number,
+    /// b"hello world"
+    String,
+    /// &
+    Amp,
+    /// &mut
+    AmpMut,
+    ///
+    Semicolon,
+    ///:
+    Colon,
+}
+
+impl From<Tok> for TokType {
+    fn from(value: Tok) -> Self {
+        match value {
+            Tok::EOF => unreachable!(), // EOF not in `TokenTree`.
+            Tok::NumValue => TokType::Number,
+            Tok::NumTypedValue => TokType::Number,
+            Tok::ByteStringValue => TokType::String,
+            Tok::Exclaim => TokType::Sign,
+            Tok::ExclaimEqual => TokType::MathSign,
+            Tok::Percent => TokType::MathSign,
+            Tok::Amp => TokType::Amp,
+            Tok::AmpAmp => TokType::MathSign,
+            Tok::LParen => TokType::Sign,
+            Tok::RParen => TokType::Sign,
+            Tok::LBracket => TokType::Sign,
+            Tok::RBracket => TokType::Sign,
+            Tok::Star => TokType::MathSign,
+            Tok::Plus => TokType::MathSign,
+            Tok::Comma => TokType::Sign,
+            Tok::Minus => TokType::Sign,
+            Tok::Period => TokType::NoNeedSpace,
+            Tok::PeriodPeriod => TokType::NoNeedSpace,
+            Tok::Slash => TokType::Sign,
+            Tok::Colon => TokType::Colon,
+            Tok::ColonColon => TokType::NoNeedSpace,
+            Tok::Semicolon => TokType::Semicolon,
+            Tok::Less => TokType::MathSign,
+            Tok::LessEqual => TokType::MathSign,
+            Tok::LessLess => TokType::MathSign,
+            Tok::Equal => TokType::MathSign,
+            Tok::EqualEqual => TokType::MathSign,
+            Tok::EqualEqualGreater => TokType::MathSign,
+            Tok::LessEqualEqualGreater => TokType::MathSign,
+            Tok::Greater => TokType::MathSign,
+            Tok::GreaterEqual => TokType::MathSign,
+            Tok::GreaterGreater => TokType::MathSign,
+            Tok::LBrace => TokType::Sign,
+            Tok::Pipe => TokType::Sign,
+            Tok::PipePipe => TokType::Sign,
+            Tok::RBrace => TokType::Sign,
+            Tok::NumSign => TokType::Sign,
+            Tok::AtSign => TokType::Sign,
+            Tok::AmpMut => TokType::Amp,
+            _ => TokType::Alphabet,
+        }
+    }
+}
+
+pub(crate) fn need_space_simpletoken(current: Tok, next: Option<Tok>) -> bool {
     if next.is_none() {
         return false;
     }
@@ -490,74 +580,16 @@ pub(crate) fn need_space_suffix(current: Tok, next: Option<Tok>) -> bool {
         (TokType::Alphabet, TokType::Number) => true,
         _ => false,
     };
+}
 
-    pub enum TokType {
-        /// abc like token,
-        Alphabet,
-        /// + - ...
-        MathSign,
-        ///
-        Sign,
-        // specials no need space at all.
-        NoNeedSpace,
-        /// numbers 0x1 ...
-        Number,
-        /// b"hello world"
-        String,
-        /// &
-        Amp,
-        /// &mut
-        AmpMut,
-        ///
-        Semicolon,
-        ///:
-        Colon,
+pub(crate) fn need_space_nested(current: NestKind_, next: Option<Tok>) -> bool {
+    if next.is_none() {
+        return false;
     }
-    impl From<Tok> for TokType {
-        fn from(value: Tok) -> Self {
-            match value {
-                Tok::EOF => unreachable!(), // EOF not in `TokenTree`.
-                Tok::NumValue => TokType::Number,
-                Tok::NumTypedValue => TokType::Number,
-                Tok::ByteStringValue => TokType::String,
-                Tok::Exclaim => TokType::Sign,
-                Tok::ExclaimEqual => TokType::MathSign,
-                Tok::Percent => TokType::MathSign,
-                Tok::Amp => TokType::Amp,
-                Tok::AmpAmp => TokType::MathSign,
-                Tok::LParen => TokType::Sign,
-                Tok::RParen => TokType::Sign,
-                Tok::LBracket => TokType::Sign,
-                Tok::RBracket => TokType::Sign,
-                Tok::Star => TokType::MathSign,
-                Tok::Plus => TokType::MathSign,
-                Tok::Comma => TokType::Sign,
-                Tok::Minus => TokType::Sign,
-                Tok::Period => TokType::NoNeedSpace,
-                Tok::PeriodPeriod => TokType::NoNeedSpace,
-                Tok::Slash => TokType::Sign,
-                Tok::Colon => TokType::Colon,
-                Tok::ColonColon => TokType::NoNeedSpace,
-                Tok::Semicolon => TokType::Semicolon,
-                Tok::Less => TokType::MathSign,
-                Tok::LessEqual => TokType::MathSign,
-                Tok::LessLess => TokType::MathSign,
-                Tok::Equal => TokType::MathSign,
-                Tok::EqualEqual => TokType::MathSign,
-                Tok::EqualEqualGreater => TokType::MathSign,
-                Tok::LessEqualEqualGreater => TokType::MathSign,
-                Tok::Greater => TokType::MathSign,
-                Tok::GreaterEqual => TokType::MathSign,
-                Tok::GreaterGreater => TokType::MathSign,
-                Tok::LBrace => TokType::Sign,
-                Tok::Pipe => TokType::Sign,
-                Tok::PipePipe => TokType::Sign,
-                Tok::RBrace => TokType::Sign,
-                Tok::NumSign => TokType::Sign,
-                Tok::AtSign => TokType::Sign,
-                Tok::AmpMut => TokType::Amp,
-                _ => TokType::Alphabet,
-            }
-        }
-    }
+
+    return match (NestKind_::from(current), TokType::from(next.unwrap())) {
+        (_, TokType::MathSign) => true,
+        (NestKind_::Type, TokType::Alphabet) => true,
+        _ => false,
+    };
 }

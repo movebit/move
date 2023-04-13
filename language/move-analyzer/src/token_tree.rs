@@ -589,9 +589,9 @@ pub struct Comment {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum CommentKind {
     /// "//"
-    DoubleDashInlineComment,
-    /// "///"
     InlineComment,
+    /// "///"
+    DocComment,
     /// "/**/"
     BlockComment,
 }
@@ -609,7 +609,7 @@ impl Comment {
     }
     pub(crate) fn comment_kind(&self) -> CommentKind {
         if self.content.starts_with("//") {
-            CommentKind::InlineComment
+            CommentKind::DocComment
         } else {
             CommentKind::BlockComment
         }
