@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 
+use im::{HashMap, HashSet};
 use move_compiler::parser::ast::Definition;
 use move_compiler::parser::ast::*;
 use move_compiler::parser::lexer::{Lexer, Tok};
@@ -146,6 +147,7 @@ pub struct Parser<'a> {
     type_lambda_pair: Vec<(u32, u32)>,
     type_lambda_pair_index: usize,
     pub(crate) struct_definitions: Vec<(u32, u32)>,
+    pub(crate) bin_op: HashSet<u32>,
 }
 
 impl<'a> Parser<'a> {
@@ -156,6 +158,7 @@ impl<'a> Parser<'a> {
             type_lambda_pair: Default::default(),
             type_lambda_pair_index: 0,
             struct_definitions: vec![],
+            bin_op: Default::default(),
         };
         x.collect_type_and_lambda_pair();
         x
@@ -419,7 +422,8 @@ impl<'a> Parser<'a> {
                 Exp_::UnaryExp(_, e) => {
                     collect_expr(p, e.as_ref());
                 }
-                Exp_::BinopExp(l, _, r) => {
+                Exp_::BinopExp(l, op, r) => {
+                    p.bin_op.insert(op.loc.start());
                     collect_expr(p, l.as_ref());
                     collect_expr(p, r.as_ref());
                 }
