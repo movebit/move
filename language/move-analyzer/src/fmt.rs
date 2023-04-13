@@ -282,7 +282,11 @@ impl Format {
                 //TODO: If the comment is in the same line with the latest token
                 //1 don't change line
                 //2 if find \n move it after the comment
+                if (self.no_space_or_newline()) {
+                    self.push_str(" ");
+                }
                 self.push_str(c.content.as_str());
+
                 let kind = c.comment_kind();
                 match kind {
                     CommentKind::DocComment => {
@@ -292,11 +296,22 @@ impl Format {
                         let end = c.start_offset + (c.content.len() as u32);
                         let line_start = self.translate_line(c.start_offset);
                         let line_end = self.translate_line(end);
+
+                        self.push_str(" ");
                         if line_start != line_end {
                             self.new_line(None);
                         }
                     }
-                    CommentKind::InlineComment => {}
+                    CommentKind::InlineComment => {
+                        let end = c.start_offset + (c.content.len() as u32);
+                        let line_start = self.translate_line(c.start_offset);
+                        let line_end = self.translate_line(end);
+
+                        self.push_str(" ");
+                        if line_start != line_end {
+                            self.new_line(None);
+                        }
+                    }
                 }
                 self.comments_index.set(self.comments_index.get() + 1);
                 self.cur_line
@@ -322,6 +337,17 @@ impl Format {
     }
     fn push_string(&self, s: &String) {
         self.push_str(s.as_str());
+    }
+    fn no_space_or_newline(&self) -> bool {
+        if (self.ret.borrow().chars().last().is_some()) {
+            self.ret.borrow().chars().last().unwrap() != '\n'
+                && self.ret.borrow().chars().last().unwrap() != ' '
+        } else {
+            false
+        }
+    }
+    fn delete_last(&self) {
+        self.ret.borrow_mut().pop();
     }
 
     /// 缩进
@@ -410,11 +436,11 @@ impl Format {
             let cur_line = self.cur_line.get();
             let mut call_new_line = false;
             for c in &self.comments[self.comments_index.get()..] {
-                if self.translate_line(add_line_comment) == self.translate_line(c.start_offset)
-                    && c.start_offset < add_line_comment
-                {
+                if self.translate_line(add_line_comment) == self.translate_line(c.start_offset) {
                     if (self.translate_line(c.start_offset) - self.cur_line.get()) > 1 {
                         self.new_line(None);
+                    } else {
+                        self.push_str(" ");
                     }
                     self.push_str(c.content.as_str());
                     let kind = c.comment_kind();
@@ -432,7 +458,10 @@ impl Format {
                                 call_new_line = true;
                             }
                         }
-                        CommentKind::InlineComment => {}
+                        CommentKind::InlineComment => {
+                            self.new_line(None);
+                            call_new_line = true;
+                        }
                     }
                     self.comments_index.set(self.comments_index.get() + 1);
                     self.cur_line
