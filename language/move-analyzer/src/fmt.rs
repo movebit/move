@@ -26,7 +26,6 @@ struct Format {
     ret: RefCell<String>,
     cur_line: Cell<u32>,
     struct_definitions: Vec<(u32, u32)>,
-    new_line_state: Cell<bool>,
 }
 
 pub struct FormatConfig {
@@ -142,7 +141,6 @@ impl Format {
                     | Tok::Module
                     | Tok::Loop
                     | Tok::Let
-                    | Tok::NumSign
                     | Tok::Invariant
                     | Tok::If
                     | Tok::Continue
@@ -259,7 +257,7 @@ impl Format {
     fn add_comments(&self, pos: u32) {
         for c in &self.comments[self.comments_index.get()..] {
             if c.start_offset < pos {
-                if (self.translate_line(c.start_offset) - self.cur_line.get()) > 0 {
+                if (self.translate_line(c.start_offset) - self.cur_line.get()) > 1 {
                     self.new_line(None);
                 }
                 //TODO: If the comment is in the same line with the latest token
@@ -470,6 +468,7 @@ pub(crate) fn need_space_suffix(current: Tok, next: Option<Tok>) -> bool {
         (_, TokType::Amp) => true,
         (_, TokType::AmpMut) => true,
         (TokType::Colon, _) => true,
+        (TokType::Alphabet, TokType::Number) => true,
         _ => false,
     };
 
