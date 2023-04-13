@@ -24,7 +24,7 @@ struct Format {
     token_tree: Vec<TokenTree>,
     comments: Vec<Comment>,
     line_mapping: FileLineMapping,
-    path: PathBuf,
+
     comments_index: Cell<usize>,
     ret: RefCell<String>,
     cur_line: Cell<u32>,
@@ -40,10 +40,8 @@ pub struct FormatConfig {
 impl Format {
     fn new(
         config: FormatConfig,
-
         comments: CommentExtrator,
         line_mapping: FileLineMapping,
-        path: PathBuf,
         p: ParseResult,
     ) -> Self {
         let ParseResult {
@@ -59,7 +57,6 @@ impl Format {
             token_tree,
             comments: comments.comments,
             line_mapping,
-            path,
             ret: Default::default(),
             cur_line: Default::default(),
             struct_definitions,
@@ -337,6 +334,11 @@ impl Format {
 }
 
 impl Format {
+    /// if a bin operation is actual a binary operation.
+    /// like `&`,`*`.
+    fn bin_is_bin(&self, pos: u32) -> bool {
+        self.bin_op.contains(&pos)
+    }
     fn inc_depth(&self) {
         let old = self.depth.get();
         self.depth.set(old + 1);
@@ -362,8 +364,9 @@ impl Format {
     }
 
     fn translate_line(&self, pos: u32) -> u32 {
+        let p: PathBuf = Path::new(".").to_path_buf();
         self.line_mapping
-            .translate(&self.path, pos, pos)
+            .translate(&p, pos, pos)
             .unwrap()
             .line_start
     }
@@ -485,7 +488,7 @@ pub fn format(content: impl AsRef<str>, config: FormatConfig) -> Result<String, 
     let filehash = FileHash::empty();
     let (defs, _) = parse_file_string(&mut env, filehash, &content)?;
     let lexer = Lexer::new(&content, filehash);
-    let mut parse = super::token_tree::Parser::new(lexer, &defs);
+    let parse = super::token_tree::Parser::new(lexer, &defs);
     let parse_result = parse.parse_tokens();
     let ce = CommentExtrator::new(content).unwrap();
     let mut t = FileLineMapping::default();

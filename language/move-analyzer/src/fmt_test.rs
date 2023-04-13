@@ -68,7 +68,6 @@ fn test_on_file(p: impl AsRef<Path>) {
 
 fn test_content(content_origin: &str, p: impl AsRef<Path>) {
     let p = p.as_ref();
-
     let tokens_origin =
         extract_tokens(content_origin).expect("test file should be about to lexer,err:{:?}");
 
@@ -219,4 +218,34 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
     }
 
     Ok(ret)
+}
+
+#[test]
+fn test_str() {
+    test_content(
+        r#"
+
+        module 0x1::xxx {
+            fun xxx() { 
+                1
+            }
+        }
+    "#,
+        &Path::new("."),
+    );
+}
+
+#[test]
+fn test_str_chen() {
+    test_content(
+        r#"
+
+        module 0x1::xxx {
+            fun xxx() { 
+                1
+            }
+        }
+    "#,
+        &Path::new("."),
+    );
 }

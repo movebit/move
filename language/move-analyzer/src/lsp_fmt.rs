@@ -17,7 +17,7 @@ pub fn on_fmt_request(context: &Context, request: &Request) {
             .send(Message::Response(r))
             .unwrap();
     };
-    let content = std::fs::read_to_string().unwrap();
+    let content = std::fs::read_to_string(fpath.as_path()).unwrap();
     let fmt = match super::fmt::format(content.as_str(), FormatConfig { indent_size: 4 }) {
         Ok(x) => x,
         Err(_err) => {
