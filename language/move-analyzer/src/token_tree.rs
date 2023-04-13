@@ -222,6 +222,7 @@ impl<'a> Parser<'a> {
                         break;
                     }
                 }
+
                 for (start, end) in &self.type_lambda_pair[self.type_lambda_pair_index..] {
                     if &pos >= start && &pos <= end {
                         return Some(t);
@@ -374,8 +375,10 @@ impl<'a> Parser<'a> {
                 Exp_::Value(_) => {}
                 Exp_::Move(_) => {}
                 Exp_::Copy(_) => {}
-                Exp_::Name(_, _tys) => {
-                    p.type_lambda_pair.push((e.loc.start(), e.loc.end()));
+                Exp_::Name(name, tys) => {
+                    if tys.is_some() {
+                        p.type_lambda_pair.push((name.loc.end(), e.loc.end()));
+                    }
                 }
                 Exp_::Call(name, _, _tys, es) => {
                     p.type_lambda_pair.push((name.loc.end(), es.loc.start()));
@@ -517,8 +520,7 @@ impl<'a> Parser<'a> {
                             p.type_lambda_pair
                                 .push((name.loc.start(), init.loc.start() - 1))
                         } else {
-                            p.type_lambda_pair
-                                .push((name.loc.start(), spec_block.loc.end()));
+                            p.type_lambda_pair.push((name.loc.start(), m.loc.end()));
                         }
                     }
 
@@ -769,21 +771,17 @@ mod comment_test {
     use super::*;
     #[test]
     fn token_tree_to_json() {
-        let content = r#"
-            module 0x1::xxx{
-                public entry fun lock<T: store + key>(
-                    obj: T,
-                    lock: &mut Lock<T>,
-                    key: &Key<T>,
-                ) {
-                }
+        let content = r#"module 0x1::xxx{
+            public fun peel_vec_length(bcs: &mut BCS)
+            : u64{
+              total = total|2;
             }
-        "#;
+          }"#;
         let filehash = FileHash::empty();
         let mut env = CompilationEnv::new(Flags::testing());
         let (defs, _) = parse_file_string(&mut env, filehash, content).unwrap();
         let lexer = Lexer::new(&content, filehash);
-        let mut parse = Parser::new(lexer, &defs);
+        let parse = Parser::new(lexer, &defs);
         let token_tree = parse.parse_tokens().token_tree;
         let s = serde_json::to_string(&token_tree).unwrap();
         // check this using some online json tool.

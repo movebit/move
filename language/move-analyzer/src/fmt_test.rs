@@ -38,7 +38,7 @@ fn scan_dir() {
 #[test]
 fn xxx() {
     test_on_file(&Path::new(
-        "/Volumes/sanDisk/projects/sui/sui_programmability/examples/games/sources/hero.move",
+        "/Users/yuyang/projects/sui/sui_programmability/examples/basics/build/Basics/sources/dependencies/Sui/coin.move",
     ));
 }
 
@@ -223,14 +223,11 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
 #[test]
 fn test_str() {
     test_content(
-        r#"
-
-        module 0x1::xxx {
-            fun xxx() { 
-                1
+        r#"module 0x1::xxx {
+            public fun peel_vec_length(bcs: &mut BCS): u64 {
+                total = total | 2;
             }
-        }
-    "#,
+        }"#,
         &Path::new("."),
     );
 }

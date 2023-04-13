@@ -24,7 +24,6 @@ struct Format {
     token_tree: Vec<TokenTree>,
     comments: Vec<Comment>,
     line_mapping: FileLineMapping,
-
     comments_index: Cell<usize>,
     ret: RefCell<String>,
     cur_line: Cell<u32>,
@@ -94,6 +93,7 @@ impl Format {
             }
             index += 1;
         }
+        self.add_comments(u32::MAX);
         self.ret.into_inner()
     }
 
@@ -155,6 +155,7 @@ impl Format {
                     | Tok::If
                     | Tok::Continue
                     | Tok::Break
+                    | Tok::NumSign
                     | Tok::Abort => true,
                     Tok::Identifier
                         if next_content
@@ -476,7 +477,6 @@ impl Format {
                 return;
             }
         }
-
         self.push_str("\n");
         self.indent();
     }
