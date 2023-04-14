@@ -994,3 +994,7 @@ impl std::fmt::Display for GetExprTypeImpl {
         write!(f, "{}", "visit for generate spec.")
     }
 }
+
+pub(crate) fn fun_is_pure(f: &Function) -> bool {
+    unimplemented!("丁继政 going to implement this.")
+}
