@@ -73,7 +73,7 @@ impl Format {
             if t.is_pound() {
                 pound_sign = Some(index);
             }
-            self.format_token_trees_(t, self.token_tree.get(index + 1), false);
+            self.format_token_trees_(t, self.token_tree.get(index + 1));
             if pound_sign.map(|x| (x + 1) == index).unwrap_or_default() {
                 self.new_line(Some(t.end_pos()));
                 pound_sign = None;
@@ -174,14 +174,7 @@ impl Format {
         false
     }
 
-    fn format_token_trees_(
-        &self,
-        token: &TokenTree,
-        next_token: Option<&TokenTree>,
-        // after this token been process a newline must push to the result.
-        // right now only used for if need append a extra space after this token.
-        new_line_after: bool,
-    ) {
+    fn format_token_trees_(&self, token: &TokenTree, next_token: Option<&TokenTree>) {
         match token {
             TokenTree::Nested { elements, kind } => {
                 const MAX: usize = 35;
@@ -216,7 +209,7 @@ impl Format {
                     }
                     NestKind_::Brace => {}
                 }
-                self.format_token_trees_(&kind.start_token_tree(), elements.get(0), false);
+                self.format_token_trees_(&kind.start_token_tree(), None);
                 self.inc_depth();
                 if new_line_mode {
                     self.new_line(Some(kind.start_pos));
@@ -229,7 +222,7 @@ impl Format {
                         pound_sign = Some(index)
                     }
                     let next_t = elements.get(index + 1);
-                    self.format_token_trees_(t, elements.get(index + 1), false);
+                    self.format_token_trees_(t, elements.get(index + 1));
                     if pound_sign.map(|x| (x + 1) == index).unwrap_or_default() {
                         self.new_line(Some(t.end_pos()));
                         pound_sign = None;
@@ -252,25 +245,36 @@ impl Format {
                 if new_line_mode {
                     self.new_line(Some(kind.end_pos));
                 }
-                self.format_token_trees_(&kind.end_token_tree(), next_token, false);
-                if need_space_nested(
-                    kind.kind,
-                    match next_token {
-                        Some(x) => match x {
-                            TokenTree::SimpleToken {
-                                content: _,
-                                pos: _,
-                                tok,
-                            } => Some(*tok),
-                            TokenTree::Nested {
-                                elements: _,
-                                kind: _,
-                            } => None,
-                        },
-                        None => None,
-                    },
-                ) {
-                    self.push_str(" ");
+                self.format_token_trees_(&kind.end_token_tree(), None);
+
+                match kind.end_token_tree() {
+                    TokenTree::SimpleToken {
+                        content: (_),
+                        pos: (t_pos),
+                        tok: (t_tok),
+                    } => {
+                        if need_space(
+                            t_tok,
+                            match next_token {
+                                Some(x) => match x {
+                                    TokenTree::SimpleToken {
+                                        content: _,
+                                        pos: _,
+                                        tok,
+                                    } => Some(*tok),
+                                    TokenTree::Nested {
+                                        elements: _,
+                                        kind: _,
+                                    } => None,
+                                },
+                                None => None,
+                            },
+                            self.bin_is_bin(t_pos),
+                        ) {
+                            self.push_str(" ");
+                        }
+                    }
+                    _ => {}
                 }
             }
 
@@ -282,10 +286,7 @@ impl Format {
                 }
                 self.push_str(&content.as_str());
                 self.cur_line.set(self.translate_line(*pos));
-                if new_line_after {
-                    return;
-                }
-                if need_space_simpletoken(
+                if need_space(
                     *tok,
                     match next_token {
                         Some(x) => match x {
@@ -318,7 +319,7 @@ impl Format {
                 //TODO: If the comment is in the same line with the latest token
                 //1 don't change line
                 //2 if find \n move it after the comment
-                if (self.no_space_or_newline()) {
+                if (self.no_space_or_new_line_for_comment()) {
                     self.push_str(" ");
                 }
                 self.push_str(c.content.as_str());
@@ -379,16 +380,16 @@ impl Format {
     fn push_string(&self, s: &String) {
         self.push_str(s.as_str());
     }
-    fn no_space_or_newline(&self) -> bool {
+    fn delete_last(&self) {
+        self.ret.borrow_mut().pop();
+    }
+    fn no_space_or_new_line_for_comment(&self) -> bool {
         if (self.ret.borrow().chars().last().is_some()) {
             self.ret.borrow().chars().last().unwrap() != '\n'
                 && self.ret.borrow().chars().last().unwrap() != ' '
         } else {
             false
         }
-    }
-    fn delete_last(&self) {
-        self.ret.borrow_mut().pop();
     }
 
     /// 缩进
