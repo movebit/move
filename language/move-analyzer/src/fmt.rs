@@ -246,24 +246,35 @@ impl Format {
                     self.new_line(Some(kind.end_pos));
                 }
                 self.format_token_trees_(&kind.end_token_tree(), None);
-                if need_space_nested(
-                    kind.kind,
-                    match next_token {
-                        Some(x) => match x {
-                            TokenTree::SimpleToken {
-                                content: _,
-                                pos: _,
-                                tok,
-                            } => Some(*tok),
-                            TokenTree::Nested {
-                                elements: _,
-                                kind: _,
-                            } => None,
-                        },
-                        None => None,
-                    },
-                ) {
-                    self.push_str(" ");
+
+                match kind.end_token_tree() {
+                    TokenTree::SimpleToken {
+                        content: (_),
+                        pos: (t_pos),
+                        tok: (t_tok),
+                    } => {
+                        if need_space_simpletoken(
+                            t_tok,
+                            match next_token {
+                                Some(x) => match x {
+                                    TokenTree::SimpleToken {
+                                        content: _,
+                                        pos: _,
+                                        tok,
+                                    } => Some(*tok),
+                                    TokenTree::Nested {
+                                        elements: _,
+                                        kind: _,
+                                    } => None,
+                                },
+                                None => None,
+                            },
+                            self.bin_is_bin(t_pos),
+                        ) {
+                            self.push_str(" ");
+                        }
+                    }
+                    _ => {}
                 }
             }
 
@@ -291,6 +302,7 @@ impl Format {
                         },
                         None => None,
                     },
+                    self.bin_is_bin(*pos),
                 ) {
                     self.push_str(" ");
                 }
@@ -540,6 +552,8 @@ pub enum TokType {
     String,
     /// &
     Amp,
+    /// *
+    Star,
     /// &mut
     AmpMut,
     ///
@@ -564,7 +578,7 @@ impl From<Tok> for TokType {
             Tok::RParen => TokType::Sign,
             Tok::LBracket => TokType::Sign,
             Tok::RBracket => TokType::Sign,
-            Tok::Star => TokType::MathSign,
+            Tok::Star => TokType::Star,
             Tok::Plus => TokType::MathSign,
             Tok::Comma => TokType::Sign,
             Tok::Minus => TokType::Sign,
@@ -596,7 +610,7 @@ impl From<Tok> for TokType {
     }
 }
 
-pub(crate) fn need_space_simpletoken(current: Tok, next: Option<Tok>) -> bool {
+pub(crate) fn need_space_simpletoken(current: Tok, next: Option<Tok>, is_bin: bool) -> bool {
     if next.is_none() {
         return false;
     }
@@ -605,22 +619,26 @@ pub(crate) fn need_space_simpletoken(current: Tok, next: Option<Tok>) -> bool {
         (TokType::MathSign, _) => true,
         (TokType::Sign, TokType::Alphabet) => true,
         (_, TokType::MathSign) => true,
-        (_, TokType::Amp) => true,
+
         (_, TokType::AmpMut) => true,
         (TokType::Colon, _) => true,
         (TokType::Alphabet, TokType::Number) => true,
-        _ => false,
-    };
-}
 
-pub(crate) fn need_space_nested(current: NestKind_, next: Option<Tok>) -> bool {
-    if next.is_none() {
-        return false;
-    }
+        (_, TokType::Amp) => {
+            if is_bin {
+                true
+            } else {
+                false
+            }
+        }
 
-    return match (NestKind_::from(current), TokType::from(next.unwrap())) {
-        (_, TokType::MathSign) => true,
-        (NestKind_::Type, TokType::Alphabet) => true,
+        (_, TokType::Star) => {
+            if is_bin {
+                true
+            } else {
+                false
+            }
+        }
         _ => false,
     };
 }
