@@ -17,6 +17,7 @@ use std::path::Path;
 
 #[test]
 fn scan_dir() {
+    let mut num: usize = 0;
     for x in walkdir::WalkDir::new(match std::env::var("MOVE_FMT_TEST_DIR") {
         Ok(x) => x,
         Err(_) => {
@@ -31,8 +32,10 @@ fn scan_dir() {
         if x.file_type().is_file() && x.file_name().to_str().unwrap().ends_with(".move") {
             let p = x.into_path();
             test_on_file(p.as_path());
+            num += 1;
         }
     }
+    eprintln!("formated {} files", num);
 }
 
 #[test]
@@ -164,7 +167,7 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
     };
     let lexer = Lexer::new(&content, filehash);
     let mut ret = Vec::new();
-    let mut parse = super::token_tree::Parser::new(lexer, &defs);
+    let parse = super::token_tree::Parser::new(lexer, &defs);
     let token_tree = parse.parse_tokens().token_tree;
     let mut line_mapping = FileLineMapping::default();
     line_mapping.update(p.to_path_buf(), &content);
@@ -224,9 +227,7 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
 fn test_str() {
     test_content(
         r#"module 0x1::xxx {
-            public fun peel_vec_length(bcs: &mut BCS): u64 {
-                total = total | 2;
-            }
+            public fun get_decimals<T>(metadata: &CoinMetadata<T>){}
         }"#,
         &Path::new("."),
     );

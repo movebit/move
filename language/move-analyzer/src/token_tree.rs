@@ -20,7 +20,7 @@ pub enum NestKind_ {
     Lambda,
 }
 
-#[derive(Clone, Copy, serde::Serialize)]
+#[derive(Clone, Copy, serde::Serialize, Debug)]
 pub struct NestKind {
     pub(crate) kind: NestKind_,
     pub(crate) start_pos: u32,

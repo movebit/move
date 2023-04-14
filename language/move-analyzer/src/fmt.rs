@@ -177,7 +177,7 @@ impl Format {
     fn format_token_trees_(&self, token: &TokenTree, next_token: Option<&TokenTree>) {
         match token {
             TokenTree::Nested { elements, kind } => {
-                const MAX: usize = 30;
+                const MAX: usize = 35;
                 let length = self.analyze_token_tree_length(elements, MAX);
                 let (delimiter, has_colon) = Self::analyze_token_tree_delimiter(elements);
                 let mut new_line_mode = {
@@ -195,7 +195,7 @@ impl Format {
                         || delimiter
                             .map(|x| x == Delimiter::Semicolon)
                             .unwrap_or_default()
-                        || nested_in_struct_definition
+                        || (nested_in_struct_definition && elements.len() > 0)
                         || fun_body
                 };
                 match kind.kind {
@@ -228,13 +228,12 @@ impl Format {
                         pound_sign = None;
                         continue;
                     }
-
                     // need new line.
                     if new_line_mode {
                         let d = delimiter.map(|x| x.to_static_str());
                         let t_str = t.simple_str();
                         if (Self::need_new_line(kind.kind, delimiter, has_colon, t, next_t)
-                            || d == t_str)
+                            || (d == t_str && d.is_some()))
                             && index != len - 1
                         {
                             self.new_line(Some(t.end_pos()));

@@ -5,7 +5,7 @@
   有错误 使用缓存的结果
 
 
-### inlay hints 
+### inlay hints
 可以做 应该要一周
 
 ### lambda 支持
@@ -28,6 +28,3 @@ https://github.com/lalrpop/lalrpop
 
 ### 升级vscode-languageclient 不急
 我去升级就报错，可能要升级一下，可以支持新特性
-
-
-
