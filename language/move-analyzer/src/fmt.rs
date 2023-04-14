@@ -253,7 +253,7 @@ impl Format {
                         pos: (t_pos),
                         tok: (t_tok),
                     } => {
-                        if need_space_simpletoken(
+                        if need_space(
                             t_tok,
                             match next_token {
                                 Some(x) => match x {
@@ -286,7 +286,7 @@ impl Format {
                 }
                 self.push_str(&content.as_str());
                 self.cur_line.set(self.translate_line(*pos));
-                if need_space_simpletoken(
+                if need_space(
                     *tok,
                     match next_token {
                         Some(x) => match x {
@@ -610,7 +610,7 @@ impl From<Tok> for TokType {
     }
 }
 
-pub(crate) fn need_space_simpletoken(current: Tok, next: Option<Tok>, is_bin: bool) -> bool {
+pub(crate) fn need_space(current: Tok, next: Option<Tok>, is_bin: bool) -> bool {
     if next.is_none() {
         return false;
     }
