@@ -48,6 +48,7 @@ fn xxx() {
 #[test]
 fn xxx_chen() {
     test_on_file(&Path::new(
+        //"C:/I-Git/aptos-core/aptos-move/framework/aptos-framework/sources/stake.spec.move",
         "C:/I-Git/sui/sui/sui_programmability/examples/basics/sources/lock.move",
     ));
 }
