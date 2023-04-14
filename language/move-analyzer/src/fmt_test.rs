@@ -41,7 +41,7 @@ fn scan_dir() {
 #[test]
 fn xxx() {
     test_on_file(&Path::new(
-        "/Users/yuyang/projects/sui/sui_programmability/examples/basics/build/Basics/sources/dependencies/Sui/coin.move",
+        "/Users/yuyang/projects/aptos-core/third_party/move/documentation/examples/diem-framework/move-packages/DPN/sources/DiemAccount.move",
     ));
 }
 
@@ -81,7 +81,7 @@ fn test_content(content_origin: &str, p: impl AsRef<Path>) {
         Err(err) => {
             unreachable!(
                 "should be able to parse after format:err{:?},after format:\n\n################\n{}\n###############",
-                err, content_format
+                err, content_format 
             );
         }
     };
@@ -226,9 +226,18 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
 #[test]
 fn test_str() {
     test_content(
-        r#"module 0x1::xxx {
-            public fun get_decimals<T>(metadata: &CoinMetadata<T>){}
-        }"#,
+        r#"
+        module 0x1::xxx { 
+            spec module{
+                
+              
+                apply PreserveKeyRotationCapAbsence to * except make_account, create_*_account, restore_key_rotation_capability, initialize;
+                
+                
+            }
+        }
+        
+            "#,
         &Path::new("."),
     );
 }

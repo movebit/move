@@ -242,12 +242,12 @@ impl<'a> Parser<'a> {
         self.lexer.advance().unwrap();
         let mut ret = vec![];
         while self.lexer.peek() != Tok::EOF {
+            if self.lexer.peek() == kind.end_tok() {
+                break;
+            }
             if let Some(kind) = self.is_nest_start() {
                 ret.push(self.parse_nested(kind));
                 continue;
-            }
-            if self.lexer.peek() == kind.end_tok() {
-                break;
             }
             if kind == NestKind_::Type && self.lexer.peek() == Tok::GreaterGreater {
                 self.adjust_token(Tok::Greater);
@@ -480,10 +480,17 @@ impl<'a> Parser<'a> {
         }
 
         fn collect_spec(p: &mut Parser, spec_block: &SpecBlock) {
-            p.type_lambda_pair.push((
-                spec_block.value.target.loc.start(),
-                spec_block.value.target.loc.end(),
-            ));
+            match &spec_block.value.target.value {
+                SpecBlockTarget_::Code => {}
+                SpecBlockTarget_::Module => {}
+                SpecBlockTarget_::Member(_, _) | SpecBlockTarget_::Schema(_, _) => {
+                    p.type_lambda_pair.push((
+                        spec_block.value.target.loc.start(),
+                        spec_block.value.target.loc.end(),
+                    ));
+                }
+            }
+
             for m in spec_block.value.members.iter() {
                 match &m.value {
                     SpecBlockMember_::Condition {
@@ -537,12 +544,12 @@ impl<'a> Parser<'a> {
                         collect_expr(p, exp);
                     }
                     SpecBlockMember_::Apply {
-                        exp: _,
+                        exp,
                         patterns: _,
                         exclusion_patterns: _,
-                    } => p
-                        .type_lambda_pair
-                        .push((spec_block.loc.start(), spec_block.loc.end())),
+                    } => {
+                        collect_expr(p, exp);
+                    }
                     SpecBlockMember_::Pragma { properties: _ } => {}
                 }
             }
@@ -709,6 +716,8 @@ impl CommentExtrator {
                         comment.push(STAR);
                         comment.push(SLASH);
                         make_comment!();
+                    } else if *c == STAR {
+                        comment.push(STAR);
                     } else {
                         comment.push(STAR);
                         comment.push(*c);
@@ -772,9 +781,8 @@ mod comment_test {
     #[test]
     fn token_tree_to_json() {
         let content = r#"module 0x1::xxx{
-            public fun peel_vec_length(bcs: &mut BCS)
-            : u64{
-              total = total|2;
+            public entry fun object_vec(msg: String, objs: vector<Object<ModuleData>>) acquires ModuleData {
+                vector::for_each(objs,|o| {  });
             }
           }"#;
         let filehash = FileHash::empty();
@@ -796,10 +804,11 @@ mod comment_test {
     // 222
     fdfdf
     // bb
-    /* ***** '" 1121 */
+    /* ***** '" 1121 **/
     " \" // iii "
     "// fff"
     /// ggg
+     
         "#,
         )
         .unwrap();
@@ -807,13 +816,21 @@ mod comment_test {
             "// 111",
             "// 222",
             "// bb",
-            "/* ***** '\" 1121 */",
+            "/* ***** '\" 1121 **/",
             "/// ggg",
         ];
         for (c1, c2) in v.iter().zip(x.comments.iter()) {
             assert_eq!(*c1, c2.content.as_str());
         }
         assert_eq!(v.len(), x.comments.len());
+    }
+    #[test]
+    fn test_comment_extrator_ok2() {
+        let _x = CommentExtrator::new(
+            r#"/**
+**/"#,
+        )
+        .unwrap();
     }
 
     #[test]

@@ -73,7 +73,7 @@ impl Format {
             if t.is_pound() {
                 pound_sign = Some(index);
             }
-            self.format_token_trees_(t, self.token_tree.get(index + 1));
+            self.format_token_trees_(t, self.token_tree.get(index + 1), false);
             if pound_sign.map(|x| (x + 1) == index).unwrap_or_default() {
                 self.new_line(Some(t.end_pos()));
                 pound_sign = None;
@@ -174,7 +174,14 @@ impl Format {
         false
     }
 
-    fn format_token_trees_(&self, token: &TokenTree, next_token: Option<&TokenTree>) {
+    fn format_token_trees_(
+        &self,
+        token: &TokenTree,
+        next_token: Option<&TokenTree>,
+        // after this token been process a newline must push to the result.
+        // right now only used for if need append a extra space after this token.
+        new_line_after: bool,
+    ) {
         match token {
             TokenTree::Nested { elements, kind } => {
                 const MAX: usize = 35;
@@ -209,7 +216,7 @@ impl Format {
                     }
                     NestKind_::Brace => {}
                 }
-                self.format_token_trees_(&kind.start_token_tree(), None);
+                self.format_token_trees_(&kind.start_token_tree(), elements.get(0), false);
                 self.inc_depth();
                 if new_line_mode {
                     self.new_line(Some(kind.start_pos));
@@ -222,7 +229,7 @@ impl Format {
                         pound_sign = Some(index)
                     }
                     let next_t = elements.get(index + 1);
-                    self.format_token_trees_(t, elements.get(index + 1));
+                    self.format_token_trees_(t, elements.get(index + 1), false);
                     if pound_sign.map(|x| (x + 1) == index).unwrap_or_default() {
                         self.new_line(Some(t.end_pos()));
                         pound_sign = None;
@@ -245,7 +252,7 @@ impl Format {
                 if new_line_mode {
                     self.new_line(Some(kind.end_pos));
                 }
-                self.format_token_trees_(&kind.end_token_tree(), None);
+                self.format_token_trees_(&kind.end_token_tree(), next_token, false);
                 if need_space_nested(
                     kind.kind,
                     match next_token {
@@ -275,6 +282,9 @@ impl Format {
                 }
                 self.push_str(&content.as_str());
                 self.cur_line.set(self.translate_line(*pos));
+                if new_line_after {
+                    return;
+                }
                 if need_space_simpletoken(
                     *tok,
                     match next_token {

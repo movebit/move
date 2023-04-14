@@ -64,13 +64,7 @@ impl Handler {
             config,
         }
     }
-    #[allow(dead_code)]
-    fn in_range(&self, loc: Loc, services: &dyn HandleItemService) -> bool {
-        services
-            .convert_loc_range(&loc)
-            .map(|x| self.in_range_range(&x))
-            .unwrap_or(false)
-    }
+
     fn in_range_range(&self, x: &FileRange) -> bool {
         GetPositionStruct::in_range(
             &GetPositionStruct {
@@ -127,6 +121,9 @@ impl ItemOrAccessHandler for Handler {
                 return;
             }
         };
+        if !self.in_range_range(&l) {
+            return;
+        }
 
         self.reuslts.push(mk_inlay_hits(
             Position {
