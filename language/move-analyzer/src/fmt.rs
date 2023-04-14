@@ -560,6 +560,8 @@ pub enum TokType {
     Semicolon,
     ///:
     Colon,
+    /// @
+    AtSign,
 }
 
 impl From<Tok> for TokType {
@@ -603,7 +605,7 @@ impl From<Tok> for TokType {
             Tok::PipePipe => TokType::Sign,
             Tok::RBrace => TokType::Sign,
             Tok::NumSign => TokType::Sign,
-            Tok::AtSign => TokType::Sign,
+            Tok::AtSign => TokType::AtSign,
             Tok::AmpMut => TokType::Amp,
             _ => TokType::Alphabet,
         }
@@ -639,6 +641,8 @@ pub(crate) fn need_space(current: Tok, next: Option<Tok>, is_bin: bool) -> bool 
                 false
             }
         }
+
+        (TokType::AtSign, TokType::Alphabet) => false,
         _ => false,
     };
 }
