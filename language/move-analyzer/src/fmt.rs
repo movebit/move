@@ -30,6 +30,7 @@ struct Format {
     struct_definitions: Vec<(u32, u32)>,
     fun_body: HashSet<(u32, u32)>,
     bin_op: HashSet<u32>,
+    apply_wildcard: HashSet<u32>,
 }
 
 pub struct FormatConfig {
@@ -48,6 +49,7 @@ impl Format {
             struct_definitions,
             bin_op,
             fun_body,
+            apply_wildcard,
         } = p;
         Self {
             comments_index: Default::default(),
@@ -61,6 +63,7 @@ impl Format {
             struct_definitions,
             fun_body,
             bin_op,
+            apply_wildcard,
         }
     }
 
@@ -366,6 +369,13 @@ impl Format {
     fn bin_is_bin(&self, pos: u32) -> bool {
         self.bin_op.contains(&pos)
     }
+
+    /// If `*` is actual apply wildcard.
+    /// example `apply PreserveKeyRotationCapAbsence to * except make_account, create_*_account initialize;`
+    fn is_mul_apply_wildcard(&self, pos: u32) -> bool {
+        self.apply_wildcard.contains(&pos)
+    }
+
     fn inc_depth(&self) {
         let old = self.depth.get();
         self.depth.set(old + 1);

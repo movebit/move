@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashSet;
+use std::hash::Hash;
 
 use move_compiler::parser::ast::Definition;
 use move_compiler::parser::ast::*;
@@ -149,6 +150,7 @@ pub struct Parser<'a> {
     struct_definitions: Vec<(u32, u32)>,
     bin_op: HashSet<u32>,
     fun_body: HashSet<(u32, u32)>,
+    apply_wildcard: HashSet<u32>,
 }
 
 impl<'a> Parser<'a> {
@@ -161,6 +163,7 @@ impl<'a> Parser<'a> {
             struct_definitions: vec![],
             bin_op: Default::default(),
             fun_body: Default::default(),
+            apply_wildcard: Default::default(),
         };
         x.collect_various_information();
         x
@@ -172,6 +175,7 @@ pub struct ParseResult {
     pub(crate) struct_definitions: Vec<(u32, u32)>,
     pub(crate) bin_op: HashSet<u32>,
     pub(crate) fun_body: HashSet<(u32, u32)>,
+    pub(crate) apply_wildcard: HashSet<u32>,
 }
 
 impl<'a> Parser<'a> {
@@ -194,6 +198,7 @@ impl<'a> Parser<'a> {
             struct_definitions,
             bin_op,
             fun_body,
+            apply_wildcard,
             ..
         } = self;
 
@@ -202,6 +207,7 @@ impl<'a> Parser<'a> {
             struct_definitions,
             bin_op,
             fun_body,
+            apply_wildcard,
         }
     }
 
@@ -545,9 +551,22 @@ impl<'a> Parser<'a> {
                     }
                     SpecBlockMember_::Apply {
                         exp,
-                        patterns: _,
-                        exclusion_patterns: _,
+                        patterns,
+                        exclusion_patterns,
                     } => {
+                        for pat in patterns.iter().chain(exclusion_patterns.iter()) {
+                            for n in &pat.value.name_pattern {
+                                match &n.value {
+                                    SpecApplyFragment_::Wildcard => {
+                                        p.apply_wildcard.insert(n.loc.start());
+                                    }
+                                    SpecApplyFragment_::NamePart(_) => {}
+                                }
+                            }
+                            if let Some(x) = pat.value.name_pattern.last() {
+                                p.type_lambda_pair.push((x.loc.end(), pat.loc.end()));
+                            }
+                        }
                         collect_expr(p, exp);
                     }
                     SpecBlockMember_::Pragma { properties: _ } => {}
