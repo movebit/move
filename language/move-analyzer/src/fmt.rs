@@ -384,15 +384,11 @@ impl Format {
         let old = self.depth.get();
         self.depth.set(old - 1);
     }
-    fn push_str(&self, s: &str) {
+    fn push_str(&self, s: impl AsRef<str>) {
+        let s = s.as_ref();
         self.ret.borrow_mut().push_str(s);
     }
-    fn push_string(&self, s: &String) {
-        self.push_str(s.as_str());
-    }
-    fn delete_last(&self) {
-        self.ret.borrow_mut().pop();
-    }
+
     fn no_space_or_new_line_for_comment(&self) -> bool {
         if (self.ret.borrow().chars().last().is_some()) {
             self.ret.borrow().chars().last().unwrap() != '\n'
