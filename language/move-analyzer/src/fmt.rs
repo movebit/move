@@ -273,6 +273,8 @@ impl Format {
                                 None => None,
                             },
                             self.bin_is_bin(t_pos),
+                            false,
+                            false,
                         ) {
                             self.push_str(" ");
                         }
@@ -283,6 +285,7 @@ impl Format {
 
             //Add to string
             TokenTree::SimpleToken { content, pos, tok } => {
+                let mut is_to_except: bool = false;
                 self.add_comments(*pos);
                 if (self.translate_line(*pos) - self.cur_line.get()) > 1 {
                     self.new_line(None);
@@ -294,10 +297,15 @@ impl Format {
                     match next_token {
                         Some(x) => match x {
                             TokenTree::SimpleToken {
-                                content: _,
+                                content: con,
                                 pos: _,
                                 tok,
-                            } => Some(*tok),
+                            } => {
+                                if con.as_str() == "to" || con.as_str() == "except" {
+                                    is_to_except = true;
+                                }
+                                Some(*tok)
+                            }
                             TokenTree::Nested {
                                 elements: _,
                                 kind: _,
@@ -306,6 +314,8 @@ impl Format {
                         None => None,
                     },
                     self.bin_is_bin(*pos),
+                    content.as_str() == "to" || content.as_str() == "except",
+                    is_to_except,
                 ) {
                     self.push_str(" ");
                 }
@@ -589,7 +599,7 @@ impl From<Tok> for TokType {
             Tok::Star => TokType::Star,
             Tok::Plus => TokType::MathSign,
             Tok::Comma => TokType::Sign,
-            Tok::Minus => TokType::Sign,
+            Tok::Minus => TokType::MathSign,
             Tok::Period => TokType::NoNeedSpace,
             Tok::PeriodPeriod => TokType::NoNeedSpace,
             Tok::Slash => TokType::Sign,
@@ -608,7 +618,7 @@ impl From<Tok> for TokType {
             Tok::GreaterGreater => TokType::MathSign,
             Tok::LBrace => TokType::Sign,
             Tok::Pipe => TokType::Sign,
-            Tok::PipePipe => TokType::Sign,
+            Tok::PipePipe => TokType::MathSign,
             Tok::RBrace => TokType::Sign,
             Tok::NumSign => TokType::Sign,
             Tok::AtSign => TokType::AtSign,
@@ -618,7 +628,13 @@ impl From<Tok> for TokType {
     }
 }
 
-pub(crate) fn need_space(current: Tok, next: Option<Tok>, is_bin: bool) -> bool {
+pub(crate) fn need_space(
+    current: Tok,
+    next: Option<Tok>,
+    is_bin: bool,
+    is_to_except_current: bool,
+    is_to_except_next: bool,
+) -> bool {
     if next.is_none() {
         return false;
     }
@@ -628,6 +644,7 @@ pub(crate) fn need_space(current: Tok, next: Option<Tok>, is_bin: bool) -> bool 
         (TokType::Sign, TokType::Alphabet) => true,
         (_, TokType::MathSign) => true,
 
+        (TokType::Number, TokType::Alphabet) => true,
         (_, TokType::AmpMut) => true,
         (TokType::Colon, _) => true,
         (TokType::Alphabet, TokType::Number) => true,
@@ -641,7 +658,15 @@ pub(crate) fn need_space(current: Tok, next: Option<Tok>, is_bin: bool) -> bool 
         }
 
         (_, TokType::Star) => {
-            if is_bin {
+            if is_bin || is_to_except_current {
+                true
+            } else {
+                false
+            }
+        }
+
+        (TokType::Star, _) => {
+            if is_bin || is_to_except_next {
                 true
             } else {
                 false
