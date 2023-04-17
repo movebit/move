@@ -32,6 +32,33 @@ impl PathBufHashMap {
         self.hash_2_path.get(hash)
     }
 }
+/// A thin wrapper on `FileLineMapping`
+/// Sometimes only handle one file.
+#[derive(Debug, Default)]
+pub struct FileLineMappingOneFile {
+    mapping: FileLineMapping,
+}
+
+impl From<FileLineMapping> for FileLineMappingOneFile {
+    fn from(value: FileLineMapping) -> Self {
+        Self { mapping: value }
+    }
+}
+
+impl FileLineMappingOneFile {
+    pub fn update(&mut self, content: &str) {
+        self.mapping.update(Path::new(".").to_path_buf(), content);
+    }
+    pub(crate) fn translate(
+        &self,
+        start_index: ByteIndex,
+        end_index: ByteIndex,
+    ) -> Option<lsp_types::Range> {
+        self.mapping
+            .translate(&Path::new(".").to_path_buf(), start_index, end_index)
+            .map(|x| x.mk_location().range)
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct FileLineMapping {
