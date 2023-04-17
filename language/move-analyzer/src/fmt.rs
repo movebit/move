@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use std::cell::RefCell;
 
-use std::collections::HashSet;
+
 
 use std::result::Result::*;
 
@@ -14,7 +14,7 @@ use move_compiler::Flags;
 use std::cell::Cell;
 
 use crate::token_tree::{
-    Comment, CommentExtrator, CommentKind, Delimiter, NestKind_, ParseResult, TokenTree,
+    Comment, CommentExtrator, CommentKind, Delimiter, NestKind_, Note, TokenTree,
 };
 use crate::utils::FileLineMappingOneFile;
 struct Format {
@@ -26,10 +26,6 @@ struct Format {
     comments_index: Cell<usize>,
     ret: RefCell<String>,
     cur_line: Cell<u32>,
-    struct_definitions: Vec<(u32, u32)>,
-    fun_body: HashSet<(u32, u32)>,
-    bin_op: HashSet<u32>,
-    apply_wildcard: HashSet<u32>,
 }
 
 pub struct FormatConfig {
@@ -41,15 +37,8 @@ impl Format {
         config: FormatConfig,
         comments: CommentExtrator,
         line_mapping: FileLineMappingOneFile,
-        p: ParseResult,
+        token_tree: Vec<TokenTree>,
     ) -> Self {
-        let ParseResult {
-            token_tree,
-            struct_definitions,
-            bin_op,
-            fun_body,
-            apply_wildcard,
-        } = p;
         Self {
             comments_index: Default::default(),
             config,
@@ -59,10 +48,6 @@ impl Format {
             line_mapping,
             ret: Default::default(),
             cur_line: Default::default(),
-            struct_definitions,
-            fun_body,
-            bin_op,
-            apply_wildcard,
         }
     }
 
@@ -86,8 +71,13 @@ impl Format {
                     content: _,
                     pos: _,
                     tok: _,
+                    note: _,
                 } => {}
-                TokenTree::Nested { elements: _, kind } => {
+                TokenTree::Nested {
+                    elements: _,
+                    kind,
+                    note: _,
+                } => {
                     if kind.kind == NestKind_::Brace {
                         self.new_line(Some(t.end_pos()));
                     }
@@ -115,8 +105,13 @@ impl Format {
                 content: _,
                 pos: _,
                 tok,
+                note: _,
             } => tok.clone(),
-            TokenTree::Nested { elements: _, kind } => kind.kind.start_tok(),
+            TokenTree::Nested {
+                elements: _,
+                kind,
+                note: _,
+            } => kind.kind.start_tok(),
         });
 
         let next_content = next.map(|x| match x {
@@ -124,8 +119,13 @@ impl Format {
                 content,
                 pos: _,
                 tok: _,
+                note: _,
             } => content.clone(),
-            TokenTree::Nested { elements: _, kind } => kind.kind.start_tok().to_string(),
+            TokenTree::Nested {
+                elements: _,
+                kind,
+                note: _,
+            } => kind.kind.start_tok().to_string(),
         });
 
         // special case for `}}`
@@ -134,8 +134,13 @@ impl Format {
                 content: _,
                 pos: _,
                 tok: _,
+                note: _,
             } => false,
-            TokenTree::Nested { elements: _, kind } => kind.kind == NestKind_::Brace,
+            TokenTree::Nested {
+                elements: _,
+                kind,
+                note: _,
+            } => kind.kind == NestKind_::Brace,
         } && kind == NestKind_::Brace
             && match next_tok {
                 Some(x) => match x {
@@ -178,20 +183,21 @@ impl Format {
 
     fn format_token_trees_(&self, token: &TokenTree, next_token: Option<&TokenTree>) {
         match token {
-            TokenTree::Nested { elements, kind } => {
+            TokenTree::Nested {
+                elements,
+                kind,
+                note,
+            } => {
                 const MAX: usize = 35;
                 let length = self.analyze_token_tree_length(elements, MAX);
                 let (delimiter, has_colon) = Self::analyze_token_tree_delimiter(elements);
                 let mut new_line_mode = {
                     // more rules.
-                    let nested_in_struct_definition = self
-                        .struct_definitions
-                        .iter()
-                        .any(|x| kind.start_pos >= x.0 && kind.end_pos <= x.1)
-                        && kind.kind == NestKind_::Brace;
+                    let nested_in_struct_definition = note
+                        .map(|x| x == Note::StructDefinition)
+                        .unwrap_or_default();
 
-                    let fun_body = self.fun_body.contains(&(kind.start_pos, kind.end_pos))
-                        && kind.kind == NestKind_::Brace;
+                    let fun_body = note.map(|x| x == Note::FunBody).unwrap_or_default();
 
                     length > MAX
                         || delimiter
@@ -252,8 +258,9 @@ impl Format {
                 match kind.end_token_tree() {
                     TokenTree::SimpleToken {
                         content: _,
-                        pos: t_pos,
+                        pos: _t_pos,
                         tok: t_tok,
+                        note,
                     } => {
                         if need_space(
                             t_tok,
@@ -263,15 +270,17 @@ impl Format {
                                         content: _,
                                         pos: _,
                                         tok,
+                                        note: _,
                                     } => Some(*tok),
                                     TokenTree::Nested {
                                         elements: _,
                                         kind: _,
+                                        note: _,
                                     } => None,
                                 },
                                 None => None,
                             },
-                            self.bin_is_bin(t_pos),
+                            note.map(|x| x == Note::BinaryOP).unwrap_or_default(),
                             false,
                             false,
                         ) {
@@ -283,7 +292,12 @@ impl Format {
             }
 
             //Add to string
-            TokenTree::SimpleToken { content, pos, tok } => {
+            TokenTree::SimpleToken {
+                content,
+                pos,
+                tok,
+                note,
+            } => {
                 let mut is_to_except: bool = false;
                 self.add_comments(*pos);
                 if (self.translate_line(*pos) - self.cur_line.get()) > 1 {
@@ -299,6 +313,7 @@ impl Format {
                                 content: con,
                                 pos: _,
                                 tok,
+                                note: _,
                             } => {
                                 if con.as_str() == "to" || con.as_str() == "except" {
                                     is_to_except = true;
@@ -308,11 +323,12 @@ impl Format {
                             TokenTree::Nested {
                                 elements: _,
                                 kind: _,
+                                note: _,
                             } => None,
                         },
                         None => None,
                     },
-                    self.bin_is_bin(*pos),
+                    note.map(|x| x == Note::BinaryOP).unwrap_or_default(),
                     content.as_str() == "to" || content.as_str() == "except",
                     is_to_except,
                 ) {
@@ -373,18 +389,6 @@ impl Format {
 }
 
 impl Format {
-    /// if a bin operation is actual a binary operation.
-    /// like `&`,`*`.
-    fn bin_is_bin(&self, pos: u32) -> bool {
-        self.bin_op.contains(&pos)
-    }
-
-    /// If `*` is actual apply wildcard.
-    /// example `apply PreserveKeyRotationCapAbsence to * except make_account, create_*_account initialize;`
-    fn is_mul_apply_wildcard(&self, pos: u32) -> bool {
-        self.apply_wildcard.contains(&pos)
-    }
-
     fn inc_depth(&self) {
         let old = self.depth.get();
         self.depth.set(old + 1);
@@ -435,6 +439,7 @@ impl Format {
                     content,
                     pos: _,
                     tok: _,
+                    note: _,
                 } => match content.as_str() {
                     ";" => {
                         d = Some(Delimiter::Semicolon);

@@ -169,7 +169,7 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
     let lexer = Lexer::new(&content, filehash);
     let mut ret = Vec::new();
     let parse = super::token_tree::Parser::new(lexer, &defs);
-    let token_tree = parse.parse_tokens().token_tree;
+    let token_tree = parse.parse_tokens();
     let mut line_mapping = FileLineMapping::default();
     line_mapping.update(p.to_path_buf(), &content);
     fn collect_token_tree(ret: &mut Vec<ExtractToken>, m: &FileLineMapping, t: &TokenTree) {
@@ -177,8 +177,7 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
             TokenTree::SimpleToken {
                 content,
                 pos,
-                tok: _tok,
-            } => {
+                tok: _tok, note: _ } => {
                 let loc = m
                     .translate(&Path::new(".").to_path_buf(), *pos, *pos)
                     .unwrap();
@@ -189,7 +188,7 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
                     col: loc.col_start,
                 });
             }
-            TokenTree::Nested { elements, kind } => {
+            TokenTree::Nested { elements, kind , note: _  } => {
                 let start_loc = m
                     .translate(
                         &Path::new(".").to_path_buf(),

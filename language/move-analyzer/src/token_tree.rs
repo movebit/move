@@ -1,7 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashSet;
 
-
 use move_compiler::parser::ast::Definition;
 use move_compiler::parser::ast::*;
 use move_compiler::parser::lexer::{Lexer, Tok};
@@ -34,6 +33,7 @@ impl NestKind {
             content: self.kind.start_tok().to_string(),
             pos: self.start_pos,
             tok: self.kind.start_tok(),
+            note: None,
         }
     }
 
@@ -42,6 +42,7 @@ impl NestKind {
             content: self.kind.end_tok().to_string(),
             pos: self.end_pos,
             tok: self.kind.end_tok(),
+            note: None,
         }
     }
 }
@@ -101,11 +102,27 @@ pub enum TokenTree {
         pos: u32, // start offset in file buffer.
         #[serde(skip_serializing)]
         tok: Tok,
+        #[serde(skip_serializing)]
+        note: Option<Note>,
     },
     Nested {
         elements: Vec<TokenTree>,
         kind: NestKind,
+        #[serde(skip_serializing)]
+        note: Option<Note>,
     },
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Note {
+    /// binary op like `+` , `*`
+    BinaryOP,
+    /// This is a struct definition.
+    StructDefinition,
+    /// This is a function body.
+    FunBody,
+    /// This is a apply name in `apply` statement.
+    ApplyName,
 }
 
 impl TokenTree {
@@ -115,8 +132,13 @@ impl TokenTree {
                 content,
                 pos,
                 tok: _,
+                note: _,
             } => pos + (content.len() as u32),
-            TokenTree::Nested { elements: _, kind } => kind.end_pos,
+            TokenTree::Nested {
+                elements: _,
+                kind,
+                note: _,
+            } => kind.end_pos,
         }
     }
 
@@ -133,10 +155,12 @@ impl TokenTree {
                 content,
                 pos: _,
                 tok: _,
+                note: _,
             } => Some(content.as_str()),
             TokenTree::Nested {
                 elements: _,
                 kind: _,
+                note: _,
             } => None,
         }
     }
@@ -149,8 +173,8 @@ pub struct Parser<'a> {
     type_lambda_pair_index: usize,
     struct_definitions: Vec<(u32, u32)>,
     bin_op: HashSet<u32>,
-    fun_body: HashSet<(u32, u32)>,
-    apply_wildcard: HashSet<u32>,
+    fun_body: HashSet<u32>, // start pos.
+    apple_name: HashSet<u32>,
 }
 
 impl<'a> Parser<'a> {
@@ -163,23 +187,25 @@ impl<'a> Parser<'a> {
             struct_definitions: vec![],
             bin_op: Default::default(),
             fun_body: Default::default(),
-            apply_wildcard: Default::default(),
+            apple_name: Default::default(),
         };
         x.collect_various_information();
         x
     }
 }
 
-pub struct ParseResult {
-    pub(crate) token_tree: Vec<TokenTree>,
-    pub(crate) struct_definitions: Vec<(u32, u32)>,
-    pub(crate) bin_op: HashSet<u32>,
-    pub(crate) fun_body: HashSet<(u32, u32)>,
-    pub(crate) apply_wildcard: HashSet<u32>,
-}
-
 impl<'a> Parser<'a> {
-    pub(crate) fn parse_tokens(mut self) -> ParseResult {
+    fn add_simple_note(&self, pos: u32) -> Option<Note> {
+        if self.bin_op.contains(&pos) {
+            return Some(Note::BinaryOP);
+        }
+        if self.apple_name.contains(&pos) {
+            return Some(Note::ApplyName);
+        }
+        None
+    }
+
+    pub(crate) fn parse_tokens(mut self) -> Vec<TokenTree> {
         let mut ret = vec![];
         self.lexer.advance().unwrap();
         while self.lexer.peek() != Tok::EOF {
@@ -191,24 +217,12 @@ impl<'a> Parser<'a> {
                 content: self.lexer.content().to_string(),
                 pos: self.lexer.start_loc() as u32,
                 tok: self.lexer.peek(),
+                note: self.add_simple_note(self.lexer.start_loc() as u32),
             });
+
             self.lexer.advance().unwrap();
         }
-        let Parser {
-            struct_definitions,
-            bin_op,
-            fun_body,
-            apply_wildcard,
-            ..
-        } = self;
-
-        ParseResult {
-            token_tree: ret,
-            struct_definitions,
-            bin_op,
-            fun_body,
-            apply_wildcard,
-        }
+        ret
     }
 
     fn is_nest_start(&mut self) -> Option<NestKind_> {
@@ -244,9 +258,21 @@ impl<'a> Parser<'a> {
 
     fn parse_nested(&mut self, kind: NestKind_) -> TokenTree {
         debug_assert!(self.lexer.peek() == kind.start_tok());
-        let start = self.lexer.start_loc();
+        let start = self.lexer.start_loc() as u32;
         self.lexer.advance().unwrap();
         let mut ret = vec![];
+        let mut note = None;
+        if self
+            .struct_definitions
+            .iter()
+            .any(|x| x.0 <= start && x.1 >= start)
+            && kind == NestKind_::Brace
+        {
+            note = Some(Note::StructDefinition);
+        }
+        if self.fun_body.contains(&start) {
+            note = Some(Note::FunBody);
+        }
         while self.lexer.peek() != Tok::EOF {
             if self.lexer.peek() == kind.end_tok() {
                 break;
@@ -263,19 +289,21 @@ impl<'a> Parser<'a> {
                 content: self.lexer.content().to_string(),
                 pos: self.lexer.start_loc() as u32,
                 tok: self.lexer.peek(),
+                note: self.add_simple_note(self.lexer.start_loc() as u32),
             });
             self.lexer.advance().unwrap();
         }
         debug_assert_eq!(self.lexer.peek(), kind.end_tok());
-        let end = self.lexer.start_loc();
+        let end = self.lexer.start_loc() as u32;
         self.lexer.advance().unwrap();
         TokenTree::Nested {
             elements: ret,
             kind: NestKind {
                 kind,
-                start_pos: start as u32,
-                end_pos: end as u32,
+                start_pos: start,
+                end_pos: end,
             },
+            note,
         }
     }
 }
@@ -556,12 +584,7 @@ impl<'a> Parser<'a> {
                     } => {
                         for pat in patterns.iter().chain(exclusion_patterns.iter()) {
                             for n in &pat.value.name_pattern {
-                                match &n.value {
-                                    SpecApplyFragment_::Wildcard => {
-                                        p.apply_wildcard.insert(n.loc.start());
-                                    }
-                                    SpecApplyFragment_::NamePart(_) => {}
-                                }
+                                p.apple_name.insert(n.loc.start());
                             }
                             if let Some(x) = pat.value.name_pattern.last() {
                                 p.type_lambda_pair.push((x.loc.end(), pat.loc.end()));
@@ -589,7 +612,7 @@ impl<'a> Parser<'a> {
 
             match &d.body.value {
                 FunctionBody_::Defined(s) => {
-                    p.fun_body.insert((d.body.loc.start(), d.body.loc.end()));
+                    p.fun_body.insert(d.body.loc.start());
                     collect_seq(p, s);
                 }
                 FunctionBody_::Native => {}
@@ -809,7 +832,7 @@ mod comment_test {
         let (defs, _) = parse_file_string(&mut env, filehash, content).unwrap();
         let lexer = Lexer::new(&content, filehash);
         let parse = Parser::new(lexer, &defs);
-        let token_tree = parse.parse_tokens().token_tree;
+        let token_tree = parse.parse_tokens();
         let s = serde_json::to_string(&token_tree).unwrap();
         // check this using some online json tool.
         eprintln!("json:{}", s);
