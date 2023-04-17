@@ -1,8 +1,6 @@
 #![allow(dead_code)]
 use std::cell::RefCell;
 
-
-
 use std::result::Result::*;
 
 use move_command_line_common::files::FileHash;
@@ -628,17 +626,35 @@ impl From<Tok> for TokType {
     }
 }
 
-pub(crate) fn need_space(
-    current: Tok,
-    next: Option<Tok>,
-    is_bin: bool,
-    is_to_except_current: bool,
-    is_to_except_next: bool,
-) -> bool {
+pub(crate) fn need_space(current: &TokenTree, next: Option<&TokenTree>) -> bool {
     if next.is_none() {
         return false;
     }
-    return match (TokType::from(current), TokType::from(next.unwrap())) {
+
+    fn get_start_tok(t: &TokenTree) -> Tok {
+        match t {
+            TokenTree::SimpleToken {
+                content,
+                pos,
+                tok,
+                note,
+            } => tok.clone(),
+            TokenTree::Nested {
+                elements,
+                kind,
+                note,
+            } => kind.kind.start_tok(),
+        }
+    }
+    let is_bin = current
+        .get_note()
+        .map(|x| x == Note::BinaryOP)
+        .unwrap_or_default();
+
+    return match (
+        TokType::from(get_start_tok(current)),
+        TokType::from(next.map(|x| get_start_tok(x)).unwrap()),
+    ) {
         (TokType::Alphabet, TokType::Alphabet) => true,
         (TokType::MathSign, _) => true,
         (TokType::Sign, TokType::Alphabet) => true,

@@ -126,6 +126,21 @@ pub enum Note {
 }
 
 impl TokenTree {
+    pub(crate) fn get_note(&self) -> Option<Note> {
+        match self {
+            TokenTree::SimpleToken {
+                content,
+                pos,
+                tok,
+                note,
+            } => note.clone(),
+            TokenTree::Nested {
+                elements,
+                kind,
+                note,
+            } => note.clone(),
+        }
+    }
     pub(crate) fn end_pos(&self) -> u32 {
         match self {
             TokenTree::SimpleToken {
