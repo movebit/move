@@ -35,6 +35,7 @@ impl PathBufHashMap {
 /// A thin wrapper on `FileLineMapping`
 /// Sometimes only handle one file.
 #[derive(Debug, Default)]
+#[repr(transparent)]
 pub struct FileLineMappingOneFile {
     mapping: FileLineMapping,
 }
@@ -56,7 +57,7 @@ impl FileLineMappingOneFile {
     ) -> Option<lsp_types::Range> {
         self.mapping
             .translate(&Path::new(".").to_path_buf(), start_index, end_index)
-            .map(|x| x.mk_location().range)
+            .map(|x| x.mk_range())
     }
 }
 
@@ -186,7 +187,12 @@ pub struct FileRange {
 
 impl FileRange {
     pub fn mk_location(&self) -> lsp_types::Location {
-        let range = lsp_types::Range {
+        let range = self.mk_range();
+        let uri = url::Url::from_file_path(self.path.as_path()).unwrap();
+        lsp_types::Location::new(uri, range)
+    }
+    pub fn mk_range(&self) -> lsp_types::Range {
+        lsp_types::Range {
             start: lsp_types::Position {
                 line: self.line_start,
                 character: self.col_start,
@@ -195,9 +201,7 @@ impl FileRange {
                 line: self.line_end,
                 character: self.col_end,
             },
-        };
-        let uri = url::Url::from_file_path(self.path.as_path()).unwrap();
-        lsp_types::Location::new(uri, range)
+        }
     }
 }
 
