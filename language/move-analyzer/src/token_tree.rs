@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashSet;
-use std::hash::Hash;
+
 
 use move_compiler::parser::ast::Definition;
 use move_compiler::parser::ast::*;

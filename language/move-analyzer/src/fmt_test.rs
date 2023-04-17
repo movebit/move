@@ -41,7 +41,7 @@ fn scan_dir() {
 #[test]
 fn xxx() {
     test_on_file(&Path::new(
-        "/Users/yuyang/projects/aptos-core/third_party/move/documentation/examples/diem-framework/move-packages/DPN/sources/DiemAccount.move",
+        "/Volumes/sanDisk/projects/aptos-core/third_party/move/documentation/examples/diem-framework/move-packages/DPN/sources/Roles.move",
     ));
 }
 

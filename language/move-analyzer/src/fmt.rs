@@ -2,7 +2,6 @@
 use std::cell::RefCell;
 
 use std::collections::HashSet;
-use std::path::{Path, PathBuf};
 
 use std::result::Result::*;
 
@@ -17,13 +16,13 @@ use std::cell::Cell;
 use crate::token_tree::{
     Comment, CommentExtrator, CommentKind, Delimiter, NestKind_, ParseResult, TokenTree,
 };
-use crate::utils::FileLineMapping;
+use crate::utils::FileLineMappingOneFile;
 struct Format {
     config: FormatConfig,
     depth: Cell<usize>,
     token_tree: Vec<TokenTree>,
     comments: Vec<Comment>,
-    line_mapping: FileLineMapping,
+    line_mapping: FileLineMappingOneFile,
     comments_index: Cell<usize>,
     ret: RefCell<String>,
     cur_line: Cell<u32>,
@@ -41,7 +40,7 @@ impl Format {
     fn new(
         config: FormatConfig,
         comments: CommentExtrator,
-        line_mapping: FileLineMapping,
+        line_mapping: FileLineMappingOneFile,
         p: ParseResult,
     ) -> Self {
         let ParseResult {
@@ -252,9 +251,9 @@ impl Format {
 
                 match kind.end_token_tree() {
                     TokenTree::SimpleToken {
-                        content: (_),
-                        pos: (t_pos),
-                        tok: (t_tok),
+                        content: _,
+                        pos: t_pos,
+                        tok: t_tok,
                     } => {
                         if need_space(
                             t_tok,
@@ -322,7 +321,7 @@ impl Format {
                 //TODO: If the comment is in the same line with the latest token
                 //1 don't change line
                 //2 if find \n move it after the comment
-                if (self.no_space_or_new_line_for_comment()) {
+                if self.no_space_or_new_line_for_comment() {
                     self.push_str(" ");
                 }
                 self.push_str(c.content.as_str());
@@ -390,7 +389,7 @@ impl Format {
     }
 
     fn no_space_or_new_line_for_comment(&self) -> bool {
-        if (self.ret.borrow().chars().last().is_some()) {
+        if self.ret.borrow().chars().last().is_some() {
             self.ret.borrow().chars().last().unwrap() != '\n'
                 && self.ret.borrow().chars().last().unwrap() != ' '
         } else {
@@ -408,11 +407,7 @@ impl Format {
     }
 
     fn translate_line(&self, pos: u32) -> u32 {
-        let p: PathBuf = Path::new(".").to_path_buf();
-        self.line_mapping
-            .translate(&p, pos, pos)
-            .unwrap()
-            .line_start
+        self.line_mapping.translate(pos, pos).unwrap().start.line
     }
 
     /// analyzer a `Nested` token tree.
@@ -537,8 +532,8 @@ pub fn format(content: impl AsRef<str>, config: FormatConfig) -> Result<String, 
     let parse = super::token_tree::Parser::new(lexer, &defs);
     let parse_result = parse.parse_tokens();
     let ce = CommentExtrator::new(content).unwrap();
-    let mut t = FileLineMapping::default();
-    t.update(Path::new(".").to_path_buf(), &content);
+    let mut t = FileLineMappingOneFile::default();
+    t.update(&content);
     let f = Format::new(config, ce, t, parse_result);
     Ok(f.format_token_trees())
 }
