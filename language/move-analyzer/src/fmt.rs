@@ -283,7 +283,7 @@ impl Format {
                 self.push_str(&content.as_str());
                 self.cur_line.set(self.translate_line(*pos));
                 if self.last_line_length() > 75
-                    && Self::tok_suitable_for_new_line(tok.clone(), note.clone())
+                    && Self::tok_suitable_for_new_line(tok.clone(), note.clone(), next_token)
                 {
                     self.new_line(None);
                     self.push_str(" ");
@@ -606,7 +606,7 @@ pub(crate) fn need_space(current: &TokenTree, next: Option<&TokenTree>) -> bool 
             } => kind.kind.start_tok(),
         }
     }
-    let is_bin_current = current
+    let _is_bin_current = current
         .get_note()
         .map(|x| x == Note::BinaryOP)
         .unwrap_or_default();
@@ -659,7 +659,7 @@ pub(crate) fn need_space(current: &TokenTree, next: Option<&TokenTree>) -> bool 
         (TokType::MathSign, _) => true,
         (TokType::Sign, TokType::Alphabet) => true,
         (_, TokType::MathSign) => true,
-
+        (TokType::Alphabet, TokType::String) => true,
         (TokType::Number, TokType::Alphabet) => true,
         (_, TokType::AmpMut) => true,
         (TokType::Colon, _) => true,
@@ -721,7 +721,27 @@ impl Format {
             .map(|x| x.len())
             .unwrap_or_default()
     }
-    fn tok_suitable_for_new_line(tok: Tok, note: Option<Note>) -> bool {
+    fn tok_suitable_for_new_line(tok: Tok, note: Option<Note>, next: Option<&TokenTree>) -> bool {
+        // special case
+        if next
+            .map(|x| match x {
+                TokenTree::SimpleToken {
+                    content: _,
+                    pos: _,
+                    tok: _,
+                    note: _,
+                } => None,
+                TokenTree::Nested {
+                    elements: _,
+                    kind,
+                    note: _,
+                } => Some(kind.kind == NestKind_::Type),
+            })
+            .flatten()
+            .unwrap_or_default()
+        {
+            return false;
+        }
         let is_bin = note.map(|x| x == Note::BinaryOP).unwrap_or_default();
         match tok {
             Tok::NumValue

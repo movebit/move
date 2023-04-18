@@ -41,7 +41,7 @@ fn scan_dir() {
 #[test]
 fn xxx() {
     test_on_file(&Path::new(
-        "/Users/yuyang/projects/aptos-core/aptos-move/aptos-transactional-test-harness/tests/aptos_test_harness/call_function.move",
+        "/Users/yuyang/projects/aptos-core/third_party/move/move-compiler/tests/move_check/parser/byte_string_success.move",
     ));
 }
 
@@ -82,7 +82,8 @@ fn test_content(content_origin: &str, p: impl AsRef<Path>) {
         Err(err) => {
             unreachable!(
                 "should be able to parse after format:err{:?},after format:\n\n################\n{}\n###############",
-                err, content_format 
+                err,  
+                content_format 
             );
         }
     };
@@ -177,7 +178,9 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
             TokenTree::SimpleToken {
                 content,
                 pos,
-                tok: _tok, note: _ } => {
+                tok: _tok,
+                note: _,
+            } => {
                 let loc = m
                     .translate(&Path::new(".").to_path_buf(), *pos, *pos)
                     .unwrap();
@@ -188,7 +191,11 @@ fn extract_tokens(content: &str) -> Result<Vec<ExtractToken>, Vec<String>> {
                     col: loc.col_start,
                 });
             }
-            TokenTree::Nested { elements, kind , note: _  } => {
+            TokenTree::Nested {
+                elements,
+                kind,
+                note: _,
+            } => {
                 let start_loc = m
                     .translate(
                         &Path::new(".").to_path_buf(),
@@ -228,8 +235,8 @@ fn test_str() {
     test_content(
         r#"
         module 0x1::xxx { 
-            public entry fun hi(sender: &signer, msg: String) acquires ModuleData{
-                borrow_global_mut<ModuleData>(signer::address_of(sender)).state = msg;
+            public fun escaped_backslash_before_quote(): vector<u8> {
+                b"\\"
             }
         }
         

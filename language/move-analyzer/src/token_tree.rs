@@ -1,3 +1,4 @@
+use core::panic;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 
@@ -694,13 +695,13 @@ pub enum ExtratorCommentState {
     /// init state
     Init,
     /// `/` has been seen,maybe a comment.
-    OneSlash,
+    OneSlash(u8),
     /// `//` has been seen, maybe doubledash inline comment or tripledash inline comment.
     DoubleDashInlineComment,
     /// `///` has been seen,inline comment.
     InlineComment,
     /// `/*` has been seen,block comment.
-    BlockComment,
+    BlockComment(u8),
     /// in state `BlockComment`,`*` has been seen,maybe exit the `BlockComment`.
     OneStar,
     /// `"` has been seen.
@@ -735,9 +736,13 @@ impl CommentExtrator {
                 state = ExtratorCommentState::Init;
             };
         }
-
+        // eprintln!("xxxx:{}", content.len());
         while index <= last_index {
             let c = content.get(index).unwrap();
+            // eprintln!(
+            //     "index:{} state:{:?} c:{:?} last:{}",
+            //     index, state, *c as char, last_index
+            // );
             match state {
                 ExtratorCommentState::Init => match *c {
                     SLASH => {
@@ -813,10 +818,19 @@ impl CommentExtrator {
                     {
                         index += 2;
                         continue;
+                    } else if *c == BLACK_SLASH  // handle \\
+                        && content
+                            .get(index + 1)
+                            .map(|x| *x == BLACK_SLASH)
+                            .unwrap_or(false)
+                    {
+                        index += 2;
+                        continue;
                     } else if *c == QUOTE {
                         state = ExtratorCommentState::Init;
                     } else if *c == NEW_LINE {
-                        return Err(CommentExtratorErr::NewLineInQuote);
+                        // return Err(CommentExtratorErr::NewLineInQuote);
+                        panic!("1")
                     }
                 }
             };
@@ -865,7 +879,7 @@ mod comment_test {
     " \" // iii "
     "// fff"
     /// ggg
-     
+    b"\\"
         "#,
         )
         .unwrap();
@@ -883,11 +897,7 @@ mod comment_test {
     }
     #[test]
     fn test_comment_extrator_ok2() {
-        let _x = CommentExtrator::new(
-            r#"/**
-**/"#,
-        )
-        .unwrap();
+        let _x = CommentExtrator::new(r#"/* /* 1 */ */"#).unwrap();
     }
 
     #[test]
@@ -916,3 +926,15 @@ mod comment_test {
         }
     }
 }
+
+/*
+
+    /*
+        1111
+     */
+
+
+
+
+
+*/
