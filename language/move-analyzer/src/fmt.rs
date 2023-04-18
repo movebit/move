@@ -456,8 +456,6 @@ impl Format {
                 if self.translate_line(add_line_comment) == self.translate_line(c.start_offset) {
                     if (self.translate_line(c.start_offset) - self.cur_line.get()) > 1 {
                         self.new_line(None);
-                    } else {
-                        self.push_str(" ");
                     }
                     self.push_str(c.content.as_str());
                     let kind = c.comment_kind();
@@ -536,6 +534,8 @@ pub enum TokType {
     Colon,
     /// @
     AtSign,
+    /// <
+    Less,
 }
 
 impl From<Tok> for TokType {
@@ -564,7 +564,7 @@ impl From<Tok> for TokType {
             Tok::Colon => TokType::Colon,
             Tok::ColonColon => TokType::NoNeedSpace,
             Tok::Semicolon => TokType::Semicolon,
-            Tok::Less => TokType::MathSign,
+            Tok::Less => TokType::Less,
             Tok::LessEqual => TokType::MathSign,
             Tok::LessLess => TokType::MathSign,
             Tok::Equal => TokType::MathSign,
@@ -606,11 +606,18 @@ pub(crate) fn need_space(current: &TokenTree, next: Option<&TokenTree>) -> bool 
             } => kind.kind.start_tok(),
         }
     }
-    let is_bin = current
+    let is_bin_current = current
         .get_note()
         .map(|x| x == Note::BinaryOP)
         .unwrap_or_default();
 
+    let is_bin_next = match next {
+        None => false,
+        Some(next_) => next_
+            .get_note()
+            .map(|x| x == Note::BinaryOP)
+            .unwrap_or_default(),
+    };
     let is_apply_current = current
         .get_note()
         .map(|x| x == Note::ApplyName)
@@ -658,8 +665,18 @@ pub(crate) fn need_space(current: &TokenTree, next: Option<&TokenTree>) -> bool 
         (TokType::Colon, _) => true,
         (TokType::Alphabet, TokType::Number) => true,
 
+        (_, TokType::Less) => {
+            if is_bin_next {
+                true
+            } else {
+                false
+            }
+        }
+        (TokType::Less, TokType::Alphabet) => true,
+        (TokType::Less, _) => false,
+
         (_, TokType::Amp) => {
-            if is_bin {
+            if is_bin_next {
                 true
             } else {
                 false
@@ -667,7 +684,7 @@ pub(crate) fn need_space(current: &TokenTree, next: Option<&TokenTree>) -> bool 
         }
 
         (_, TokType::Star) => {
-            if is_bin || is_apply_next {
+            if is_bin_next || is_apply_next {
                 if is_to_execpt {
                     true
                 } else {
@@ -679,7 +696,7 @@ pub(crate) fn need_space(current: &TokenTree, next: Option<&TokenTree>) -> bool 
         }
 
         (TokType::Star, _) => {
-            if is_bin || is_apply_current {
+            if is_bin_next || is_apply_current {
                 if is_to_execpt {
                     true
                 } else {
