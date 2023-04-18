@@ -260,28 +260,7 @@ impl Format {
                         tok: t_tok,
                         note,
                     } => {
-                        if need_space(
-                            t_tok,
-                            match next_token {
-                                Some(x) => match x {
-                                    TokenTree::SimpleToken {
-                                        content: _,
-                                        pos: _,
-                                        tok,
-                                        note: _,
-                                    } => Some(*tok),
-                                    TokenTree::Nested {
-                                        elements: _,
-                                        kind: _,
-                                        note: _,
-                                    } => None,
-                                },
-                                None => None,
-                            },
-                            note.map(|x| x == Note::BinaryOP).unwrap_or_default(),
-                            false,
-                            false,
-                        ) {
+                        if need_space(token, next_token) {
                             self.push_str(" ");
                         }
                     }
@@ -296,7 +275,6 @@ impl Format {
                 tok,
                 note,
             } => {
-                let mut is_to_except: bool = false;
                 self.add_comments(*pos);
                 if (self.translate_line(*pos) - self.cur_line.get()) > 1 {
                     self.new_line(None);
@@ -307,39 +285,13 @@ impl Format {
                 }
                 self.push_str(&content.as_str());
                 self.cur_line.set(self.translate_line(*pos));
-                if need_space(
-                    *tok,
-                    match next_token {
-                        Some(x) => match x {
-                            TokenTree::SimpleToken {
-                                content: con,
-                                pos: _,
-                                tok,
-                                note: _,
-                            } => {
-                                if con.as_str() == "to" || con.as_str() == "except" {
-                                    is_to_except = true;
-                                }
-                                Some(*tok)
-                            }
-                            TokenTree::Nested {
-                                elements: _,
-                                kind: _,
-                                note: _,
-                            } => None,
-                        },
-                        None => None,
-                    },
-                    note.map(|x| x == Note::BinaryOP).unwrap_or_default(),
-                    content.as_str() == "to" || content.as_str() == "except",
-                    is_to_except,
-                ) {
+                if need_space(token, next_token) {
                     self.push_str(" ");
                 }
             }
         }
     }
-
+    //note.map(|x| x == Note::BinaryOP).unwrap_or_default(),
     fn add_comments(&self, pos: u32) {
         for c in &self.comments[self.comments_index.get()..] {
             if c.start_offset < pos {
@@ -655,6 +607,39 @@ pub(crate) fn need_space(current: &TokenTree, next: Option<&TokenTree>) -> bool 
         .map(|x| x == Note::BinaryOP)
         .unwrap_or_default();
 
+    let is_apply_current = current
+        .get_note()
+        .map(|x| x == Note::ApplyName)
+        .unwrap_or_default();
+
+    let is_apply_next = match next {
+        None => false,
+        Some(next_) => next_
+            .get_note()
+            .map(|x| x == Note::ApplyName)
+            .unwrap_or_default(),
+    };
+
+    let is_to_execpt = match current {
+        TokenTree::SimpleToken {
+            content: con,
+            pos: _,
+            tok: _,
+            note: _,
+        } => con.as_str() == "to" || con.as_str() == "except",
+        _ => false,
+    } || match next {
+        None => false,
+        Some(next_) => match next_ {
+            TokenTree::SimpleToken {
+                content: con,
+                pos: _,
+                tok: _,
+                note: _,
+            } => con.as_str() == "to" || con.as_str() == "except",
+            _ => false,
+        },
+    };
     return match (
         TokType::from(get_start_tok(current)),
         TokType::from(next.map(|x| get_start_tok(x)).unwrap()),
@@ -678,16 +663,24 @@ pub(crate) fn need_space(current: &TokenTree, next: Option<&TokenTree>) -> bool 
         }
 
         (_, TokType::Star) => {
-            if is_bin || is_to_except_current {
-                true
+            if is_bin || is_apply_next {
+                if is_to_execpt {
+                    true
+                } else {
+                    false
+                }
             } else {
                 false
             }
         }
 
         (TokType::Star, _) => {
-            if is_bin || is_to_except_next {
-                true
+            if is_bin || is_apply_current {
+                if is_to_execpt {
+                    true
+                } else {
+                    false
+                }
             } else {
                 false
             }
