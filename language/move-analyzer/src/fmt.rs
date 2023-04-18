@@ -279,14 +279,16 @@ impl Format {
                 if (self.translate_line(*pos) - self.cur_line.get()) > 1 {
                     self.new_line(None);
                 }
+
+                self.push_str(&content.as_str());
+                self.cur_line.set(self.translate_line(*pos));
                 if self.last_line_length() > 75
                     && Self::tok_suitable_for_new_line(tok.clone(), note.clone())
                 {
                     self.new_line(None);
                     self.push_str(" ");
+                    return;
                 }
-                self.push_str(&content.as_str());
-                self.cur_line.set(self.translate_line(*pos));
                 if need_space(token, next_token) {
                     self.push_str(" ");
                 }
@@ -718,14 +720,13 @@ impl Format {
             | Tok::Minus
             | Tok::Period
             | Tok::Slash => true,
-            Tok::Less | Tok::Amp | Tok::Star if is_bin => true,
+            Tok::Less | Tok::Amp | Tok::Star | Tok::Greater if is_bin => true,
             Tok::LessEqual
             | Tok::LessLess
             | Tok::Equal
             | Tok::EqualEqual
             | Tok::EqualEqualGreater
             | Tok::LessEqualEqualGreater
-            | Tok::Greater
             | Tok::GreaterEqual
             | Tok::GreaterGreater => true,
             _ => false,
