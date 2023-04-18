@@ -257,8 +257,8 @@ impl Format {
                     TokenTree::SimpleToken {
                         content: _,
                         pos: _t_pos,
-                        tok: t_tok,
-                        note,
+                        tok: _t_tok,
+                        note: _,
                     } => {
                         if need_space(token, next_token) {
                             self.push_str(" ");
@@ -279,7 +279,9 @@ impl Format {
                 if (self.translate_line(*pos) - self.cur_line.get()) > 1 {
                     self.new_line(None);
                 }
-                if self.last_line_length() > 75 {
+                if self.last_line_length() > 75
+                    && Self::tok_suitable_for_new_line(tok.clone(), note.clone())
+                {
                     self.new_line(None);
                     self.push_str(" ");
                 }
@@ -291,7 +293,7 @@ impl Format {
             }
         }
     }
-    //note.map(|x| x == Note::BinaryOP).unwrap_or_default(),
+
     fn add_comments(&self, pos: u32) {
         for c in &self.comments[self.comments_index.get()..] {
             if c.start_offset < pos {
@@ -590,15 +592,15 @@ pub(crate) fn need_space(current: &TokenTree, next: Option<&TokenTree>) -> bool 
     fn get_start_tok(t: &TokenTree) -> Tok {
         match t {
             TokenTree::SimpleToken {
-                content,
-                pos,
+                content: _,
+                pos: _,
                 tok,
-                note,
+                note: _,
             } => tok.clone(),
             TokenTree::Nested {
-                elements,
+                elements: _,
                 kind,
-                note,
+                note: _,
             } => kind.kind.start_tok(),
         }
     }
@@ -699,5 +701,34 @@ impl Format {
             .last()
             .map(|x| x.len())
             .unwrap_or_default()
+    }
+    fn tok_suitable_for_new_line(tok: Tok, note: Option<Note>) -> bool {
+        let is_bin = note.map(|x| x == Note::BinaryOP).unwrap_or_default();
+        match tok {
+            Tok::NumValue
+            | Tok::NumTypedValue
+            | Tok::ByteStringValue
+            | Tok::Identifier
+            | Tok::Exclaim
+            | Tok::ExclaimEqual
+            | Tok::Percent
+            | Tok::AmpAmp
+            | Tok::AmpMut
+            | Tok::Plus
+            | Tok::Minus
+            | Tok::Period
+            | Tok::Slash => true,
+            Tok::Less | Tok::Amp | Tok::Star if is_bin => true,
+            Tok::LessEqual
+            | Tok::LessLess
+            | Tok::Equal
+            | Tok::EqualEqual
+            | Tok::EqualEqualGreater
+            | Tok::LessEqualEqualGreater
+            | Tok::Greater
+            | Tok::GreaterEqual
+            | Tok::GreaterGreater => true,
+            _ => false,
+        }
     }
 }

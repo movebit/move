@@ -129,14 +129,14 @@ impl TokenTree {
     pub(crate) fn get_note(&self) -> Option<Note> {
         match self {
             TokenTree::SimpleToken {
-                content,
-                pos,
-                tok,
+                content: _,
+                pos: _,
+                tok: _,
                 note,
             } => note.clone(),
             TokenTree::Nested {
-                elements,
-                kind,
+                elements: _,
+                kind: _,
                 note,
             } => note.clone(),
         }

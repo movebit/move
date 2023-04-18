@@ -41,7 +41,7 @@ fn scan_dir() {
 #[test]
 fn xxx() {
     test_on_file(&Path::new(
-        "/Volumes/sanDisk/projects/aptos-core/third_party/move/documentation/examples/diem-framework/move-packages/DPN/sources/Roles.move",
+        "/Users/yuyang/projects/aptos-core/aptos-move/aptos-transactional-test-harness/tests/aptos_test_harness/call_function.move",
     ));
 }
 
@@ -228,12 +228,8 @@ fn test_str() {
     test_content(
         r#"
         module 0x1::xxx { 
-            spec module{
-                
-              
-                apply PreserveKeyRotationCapAbsence to * except make_account, create_*_account, restore_key_rotation_capability, initialize;
-                
-                
+            public entry fun hi(sender: &signer, msg: String) acquires ModuleData{
+                borrow_global_mut<ModuleData>(signer::address_of(sender)).state = msg;
             }
         }
         
