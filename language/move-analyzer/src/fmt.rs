@@ -747,6 +747,7 @@ impl Format {
             Tok::ExclaimEqual
             | Tok::Percent
             | Tok::AmpAmp
+            | Tok::ColonColon
             | Tok::Plus
             | Tok::Minus
             | Tok::Period
