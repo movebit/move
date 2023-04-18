@@ -744,18 +744,13 @@ impl Format {
         }
         let is_bin = note.map(|x| x == Note::BinaryOP).unwrap_or_default();
         match tok {
-            Tok::NumValue
-            | Tok::NumTypedValue
-            | Tok::ByteStringValue
-            | Tok::Identifier
-            | Tok::Exclaim
-            | Tok::ExclaimEqual
+            Tok::ExclaimEqual
             | Tok::Percent
             | Tok::AmpAmp
-            | Tok::AmpMut
             | Tok::Plus
             | Tok::Minus
             | Tok::Period
+            | Tok::PeriodPeriod
             | Tok::Slash => true,
             Tok::Less | Tok::Amp | Tok::Star | Tok::Greater if is_bin => true,
             Tok::LessEqual
