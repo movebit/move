@@ -301,6 +301,10 @@ impl Format {
                 if (self.translate_line(*pos) - self.cur_line.get()) > 1 {
                     self.new_line(None);
                 }
+                if self.last_line_length() > 75 {
+                    self.new_line(None);
+                    self.push_str(" ");
+                }
                 self.push_str(&content.as_str());
                 self.cur_line.set(self.translate_line(*pos));
                 if need_space(
@@ -692,4 +696,15 @@ pub(crate) fn need_space(current: &TokenTree, next: Option<&TokenTree>) -> bool 
         (TokType::AtSign, TokType::Alphabet) => false,
         _ => false,
     };
+}
+
+impl Format {
+    fn last_line_length(&self) -> usize {
+        self.ret
+            .borrow()
+            .lines()
+            .last()
+            .map(|x| x.len())
+            .unwrap_or_default()
+    }
 }
