@@ -58,8 +58,9 @@ impl Format {
             if t.is_pound() {
                 pound_sign = Some(index);
             }
-            self.format_token_trees_(t, self.token_tree.get(index + 1));
-            if pound_sign.map(|x| (x + 1) == index).unwrap_or_default() {
+            let new_line = pound_sign.map(|x| (x + 1) == index).unwrap_or_default();
+            self.format_token_trees_(t, self.token_tree.get(index + 1), new_line);
+            if new_line {
                 self.new_line(Some(t.end_pos()));
                 pound_sign = None;
             }
@@ -179,7 +180,12 @@ impl Format {
         false
     }
 
-    fn format_token_trees_(&self, token: &TokenTree, next_token: Option<&TokenTree>) {
+    fn format_token_trees_(
+        &self,
+        token: &TokenTree,
+        next_token: Option<&TokenTree>,
+        new_line_after: bool,
+    ) {
         match token {
             TokenTree::Nested {
                 elements,
@@ -215,7 +221,7 @@ impl Format {
                     }
                     NestKind_::Brace => {}
                 }
-                self.format_token_trees_(&kind.start_token_tree(), None);
+                self.format_token_trees_(&kind.start_token_tree(), None, new_line_mode);
                 self.inc_depth();
                 if new_line_mode {
                     self.new_line(Some(kind.start_pos));
@@ -228,22 +234,35 @@ impl Format {
                         pound_sign = Some(index)
                     }
                     let next_t = elements.get(index + 1);
-                    self.format_token_trees_(t, elements.get(index + 1));
-                    if pound_sign.map(|x| (x + 1) == index).unwrap_or_default() {
-                        self.new_line(Some(t.end_pos()));
-                        pound_sign = None;
-                        continue;
-                    }
-                    // need new line.
-                    if new_line_mode {
+                    let pound_sign_new_line =
+                        pound_sign.map(|x| (x + 1) == index).unwrap_or_default();
+                    let new_line = if new_line_mode {
                         let d = delimiter.map(|x| x.to_static_str());
                         let t_str = t.simple_str();
                         if (Self::need_new_line(kind.kind, delimiter, has_colon, t, next_t)
                             || (d == t_str && d.is_some()))
                             && index != len - 1
                         {
-                            self.new_line(Some(t.end_pos()));
+                            true
+                        } else {
+                            false
                         }
+                    } else {
+                        false
+                    };
+                    self.format_token_trees_(
+                        t,
+                        elements.get(index + 1),
+                        pound_sign_new_line || new_line,
+                    );
+                    if pound_sign_new_line {
+                        self.new_line(Some(t.end_pos()));
+                        pound_sign = None;
+                        continue;
+                    }
+                    // need new line.
+                    if new_line {
+                        self.new_line(Some(t.end_pos()));
                     }
                 }
                 self.add_comments(kind.end_pos);
@@ -251,7 +270,7 @@ impl Format {
                 if new_line_mode {
                     self.new_line(Some(kind.end_pos));
                 }
-                self.format_token_trees_(&kind.end_token_tree(), None);
+                self.format_token_trees_(&kind.end_token_tree(), None, false);
 
                 match kind.end_token_tree() {
                     TokenTree::SimpleToken {
@@ -282,6 +301,9 @@ impl Format {
 
                 self.push_str(&content.as_str());
                 self.cur_line.set(self.translate_line(*pos));
+                if new_line_after {
+                    return;
+                }
                 if self.last_line_length() > 75
                     && Self::tok_suitable_for_new_line(tok.clone(), note.clone(), next_token)
                 {
