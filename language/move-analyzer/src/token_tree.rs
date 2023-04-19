@@ -779,11 +779,9 @@ impl CommentExtrator {
                         state = ExtratorCommentState::BlockComment;
                     } else {
                         comment.push(SLASH);
-                        if depth <= 1 {
-                            depth = 0;
+                        if depth == 0 {
                             state = ExtratorCommentState::Init;
                         } else {
-                            depth = depth - 1;
                             state = ExtratorCommentState::BlockComment;
                         }
                     }
@@ -836,13 +834,7 @@ impl CommentExtrator {
                         index += 2;
                         continue;
                     } else if *c == QUOTE {
-                        depth = depth - 1;
-                        if depth <= 1 {
-                            depth = 0;
-                            state = ExtratorCommentState::Init;
-                        } else {
-                            state = ExtratorCommentState::BlockComment;
-                        }
+                        state = ExtratorCommentState::Init;
                     } else if *c == NEW_LINE {
                         // return Err(CommentExtratorErr::NewLineInQuote);
                         panic!("1")
