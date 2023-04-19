@@ -769,16 +769,19 @@ impl CommentExtrator {
                 },
                 ExtratorCommentState::OneSlash => {
                     if *c == SLASH {
-                        state = ExtratorCommentState::InlineComment;
                         comment.push(SLASH);
                         comment.push(SLASH);
+                        if depth == 0 {
+                            state = ExtratorCommentState::InlineComment;
+                        } else {
+                            state = ExtratorCommentState::BlockComment;
+                        }
                     } else if *c == STAR {
                         comment.push(SLASH);
                         comment.push(STAR);
                         depth = depth + 1;
                         state = ExtratorCommentState::BlockComment;
                     } else {
-                        comment.push(SLASH);
                         if depth == 0 {
                             state = ExtratorCommentState::Init;
                         } else {
