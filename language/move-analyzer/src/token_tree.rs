@@ -695,13 +695,11 @@ pub enum ExtratorCommentState {
     /// init state
     Init,
     /// `/` has been seen,maybe a comment.
-    OneSlash(u8),
-    /// `//` has been seen, maybe doubledash inline comment or tripledash inline comment.
-    DoubleDashInlineComment,
+    OneSlash,
     /// `///` has been seen,inline comment.
     InlineComment,
     /// `/*` has been seen,block comment.
-    BlockComment(u8),
+    BlockComment,
     /// in state `BlockComment`,`*` has been seen,maybe exit the `BlockComment`.
     OneStar,
     /// `"` has been seen.
@@ -710,7 +708,7 @@ pub enum ExtratorCommentState {
 
 impl CommentExtrator {
     pub(crate) fn new(content: &str) -> Result<Self, CommentExtratorErr> {
-        if content.len() == 0 {
+        if content.len() <= 1 {
             return Ok(Self::default());
         }
         let content = content.as_bytes();
@@ -721,6 +719,7 @@ impl CommentExtrator {
         const STAR: u8 = 42;
         const BLACK_SLASH: u8 = 92;
         const QUOTE: u8 = 34;
+        let mut depth = 0;
         let mut comments = Vec::new();
         let mut comment = Vec::new();
         let last_index = content.len() - 1;
@@ -733,7 +732,22 @@ impl CommentExtrator {
                     content: String::from_utf8(comment.clone()).unwrap(),
                 });
                 comment.clear();
-                state = ExtratorCommentState::Init;
+
+                if state == ExtratorCommentState::InlineComment {
+                    if depth == 0 {
+                        state = ExtratorCommentState::Init;
+                    } else {
+                        state = ExtratorCommentState::BlockComment;
+                    }
+                } else {
+                    if depth <= 1 {
+                        depth = 0;
+                        state = ExtratorCommentState::Init;
+                    } else {
+                        depth = depth - 1;
+                        state = ExtratorCommentState::BlockComment;
+                    }
+                }
             };
         }
         // eprintln!("xxxx:{}", content.len());
@@ -755,20 +769,30 @@ impl CommentExtrator {
                 },
                 ExtratorCommentState::OneSlash => {
                     if *c == SLASH {
-                        state = ExtratorCommentState::DoubleDashInlineComment;
+                        state = ExtratorCommentState::InlineComment;
                         comment.push(SLASH);
                         comment.push(SLASH);
                     } else if *c == STAR {
                         comment.push(SLASH);
                         comment.push(STAR);
+                        depth = depth + 1;
                         state = ExtratorCommentState::BlockComment;
                     } else {
-                        state = ExtratorCommentState::Init;
+                        comment.push(SLASH);
+                        if depth <= 1 {
+                            depth = 0;
+                            state = ExtratorCommentState::Init;
+                        } else {
+                            depth = depth - 1;
+                            state = ExtratorCommentState::BlockComment;
+                        }
                     }
                 }
                 ExtratorCommentState::BlockComment => {
                     if *c == STAR {
                         state = ExtratorCommentState::OneStar;
+                    } else if *c == SLASH {
+                        state = ExtratorCommentState::OneSlash;
                     } else {
                         comment.push(*c);
                     }
@@ -786,26 +810,11 @@ impl CommentExtrator {
                         state = ExtratorCommentState::BlockComment;
                     }
                 }
-                ExtratorCommentState::DoubleDashInlineComment => {
-                    if *c == SLASH {
-                        state = ExtratorCommentState::InlineComment;
-                        comment.push(SLASH);
-                    } else if *c == NEW_LINE || index == last_index {
-                        if *c != NEW_LINE {
-                            comment.push(*c);
-                        }
-
-                        make_comment!();
-                    } else {
-                        comment.push(*c);
-                    }
-                }
                 ExtratorCommentState::InlineComment => {
                     if *c == NEW_LINE || index == last_index {
                         if *c != NEW_LINE {
                             comment.push(*c);
                         }
-
                         make_comment!();
                     } else {
                         comment.push(*c);
@@ -827,7 +836,13 @@ impl CommentExtrator {
                         index += 2;
                         continue;
                     } else if *c == QUOTE {
-                        state = ExtratorCommentState::Init;
+                        depth = depth - 1;
+                        if depth <= 1 {
+                            depth = 0;
+                            state = ExtratorCommentState::Init;
+                        } else {
+                            state = ExtratorCommentState::BlockComment;
+                        }
                     } else if *c == NEW_LINE {
                         // return Err(CommentExtratorErr::NewLineInQuote);
                         panic!("1")
