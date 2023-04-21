@@ -90,12 +90,16 @@ Move source file (a file with a `.move` file extension) and:
 
 ## The changelogs:
 
+### 2023/04/21 0.0.17
+
+* Added inlay hint switch.
+
 ### 2023/03/31 0.0.16
 
-* Added inlay hint to variable;
-* Added inlay hint to parameter;
-* Added inlay hint to statement;
-* Auto reload move.toml when modified;
+* Added inlay hint to variable.
+* Added inlay hint to parameter.
+* Added inlay hint to statement.
+* Auto reload move.toml when modified. 
 
 ### 2023/03/16 0.0.15
 
