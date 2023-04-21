@@ -18,7 +18,7 @@ use move_ir_types::location::Loc;
 use std::path::PathBuf;
 
 /// Handles go-to-def request of the language server.
-pub fn on_inlay_hints(context: &Context, request: &Request) {
+pub fn on_inlay_hints(context: &Context, request: &Request, config: InlayHintsConfig) {
     let parameters = serde_json::from_value::<InlayHintParams>(request.params.clone())
         .expect("could not deserialize go-to-def request");
     let fpath = parameters.text_document.uri.to_file_path().unwrap();
@@ -26,7 +26,7 @@ pub fn on_inlay_hints(context: &Context, request: &Request) {
         PathBuf::from(std::env::current_dir().unwrap()).as_path(),
         fpath.as_path(),
     );
-    let mut handler = Handler::new(fpath.clone(), parameters.range);
+    let mut handler = Handler::new(fpath.clone(), parameters.range, config);
     let _ = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
@@ -47,10 +47,11 @@ pub fn on_inlay_hints(context: &Context, request: &Request) {
 struct Handler {
     range: FileRange,
     reuslts: Vec<InlayHint>,
+    config: InlayHintsConfig,
 }
 
 impl Handler {
-    fn new(fpath: PathBuf, range: Range) -> Self {
+    fn new(fpath: PathBuf, range: Range, config: InlayHintsConfig) -> Self {
         Self {
             range: FileRange {
                 path: fpath,
@@ -60,6 +61,7 @@ impl Handler {
                 col_end: range.end.character + 1,
             },
             reuslts: Default::default(),
+            config,
         }
     }
     #[allow(dead_code)]
@@ -91,6 +93,9 @@ impl ItemOrAccessHandler for Handler {
         para: move_compiler::shared::Name,
         exp: &move_compiler::parser::ast::Exp,
     ) {
+        if self.config.parameter == false {
+            return;
+        }
         match &exp.value {
             Exp_::Name(x, _) => match &x.value {
                 move_compiler::parser::ast::NameAccessChain_::One(x) => {
@@ -134,6 +139,9 @@ impl ItemOrAccessHandler for Handler {
                     has_decl_ty: false,
                     ..
                 } => {
+                    if self.config.declare_var == false {
+                        return;
+                    }
                     if ty.is_err() {
                         return;
                     }
@@ -167,9 +175,13 @@ impl ItemOrAccessHandler for Handler {
                     item: _item,
                     has_ref,
                 }) => {
+                    if self.config.field_type == false {
+                        return;
+                    }
                     if ty.is_err() {
                         return;
                     }
+
                     let ty = if let Some(is_mut) = has_ref {
                         ResolvedType::new_ref(*is_mut, ty.clone())
                     } else {
@@ -396,4 +408,21 @@ fn ty_inlay_hints_label_parts_(
             ty_inlay_hints_label_parts_(ret, ret_ty.as_ref(), services);
         }
     };
+}
+
+#[derive(Clone, Copy, serde::Deserialize, Debug)]
+pub struct InlayHintsConfig {
+    field_type: bool,
+    parameter: bool,
+    declare_var: bool,
+}
+
+impl Default for InlayHintsConfig {
+    fn default() -> Self {
+        Self {
+            field_type: true,
+            parameter: true,
+            declare_var: true,
+        }
+    }
 }

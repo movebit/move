@@ -1,12 +1,16 @@
 ## Implementing a language formatter with less work.
 
-implementing a formatter for programming language always with a lot of work.
 
-first of all a language AST has a lot of variant data structure.
+Implementing a formatter for programming language always with a lot of work.
+
+A formatter just print a AST to a string.
+
+first of all a language AST always has a lot of variant data structure.
 
 like move expression.
 
 ~~~
+pub enum Exp_ {
     Value(Value),
     // move(x)
     Move(Var),
@@ -53,6 +57,9 @@ like move expression.
     ExpList(Vec<Exp>),
     // ()
     Unit,
+    
+    ...
+}
 ~~~
 This is just `Expression` variants.
 
@@ -63,11 +70,13 @@ Implement a formatter you have to deal all the data structure.
 
 Another complex thing about formatter is `Comments`.
 Most programming language support two forms of comments.
-* Line comment  like // This is comments.
-* Block comments     /*  This is comments */
 
-The tricky part is `Block comments`. 
-`Block comments` can write anywhere in source code.
+* Line comment       // This a is comment.
+* Block comment     /*  This a is comment. */
+
+The tricky part is `Block comment`. 
+
+`Block comment` can write anywhere in source code.
 
 In order to keep user's comments you have to keep comments in AST like below.
 ~~~
@@ -78,13 +87,84 @@ In order to keep user's comments you have to keep comments in AST like below.
         bool, Option<Vec<Type>>, Spanned<Vec<Exp>>),
 ~~~
 This will make things below ugly.
-* Ast Definition.
-* parse AST.
-* all routine that handle AST.
+
+* AST Definition.
+* Parse AST.
+* All routine that accept AST.
+
+In general We need keep a `Vec<Comment>` in every AST structure.
 
 
-In general We need keep a `Comments` in every AST structure.
+Is there a way to slove this puzzle.
 
+## TokenTree solution
 
-Is there a way to slove the puzzle.
+The key idea about this post to simplfy `AST` to far more simpler tree type which I call it `TokenTree`.
+~~~
+function(a) {
+    if (a) { 
+        return 1
+    } else {
+        return 2
+    }
+}
+~~~
+
+`TokenTree` mainly contains two category.
+
+* `SimpleToken` in previous code snippet,`if`,`return`,`a` are `SimpleToken`.
+* `Nested` in previous code snippet, paired `()` and paired `{}` will form a `Nested` Token.
+
+So a source program may represents like this.
+
+~~~
+pub enum TokenTree {
+    SimpleToken {
+        content: String,
+        pos: u32,  // start position of file buffer.
+    },
+    Nested {
+        elements: Vec<TokenTree>,
+        kind: NestKind,
+    },
+}
+
+pub type AST = Vec<TokenTree>;
+~~~
+
+Instead of dealing a lot data structure we simple the puzzle to dump `Vec<TokenTree>`.
+
+`TokenTree` is just another very simple version of `AST`.
+
+`TokenTree` is very easy to parse,simple as.
+~~~
+...
+if(tok == Tok::LParent){ // current token is `(`
+    parse_nested(Tok::LParent);    
+}
+...
+~~~
+
+Right now verything looks fine.
+
+But There are some token can be both `SimpleToken` and `Nested`.
+
+Typical for a language support type parameter like `Vec<X>`.
+
+A Token `<` can be `type parameter sign` or `mathematic less than`.
+
+This can be solved by consult the `AST` before parse `TokenTree`.
+
+Because we are writting a formatter for exist programming language.
+
+It is always easy for us to get the real `AST`.
+
+We can traval the `AST` the decide `<` is either a `SimpleToken` or `Nested`.
+
+## how to generate base on `TokenTree`.
+
+`Vec<TokenTree>` is a tree type, It is very easy to decide how many ident,etc.
+
+And comment can pour into `result` base on the `pos` relate to `SimpleToken`.`pos`.
+
 

@@ -994,3 +994,18 @@ impl std::fmt::Display for GetExprTypeImpl {
         write!(f, "{}", "visit for generate spec.")
     }
 }
+
+pub(crate) fn fun_may_pure(
+    f: &Function,
+) -> (
+    /* a list of call point in this function.
+    ```
+        x()
+    ```
+    x goes into this set.
+    */
+    HashSet<NameAccessChain>,
+    bool,
+) {
+    unimplemented!("丁继政 going to implement this.")
+}

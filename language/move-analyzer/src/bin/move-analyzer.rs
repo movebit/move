@@ -18,6 +18,7 @@ use lsp_types::{
 };
 
 use move_analyzer::call;
+use move_analyzer::inlay_hitnt::InlayHintsConfig;
 use move_command_line_common::files::FileHash;
 use move_compiler::diagnostics::Diagnostics;
 use move_compiler::{shared::*, PASS_TYPING};
@@ -175,6 +176,7 @@ fn main() {
         .expect("could not finish connection initialization");
     let (diag_sender, diag_receiver) = bounded::<(PathBuf, Diagnostics)>(1);
     let diag_sender = Arc::new(Mutex::new(diag_sender));
+    let mut inlay_hints_config = InlayHintsConfig::default();
 
     loop {
         select! {
@@ -189,7 +191,7 @@ fn main() {
             recv(context.connection.receiver) -> message => {
                 try_reload_projects(&mut context);
                 match message {
-                    Ok(Message::Request(request)) => on_request(&mut context, &request),
+                    Ok(Message::Request(request)) => on_request(&mut context, &request , &mut inlay_hints_config),
                     Ok(Message::Response(response)) => on_response(&context, &response),
                     Ok(Message::Notification(notification)) => {
                         match notification.method.as_str() {
@@ -214,7 +216,7 @@ fn main() {
 fn try_reload_projects(context: &mut Context) {
     context.projects.try_reload_projects(&context.connection);
 }
-fn on_request(context: &mut Context, request: &Request) {
+fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut InlayHintsConfig) {
     log::info!("receive method:{}", request.method.as_str());
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => on_completion_request(context, request),
@@ -237,7 +239,7 @@ fn on_request(context: &mut Context, request: &Request) {
             code_lens::move_get_test_code_lens(context, request);
         }
         lsp_types::request::InlayHintRequest::METHOD => {
-            inlay_hitnt::on_inlay_hints(context, request);
+            inlay_hitnt::on_inlay_hints(context, request, inlay_hints_config.clone());
         }
         "move/generate/spec/file" => {
             on_generate_spec_file(context, request);
@@ -247,6 +249,12 @@ fn on_request(context: &mut Context, request: &Request) {
         }
         "move/call/tree" => {
             call::on_get_call_tree(context, request);
+        }
+        "move/lsp/client/inlay_hints/config" => {
+            let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
+                .expect("could not deserialize inlay hints request");
+            eprintln!("call inlay_hints config {:?}", parameters);
+            *inlay_hints_config = parameters;
         }
         _ => log::error!("handle request '{}' from client", request.method),
     }
@@ -320,6 +328,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 parameters.content_changes.last().unwrap().text.as_str(),
             );
         }
+
         lsp_types::notification::DidOpenTextDocument::METHOD => {
             use lsp_types::DidOpenTextDocumentParams;
             let parameters =
@@ -375,6 +384,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 }
             };
         }
+
         _ => log::error!("handle notification '{}' from client", notification.method),
     }
 }

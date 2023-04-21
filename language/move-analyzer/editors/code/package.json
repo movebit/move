@@ -166,6 +166,21 @@
 					"default": "move-analyzer",
 					"markdownDescription": "Path and filename of the move-analyzer executable, e.g. `/usr/bin/move-analyzer`."
 				},
+				"move-analyzer.inlay.hints.parameter" : {
+					"type": "boolean",
+					"default" : true,
+					"markdownDescription": "inlay hints on parameter."
+				},
+				"move-analyzer.inlay.hints.field.type" : {
+					"type": "boolean",
+					"default" : true,
+					"markdownDescription": "inlay hints on field type."
+				},
+				"move-analyzer.inlay.hints.declare.var" : {
+					"type": "boolean",
+					"default" : true,
+					"markdownDescription": "inlay hints on declare var."
+				},
 				"move-analyzer.trace.server": {
 					"type": "string",
 					"scope": "window",
