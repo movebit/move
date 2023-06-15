@@ -152,7 +152,7 @@ impl Project {
         filepath: &PathBuf,
         enter_import: bool,
     ) -> anyhow::Result<()> {
-        log::info!("run visitor part for {} ", visitor);
+        eprintln!("debugrb run visitor part for {} ", visitor);
         self.get_defs(filepath, |provider| {
             self.visit(
                 &self.project_context,
@@ -794,10 +794,12 @@ impl Project {
                           project_context: &ProjectContext,
                           visitor: &mut dyn ItemOrAccessHandler,
                           has_ref: Option<bool>| {
-            self.visit_expr(e, project_context, visitor);
+            eprintln!("debugrb handle_dot({})", field);
+            // self.visit_expr(e, project_context, visitor);
             if visitor.finished() {
                 return;
             }
+            eprintln!("debugrb handle_dot --> inlay_hint.handle_item_or_access({}) continue", field);
             let struct_ty = self.get_expr_type(e, project_context);
             let struct_ty = match &struct_ty {
                 ResolvedType::Ref(_, ty) => ty.as_ref(),
@@ -1202,6 +1204,7 @@ impl Project {
                 }
             },
             Exp_::Dot(e, field) => {
+                eprintln!("debugrb process Exp_::Dot, field = {}", field);
                 handle_dot(&e, field, project_context, visitor, None);
             }
             Exp_::Index(e, index) => {
