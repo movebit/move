@@ -539,6 +539,7 @@ impl Project {
                 return;
             }
             let _guard = project_context.clone_scope_and_enter(addr, module_name, false);
+            eprintln!("debugrb provider.with_function range = {:?}", range);
             self.visit_function(f, project_context, visitor);
         });
 
@@ -717,6 +718,7 @@ impl Project {
             }
         }
     }
+    
     pub(crate) fn visit_block(
         &self,
         seq: &Sequence,
@@ -731,12 +733,27 @@ impl Project {
                 }
             }
             for s in seq.1.iter() {
+                eprintln!("debugrb visit_block sequence_item = {:?}", s);
                 self.visit_sequence_item(s, scopes, visitor);
                 if visitor.finished() {
                     return;
                 }
             }
             if let Some(ref exp) = seq.3.as_ref() {
+                match exp.value {
+                    Exp_::UnaryExp(_, _) => {
+                        return;
+                    }
+                    Exp_::BinopExp(_, _, _) => {
+                        return;
+                    }
+                    Exp_::Dot(_, _) => {
+                        return;
+                    }
+                    _ => {}
+                }
+
+                eprintln!("debugrb visit_block exp = {:?}", exp);
                 self.visit_expr(exp, scopes, visitor);
             }
         });
@@ -849,18 +866,21 @@ impl Project {
                 // let's try.
                 if let Some(tys) = tys {
                     for ty in tys.iter() {
+                        eprintln!("debugrb process Exp_::Name, ty = {:?}", ty);
                         self.visit_type_apply(ty, project_context, visitor);
                         if visitor.finished() {
                             return;
                         }
                     }
                 }
+                eprintln!("debugrb process Exp_::Name, chain = {}", chain);
                 let (item, module) = project_context.find_name_chain_item(chain, self);
                 let item = ItemOrAccess::Access(Access::ExprAccessChain(
                     chain.clone(),
                     module,
                     Box::new(item.unwrap_or_default()),
                 ));
+                eprintln!("debugrb process Exp_::Name, item = {}", item);
                 visitor.handle_item_or_access(self, project_context, &item);
                 if visitor.finished() {
                     return;
@@ -926,6 +946,7 @@ impl Project {
                         module,
                         Box::new(item.unwrap_or_default()),
                     ));
+                    eprintln!("debugrb process Exp_::Call, item = {}", item);
                     visitor.handle_item_or_access(self, project_context, &item);
                     if visitor.finished() {
                         return;
@@ -933,6 +954,7 @@ impl Project {
                 }
                 if let Some(ref types) = types {
                     for t in types.iter() {
+                        eprintln!("debugrb process Exp_::Call, t = {:?}", t);
                         self.visit_type_apply(t, project_context, visitor);
                         if visitor.finished() {
                             return;
@@ -940,6 +962,7 @@ impl Project {
                     }
                 }
                 for expr in exprs.value.iter() {
+                    eprintln!("debugrb process Exp_::Call, expr = {:?}", expr);
                     self.visit_expr(expr, project_context, visitor);
                     if visitor.finished() {
                         return;
@@ -1295,12 +1318,13 @@ impl Project {
                     loc: v.loc,
                     value: Type_::Apply(Box::new(v.clone()), vec![]),
                 };
+                eprintln!("debugrb visit_function, ty = {:?}", ty);
                 self.visit_type_apply(&ty, project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
             }
-
+            eprintln!("debugrb visit_function, function.body.value = {:?}", function.body.value);
             match function.body.value {
                 FunctionBody_::Native => {}
                 FunctionBody_::Defined(ref seq) => self.visit_block(seq, project_context, visitor),
