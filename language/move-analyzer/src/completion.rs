@@ -9,6 +9,6 @@ use lsp_server::Request;
 /// Sends the given connection a response to a completion request.
 ///
 /// The completions returned depend upon where the user's cursor is positioned.
-pub fn on_completion_request(context: &Context, request: &Request) {
-    eprintln!("handling completion request");
+pub fn on_completion_request(_context: &Context, request: &Request) {
+    eprintln!("handling completion request{:?}", request);
 }

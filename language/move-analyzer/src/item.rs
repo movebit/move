@@ -1,6 +1,3 @@
-use crate::project_context::AccessEnv;
-use crate::project_context::ProjectContext;
-
 use super::scope::*;
 use super::types::*;
 use enum_iterator::Sequence;
@@ -45,13 +42,6 @@ impl ItemStruct {
             }
         }
         None
-    }
-    pub(crate) fn all_fields(&self) -> HashMap<Symbol, (Name, ResolvedType)> {
-        let mut m = HashMap::new();
-        self.fields.iter().for_each(|f| {
-            m.insert(f.0 .0.value, (f.0 .0.clone(), f.1.clone()));
-        });
-        m
     }
 }
 
@@ -160,21 +150,6 @@ pub struct ItemUseItem {
 #[derive(Clone)]
 pub struct ItemModuleName {
     pub(crate) name: ModuleName,
-    pub(crate) is_test: bool,
-}
-impl Item {
-    pub(crate) fn struct_accessible(&self, under_test: AccessEnv) -> bool {
-        match self {
-            Item::Struct(ItemStruct { is_test, .. })
-            | Item::StructNameRef(ItemStructNameRef { is_test, .. }) => {
-                if under_test.is_spec() {
-                    return true;
-                }
-                return *is_test == false;
-            }
-            _ => unreachable!(),
-        }
-    }
 }
 
 #[derive(Clone)]
@@ -193,10 +168,7 @@ pub struct ItemFun {
     pub(crate) parameters: Vec<(Var, ResolvedType)>,
     pub(crate) ret_type: Box<ResolvedType>,
     pub(crate) ret_type_unresolved: Type,
-    pub(crate) is_spec: bool,
-    pub(crate) vis: Visibility,
     pub(crate) addr_and_name: AddrAndModuleName,
-    pub(crate) is_test: AttrTest,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -209,37 +181,6 @@ pub enum AttrTest {
 impl AttrTest {
     pub(crate) fn is_test(self) -> bool {
         self == Self::Test || self == Self::TestOnly
-    }
-}
-
-impl ItemFun {
-    pub(crate) fn accessible(&self, project_context: &ProjectContext, env: AccessEnv) -> bool {
-        if !env.is_spec() && self.is_spec {
-            return false;
-        }
-        if !env.is_test() && self.is_test.is_test() {
-            return false;
-        }
-        let current = project_context.get_current_addr_and_module_name();
-        match self.vis {
-            Visibility::Internal => {
-                if project_context.get_current_addr_and_module_name() != self.addr_and_name {
-                    return false;
-                }
-            }
-            Visibility::Public(_) => {}
-            Visibility::Friend(_) => {
-                if !project_context.with_friends(
-                    self.addr_and_name.addr,
-                    self.addr_and_name.name.value(),
-                    |friends| friends.contains(&(current.addr, current.name.value())),
-                ) {
-                    return false;
-                }
-            }
-            Visibility::Script(_) => return true, // TODO script.
-        }
-        true
     }
 }
 
@@ -391,8 +332,6 @@ impl Default for Item {
 pub struct ItemConst {
     pub(crate) name: ConstantName,
     pub(crate) ty: ResolvedType,
-    /// only Const have this field,SpecConst ignore this field.
-    pub(crate) is_test: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -549,17 +488,7 @@ pub struct AccessFiled {
     pub(crate) from: Field,
     pub(crate) to: Field,
     pub(crate) ty: ResolvedType,
-    pub(crate) all_fields: HashMap<Symbol, (Name, ResolvedType)>,
-    /// When dealing with below syntax can have this.
-    /// ```move
-    /// let x = XXX {x}
-    ///```
-    /// x is alas a field and a expr.
-    /// and a expr can link to a item.
     pub(crate) item: Option<Item>,
-    /// Does this field access contains a ref
-    /// like &xxx.yyy
-    pub(crate) has_ref: Option<bool>,
 }
 
 impl std::fmt::Display for Access {

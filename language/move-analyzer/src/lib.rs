@@ -30,7 +30,6 @@ macro_rules! impl_convert_loc {
         }
     };
 }
-// extern crate move_ir_types;
 
 pub mod completion;
 pub mod context;
@@ -44,6 +43,5 @@ pub mod project_visitor;
 pub mod references;
 pub mod scope;
 pub mod syntax;
-pub mod token_tree;
 pub mod types;
 pub mod utils;

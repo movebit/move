@@ -228,7 +228,6 @@ impl Project {
         provider.with_module(|addr, module_def| {
             let item = ItemOrAccess::Item(Item::ModuleName(ItemModuleName {
                 name: module_def.name,
-                is_test: attributes_has_test(&module_def.attributes).is_test(),
             }));
             visitor.handle_item_or_access(self, project_context, &item);
             if !module_def.is_spec_module {
@@ -383,8 +382,6 @@ impl Project {
                     parameters: params,
                     ret_type: Box::new(ret),
                     ret_type_unresolved: s.return_type.clone(),
-                    is_spec,
-                    vis: f.visibility.clone(),
                     addr_and_name: AddrAndModuleName {
                         addr: addr.clone(),
                         name: ModuleName(Spanned {
@@ -392,7 +389,6 @@ impl Project {
                             value: module_name,
                         }),
                     },
-                    is_test: attributes_has_test(&f.attributes),
                 });
                 let item = ItemOrAccess::Item(item);
                 visitor.handle_item_or_access(modules, scopes, &item);
@@ -652,9 +648,7 @@ impl Project {
                                 field.clone()
                             },
                             ty: field_ty.clone(),
-                            all_fields: struct_item.all_fields(),
                             item: None,
-                            has_ref: None,
                         }));
                         visitor.handle_item_or_access(self, project_context, &item);
                         if visitor.finished() {
@@ -776,7 +770,6 @@ impl Project {
         let item = ItemOrAccess::Item(Item::Const(ItemConst {
             name: c.name.clone(),
             ty,
-            is_test: attributes_has_test(&c.attributes).is_test(),
         }));
         visitor.handle_item_or_access(self, project_context, &item);
         let item: Item = item.into();
@@ -810,7 +803,7 @@ impl Project {
                           field: &Name,
                           project_context: &ProjectContext,
                           visitor: &mut dyn ItemOrAccessHandler,
-                          has_ref: Option<bool>| {
+                          _has_ref: Option<bool>| {
             eprintln!("debugrb handle_dot({})", field);
             // self.visit_expr(e, project_context, visitor);
             if visitor.finished() {
@@ -823,15 +816,15 @@ impl Project {
                 _ => &struct_ty,
             };
             let struct_ty = struct_ty.struct_ref_to_struct(project_context);
-            let all_fields = struct_ty.all_fields();
+            // let all_fields = struct_ty.all_fields();
             if let Some(def_field) = struct_ty.find_filed_by_name(field.value) {
                 let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
                     from: Field(field.clone()),
                     to: def_field.0.clone(),
                     ty: def_field.1.clone(),
-                    all_fields,
+                    // all_fields,
                     item: None,
-                    has_ref,
+                    // has_ref,
                 }));
                 visitor.handle_item_or_access(self, project_context, &item);
             } else {
@@ -839,9 +832,9 @@ impl Project {
                     from: Field(field.clone()),
                     to: Field(field.clone()),
                     ty: ResolvedType::UnKnown,
-                    all_fields,
+                    // all_fields,
                     item: None,
-                    has_ref,
+                    // has_ref,
                 }));
                 visitor.handle_item_or_access(self, project_context, &item);
             }
@@ -1007,7 +1000,7 @@ impl Project {
                 }
                 for f in fields.iter() {
                     let field_type = struct_item.find_filed_by_name(f.0.value());
-                    let all_fields = struct_item.all_fields();
+                    // let all_fields = struct_item.all_fields();
                     let item = match &f.1.value {
                         Exp_::Name(chain, _) => match &chain.value {
                             NameAccessChain_::One(x) => {
@@ -1029,9 +1022,7 @@ impl Project {
                             from: f.0.clone(),
                             to: field_type.0.clone(),
                             ty: field_type.1.clone(),
-                            all_fields,
                             item,
-                            has_ref: None,
                         }));
                         visitor.handle_item_or_access(self, project_context, &item);
                     } else {
@@ -1039,9 +1030,7 @@ impl Project {
                             from: f.0.clone(),
                             to: f.0.clone(),
                             ty: ResolvedType::UnKnown,
-                            all_fields,
                             item,
-                            has_ref: None,
                         }));
                         visitor.handle_item_or_access(self, project_context, &item);
                     }
@@ -1627,10 +1616,7 @@ impl Project {
                     parameters: parameter.clone(),
                     ret_type: Box::new(ret_ty),
                     ret_type_unresolved: signature.return_type.clone(),
-                    is_spec: true,
-                    vis: Visibility::Internal,
                     addr_and_name: project_context.get_current_addr_and_module_name(),
-                    is_test: AttrTest::No,
                 });
                 project_context.enter_item(self, name.value(), item);
                 for (var, ty) in parameter {
@@ -1758,9 +1744,7 @@ impl Project {
                                             from: f.clone(),
                                             to: Field(f2.clone()),
                                             ty: ty.clone(),
-                                            all_fields: all_fields.clone(),
                                             item: None,
-                                            has_ref: None,
                                         }));
                                     visitor.handle_item_or_access(self, project_context, &item);
                                     if visitor.finished() {
@@ -1772,9 +1756,7 @@ impl Project {
                                             from: f.clone(),
                                             to: f.clone(),
                                             ty: ResolvedType::UnKnown,
-                                            all_fields: all_fields.clone(),
                                             item: None,
-                                            has_ref: None,
                                         }));
                                     visitor.handle_item_or_access(self, project_context, &item);
                                     if visitor.finished() {

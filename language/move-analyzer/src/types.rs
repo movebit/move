@@ -12,7 +12,6 @@ use move_symbol_pool::Symbol;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::vec;
-// use codespan::ByteIndex;
 
 #[derive(Clone)]
 pub enum ResolvedType {

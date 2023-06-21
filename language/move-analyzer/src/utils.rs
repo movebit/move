@@ -1,8 +1,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-// use codespan_reporting::files::{Files, SimpleFiles};
-// use lsp_types::{Command, Location, Position};
 use lsp_types::{Location, Position};
 use move_command_line_common::files::FileHash;
 use move_ir_types::location::*;
@@ -25,9 +23,7 @@ impl PathBufHashMap {
         self.path_2_hash.insert(path.clone(), hash.clone());
         self.hash_2_path.insert(hash, path);
     }
-    pub(crate) fn get_hash(&self, path: &PathBuf) -> Option<&'_ FileHash> {
-        self.path_2_hash.get(path)
-    }
+
     pub(crate) fn get_path(&self, hash: &FileHash) -> Option<&'_ PathBuf> {
         self.hash_2_path.get(hash)
     }
@@ -291,44 +287,6 @@ impl GetPosition for GetPositionStruct {
     }
 }
 
-// pub fn discover_manifest_and_kind(x: &Path) -> Option<(PathBuf, SourcePackageLayout)> {
-//     let mut x: Vec<_> = x.components().collect();
-//     // We should be able at least pop one.
-//     x.pop()?;
-//     let mut layout = None;
-//     while x.len() > 0 {
-//         while x.len() > 0 {
-//             layout = x
-//                 .last()
-//                 .map(|x| match x.as_os_str().to_str().unwrap() {
-//                     "tests" => Some(SourcePackageLayout::Tests),
-//                     "sources" => Some(SourcePackageLayout::Sources),
-//                     "scripts" => Some(SourcePackageLayout::Scripts),
-//                     _ => return None,
-//                 })
-//                 .flatten();
-//             if layout.is_some() {
-//                 break;
-//             }
-//             x.pop();
-//         }
-//         let layout = layout?;
-//         // Pop tests or sources ...
-//         x.pop()?;
-//         let mut manifest_dir = PathBuf::new();
-//         for x in x.iter() {
-//             manifest_dir.push(x);
-//         }
-//         // check if manifest exists.
-//         let mut manifest_file = manifest_dir.clone();
-//         manifest_file.push(PROJECT_FILE_NAME);
-//         if manifest_file.exists() {
-//             return Some((manifest_dir, layout));
-//         }
-//     }
-//     None
-// }
-
 pub fn discover_manifest_and_kind(x: &Path) -> Option<(PathBuf, SourcePackageLayout)> {
     let mut x: Vec<_> = x.components().collect();
     // We should be able at least pop one.
@@ -405,22 +363,6 @@ pub fn is_sub_dir(p: PathBuf, mut sub: PathBuf) -> bool {
     false
 }
 
-/// There command should implemented in `LSP` client.
-pub enum MoveAnalyzerClientCommands {
-    GotoDefinition(Location),
-}
-
-// impl MoveAnalyzerClientCommands {
-//     pub(crate) fn to_lsp_command(self) -> Command {
-//         match self {
-//             MoveAnalyzerClientCommands::GotoDefinition(x) => Command::new(
-//                 "Goto Definition".to_string(),
-//                 "move-analyzer.goto_definition".to_string(),
-//                 Some(vec![serde_json::to_value(PathAndRange::from(&x)).unwrap()]),
-//             ),
-//         }
-//     }
-// }
 use lsp_types::Range;
 
 #[derive(Clone, serde::Serialize)]

@@ -4,7 +4,6 @@ use super::scope::*;
 use super::types::*;
 use super::utils::*;
 use move_compiler::parser::ast::*;
-use move_compiler::shared::Identifier;
 use move_core_types::account_address::AccountAddress;
 use move_command_line_common::files::FileHash;
 use move_ir_types::location::*;
@@ -12,7 +11,6 @@ use move_symbol_pool::Symbol;
 use std::borrow::BorrowMut;
 use std::cell::Cell;
 use std::cell::RefCell;
-use std::collections::HashSet;
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -65,12 +63,12 @@ impl Default for AccessEnv {
 }
 
 impl AccessEnv {
-    pub(crate) fn is_test(self) -> bool {
-        self == Self::Test
-    }
-    pub(crate) fn is_spec(self) -> bool {
-        self == Self::Spec
-    }
+    // pub(crate) fn is_test(self) -> bool {
+    //     self == Self::Test
+    // }
+    // pub(crate) fn is_spec(self) -> bool {
+    //     self == Self::Spec
+    // }
 }
 
 impl ProjectContext {
@@ -490,10 +488,6 @@ impl ProjectContext {
         )
     }
 
-    pub(crate) fn get_access_env(&self) -> AccessEnv {
-        self.access_env.get()
-    }
-
     pub(crate) fn set_access_env(&self, x: AccessEnv) -> AccessEnv {
         self.access_env.replace(x)
     }
@@ -513,32 +507,6 @@ impl ProjectContext {
             false
         });
         return ResolvedType::UnKnown;
-    }
-
-    pub(crate) fn with_friends<R>(
-        &self,
-        addr: AccountAddress,
-        module_name: Symbol,
-        call_back: impl FnOnce(&HashSet<(AccountAddress, Symbol)>) -> R,
-    ) -> R
-    where
-        R: Default,
-    {
-        let xxx = || {
-            return Some(call_back(
-                &self
-                    .addresses
-                    .borrow()
-                    .address
-                    .get(&addr)?
-                    .modules
-                    .get(&module_name)?
-                    .as_ref()
-                    .borrow()
-                    .friends,
-            ));
-        };
-        xxx().unwrap_or(R::default())
     }
 
     pub(crate) fn find_name_chain_item(
@@ -982,304 +950,6 @@ impl ProjectContext {
                     .clone(),
             )
         })
-    }
-
-    /// Collect all spec schema.
-    pub(crate) fn collect_all_spec_schema(&self) -> Vec<Item> {
-        let mut ret = Vec::new();
-        self.inner_first_visit(|scope| {
-            for (_, item) in scope.items.iter() {
-                match item {
-                    Item::SpecSchema(_, _) => {
-                        ret.push(item.clone());
-                    }
-                    _ => {}
-                }
-            }
-            false
-        });
-        ret
-    }
-
-    pub(crate) fn collect_all_spec_target(&self) -> Vec<Item> {
-        let mut ret = Vec::new();
-        self.inner_first_visit(|scope| {
-            for (_, item) in scope.items.iter() {
-                match item {
-                    Item::Struct(_) | Item::StructNameRef(_) | Item::Fun(_) => {
-                        ret.push(item.clone());
-                    }
-                    _ => {}
-                }
-            }
-            false
-        });
-        ret
-    }
-
-    /// Collect type item in all nest scopes.
-    pub(crate) fn collect_all_type_items(&self) -> Vec<Item> {
-        let under_test = self.get_access_env();
-        let mut ret = Vec::new();
-        let mut ret_names = HashSet::new();
-        let item_ok = |item: &Item| -> bool {
-            match item {
-                Item::TParam(_, _) => true,
-                Item::Struct(_) | Item::StructNameRef(_) if item.struct_accessible(under_test) => {
-                    true
-                }
-                Item::BuildInType(_) => true,
-                _ => false,
-            }
-        };
-
-        self.inner_first_visit(|scope| {
-            for (kname, item) in scope
-                .types
-                .iter()
-                .chain(scope.items.iter())
-                .chain(scope.uses.iter())
-            {
-                match item {
-                    Item::Use(x) => {
-                        for x in x.iter() {
-                            match x {
-                                ItemUse::Module(_) => {
-                                    if ret_names.contains(kname) == false {
-                                        ret.push(item.clone());
-                                        ret_names.insert(kname.clone());
-                                    }
-                                }
-                                ItemUse::Item(ItemUseItem { members, name, .. }) => {
-                                    // TODO this could be a type like struct.
-                                    // do a query to if if this is a type.
-                                    let x = members
-                                        .as_ref()
-                                        .borrow()
-                                        .module
-                                        .items
-                                        .get(&name.value)
-                                        .map(|item| item_ok(item));
-                                    if x.unwrap_or(true) && ret_names.contains(kname) == false {
-                                        ret.push(item.clone());
-                                        ret_names.insert(kname.clone());
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    _ => {
-                        if item_ok(item) {
-                            ret.push(item.clone());
-                            ret_names.insert(kname.clone());
-                        }
-                    }
-                };
-            }
-            false
-        });
-        ret
-    }
-
-    /// Collect all item in nest scopes.
-    pub(crate) fn collect_items(&self, filter: impl Fn(&Item) -> bool) -> Vec<Item> {
-        let mut ret = Vec::new();
-        self.inner_first_visit(|scope| {
-            for (_, item) in scope
-                .types
-                .iter()
-                .chain(scope.items.iter())
-                .chain(scope.uses.iter())
-            {
-                if !self.item_access_able(item) {
-                    continue;
-                }
-                if filter(item) {
-                    ret.push(item.clone());
-                }
-            }
-            false
-        });
-        ret
-    }
-
-    fn item_access_able(&self, item: &Item) -> bool {
-        let env = self.get_access_env();
-        match item {
-            Item::Const(ItemConst { is_test, .. }) | Item::Struct(ItemStruct { is_test, .. }) => {
-                env.is_test() || *is_test == false
-            }
-            Item::Fun(x) => x.accessible(self, env),
-            Item::SpecBuildInFun(_) | Item::SpecConst(_) => env.is_spec(),
-            _ => true,
-        }
-    }
-
-    /// Collect all import modules.
-    /// like use 0x1::vector.
-    pub(crate) fn collect_imported_modules(&self) -> Vec<Item> {
-        let mut ret = Vec::new();
-        self.inner_first_visit(|scope| {
-            for (_, item) in scope
-                .types
-                .iter()
-                .chain(scope.items.iter())
-                .chain(scope.uses.iter())
-            {
-                match item {
-                    Item::Use(_) => {
-                        ret.push(item.clone());
-                    }
-                    _ => {}
-                };
-            }
-            false
-        });
-        ret
-    }
-
-    /// Collect all items in a module like 0x1::vector.
-    pub(crate) fn collect_use_module_items(
-        &self,
-        name: &LeadingNameAccess,
-        select_item: impl Fn(&Item) -> bool,
-    ) -> Vec<Item> {
-        let mut ret = Vec::new();
-        let name = match &name.value {
-            LeadingNameAccess_::AnonymousAddress(addr) => {
-                log::error!("addr:{:?} should not be here.", addr);
-                return ret;
-            }
-            LeadingNameAccess_::Name(name) => name.value,
-        };
-        self.inner_first_visit(|scope| {
-            for (name2, item) in scope
-                .types
-                .iter()
-                .chain(scope.items.iter())
-                .chain(scope.uses.iter())
-            {
-                match item {
-                    Item::Use(x) => {
-                        for x in x.iter() {
-                            match x {
-                                ItemUse::Module(ItemUseModule { members, .. }) => {
-                                    if name == *name2 {
-                                        members.borrow().module.items.iter().for_each(
-                                            |(_, item)| {
-                                                if !self.item_access_able(item) {
-                                                    return;
-                                                }
-
-                                                if select_item(item) {
-                                                    ret.push(item.clone());
-                                                }
-                                            },
-                                        );
-                                        members.borrow().spec.items.iter().for_each(|(_, item)| {
-                                            if !self.item_access_able(item) {
-                                                return;
-                                            }
-                                            if select_item(item) {
-                                                ret.push(item.clone());
-                                            }
-                                        });
-                                        return true;
-                                    };
-                                }
-                                ItemUse::Item(_) => {}
-                            }
-                        }
-                    }
-                    _ => {}
-                };
-            }
-            false
-        });
-        ret
-    }
-
-    /// Collect all module names in a addr.
-    /// like module 0x1::vector{ ... }
-    pub(crate) fn collect_modules(&self, addr: &AccountAddress) -> Vec<ModuleName> {
-        let addr_and_name = self.get_current_addr_and_module_name();
-        let empty = Default::default();
-        let mut ret = Vec::new();
-        let env = self.get_access_env();
-        self.visit_address(|x| {
-            x.address
-                .get(addr)
-                .unwrap_or(&empty)
-                .modules
-                .iter()
-                .for_each(|(_, x)| {
-                    let name = x.as_ref().borrow().name_and_addr.name.clone();
-                    if *addr != addr_and_name.addr.clone()
-                        || name.value() != addr_and_name.name.value()
-                    {
-                        if env.is_test() || x.as_ref().borrow().is_test == false {
-                            ret.push(name.clone());
-                        }
-                    }
-                })
-        });
-        ret
-    }
-
-    /// Collect all module names in a addr.
-    /// like module 0x1::vector{ ... }
-    pub(crate) fn collect_modules_items(
-        &self,
-        addr: &AccountAddress,
-        module_name: Symbol,
-        filter: impl Fn(&Item) -> bool,
-    ) -> Vec<Item> {
-        let env = self.get_access_env();
-        let empty = Default::default();
-        let empty2 = Default::default();
-        let mut ret = Vec::new();
-        self.visit_address(|x| {
-            x.address
-                .get(addr)
-                .unwrap_or(&empty)
-                .modules
-                .get(&module_name)
-                .unwrap_or(&empty2)
-                .borrow()
-                .module
-                .items
-                .iter()
-                .for_each(|(_, x)| {
-                    if !self.item_access_able(x) {
-                        return;
-                    }
-                    if filter(x) {
-                        ret.push(x.clone())
-                    }
-                });
-
-            if env.is_spec() {
-                x.address
-                    .get(addr)
-                    .unwrap_or(&empty)
-                    .modules
-                    .get(&module_name)
-                    .unwrap_or(&empty2)
-                    .borrow()
-                    .spec
-                    .items
-                    .iter()
-                    .for_each(|(_, x)| {
-                        if !self.item_access_able(x) {
-                            return;
-                        }
-                        if filter(x) {
-                            ret.push(x.clone())
-                        }
-                    });
-            }
-        });
-        ret
     }
 }
 
