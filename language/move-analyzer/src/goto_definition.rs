@@ -17,6 +17,7 @@ use std::path::PathBuf;
 
 /// Handles go-to-def request of the language server.
 pub fn on_go_to_def_request(context: &Context, request: &Request) {
+    log::error!("debugrb request  = {:?}", request);
     let parameters = serde_json::from_value::<GotoDefinitionParams>(request.params.clone())
         .expect("could not deserialize go-to-def request");
     let fpath = parameters
@@ -32,7 +33,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
         PathBuf::from(std::env::current_dir().unwrap()).as_path(),
         fpath.as_path(),
     );
-    log::info!(
+    log::error!(
         "request is goto definition,fpath:{:?}  line:{} col:{}",
         fpath.as_path(),
         line,

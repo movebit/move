@@ -16,7 +16,6 @@ import * as fs from 'fs';
 import * as fse from 'fs-extra';
 import {
     runTests,
-    downloadAndUnzipVSCode,
     resolveCliArgsFromVSCodeExecutablePath,
 } from '@vscode/test-electron';
 
@@ -43,13 +42,15 @@ async function runVSCodeTest(vscodeVersion: string): Promise<void> {
         }
 
         // Install vscode and depends extension
-        const vscodeExecutablePath = await downloadAndUnzipVSCode(vscodeVersion);
+        // const vscodeExecutablePath = await downloadAndUnzipVSCode(vscodeVersion, );
+        const vscodeExecutablePath = 'D:\\Softwares\\Microsoft VS Code\\Code.exe';
         const [cli, ...args] = resolveCliArgsFromVSCodeExecutablePath(vscodeExecutablePath);
         const newCli = cli ?? 'code';
-        cp.spawnSync(newCli, [...args, '--install-extension', 'damirka.move-syntax', '--force'], {
+        cp.spawnSync(newCli, [...args, '--install-extension', 'movebit.move-msl-syx', '--force'], {
             encoding: 'utf-8',
             stdio: 'inherit',
         });
+        console.warn('debugrb testWorkspacePath = ' + testWorkspacePath);
 
         // Because the default vscode userDataDir is too long,
         // v1.69.2 will report an error when running test.
@@ -59,6 +60,8 @@ async function runVSCodeTest(vscodeVersion: string): Promise<void> {
             fse.mkdirsSync(userDataDir);
         }
 
+        console.warn('debugrb start runTests, extensionDevelopmentPath = ' + extensionDevelopmentPath
+            + ' extensionTestsPath = ' + extensionTestsPath);
         // Download VS Code, unzip it, and run the "test suite" program.
         await runTests({
             vscodeExecutablePath: vscodeExecutablePath,
@@ -73,8 +76,8 @@ async function runVSCodeTest(vscodeVersion: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
-    await runVSCodeTest('1.64.0'); // Test with vscode v1.64.0
-    await runVSCodeTest('1.69.2'); // Test with vscode v1.69.2
+    console.warn('debugrb start to run tests');
+    await runVSCodeTest('1.79.2'); // Test with vscode v1.69.2
 }
 
 void main();

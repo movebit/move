@@ -2,6 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::{symbols::Symbols, vfs::VirtualFileSystem};
 use super::utils::*;
 use crate::project::Project;
 use crate::project::*;
@@ -18,12 +19,17 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 /// The context within which the language server is running.
 pub struct Context {
-    pub projects: MultiProject,
     /// The connection with the language server's client.
     pub connection: Connection,
+    /// The files that the language server is providing information about.
+    pub files: VirtualFileSystem,
+    /// Symbolication information
+    pub symbols: Arc<Mutex<Symbols>>,
+    pub projects: MultiProject,
     pub ref_caches: ReferencesCache,
     pub diag_version: FileDiags,
 }

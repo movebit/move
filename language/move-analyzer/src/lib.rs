@@ -2,6 +2,9 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#[macro_use(sp)]
+extern crate move_ir_types;
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -44,4 +47,7 @@ pub mod references;
 pub mod scope;
 pub mod syntax;
 pub mod types;
+pub mod diagnostics;
+pub mod symbols;
 pub mod utils;
+pub mod vfs;

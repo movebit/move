@@ -23,6 +23,52 @@ const isKeywordInCompletionItems = (label: string, items: vscode.CompletionItem[
 const PRIMITIVE_TYPES = ['u8', 'u16', 'u32', 'u64', 'u128', 'u256', 'bool', 'vector'];
 
 Mocha.suite('LSP', () => {
+    Mocha.test('goto_definition', async () => {
+        const ext = vscode.extensions.getExtension('move.move-analyzer');
+        assert.ok(ext);
+
+        await ext.activate(); // Synchronous waiting for activation to complete
+
+        // 1. get workdir
+        const workDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+
+        // 2. open doc
+        const docs = await vscode.workspace.openTextDocument(path.join(workDir, 'lsp-demo/sources/M2.move'));
+        await vscode.window.showTextDocument(docs);
+
+        // 3. execute command
+        // const positionParams = {
+        //     textDocument: { uri: path.join(workDir, 'lsp-demo/sources/M2.move') },
+        //     position: { line: 12, character: 42 },
+        // };
+
+        // const params = {
+        //     ...positionParams,
+        //     context: { includeDeclaration: true },
+        // };
+
+        const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(2, 5));
+        const fpath = path.join(workDir, 'lsp-demo/sources/M2.move');
+        const syms: Array<lc.DocumentSymbol> | undefined = await
+            vscode.commands.executeCommand(
+                'move-analyzer.goto_definition', { range, fpath },
+            );
+
+        // X const syms: Array<lc.DocumentSymbol> | undefined = await
+        //     vscode.commands.executeCommand(
+        //         'move-analyzer.goto_definition', params,
+        //     );
+        if (syms) {
+            for (const sym of syms) {
+                console.warn(sym.name); // 这里以打印符号名称为例
+            }
+        } else {
+            console.warn('null return');
+        }
+
+        assert.ok(syms);
+    });
+
     Mocha.test('textDocument/documentSymbol', async () => {
         const ext = vscode.extensions.getExtension('move.move-analyzer');
         assert.ok(ext);
@@ -33,7 +79,7 @@ Mocha.suite('LSP', () => {
         const workDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
 
         // 2. open doc
-        const docs = await vscode.workspace.openTextDocument(path.join(workDir, 'sources/M1.move'));
+        const docs = await vscode.workspace.openTextDocument(path.join(workDir, 'lsp-demo/sources/M1.move'));
         await vscode.window.showTextDocument(docs);
 
         // 3. execute command
@@ -79,7 +125,7 @@ Mocha.suite('LSP', () => {
 
         // 2. open doc
         const docs = await vscode.workspace.openTextDocument(
-            path.join(workDir, 'sources/M2.move'),
+            path.join(workDir, 'lsp-demo/sources/M2.move'),
         );
         await vscode.window.showTextDocument(docs);
 
@@ -118,7 +164,7 @@ Mocha.suite('LSP', () => {
 
         // 2. open doc
         const docs = await vscode.workspace.openTextDocument(
-            path.join(workDir, 'sources/M2.move'),
+            path.join(workDir, 'lsp-demo/sources/M2.move'),
         );
         await vscode.window.showTextDocument(docs);
 
@@ -156,7 +202,7 @@ Mocha.suite('LSP', () => {
 
         // 2. open doc
         const docs = await vscode.workspace.openTextDocument(
-            path.join(workDir, 'sources/Completions.move'),
+            path.join(workDir, 'lsp-demo/sources/Completions.move'),
         );
         await vscode.window.showTextDocument(docs);
 

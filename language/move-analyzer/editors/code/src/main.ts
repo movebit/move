@@ -7,6 +7,7 @@ import { Context } from './context';
 import { Extension } from './extension';
 import { log } from './log';
 import { Reg } from './reg';
+import * as commands from './commands';
 
 import * as vscode from 'vscode';
 
@@ -45,11 +46,10 @@ export async function activate(
     );
     return;
   }
-  context.registerCommand('goto_definition', async (_context, ...args) => {
-    const loc = args[0] as { range: vscode.Range; fpath: string };
-    const t = await vscode.workspace.openTextDocument(loc.fpath);
-    await vscode.window.showTextDocument(t, { selection: loc.range, preserveFocus: false });
-  });
+
+  context.registerCommand('textDocumentDocumentSymbol', commands.textDocumentDocumentSymbol);
+  context.registerCommand('textDocumentHover', commands.textDocumentHover);
+  context.registerCommand('textDocumentCompletion', commands.textDocumentCompletion);
 
   // Configure other language features.
   context.configureLanguage();
