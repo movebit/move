@@ -4,7 +4,6 @@
 
 use crate::{symbols::Symbols, vfs::VirtualFileSystem};
 use super::utils::*;
-use crate::project::Project;
 use crate::project::*;
 use crate::references::ReferencesCache;
 use im::HashSet;

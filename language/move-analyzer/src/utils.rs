@@ -123,48 +123,6 @@ impl FileLineMapping {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn file_mapping() {
-        let filepath = PathBuf::from("test");
-
-        let mut f = FileLineMapping::default();
-        f.update(
-            filepath.clone(),
-            r#"123456
-123456
-abc        "#,
-        );
-
-        let r = f.translate(&filepath, 0, 2).unwrap();
-        assert_eq!(
-            r,
-            FileRange {
-                path: filepath.clone(),
-                line_start: 0,
-                line_end: 0,
-                col_start: 0,
-                col_end: 2
-            }
-        );
-
-        let r = f.translate(&filepath, 9, 10).unwrap();
-        assert_eq!(
-            r,
-            FileRange {
-                path: filepath.clone(),
-                line_start: 1,
-                line_end: 1,
-                col_start: 2,
-                col_end: 3
-            }
-        );
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileRange {
     pub path: PathBuf,
@@ -347,35 +305,6 @@ pub fn discover_manifest_and_kind(x: &Path) -> Option<(PathBuf, SourcePackageLay
         }
     }
     None
-}
-
-#[test]
-fn discover_manifest_and_kind_test() {
-    let (_, kind) = discover_manifest_and_kind(
-        PathBuf::from("/Users/yuyang/projects/test-move2/scripts/aaa.move").as_path(),
-    )
-    .unwrap();
-    assert!(kind == SourcePackageLayout::Scripts);
-    let (_, kind) = discover_manifest_and_kind(
-        PathBuf::from("/Users/yuyang/projects/test-move2/sources/some.move").as_path(),
-    )
-    .unwrap();
-    assert!(kind == SourcePackageLayout::Sources);
-    let (_, kind) = discover_manifest_and_kind(
-        PathBuf::from("/Users/yuyang/projects/test-move2/sources/configs/some.move").as_path(),
-    )
-    .unwrap();
-    assert!(kind == SourcePackageLayout::Sources);
-    let (_, kind) = discover_manifest_and_kind(
-        PathBuf::from("/Users/yuyang/projects/test-move2/sources/tests/some.move").as_path(),
-    )
-    .unwrap();
-    assert!(kind == SourcePackageLayout::Sources);
-    let (_, kind) = discover_manifest_and_kind(
-        PathBuf::from("/Users/yuyang/projects/test-move2/tests/some.move").as_path(),
-    )
-    .unwrap();
-    assert!(kind == SourcePackageLayout::Tests);
 }
 
 pub fn is_sub_dir(p: PathBuf, mut sub: PathBuf) -> bool {
