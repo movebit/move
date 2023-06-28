@@ -255,7 +255,7 @@ fn main() {
                                 // It ought to, especially once it begins processing requests that may
                                 // take a long time to respond to.
                             }
-                            _ => on_notification_v2(&mut context, &notification ,diag_sender.clone()),
+                            _ => on_notification_v2(&mut context, &notification, diag_sender.clone()),
                             // _ => on_notification(&mut context, &symbolicator_runner, &notification),
                         }
                     }
@@ -264,7 +264,9 @@ fn main() {
             }
         };
     }
+
     io_threads.join().expect("I/O threads could not finish");
+    symbolicator_runner.quit();
     eprintln!("Shut down language server '{}'.", exe);
 }
 
@@ -467,6 +469,7 @@ fn get_package_compile_diagnostics(
         match compilation_result {
             std::result::Result::Ok(_) => {}
             std::result::Result::Err(diags) => {
+                eprintln!("debugrb get_package_compile_diagnostics compilation_result failed");
                 diagnostics = Some(diags);
             }
         };
@@ -546,6 +549,7 @@ fn send_not_project_file_error(context: &mut Context, fpath: PathBuf, is_open: b
 }
 
 fn send_diag(context: &mut Context, mani: PathBuf, x: Diagnostics) {
+    eprintln!("debugrb send_diag ~~~~~~~");
     let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
     for x in x.into_codespan_format() {
         let (s, msg, (loc, m), _, notes) = x;
