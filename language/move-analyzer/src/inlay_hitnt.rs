@@ -87,6 +87,12 @@ impl ItemOrAccessHandler for Handler {
     fn need_para_arg_pair(&self) -> bool {
         true
     }
+
+    // current vistor handler is inlay_hints ?
+    fn current_vistor_handler_is_inlay_hints(&self) -> bool {
+        true
+    }
+    
     fn handle_para_arg_pair(
         &mut self,
         services: &dyn HandleItemService,

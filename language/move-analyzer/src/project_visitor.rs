@@ -740,19 +740,6 @@ impl Project {
                 }
             }
             if let Some(ref exp) = seq.3.as_ref() {
-                match exp.value {
-                    Exp_::UnaryExp(_, _) => {
-                        return;
-                    }
-                    Exp_::BinopExp(_, _, _) => {
-                        return;
-                    }
-                    Exp_::Dot(_, _) => {
-                        return;
-                    }
-                    _ => {}
-                }
-
                 eprintln!("debugrb visit_block exp = {:?}", exp);
                 self.visit_expr(exp, scopes, visitor);
             }
@@ -946,6 +933,9 @@ impl Project {
                         module,
                         Box::new(item.unwrap_or_default()),
                     ));
+                    if visitor.current_vistor_handler_is_inlay_hints() {
+                        return;
+                    }
                     eprintln!("debugrb process Exp_::Call, item = {}", item);
                     visitor.handle_item_or_access(self, project_context, &item);
                     if visitor.finished() {
