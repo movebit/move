@@ -320,39 +320,3 @@ impl ResolvedType {
         }
     }
 }
-
-// impl Debug for ResolvedType {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         match self {
-//             ResolvedType::UnKnown => write!(f, "{}", self),
-//             ResolvedType::Struct(x) => {
-//                 write!(f, "{}", x.name.value().as_str())?;
-//                 if x.type_parameters_ins.len() > 0 {
-//                     debug_assert!(x.type_parameters_ins.len() == x.type_parameters.len());
-//                     write!(f, "{}", "<")?;
-//                     for (x, y) in x.type_parameters.iter().zip(x.type_parameters_ins.iter()) {
-//                         write!(f, "{}->{:?}\n", x.name.value.as_str(), y);
-//                     }
-//                     write!(f, "{}", ">")?;
-//                 }
-//                 write!(f, "{{\n")?;
-//                 if x.fields.len() > 0 {
-//                     for (name, ty) in x.fields.iter() {
-//                         write!(f, "{}->{:?}\n", name.0.value.as_str(), ty);
-//                     }
-//                 }
-//                 write!(f, "}}\n")
-//             }
-//             ResolvedType::StructRef(_, _) => todo!(),
-//             ResolvedType::BuildInType(_) => write!(f, "{}", self),
-//             ResolvedType::TParam(_, _) => write!(f, "{}", self),
-//             ResolvedType::Ref(_, t) => write!(f, "&{:?}", t.as_ref()),
-//             ResolvedType::Unit => write!(f, "{}", self),
-//             ResolvedType::Multiple(_) => todo!(),
-//             ResolvedType::Fun(_) => todo!(),
-//             ResolvedType::Vec(_) => todo!(),
-//             ResolvedType::Lambda { args, ret_ty } => todo!(),
-//             ResolvedType::Range => write!(f, "{}", self),
-//         }
-//     }
-// }

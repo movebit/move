@@ -257,7 +257,7 @@ impl Project {
         Ok(())
     }
 
-    /// Load move files  locate in sources and tests ...
+    /// Load move files locate in sources and tests ...
     pub(crate) fn load_layout_files(&mut self, manifest_path: &PathBuf, kind: SourcePackageLayout) {
         use super::syntax::parse_file_string;
         let mut env = CompilationEnv::new(Flags::testing());

@@ -38,7 +38,7 @@ use url::Url;
 struct SimpleLogger;
 impl log::Log for SimpleLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Error
+        metadata.level() <= Level::Info
     }
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
@@ -51,7 +51,7 @@ const LOGGER: SimpleLogger = SimpleLogger;
 
 pub fn init_log() {
     log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(log::LevelFilter::Info))
+        .map(|()| log::set_max_level(log::LevelFilter::Trace))
         .unwrap()
 }
 
@@ -74,7 +74,7 @@ fn main() {
         .unwrap()
         .to_string_lossy()
         .to_string();
-    log::info!(
+    eprintln!(
         "Starting language server '{}' communicating via stdio...",
         exe
     );
@@ -211,7 +211,6 @@ fn main() {
                                 for (k, v) in diags {
                                     let url = Url::from_file_path(Path::new(&k.to_string())).unwrap();
                                     let params = lsp_types::PublishDiagnosticsParams::new(url, v, None);
-                                    eprintln!("debugrb diag_receiver_symbol ok params = : {:?}", params);
                                     let notification = Notification::new(lsp_types::notification::PublishDiagnostics::METHOD.to_string(), params);
                                     if let Err(err) = context
                                         .connection
@@ -222,7 +221,6 @@ fn main() {
                                 }
                             },
                             Err(err) => {
-                                eprintln!("debugrb diag_receiver_symbol err result = : {:?}", err);
                                 let typ = lsp_types::MessageType::ERROR;
                                 let message = format!("{err}");
                                     // report missing manifest only once to avoid re-generating
@@ -469,7 +467,7 @@ fn get_package_compile_diagnostics(
         match compilation_result {
             std::result::Result::Ok(_) => {}
             std::result::Result::Err(diags) => {
-                eprintln!("debugrb get_package_compile_diagnostics compilation_result failed");
+                eprintln!("get_package_compile_diagnostics compilate failed");
                 diagnostics = Some(diags);
             }
         };
@@ -549,7 +547,7 @@ fn send_not_project_file_error(context: &mut Context, fpath: PathBuf, is_open: b
 }
 
 fn send_diag(context: &mut Context, mani: PathBuf, x: Diagnostics) {
-    eprintln!("debugrb send_diag ~~~~~~~");
+    eprintln!("send_diag ~~~~~~~");
     let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
     for x in x.into_codespan_format() {
         let (s, msg, (loc, m), _, notes) = x;

@@ -1436,21 +1436,6 @@ fn parse_exp(context: &mut Context) -> Result<Exp, Box<Diagnostic>> {
         _ => {
             // This could be either an assignment or a binary operator
             // expression.
-            // let start_loc = context.tokens.start_loc();
-            // let lhs = match parse_unary_exp(context) {
-            //     Result::Ok(x) => x,
-            //     Result::Err(x) => {
-            //         log::error!("parse_unary_exp failed,err:{:?}", x);
-            //         let end_loc = context.tokens.previous_end_loc();
-            //         Exp {
-            //             loc: make_loc(context.tokens.file_hash(), start_loc, end_loc),
-            //             value: Exp_::Value(Value {
-            //                 loc: make_loc(context.tokens.file_hash(), start_loc, end_loc),
-            //                 value: Value_::Bool(false),
-            //             }),
-            //         }
-            //     }
-            // };
             let lhs = parse_unary_exp(context)?;
             match context.tokens.peek() {
                 Tok::EqualEqual
@@ -3324,7 +3309,7 @@ fn parse_spec_function(context: &mut Context) -> Result<SpecBlockMember, Box<Dia
     let return_type = match consume_token(context.tokens, Tok::Colon) {
         Ok(_) => parse_type(context)?,
         Err(_) => {
-            // log::error!("parse_parameter need a colon:");
+            // parse_parameter need a colon;
             let end_loc = context.tokens.previous_end_loc();
             let loc = make_loc(context.tokens.file_hash(), start_loc, end_loc);
             Type {

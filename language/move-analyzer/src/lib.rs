@@ -36,9 +36,7 @@ macro_rules! impl_convert_loc {
 
 pub mod completion;
 pub mod context;
-pub mod document_symbol;
 pub mod goto_definition;
-pub mod hover;
 pub mod item;
 pub mod project;
 pub mod project_context;

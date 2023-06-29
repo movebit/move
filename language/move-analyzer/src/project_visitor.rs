@@ -152,7 +152,7 @@ impl Project {
         filepath: &PathBuf,
         enter_import: bool,
     ) -> anyhow::Result<()> {
-        eprintln!("debugrb run visitor part for {} ", visitor);
+        log::info!("run visitor part for {} ", visitor);
         self.get_defs(filepath, |provider| {
             self.visit(
                 &self.project_context,
@@ -535,7 +535,7 @@ impl Project {
                 return;
             }
             let _guard = project_context.clone_scope_and_enter(addr, module_name, false);
-            eprintln!("debugrb provider.with_function range = {:?}", range);
+            log::info!("provider.with_function range = {:?}", range);
             self.visit_function(f, project_context, visitor);
         });
 
@@ -727,7 +727,7 @@ impl Project {
                 }
             }
             for s in seq.1.iter() {
-                eprintln!("debugrb visit_block sequence_item = {:?}", s);
+                log::trace!("visit_block sequence_item = {:?}", s);
                 self.visit_sequence_item(s, scopes, visitor);
                 if visitor.finished() {
                     return;
@@ -747,7 +747,7 @@ impl Project {
                     _ => {}
                 }
 
-                eprintln!("debugrb visit_block exp = {:?}", exp);
+                log::trace!("visit_block exp = {:?}", exp);
                 self.visit_expr(exp, scopes, visitor);
             }
         });
@@ -804,12 +804,12 @@ impl Project {
                           project_context: &ProjectContext,
                           visitor: &mut dyn ItemOrAccessHandler,
                           _has_ref: Option<bool>| {
-            eprintln!("debugrb handle_dot({})", field);
+            log::trace!("handle_dot({})", field);
             // self.visit_expr(e, project_context, visitor);
             if visitor.finished() {
                 return;
             }
-            eprintln!("debugrb handle_dot --> inlay_hint.handle_item_or_access({}) continue", field);
+            log::trace!("handle_dot --> inlay_hint.handle_item_or_access({}) continue", field);
             let struct_ty = self.get_expr_type(e, project_context);
             let struct_ty = match &struct_ty {
                 ResolvedType::Ref(_, ty) => ty.as_ref(),
@@ -859,21 +859,21 @@ impl Project {
                 // let's try.
                 if let Some(tys) = tys {
                     for ty in tys.iter() {
-                        eprintln!("debugrb process Exp_::Name, ty = {:?}", ty);
+                        log::trace!("process Exp_::Name, ty = {:?}", ty);
                         self.visit_type_apply(ty, project_context, visitor);
                         if visitor.finished() {
                             return;
                         }
                     }
                 }
-                eprintln!("debugrb process Exp_::Name, chain = {}", chain);
+                log::trace!("process Exp_::Name, chain = {}", chain);
                 let (item, module) = project_context.find_name_chain_item(chain, self);
                 let item = ItemOrAccess::Access(Access::ExprAccessChain(
                     chain.clone(),
                     module,
                     Box::new(item.unwrap_or_default()),
                 ));
-                eprintln!("debugrb process Exp_::Name, item = {}", item);
+                log::trace!("process Exp_::Name, item = {}", item);
                 visitor.handle_item_or_access(self, project_context, &item);
                 if visitor.finished() {
                     return;
@@ -939,7 +939,7 @@ impl Project {
                         module,
                         Box::new(item.unwrap_or_default()),
                     ));
-                    eprintln!("debugrb process Exp_::Call, item = {}", item);
+                    log::trace!("process Exp_::Call, item = {}", item);
                     visitor.handle_item_or_access(self, project_context, &item);
                     if visitor.finished() {
                         return;
@@ -947,7 +947,7 @@ impl Project {
                 }
                 if let Some(ref types) = types {
                     for t in types.iter() {
-                        eprintln!("debugrb process Exp_::Call, t = {:?}", t);
+                        log::trace!("process Exp_::Call, t = {:?}", t);
                         self.visit_type_apply(t, project_context, visitor);
                         if visitor.finished() {
                             return;
@@ -955,7 +955,7 @@ impl Project {
                     }
                 }
                 for expr in exprs.value.iter() {
-                    eprintln!("debugrb process Exp_::Call, expr = {:?}", expr);
+                    log::trace!("process Exp_::Call, expr = {:?}", expr);
                     self.visit_expr(expr, project_context, visitor);
                     if visitor.finished() {
                         return;
@@ -1087,13 +1087,6 @@ impl Project {
             Exp_::Lambda(_, _) => {
                 // TODO have lambda expression in ast structure.
                 // But I don't find in msl spec.
-                // for bind in binds.value.iter() {
-                //     self.visit_bind(bind, &ResolvedType::UnKnown, scopes, visitor);
-                //     if visitor.finished() {
-                //         return;
-                //     }
-                // }
-                // self.visit_expr(expr.as_ref(), scopes, visitor);
                 log::error!("lambda expression in ast.");
             }
 
@@ -1216,7 +1209,7 @@ impl Project {
                 }
             },
             Exp_::Dot(e, field) => {
-                eprintln!("debugrb process Exp_::Dot, field = {}", field);
+                log::trace!("process Exp_::Dot, field = {}", field);
                 handle_dot(&e, field, project_context, visitor, None);
             }
             Exp_::Index(e, index) => {
@@ -1307,13 +1300,13 @@ impl Project {
                     loc: v.loc,
                     value: Type_::Apply(Box::new(v.clone()), vec![]),
                 };
-                eprintln!("debugrb visit_function, ty = {:?}", ty);
+                log::trace!("visit_function, ty = {:?}", ty);
                 self.visit_type_apply(&ty, project_context, visitor);
                 if visitor.finished() {
                     return;
                 }
             }
-            eprintln!("debugrb visit_function, function.body.value = {:?}", function.body.value);
+            log::info!("visit_function, function.body.value = {:?}", function.body.value);
             match function.body.value {
                 FunctionBody_::Native => {}
                 FunctionBody_::Defined(ref seq) => self.visit_block(seq, project_context, visitor),

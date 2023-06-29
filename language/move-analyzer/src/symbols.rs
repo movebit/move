@@ -2287,7 +2287,6 @@ pub fn on_use_request(
         result = Some(serde_json::to_value(Option::<lsp_types::Location>::None).unwrap());
     }
 
-    eprintln!("about to send use response");
     // unwrap will succeed based on the logic above which the compiler is unable to figure out
     // without using Option
     let response = lsp_server::Response::new_ok(id, result.unwrap());

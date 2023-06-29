@@ -346,8 +346,8 @@ impl ProjectContext {
         let loc = convert_loc
             .convert_loc_range(&loc)
             .unwrap_or(FileRange::unknown());
-        log::info!("{}", loc);
-        log::info!(
+        log::trace!("{}", loc);
+        log::trace!(
             "enter top scope address:0x{:?} module:{:?} name:{:?} item:{}",
             address.short_str_lossless(),
             module,
@@ -399,8 +399,8 @@ impl ProjectContext {
         let loc = convert_loc
             .convert_loc_range(&loc)
             .unwrap_or(FileRange::unknown());
-        log::info!("{}", loc);
-        log::info!(
+        log::trace!("{}", loc);
+        log::trace!(
             "enter top scope address:0x{:?} module:{:?} name:{:?} item:{}",
             address.short_str_lossless(),
             module,
