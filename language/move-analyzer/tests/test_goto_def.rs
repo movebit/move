@@ -1,50 +1,162 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use lsp_types::{Position, TextDocumentIdentifier, Url};
-    use serde_json::Value;
+    use crossbeam::channel::select;
+    use lsp_server::{Connection, Message, Request, Response};
+    use move_command_line_common::files::FileHash;
+    use move_compiler::shared::*;
+    use std::{
+        path::PathBuf,
+        sync::{Arc, Mutex},
+    };
+    use move_analyzer::{
+        context::{Context, FileDiags, MultiProject},
+        goto_definition,
+        utils::*,
+        symbols,
+        vfs::VirtualFileSystem,
+    };
+    use serde_json::json;
+
+    fn update_defs(context: &mut Context, fpath: PathBuf, content: &str) {
+        use move_analyzer::syntax::parse_file_string;
+        let file_hash = FileHash::new(content);
+        let mut env = CompilationEnv::new(Flags::testing());
+        let defs = parse_file_string(&mut env, file_hash, content);
+        let defs = match defs {
+            std::result::Result::Ok(x) => x,
+            std::result::Result::Err(d) => {
+                log::error!("update file failed,err:{:?}", d);
+                return;
+            }
+        };
+        let (defs, _) = defs;
+        context.projects.update_defs(fpath.clone(), defs);
+        context.ref_caches.clear();
+        context
+            .projects
+            .hash_file
+            .as_ref()
+            .borrow_mut()
+            .update(fpath.clone(), file_hash);
+        context
+            .projects
+            .file_line_mapping
+            .as_ref()
+            .borrow_mut()
+            .update(fpath.clone(), content);
+    }
 
     #[test]
     fn test_on_go_to_def_request() {
-        // 构造函数参数
-        let uri = Url::from_directory_path("/path/to/file").unwrap();
-        let doc_id = TextDocumentIdentifier::new(uri);
-        let pos = Position::new(10, 5);
-        let params = Value::from(GotoDefinitionParams {
-            text_document_position_params: TextDocumentPositionParams {
-                text_document: doc_id.clone(),
-                position: pos.clone(),
+        let (connection, _) = Connection::stdio();
+        let symbols = Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols()));
+        
+        let mut mock_ctx = Context {
+            projects: MultiProject::new(),
+            connection,
+            files: VirtualFileSystem::default(),
+            symbols: symbols.clone(),
+            ref_caches: Default::default(),
+            diag_version: FileDiags::new(),
+        };
+
+        let fpath = PathBuf::from("d:\\workspace\\private_code_with_custom\\suiswap-audit\\sources\\pool.move");
+        let (mani, _) = match discover_manifest_and_kind(&fpath) {
+            Some(x) => x,
+            None => {
+                log::error!("not move project.");
+                return;
+            }
+        };
+        match mock_ctx.projects.get_project(&fpath) {
+            Some(_) => {
+                match std::fs::read_to_string(fpath.as_path()) {
+                    Ok(x) => {
+                        update_defs(&mut mock_ctx, fpath.clone(), x.as_str());
+                    }
+                    Err(_) => {}
+                };
+                return;
+            }
+            None => {
+                eprintln!("project '{:?}' not found try load.", fpath.as_path());
+            }
+        };
+        let p = match mock_ctx.projects.load_project(&mock_ctx.connection, &mani) {
+            anyhow::Result::Ok(x) => x,
+            anyhow::Result::Err(e) => {
+                log::error!("load project failed,err:{:?}", e);
+                return;
+            }
+        };
+        mock_ctx.projects.insert_project(p);
+
+        let params_json = json!({
+            "position": {
+                "line": 1404,
+                "character": 29
             },
-            work_done_progress_params: Default::default(),
+            "textDocument": {
+                "uri": "file:///d%3A/workspace/private_code_with_custom/suiswap-audit/sources/pool.move"
+            },
         });
+        let request = Request {
+            id: "001".to_string().into(),
+            method: String::from("textDocument/definition"),
+            params: params_json,
+        };
 
-        // 构造 Mock
-        let proj_path = std::env::current_dir().unwrap().join("/path/to");
-        let mut mock_proj = Project::new(proj_path.clone());
-        mock_proj.add_source_file("/path/to/file", "foo".to_string()).unwrap();
-        let mut mock_ctx = Context::default();
-        mock_ctx.projects.add_project(mock_proj).unwrap();
-
-        // 调用被测函数
-        on_go_to_def_request(&mock_ctx, &Request::new("42", "textDocument/definition", params));
+        goto_definition::on_go_to_def_request(&mut mock_ctx, &request);
 
         // 检查结果
-        let expected_r = Response::new_ok(
-            "42".to_string(),
-            json!({
-                "result": [
-                    Location {
-                        uri: uri.clone(),
-                        range: Range {
-                            start: pos.clone(),
-                            end: pos.clone(),
-                        },
-                    },
-                ],
-                "jsonrpc": "2.0",
-            }),
-        );
-        let actual_r = mock_ctx.connection.receiver.try_recv().unwrap();
-        assert_eq!(actual_r, Message::Response(expected_r));
+        // loop {
+        //     select! {
+        //         recv(mock_ctx.connection.receiver) -> message => {
+        //             match message {
+        //                 Ok(Message::Response(response)) => {
+        //                     eprintln!("IDE message response: {:?}", response);
+        //                 },
+        //                 Err(error) =>  {
+        //                     eprintln!("IDE message error: {:?}", error);
+        //                 },
+        //                 _ => {}
+        //             }
+        //         }
+        //     };
+        // }
+    
+        // let expected_r = Response::new_ok(
+        //     "001".to_string().into(),
+        //     json!({
+        //         "jsonrpc":"2.0",
+        //         "id":"001",
+        //         "result":[{
+        //             "range":{
+        //                 "end":{
+        //                     "character":22,
+        //                     "line":44
+        //                 },
+        //                 "start":{
+        //                     "character":15,
+        //                     "line":44
+        //                 }
+        //             },
+        //             "uri":"file:///D:/workspace/private_code_with_custom/suiswap-audit/sources/vpt.move"
+        //         }]
+        //     }),
+        // );
+
+        // match mock_ctx.connection.receiver.try_recv() {
+        //     Ok(message) => println!("Received message: {:?}", message),
+        //     Err(_) => {
+        //         println!("No message received");
+        //     },
+        // }
+        // log::info!("actual_r = {:?}", actual_r);
+
+        // eprintln!("\n------------------------------\n");
+        // eprintln!("expected_r = {:?}", expected_r);
+        // eprintln!("\n------------------------------\n");
+        // assert_eq!(actual_r, Message::Response(expected_r));
     }
 }

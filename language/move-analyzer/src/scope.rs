@@ -19,8 +19,6 @@ pub struct Scope {
     pub(crate) uses: HashMap<Symbol, Item>,
     /// Type parameter go into this map.
     pub(crate) types: HashMap<Symbol, Item>,
-    #[allow(dead_code)]
-    pub(crate) last_use_loc: Option<Loc>,
 }
 
 #[derive(Clone)]
@@ -107,7 +105,6 @@ impl Scope {
                         value: x,
                     }),
                     ty: ResolvedType::new_build_in(ty.clone()),
-                    // is_test: false,
                 }),
             );
         });

@@ -1052,33 +1052,6 @@ pub struct FunID {
 pub trait HandleItemService: ConvertLoc + GetAllAddrs + Name2Addr {}
 impl HandleItemService for Project {}
 
-#[allow(dead_code)]
-pub struct Ending {
-    pub(crate) msg: String,
-    start: std::time::Instant,
-}
-
-impl Drop for Ending {
-    fn drop(&mut self) {
-        let end = std::time::Instant::now();
-        eprintln!(
-            "ending {} time:{}s",
-            self.msg.as_str(),
-            (end - self.start).as_secs_f32()
-        );
-    }
-}
-
-#[allow(dead_code)]
-impl Ending {
-    pub fn new(msg: &str) -> Self {
-        Self {
-            msg: msg.to_string(),
-            start: std::time::Instant::now(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct DummyHandler;
 

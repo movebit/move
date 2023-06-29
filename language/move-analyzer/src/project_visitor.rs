@@ -816,15 +816,12 @@ impl Project {
                 _ => &struct_ty,
             };
             let struct_ty = struct_ty.struct_ref_to_struct(project_context);
-            // let all_fields = struct_ty.all_fields();
             if let Some(def_field) = struct_ty.find_filed_by_name(field.value) {
                 let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
                     from: Field(field.clone()),
                     to: def_field.0.clone(),
                     ty: def_field.1.clone(),
-                    // all_fields,
                     item: None,
-                    // has_ref,
                 }));
                 visitor.handle_item_or_access(self, project_context, &item);
             } else {
@@ -832,9 +829,7 @@ impl Project {
                     from: Field(field.clone()),
                     to: Field(field.clone()),
                     ty: ResolvedType::UnKnown,
-                    // all_fields,
                     item: None,
-                    // has_ref,
                 }));
                 visitor.handle_item_or_access(self, project_context, &item);
             }
@@ -1000,7 +995,6 @@ impl Project {
                 }
                 for f in fields.iter() {
                     let field_type = struct_item.find_filed_by_name(f.0.value());
-                    // let all_fields = struct_item.all_fields();
                     let item = match &f.1.value {
                         Exp_::Name(chain, _) => match &chain.value {
                             NameAccessChain_::One(x) => {

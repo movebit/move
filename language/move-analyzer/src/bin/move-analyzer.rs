@@ -300,6 +300,7 @@ fn on_response(_context: &Context, _response: &Response) {
     eprintln!("handle response from client");
 }
 
+#[allow(dead_code)]
 fn on_notification(
     context: &mut Context,
     symbolicator_runner: &symbols::SymbolicatorRunner,

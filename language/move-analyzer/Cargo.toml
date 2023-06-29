@@ -46,9 +46,6 @@ enum-iterator = "1.2.0"
 [target.'cfg(not(target_os= "windows"))'.dependencies]
 pprof = { version = "0.11.0" , features = ["flamegraph" , "protobuf"]}
 
-[profile.release]
-debug = true
-
 [features]
 aptos = []
 sui = []

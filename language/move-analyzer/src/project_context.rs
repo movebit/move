@@ -62,15 +62,6 @@ impl Default for AccessEnv {
     }
 }
 
-impl AccessEnv {
-    // pub(crate) fn is_test(self) -> bool {
-    //     self == Self::Test
-    // }
-    // pub(crate) fn is_spec(self) -> bool {
-    //     self == Self::Spec
-    // }
-}
-
 impl ProjectContext {
     pub(crate) fn new() -> Self {
         Self::default()
@@ -931,11 +922,6 @@ impl ProjectContext {
         delete_module_items();
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn current_scope_mut<R>(&self, x: impl FnOnce(&mut Scope) -> R) -> R {
-        let mut s = self.scopes.as_ref().borrow_mut();
-        x(s.last_mut().unwrap())
-    }
     pub(crate) fn resolve_friend(&self, addr: AccountAddress, name: Symbol) -> Option<ModuleName> {
         self.visit_address(|x| {
             Some(
