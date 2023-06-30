@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crossbeam::channel::select;
-    use lsp_server::{Connection, Message, Request, Response};
+    use lsp_server::{Connection, Request, Response};
     use move_command_line_common::files::FileHash;
     use move_compiler::shared::*;
     use std::{
@@ -16,6 +15,8 @@ mod tests {
         vfs::VirtualFileSystem,
     };
     use serde_json::json;
+    use std::time::Duration;
+    pub use url::Url;
 
     fn update_defs(context: &mut Context, fpath: PathBuf, content: &str) {
         use move_analyzer::syntax::parse_file_string;
@@ -47,7 +48,7 @@ mod tests {
     }
 
     #[test]
-    fn test_on_go_to_def_request() {
+    fn test_on_go_to_def_request_001() {
         let (connection, _) = Connection::stdio();
         let symbols = Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols()));
         
@@ -60,7 +61,13 @@ mod tests {
             diag_version: FileDiags::new(),
         };
 
-        let fpath = PathBuf::from("d:\\workspace\\private_code_with_custom\\suiswap-audit\\sources\\pool.move");
+        let fpath =
+        path_concat(
+            PathBuf::from(std::env::current_dir().unwrap()).as_path(),
+            PathBuf::from("tests/symbols/sources/M1.move").as_path(),
+        );
+
+        eprintln!("fpath = {:?}", fpath.to_str());
         let (mani, _) = match discover_manifest_and_kind(&fpath) {
             Some(x) => x,
             None => {
@@ -93,70 +100,141 @@ mod tests {
 
         let params_json = json!({
             "position": {
-                "line": 1404,
-                "character": 29
+                "line": 25,
+                "character": 27
             },
             "textDocument": {
-                "uri": "file:///d%3A/workspace/private_code_with_custom/suiswap-audit/sources/pool.move"
+                "uri": "file:///".to_string() + fpath.to_str().unwrap()
             },
         });
         let request = Request {
-            id: "001".to_string().into(),
+            id: "go_to_def_request_001".to_string().into(),
             method: String::from("textDocument/definition"),
             params: params_json,
         };
 
-        goto_definition::on_go_to_def_request(&mut mock_ctx, &request);
-
-        // 检查结果
-        // loop {
-        //     select! {
-        //         recv(mock_ctx.connection.receiver) -> message => {
-        //             match message {
-        //                 Ok(Message::Response(response)) => {
-        //                     eprintln!("IDE message response: {:?}", response);
-        //                 },
-        //                 Err(error) =>  {
-        //                     eprintln!("IDE message error: {:?}", error);
-        //                 },
-        //                 _ => {}
-        //             }
-        //         }
-        //     };
-        // }
-    
-        // let expected_r = Response::new_ok(
-        //     "001".to_string().into(),
-        //     json!({
-        //         "jsonrpc":"2.0",
-        //         "id":"001",
-        //         "result":[{
-        //             "range":{
-        //                 "end":{
-        //                     "character":22,
-        //                     "line":44
-        //                 },
-        //                 "start":{
-        //                     "character":15,
-        //                     "line":44
-        //                 }
-        //             },
-        //             "uri":"file:///D:/workspace/private_code_with_custom/suiswap-audit/sources/vpt.move"
-        //         }]
-        //     }),
-        // );
-
-        // match mock_ctx.connection.receiver.try_recv() {
-        //     Ok(message) => println!("Received message: {:?}", message),
-        //     Err(_) => {
-        //         println!("No message received");
-        //     },
-        // }
-        // log::info!("actual_r = {:?}", actual_r);
-
-        // eprintln!("\n------------------------------\n");
-        // eprintln!("expected_r = {:?}", expected_r);
-        // eprintln!("\n------------------------------\n");
-        // assert_eq!(actual_r, Message::Response(expected_r));
+        let actual_r = goto_definition::on_go_to_def_request(&mut mock_ctx, &request);
+        let expect_r = Response::new_ok(
+            "go_to_def_request_001".to_string().into(),
+            json!([{
+                "range":{
+                    "end":{
+                        "character":32,
+                        "line":6
+                    },
+                    "start":{
+                        "character":15,
+                        "line":6
+                    }
+                },
+                "uri": ("file:///".to_string() + path_concat(
+                            PathBuf::from(std::env::current_dir().unwrap()).as_path(),
+                            PathBuf::from("tests/symbols/sources/M2.move").as_path()).to_str().unwrap()
+                       ).replace("\\", "/").to_string()
+            }]),
+        );
+        std::thread::sleep(Duration::new(1, 0));
+        eprintln!("\n------------------------------\n");
+        eprintln!("actual_r = {:?}", actual_r);
+        eprintln!("\n");
+        eprintln!("expect_r = {:?}", expect_r);
+        eprintln!("\n------------------------------\n");
+        assert_eq!(actual_r.result, expect_r.result);
     }
+
+    #[test]
+    fn test_on_go_to_type_def_request_002() {
+        let (connection, _) = Connection::stdio();
+        let symbols = Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols()));
+        
+        let mut mock_ctx = Context {
+            projects: MultiProject::new(),
+            connection,
+            files: VirtualFileSystem::default(),
+            symbols: symbols.clone(),
+            ref_caches: Default::default(),
+            diag_version: FileDiags::new(),
+        };
+
+        let fpath =
+        path_concat(
+            PathBuf::from(std::env::current_dir().unwrap()).as_path(),
+            PathBuf::from("tests/symbols/sources/M1.move").as_path(),
+        );
+
+        eprintln!("fpath = {:?}", fpath.to_str());
+        let (mani, _) = match discover_manifest_and_kind(&fpath) {
+            Some(x) => x,
+            None => {
+                log::error!("not move project.");
+                return;
+            }
+        };
+        match mock_ctx.projects.get_project(&fpath) {
+            Some(_) => {
+                match std::fs::read_to_string(fpath.as_path()) {
+                    Ok(x) => {
+                        update_defs(&mut mock_ctx, fpath.clone(), x.as_str());
+                    }
+                    Err(_) => {}
+                };
+                return;
+            }
+            None => {
+                eprintln!("project '{:?}' not found try load.", fpath.as_path());
+            }
+        };
+        let p = match mock_ctx.projects.load_project(&mock_ctx.connection, &mani) {
+            anyhow::Result::Ok(x) => x,
+            anyhow::Result::Err(e) => {
+                log::error!("load project failed,err:{:?}", e);
+                return;
+            }
+        };
+        mock_ctx.projects.insert_project(p);
+
+        let params_json = json!({
+            "position": {
+                "line": 24,
+                "character": 45
+            },
+            "textDocument": {
+                "uri": "file:///".to_string() + fpath.to_str().unwrap()
+            },
+        });
+        let request = Request {
+            id: "go_to_type_def_request_002".to_string().into(),
+            method: String::from("textDocument/typeDefinition"),
+            params: params_json,
+        };
+
+        let actual_r = goto_definition::on_go_to_type_def_request(&mut mock_ctx, &request);
+        let expect_r = Response::new_ok(
+            "go_to_type_def_request_002".to_string().into(),
+            json!([{
+                "range":{
+                    "end":{
+                        "character":26,
+                        "line":2
+                    },
+                    "start":{
+                        "character":11,
+                        "line":2
+                    }
+                },
+                "uri": ("file:///".to_string() + path_concat(
+                            PathBuf::from(std::env::current_dir().unwrap()).as_path(),
+                            PathBuf::from("tests/symbols/sources/M2.move").as_path()).to_str().unwrap()
+                       ).replace("\\", "/").to_string()
+            }]),
+        );
+        std::thread::sleep(Duration::new(1, 0));
+        eprintln!("\n------------------------------\n");
+        eprintln!("actual_r = {:?}", actual_r);
+        eprintln!("\n");
+        eprintln!("expect_r = {:?}", expect_r);
+        eprintln!("\n------------------------------\n");
+        assert_eq!(actual_r.result, expect_r.result);
+    }
+
 }

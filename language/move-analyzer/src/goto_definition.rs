@@ -16,8 +16,8 @@ use move_ir_types::location::Loc;
 use std::path::PathBuf;
 
 /// Handles go-to-def request of the language server.
-pub fn on_go_to_def_request(context: &Context, request: &Request) {
-    log::info!("request = {:?}", request);
+pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server::Response {
+    log::info!("on_go_to_def_request request = {:?}", request);
     let parameters = serde_json::from_value::<GotoDefinitionParams>(request.params.clone())
         .expect("could not deserialize go-to-def request");
     let fpath = parameters
@@ -45,7 +45,11 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
         Some(x) => x,
         None => {
             log::error!("project not found:{:?}", fpath.as_path());
-            return;
+            return Response {
+                id: "".to_string().into(),
+                result: Some(serde_json::json!({"msg": "No available project"})),
+                error: None,
+            };
         }
     }
     .run_visitor_for_file(&mut handler, &fpath, false);
@@ -54,11 +58,13 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
         request.id.clone(),
         serde_json::to_value(GotoDefinitionResponse::Array(locations)).unwrap(),
     );
+    let ret_response = r.clone();
     context
         .connection
         .sender
         .send(Message::Response(r))
         .unwrap();
+    return ret_response;
 }
 
 pub(crate) struct Handler {
@@ -270,6 +276,7 @@ impl std::fmt::Display for Handler {
         )
     }
 }
+
 impl GetPosition for Handler {
     fn get_position(&self) -> (PathBuf, u32, u32) {
         (self.filepath.clone(), self.line, self.col)
@@ -277,7 +284,8 @@ impl GetPosition for Handler {
 }
 
 /// Handles go-to-def request of the language server
-pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
+pub fn on_go_to_type_def_request(context: &Context, request: &Request) -> lsp_server::Response {
+    log::info!("on_go_to_type_def_request request = {:?}", request);
     let parameters = serde_json::from_value::<GotoDefinitionParams>(request.params.clone())
         .expect("could not deserialize go-to-def request");
     let fpath = parameters
@@ -294,7 +302,7 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
         fpath.as_path(),
     );
     log::info!(
-        "request is goto definition,fpath:{:?}  line:{} col:{}",
+        "request is goto type definition,fpath:{:?}  line:{} col:{}",
         fpath.as_path(),
         line,
         col,
@@ -303,7 +311,13 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
     let mut handler = Handler::new(fpath.clone(), line, col);
     let modules = match context.projects.get_project(&fpath) {
         Some(x) => x,
-        None => return,
+        None => {
+            return Response {
+                id: "".to_string().into(),
+                result: Some(serde_json::json!({"msg": "No available project"})),
+                error: None,
+            };
+        },
     };
     let _ = modules.run_visitor_for_file(&mut handler, &fpath, false);
     fn type_defs(ret: &mut Vec<Location>, ty: &ResolvedType, modules: &super::project::Project) {
@@ -384,9 +398,11 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
         request.id.clone(),
         serde_json::to_value(GotoDefinitionResponse::Array(locations)).unwrap(),
     );
+    let ret_response = r.clone();
     context
         .connection
         .sender
         .send(Message::Response(r))
         .unwrap();
+    return ret_response;
 }

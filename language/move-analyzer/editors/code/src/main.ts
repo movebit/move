@@ -11,7 +11,6 @@ import * as commands from './commands';
 
 import * as vscode from 'vscode';
 
-
 /**
  * The entry point to this VS Code extension.
  *
@@ -50,6 +49,7 @@ export async function activate(
   context.registerCommand('textDocumentDocumentSymbol', commands.textDocumentDocumentSymbol);
   context.registerCommand('textDocumentHover', commands.textDocumentHover);
   context.registerCommand('textDocumentCompletion', commands.textDocumentCompletion);
+  context.registerCommand('textDocumentDefinition', commands.textDocumentDefinition);
 
   // Configure other language features.
   context.configureLanguage();
