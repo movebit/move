@@ -25,10 +25,11 @@ use move_analyzer::{
     completion::on_completion_request,
     context::{Context, FileDiags, MultiProject},
     goto_definition,
+    move_generate_spec_file::on_generate_spec_file,
+    move_generate_spec_sel::on_generate_spec_sel,
     project::ConvertLoc,
-    references,
+    references, symbols,
     utils::*,
-    symbols,
     vfs::VirtualFileSystem,
 };
 use move_symbol_pool::Symbol;
@@ -273,9 +274,7 @@ fn try_reload_projects(context: &mut Context) {
 fn on_request(context: &mut Context, request: &Request) {
     log::info!("receive method:{}", request.method.as_str());
     match request.method.as_str() {
-        lsp_types::request::Completion::METHOD => {
-            on_completion_request(context, request, &context.symbols.lock().unwrap())
-        }
+        lsp_types::request::Completion::METHOD => on_completion_request(context, request),
         lsp_types::request::GotoDefinition::METHOD => {
             goto_definition::on_go_to_def_request(context, request);
         }
@@ -290,6 +289,12 @@ fn on_request(context: &mut Context, request: &Request) {
         }
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             symbols::on_document_symbol_request(context, request, &context.symbols.lock().unwrap());
+        }
+        "move/generate/spec/file" => {
+            on_generate_spec_file(context, request);
+        }
+        "move/generate/spec/sel" => {
+            on_generate_spec_sel(context, request);
         }
         _ => eprintln!("handle request '{}' from client", request.method),
     }

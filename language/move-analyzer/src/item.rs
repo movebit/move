@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{scope::*, types::*};
+use crate::project_context::{AccessEnv, ProjectContext};
 use enum_iterator::Sequence;
-use move_compiler::{
-    parser::ast::*,
-    shared::{Identifier, TName, *},
-};
+use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::AccountAddress;
 
 use move_command_line_common::files::FileHash;
@@ -44,6 +42,13 @@ impl ItemStruct {
         self.fields
             .iter()
             .find(|&f| f.0 .0.value.as_str() == name.as_str())
+    }
+    pub(crate) fn all_fields(&self) -> HashMap<Symbol, (Name, ResolvedType)> {
+        let mut m = HashMap::new();
+        self.fields.iter().for_each(|f| {
+            m.insert(f.0 .0.value, (f.0 .0, f.1.clone()));
+        });
+        m
     }
 }
 
@@ -148,6 +153,21 @@ pub struct ItemUseItem {
 #[derive(Clone)]
 pub struct ItemModuleName {
     pub(crate) name: ModuleName,
+    pub(crate) is_test: bool,
+}
+impl Item {
+    pub(crate) fn struct_accessible(&self, under_test: AccessEnv) -> bool {
+        match self {
+            Item::Struct(ItemStruct { is_test, .. })
+            | Item::StructNameRef(ItemStructNameRef { is_test, .. }) => {
+                if under_test.is_spec() {
+                    return true;
+                }
+                !(*is_test)
+            }
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -166,7 +186,10 @@ pub struct ItemFun {
     pub(crate) parameters: Vec<(Var, ResolvedType)>,
     pub(crate) ret_type: Box<ResolvedType>,
     pub(crate) ret_type_unresolved: Type,
+    pub(crate) is_spec: bool,
+    pub(crate) vis: Visibility,
     pub(crate) addr_and_name: AddrAndModuleName,
+    pub(crate) is_test: AttrTest,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -179,6 +202,37 @@ pub enum AttrTest {
 impl AttrTest {
     pub(crate) fn is_test(self) -> bool {
         self == Self::Test || self == Self::TestOnly
+    }
+}
+
+impl ItemFun {
+    pub(crate) fn accessible(&self, project_context: &ProjectContext, env: AccessEnv) -> bool {
+        if !env.is_spec() && self.is_spec {
+            return false;
+        }
+        if !env.is_test() && self.is_test.is_test() {
+            return false;
+        }
+        let current = project_context.get_current_addr_and_module_name();
+        match self.vis {
+            Visibility::Internal => {
+                if project_context.get_current_addr_and_module_name() != self.addr_and_name {
+                    return false;
+                }
+            }
+            Visibility::Public(_) => {}
+            Visibility::Friend(_) => {
+                if !project_context.with_friends(
+                    self.addr_and_name.addr,
+                    self.addr_and_name.name.value(),
+                    |friends| friends.contains(&(current.addr, current.name.value())),
+                ) {
+                    return false;
+                }
+            }
+            Visibility::Script(_) => return true, // TODO script.
+        }
+        true
     }
 }
 
@@ -326,6 +380,8 @@ impl Default for Item {
 pub struct ItemConst {
     pub(crate) name: ConstantName,
     pub(crate) ty: ResolvedType,
+    /// only Const have this field,SpecConst ignore this field.
+    pub(crate) is_test: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -347,6 +403,11 @@ impl MacroCall {
             _ => None,
         }
     }
+    // pub(crate) fn to_static_str(self) -> &'static str {
+    //     match self {
+    //         MacroCall::Assert => "assert",
+    //     }
+    // }
 }
 
 impl Default for MacroCall {
@@ -476,7 +537,17 @@ pub struct AccessFiled {
     pub(crate) to: Field,
     #[allow(dead_code)]
     pub(crate) ty: ResolvedType,
+    pub(crate) all_fields: HashMap<Symbol, (Name, ResolvedType)>,
+    /// When dealing with below syntax can have this.
+    /// ```move
+    /// let x = XXX {x}
+    ///```
+    /// x is alas a field and a expr.
+    /// and a expr can link to a item.
     pub(crate) item: Option<Item>,
+    /// Does this field access contains a ref
+    /// like &xxx.yyy
+    pub(crate) has_ref: Option<bool>,
 }
 
 impl std::fmt::Display for Access {
@@ -659,6 +730,36 @@ impl MoveBuildInFun {
             MoveBuildInFun::Exits => "exists",
         }
     }
+
+    pub(crate) fn to_notice(self) -> &'static str {
+        match self {
+            MoveBuildInFun::MoveTo => {
+                r#"move_to<T>(&signer,T)
+Publish T under signer.address.
+"#
+            }
+            MoveBuildInFun::MoveFrom => {
+                r#"move_from<T>(address): T
+Remove T from address and return it.
+"#
+            }
+            MoveBuildInFun::BorrowGlobalMut => {
+                r#"borrow_global_mut<T>(address): &mut T
+Return a mutable reference to the T stored under address.
+"#
+            }
+            MoveBuildInFun::BorrowGlobal => {
+                r#"borrow_global<T>(address): &T
+Return an immutable reference to the T stored under address.
+            "#
+            }
+            MoveBuildInFun::Exits => {
+                r#"exists<T>(address): bool
+Return true if a T is stored under address.
+            "#
+            }
+        }
+    }
 }
 
 impl std::fmt::Display for MoveBuildInFun {
@@ -700,6 +801,65 @@ impl SpecBuildInFun {
             Self::UpdateField => "update_field",
             Self::Old => "old",
             Self::TRACE => "TRACE",
+        }
+    }
+
+    pub(crate) fn to_notice(self) -> &'static str {
+        match self {
+            SpecBuildInFun::Exists => {
+                r#"exists<T>(address): bool
+Returns true if the resource T exists at address.
+                "#
+            }
+            SpecBuildInFun::Global => {
+                r#"global<T>(address):
+T returns the resource value at address."#
+            }
+            SpecBuildInFun::Len => {
+                r#"len<T>(vector<T>): num
+Returns the length of the vector."#
+            }
+            SpecBuildInFun::Update => {
+                r#"update<T>(vector<T>, num, T>): vector<T>
+Returns a new vector with the element replaced at the given index."#
+            }
+            SpecBuildInFun::Vec => {
+                r#"vec<T>(): vector<T>
+Returns an empty vector."#
+            }
+            SpecBuildInFun::Concat => {
+                r#"concat<T>(vector<T>, vector<T>): vector<T>
+Returns the concatenation of the parameters."#
+            }
+            SpecBuildInFun::Contains => {
+                r#"contains<T>(vector<T>, T): bool
+Returns true if element is in vector."#
+            }
+            SpecBuildInFun::IndexOf => {
+                r#"index_of<T>(vector<T>, T): num
+Returns the index of the element in the vector, or the length of the vector if it does not contain it."#
+            }
+            SpecBuildInFun::Range => {
+                r#"range<T>(vector<T>): range
+Returns the index range of the vector."#
+            }
+            SpecBuildInFun::InRange => {
+                r#"in_range<T>(vector<T>, num): bool
+Returns true if the number is in the index range of the vector."#
+            }
+            SpecBuildInFun::UpdateField => {
+                r#"update_field(S, F, T): S
+Updates a field in a struct, preserving the values of other fields, where S is some struct, F the name of a field in S, and T a value for this field."#
+            }
+            SpecBuildInFun::Old => {
+                r#"old(T): T
+T delivers the value of the passed argument at point of entry into a Move function. This is allowed in ensures post-conditions, inline spec blocks (with additional restrictions), and certain forms of invariants, as discussed later."#
+            }
+            SpecBuildInFun::TRACE => {
+                r#"TRACE(T): T
+T is semantically the identity function and causes visualization of the argument's value in error messages created by the prover.
+            "#
+            }
         }
     }
 }
