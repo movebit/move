@@ -26,8 +26,9 @@ use move_analyzer::{
     context::{Context, FileDiags, MultiProject},
     goto_definition,
     project::ConvertLoc,
-    symbols,
+    references,
     utils::*,
+    symbols,
     vfs::VirtualFileSystem,
 };
 use move_symbol_pool::Symbol;
@@ -282,7 +283,7 @@ fn on_request(context: &mut Context, request: &Request) {
             goto_definition::on_go_to_type_def_request(context, request);
         }
         lsp_types::request::References::METHOD => {
-            symbols::on_references_request(context, request, &context.symbols.lock().unwrap());
+            references::on_references_request(context, request);
         }
         lsp_types::request::HoverRequest::METHOD => {
             symbols::on_hover_request(context, request, &context.symbols.lock().unwrap());
