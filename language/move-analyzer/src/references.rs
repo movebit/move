@@ -8,7 +8,8 @@ use lsp_types::*;
 use move_ir_types::location::Loc;
 use std::{collections::HashSet, path::*};
 
-pub fn on_references_request(context: &mut Context, request: &Request) {
+pub fn on_references_request(context: &mut Context, request: &Request) -> lsp_server::Response {
+    log::info!("on_references_request request = {:?}", request);
     let parameters = serde_json::from_value::<ReferenceParams>(request.params.clone())
         .expect("could not deserialize references request");
     let fpath = parameters
@@ -26,7 +27,11 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
     let mut goto_definition = goto_definition::Handler::new(fpath.clone(), line, col);
     let modules = match context.projects.get_project(&fpath) {
         Some(x) => x,
-        None => return,
+        None => return Response {
+            id: "".to_string().into(),
+            result: Some(serde_json::json!({"msg": "No available project"})),
+            error: None,
+        },
     };
     let _ = modules.run_visitor_for_file(&mut goto_definition, &fpath, false);
     let send_err = || {
@@ -42,7 +47,11 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
         Some(x) => x,
         None => {
             send_err();
-            return;
+            return Response {
+                id: "".to_string().into(),
+                result: Some(serde_json::json!({"msg": "No definition found"})),
+                error: None,
+            };
         }
     };
     if let Some(x) = context.ref_caches.get(&(include_declaration, def_loc)) {
@@ -50,18 +59,23 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
             request.id.clone(),
             serde_json::to_value(Some(x.clone())).unwrap(),
         );
+        let ret_response = r.clone();
         context
             .connection
             .sender
             .send(Message::Response(r))
             .unwrap();
-        return;
+        return ret_response;
     }
     let def_loc_range = match modules.convert_loc_range(&def_loc) {
         Some(x) => x,
         None => {
             send_err();
-            return;
+            return Response {
+                id: "".to_string().into(),
+                result: Some(serde_json::json!({"msg": "No location found"})),
+                error: None,
+            };
         }
     };
     let is_local = goto_definition
@@ -71,7 +85,11 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
         .unwrap_or(false);
     let modules = match context.projects.get_project(&fpath) {
         Some(x) => x,
-        None => return,
+        None => return Response {
+            id: "".to_string().into(),
+            result: Some(serde_json::json!({"msg": "No available project"})),
+            error: None,
+        },
     };
     let mut handle = Handler::new(def_loc, def_loc_range, include_declaration, is_local);
     if is_local {
@@ -88,11 +106,13 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
             .set((include_declaration, def_loc), locations);
     }
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(loc).unwrap());
+    let ret_response = r.clone();
     context
         .connection
         .sender
         .send(Message::Response(r))
         .unwrap();
+    ret_response
 }
 
 struct Handler {
