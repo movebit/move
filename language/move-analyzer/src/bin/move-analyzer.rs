@@ -24,7 +24,7 @@ use std::{
 use move_analyzer::{
     completion::on_completion_request,
     context::{Context, FileDiags, MultiProject},
-    goto_definition,
+    goto_definition, hover,
     project::ConvertLoc,
     references,
     utils::*,
@@ -286,7 +286,7 @@ fn on_request(context: &mut Context, request: &Request) {
             references::on_references_request(context, request);
         }
         lsp_types::request::HoverRequest::METHOD => {
-            symbols::on_hover_request(context, request, &context.symbols.lock().unwrap());
+            hover::on_hover_request(context, request);
         }
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             symbols::on_document_symbol_request(context, request, &context.symbols.lock().unwrap());

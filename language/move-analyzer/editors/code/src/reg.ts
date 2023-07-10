@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type { Context } from './context';
-import { log } from './log';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -698,33 +697,6 @@ const Reg = {
 
             client.sendRequest<Result>('move/generate/spec/sel', { 'fpath': fsPath, line: line, col: col }).then(
                 (result) => {
-                    vscode.window.activeTextEditor?.edit((e) => {
-                        e.insert(new vscode.Position(result.line, result.col), result.content);
-                    });
-                },
-            ).catch((err) => {
-                void vscode.window.showErrorMessage('generate failed: ' + (err as string));
-            });
-        });
-        // X context.registerCommand('goto_definition', async (_context, ...args) => {
-        context.registerCommand('goto_definition', (_context, ...args) => {
-            log.info('debugrb registerCommand goto_definition');
-            const loc = args[0] as { range: vscode.Range; fpath: string };
-            // X const t = await vscode.workspace.openTextDocument(loc.fpath);
-            // X await vscode.window.showTextDocument(t, { selection: loc.range, preserveFocus: false });
-            const client = context.getClient();
-            if (client === undefined) {
-                return;
-            }
-            interface Result {
-                content: string;
-                line: number;
-                col: number;
-            }
-
-            client.sendRequest<Result>('move/goto_definition', { 'fpath': loc.fpath, selection: loc.range }).then(
-                (result) => {
-                    console.warn(result);
                     vscode.window.activeTextEditor?.edit((e) => {
                         e.insert(new vscode.Position(result.line, result.col), result.content);
                     });

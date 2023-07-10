@@ -35,6 +35,7 @@ pub mod completion;
 pub mod context;
 pub mod diagnostics;
 pub mod goto_definition;
+pub mod hover;
 pub mod item;
 pub mod project;
 pub mod project_context;
