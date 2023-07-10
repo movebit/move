@@ -104,6 +104,7 @@ impl Scope {
                         value: x,
                     }),
                     ty: ResolvedType::new_build_in(*ty),
+                    is_test: false,
                 }),
             );
         });

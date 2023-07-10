@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{scope::*, types::*};
+use crate::project_context::{AccessEnv, ProjectContext};
 use enum_iterator::Sequence;
-use move_compiler::{
-    parser::ast::*,
-    shared::{Identifier, TName, *},
-};
+use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::AccountAddress;
 
 use move_command_line_common::files::FileHash;
@@ -44,6 +42,13 @@ impl ItemStruct {
         self.fields
             .iter()
             .find(|&f| f.0 .0.value.as_str() == name.as_str())
+    }
+    pub(crate) fn all_fields(&self) -> HashMap<Symbol, (Name, ResolvedType)> {
+        let mut m = HashMap::new();
+        self.fields.iter().for_each(|f| {
+            m.insert(f.0 .0.value, (f.0 .0, f.1.clone()));
+        });
+        m
     }
 }
 
@@ -148,6 +153,21 @@ pub struct ItemUseItem {
 #[derive(Clone)]
 pub struct ItemModuleName {
     pub(crate) name: ModuleName,
+    pub(crate) is_test: bool,
+}
+impl Item {
+    pub(crate) fn struct_accessible(&self, under_test: AccessEnv) -> bool {
+        match self {
+            Item::Struct(ItemStruct { is_test, .. })
+            | Item::StructNameRef(ItemStructNameRef { is_test, .. }) => {
+                if under_test.is_spec() {
+                    return true;
+                }
+                !(*is_test)
+            }
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -166,7 +186,10 @@ pub struct ItemFun {
     pub(crate) parameters: Vec<(Var, ResolvedType)>,
     pub(crate) ret_type: Box<ResolvedType>,
     pub(crate) ret_type_unresolved: Type,
+    pub(crate) is_spec: bool,
+    pub(crate) vis: Visibility,
     pub(crate) addr_and_name: AddrAndModuleName,
+    pub(crate) is_test: AttrTest,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -179,6 +202,37 @@ pub enum AttrTest {
 impl AttrTest {
     pub(crate) fn is_test(self) -> bool {
         self == Self::Test || self == Self::TestOnly
+    }
+}
+
+impl ItemFun {
+    pub(crate) fn accessible(&self, project_context: &ProjectContext, env: AccessEnv) -> bool {
+        if !env.is_spec() && self.is_spec {
+            return false;
+        }
+        if !env.is_test() && self.is_test.is_test() {
+            return false;
+        }
+        let current = project_context.get_current_addr_and_module_name();
+        match self.vis {
+            Visibility::Internal => {
+                if project_context.get_current_addr_and_module_name() != self.addr_and_name {
+                    return false;
+                }
+            }
+            Visibility::Public(_) => {}
+            Visibility::Friend(_) => {
+                if !project_context.with_friends(
+                    self.addr_and_name.addr,
+                    self.addr_and_name.name.value(),
+                    |friends| friends.contains(&(current.addr, current.name.value())),
+                ) {
+                    return false;
+                }
+            }
+            Visibility::Script(_) => return true, // TODO script.
+        }
+        true
     }
 }
 
@@ -326,6 +380,8 @@ impl Default for Item {
 pub struct ItemConst {
     pub(crate) name: ConstantName,
     pub(crate) ty: ResolvedType,
+    /// only Const have this field,SpecConst ignore this field.
+    pub(crate) is_test: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -481,7 +537,17 @@ pub struct AccessFiled {
     pub(crate) to: Field,
     #[allow(dead_code)]
     pub(crate) ty: ResolvedType,
+    pub(crate) all_fields: HashMap<Symbol, (Name, ResolvedType)>,
+    /// When dealing with below syntax can have this.
+    /// ```move
+    /// let x = XXX {x}
+    ///```
+    /// x is alas a field and a expr.
+    /// and a expr can link to a item.
     pub(crate) item: Option<Item>,
+    /// Does this field access contains a ref
+    /// like &xxx.yyy
+    pub(crate) has_ref: Option<bool>,
 }
 
 impl std::fmt::Display for Access {

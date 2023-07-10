@@ -26,9 +26,8 @@ use move_analyzer::{
     context::{Context, FileDiags, MultiProject},
     goto_definition, hover,
     project::ConvertLoc,
-    references,
+    references, symbols,
     utils::*,
-    symbols,
     vfs::VirtualFileSystem,
 };
 use move_symbol_pool::Symbol;
@@ -273,9 +272,7 @@ fn try_reload_projects(context: &mut Context) {
 fn on_request(context: &mut Context, request: &Request) {
     log::info!("receive method:{}", request.method.as_str());
     match request.method.as_str() {
-        lsp_types::request::Completion::METHOD => {
-            on_completion_request(context, request, &context.symbols.lock().unwrap())
-        }
+        lsp_types::request::Completion::METHOD => on_completion_request(context, request),
         lsp_types::request::GotoDefinition::METHOD => {
             goto_definition::on_go_to_def_request(context, request);
         }
