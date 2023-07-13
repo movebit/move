@@ -51,6 +51,22 @@ export async function activate(
   context.registerCommand('textDocumentCompletion', commands.textDocumentCompletion);
   context.registerCommand('textDocumentDefinition', commands.textDocumentDefinition);
 
+  const d = vscode.languages.registerInlayHintsProvider(
+    { scheme: 'file', language: 'move' },
+    {
+      provideInlayHints(document, range) {
+        const client = context.getClient();
+        if (client === undefined) {
+          return undefined;
+        }
+        const hints = client.sendRequest<vscode.InlayHint[]>('textDocument/inlayHint',
+          { range: range, textDocument: { uri: document.uri.toString() } });
+        return hints;
+      },
+    },
+  );
+
+  extensionContext.subscriptions.push(d);
   // Configure other language features.
   context.configureLanguage();
 
@@ -59,4 +75,17 @@ export async function activate(
 
   // Regist all the sui commands.
   Reg.regsui(context);
+
+  // Send inlay hints
+  const reload_inlay_hints = function(): any {
+    const client = context.getClient();
+    if (client !== undefined) {
+      void client.sendRequest('move/lsp/client/inlay_hints/config', configuration.inlay_hints_config());
+    }
+  };
+  reload_inlay_hints();
+  vscode.workspace.onDidChangeConfiguration(() => {
+    log.info('reload_inlay_hints ...  ');
+    reload_inlay_hints();
+  });
 }

@@ -767,7 +767,24 @@ impl Project {
                 let ty = self.get_expr_type(e, project_context);
                 ResolvedType::new_ref(*is_mut, ty)
             }
-            Exp_::Dot(_, _) => ResolvedType::UnKnown,
+            Exp_::Dot(e, name) => {
+                let ty = self.get_expr_type(e, project_context);
+                let ty = match &ty {
+                    ResolvedType::Ref(_, ty) => ty.as_ref(),
+                    _ => &ty,
+                };
+                match ty {
+                    ResolvedType::Struct(_, _) => {
+                        let s = ty.struct_ref_to_struct(project_context);
+                        if let Some(field) = s.find_filed_by_name(name.value) {
+                            field.1.clone()
+                        } else {
+                            ResolvedType::UnKnown
+                        }
+                    }
+                    _ => ResolvedType::UnKnown,
+                }
+            }
 
             Exp_::Index(e, _index) => {
                 let ty = self.get_expr_type(e, project_context);
@@ -978,6 +995,12 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
     fn need_expr_type(&self) -> bool {
         false
     }
+
+    // current vistor handler is inlay_hints ?
+    fn current_vistor_handler_is_inlay_hints(&self) -> bool {
+        false
+    }
+
     // handle expr type.
     fn handle_expr_typ(&mut self, _exp: &Exp, _ty: ResolvedType) {}
 

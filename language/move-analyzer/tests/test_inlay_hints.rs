@@ -6,7 +6,7 @@ mod tests {
     use lsp_server::{Connection, Request, Response};
     use move_analyzer::{
         context::{Context, FileDiags, MultiProject},
-        hover, symbols,
+        symbols, inlay_hints, inlay_hints::*,
         utils::*,
         vfs::VirtualFileSystem,
     };
@@ -50,9 +50,10 @@ mod tests {
     }
 
     #[test]
-    fn test_on_hover_request_001() {
+    fn test_on_inlay_hints_001() {
         let (connection, _) = Connection::stdio();
         let symbols = Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols()));
+        let inlay_hints_config = InlayHintsConfig::default();
 
         let mut mock_ctx = Context {
             projects: MultiProject::new(),
@@ -100,29 +101,46 @@ mod tests {
             "context": {
                 "includeDeclaration": true
             },
-            "position": {
-                "line": 7,
-                "character": 16
+            "range": [{
+                "line": 0,
+                "character": 0
             },
+            {
+                "line": 12,
+                "character": 18
+            }],
             "textDocument": {
                 "uri": "file:///".to_string() + fpath.to_str().unwrap()
             },
         });
-        let request = Request {
-            id: "hover_request_001".to_string().into(),
-            method: String::from("textDocument/hover"),
+        let request: Request = Request {
+            id: "inlay_hints_001".to_string().into(),
+            method: String::from("textDocument/inlayHint"),
             params: params_json,
         };
 
-        let expect_r = Response::new_ok(
-            "hover_request_001".to_string().into(),
-            json!({
-                    "contents": "SomeOtherStruct"
+        let expect_r: Response = Response::new_ok(
+            "inlay_hints_001".to_string().into(),
+            json!([{
+                "kind": 1,
+                "label": [
+                     {
+                          "value": ": "
+                     },
+                     {
+                          "value": "u64"
+                     }
+                ],
+                "paddingLeft": true,
+                "paddingRight": true,
+                "position": {
+                     "character": 36,
+                     "line": 7
                 }
-            ),
+           }]),
         );
 
-        let actual_r = hover::on_hover_request(&mock_ctx, &request);
+        let actual_r = inlay_hints::on_inlay_hints(&mock_ctx, &request, inlay_hints_config);
         std::thread::sleep(Duration::new(1, 0));
         eprintln!("\n------------------------------\n");
         eprintln!("actual_r = {:?}", serde_json::to_string(&actual_r));

@@ -33,9 +33,11 @@ macro_rules! impl_convert_loc {
 
 pub mod completion;
 pub mod context;
+pub mod code_lens;
 pub mod diagnostics;
 pub mod goto_definition;
 pub mod hover;
+pub mod inlay_hints;
 pub mod item;
 pub mod project;
 pub mod project_context;

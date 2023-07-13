@@ -22,9 +22,10 @@ use std::{
 };
 
 use move_analyzer::{
+    code_lens,
     completion::on_completion_request,
     context::{Context, FileDiags, MultiProject},
-    goto_definition, hover,
+    goto_definition, hover, inlay_hints, inlay_hints::*,
     project::ConvertLoc,
     references, symbols,
     utils::*,
@@ -191,6 +192,7 @@ fn main() {
         .expect("could not finish connection initialization");
     let (diag_sender, diag_receiver) = bounded::<(PathBuf, Diagnostics)>(1);
     let diag_sender = Arc::new(Mutex::new(diag_sender));
+    let mut inlay_hints_config = InlayHintsConfig::default();
 
     loop {
         select! {
@@ -242,7 +244,7 @@ fn main() {
             recv(context.connection.receiver) -> message => {
                 try_reload_projects(&mut context);
                 match message {
-                    Ok(Message::Request(request)) => on_request(&mut context, &request),
+                    Ok(Message::Request(request)) => on_request(&mut context, &request , &mut inlay_hints_config),
                     Ok(Message::Response(response)) => on_response(&context, &response),
                     Ok(Message::Notification(notification)) => {
                         match notification.method.as_str() {
@@ -269,7 +271,7 @@ fn main() {
 fn try_reload_projects(context: &mut Context) {
     context.projects.try_reload_projects(&context.connection);
 }
-fn on_request(context: &mut Context, request: &Request) {
+fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut InlayHintsConfig) {
     log::info!("receive method:{}", request.method.as_str());
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => on_completion_request(context, request),
@@ -287,6 +289,18 @@ fn on_request(context: &mut Context, request: &Request) {
         }
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             symbols::on_document_symbol_request(context, request, &context.symbols.lock().unwrap());
+        }
+        lsp_types::request::CodeLensRequest::METHOD => {
+            code_lens::move_get_test_code_lens(context, request);
+        }
+        lsp_types::request::InlayHintRequest::METHOD => {
+            inlay_hints::on_inlay_hints(context, request, *inlay_hints_config);
+        }
+        "move/lsp/client/inlay_hints/config" => {
+            let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
+                .expect("could not deserialize inlay hints request");
+            eprintln!("call inlay_hints config {:?}", parameters);
+            *inlay_hints_config = parameters;
         }
         _ => eprintln!("handle request '{}' from client", request.method),
     }
