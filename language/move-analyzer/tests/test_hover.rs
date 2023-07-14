@@ -122,7 +122,7 @@ mod tests {
             ),
         );
 
-        let actual_r = hover::on_hover_request(&mut mock_ctx, &request);
+        let actual_r = hover::on_hover_request(&mock_ctx, &request);
         std::thread::sleep(Duration::new(1, 0));
         eprintln!("\n------------------------------\n");
         eprintln!("actual_r = {:?}", serde_json::to_string(&actual_r));

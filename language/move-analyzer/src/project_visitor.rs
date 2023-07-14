@@ -720,19 +720,6 @@ impl Project {
                 }
             }
             if let Some(ref exp) = seq.3.as_ref() {
-                match exp.value {
-                    Exp_::UnaryExp(_, _) => {
-                        return;
-                    }
-                    Exp_::BinopExp(_, _, _) => {
-                        return;
-                    }
-                    Exp_::Dot(_, _) => {
-                        return;
-                    }
-                    _ => {}
-                }
-
                 log::trace!("visit_block exp = {:?}", exp);
                 self.visit_expr(exp, scopes, visitor);
             }
@@ -1452,7 +1439,6 @@ impl Project {
                     }
                 }
                 // TODO why spec have function signature.
-                // 看起来是重复定义，必须和函数的定义一模一样。
                 if let Some(signature) = signature {
                     self.visit_signature(signature.as_ref(), project_context, visitor);
                     if visitor.finished() {
