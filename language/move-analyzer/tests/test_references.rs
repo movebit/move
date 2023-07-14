@@ -128,7 +128,7 @@ mod tests {
                                 "line": 2
                             }
                     },
-                    
+
                     "uri": ("file:///".to_string() + path_concat(
                                     std::env::current_dir().unwrap().as_path(),
                                     PathBuf::from("tests/symbols/sources/M2.move").as_path()).to_str().unwrap()
@@ -268,7 +268,6 @@ mod tests {
                 }
                 assert_eq!(found_same_item, true);
             }
-            return;
-        } 
+        }
     }
 }

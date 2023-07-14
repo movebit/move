@@ -153,7 +153,6 @@ pub struct ItemUseItem {
 #[derive(Clone)]
 pub struct ItemModuleName {
     pub(crate) name: ModuleName,
-    pub(crate) is_test: bool,
 }
 impl Item {
     pub(crate) fn struct_accessible(&self, under_test: AccessEnv) -> bool {
@@ -545,9 +544,6 @@ pub struct AccessFiled {
     /// x is alas a field and a expr.
     /// and a expr can link to a item.
     pub(crate) item: Option<Item>,
-    /// Does this field access contains a ref
-    /// like &xxx.yyy
-    pub(crate) has_ref: Option<bool>,
 }
 
 impl std::fmt::Display for Access {
@@ -807,52 +803,52 @@ impl SpecBuildInFun {
     pub(crate) fn to_notice(self) -> &'static str {
         match self {
             SpecBuildInFun::Exists => {
-                r#"exists<T>(address): bool 
+                r#"exists<T>(address): bool
 Returns true if the resource T exists at address.
                 "#
             }
             SpecBuildInFun::Global => {
-                r#"global<T>(address): 
+                r#"global<T>(address):
 T returns the resource value at address."#
             }
             SpecBuildInFun::Len => {
-                r#"len<T>(vector<T>): num 
+                r#"len<T>(vector<T>): num
 Returns the length of the vector."#
             }
             SpecBuildInFun::Update => {
-                r#"update<T>(vector<T>, num, T>): vector<T> 
+                r#"update<T>(vector<T>, num, T>): vector<T>
 Returns a new vector with the element replaced at the given index."#
             }
             SpecBuildInFun::Vec => {
-                r#"vec<T>(): vector<T> 
+                r#"vec<T>(): vector<T>
 Returns an empty vector."#
             }
             SpecBuildInFun::Concat => {
-                r#"concat<T>(vector<T>, vector<T>): vector<T> 
+                r#"concat<T>(vector<T>, vector<T>): vector<T>
 Returns the concatenation of the parameters."#
             }
             SpecBuildInFun::Contains => {
-                r#"contains<T>(vector<T>, T): bool 
+                r#"contains<T>(vector<T>, T): bool
 Returns true if element is in vector."#
             }
             SpecBuildInFun::IndexOf => {
-                r#"index_of<T>(vector<T>, T): num 
+                r#"index_of<T>(vector<T>, T): num
 Returns the index of the element in the vector, or the length of the vector if it does not contain it."#
             }
             SpecBuildInFun::Range => {
-                r#"range<T>(vector<T>): range 
+                r#"range<T>(vector<T>): range
 Returns the index range of the vector."#
             }
             SpecBuildInFun::InRange => {
-                r#"in_range<T>(vector<T>, num): bool 
+                r#"in_range<T>(vector<T>, num): bool
 Returns true if the number is in the index range of the vector."#
             }
             SpecBuildInFun::UpdateField => {
-                r#"update_field(S, F, T): S 
+                r#"update_field(S, F, T): S
 Updates a field in a struct, preserving the values of other fields, where S is some struct, F the name of a field in S, and T a value for this field."#
             }
             SpecBuildInFun::Old => {
-                r#"old(T): T 
+                r#"old(T): T
 T delivers the value of the passed argument at point of entry into a Move function. This is allowed in ensures post-conditions, inline spec blocks (with additional restrictions), and certain forms of invariants, as discussed later."#
             }
             SpecBuildInFun::TRACE => {

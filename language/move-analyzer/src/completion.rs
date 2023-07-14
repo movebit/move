@@ -468,18 +468,20 @@ impl ItemOrAccessHandler for Handler {
                                 if self.match_loc(&x.loc, services) {
                                     push_items(
                                         self,
-                                        &project_context.collect_items(|x| match x {
-                                            Item::Var { .. }
-                                            | Item::Parameter(_, _)
-                                            | Item::Use(_)
-                                            | Item::SpecSchema(_, _) => true,
-                                            Item::Fun(_) => true,
-                                            Item::Struct(_) => true,
-                                            Item::Const(_) => true,
-                                            Item::MoveBuildInFun(_) => true,
-                                            Item::SpecBuildInFun(_) => true,
-                                            Item::SpecConst(_) => true,
-                                            _ => false,
+                                        &project_context.collect_items(|x| {
+                                            matches!(
+                                                x,
+                                                Item::Var { .. }
+                                                | Item::Parameter(_, _)
+                                                | Item::Use(_)
+                                                | Item::SpecSchema(_, _)
+                                                | Item::Fun(_)
+                                                | Item::Struct(_)
+                                                | Item::Const(_)
+                                                | Item::MoveBuildInFun(_)
+                                                | Item::SpecBuildInFun(_)
+                                                | Item::SpecConst(_)
+                                            )
                                         }),
                                     );
                                     let items = services.get_all_addrs(project_context);
@@ -651,52 +653,48 @@ impl GetPosition for Handler {
 }
 
 fn pragma_property_completion_items() -> Vec<CompletionItem> {
-    let mut ret = Vec::new();
-    ret.push(CompletionItem {
-        label: String::from("verify = true"),
-        kind: Some(CompletionItemKind::TEXT),
-        ..Default::default()
-    });
-
-    ret.push(CompletionItem {
-        label: String::from("intrinsic"),
-        kind: Some(CompletionItemKind::TEXT),
-        ..Default::default()
-    });
-
-    ret.push(CompletionItem {
-        label: String::from("timeout=1000"),
-        kind: Some(CompletionItemKind::TEXT),
-        ..Default::default()
-    });
-
-    ret.push(CompletionItem {
-        label: String::from("verify_duration_estimate=1000"),
-        kind: Some(CompletionItemKind::TEXT),
-        ..Default::default()
-    });
-
-    ret.push(CompletionItem {
-        label: String::from("seed"),
-        kind: Some(CompletionItemKind::TEXT),
-        ..Default::default()
-    });
-
-    ret.push(CompletionItem {
-        label: String::from("aborts_if_is_strict"),
-        kind: Some(CompletionItemKind::TEXT),
-        ..Default::default()
-    });
-    ret.push(CompletionItem {
-        label: String::from("opaque"),
-        kind: Some(CompletionItemKind::TEXT),
-        ..Default::default()
-    });
-    ret.push(CompletionItem {
-        label: String::from("aborts_if_is_partial"),
-        kind: Some(CompletionItemKind::TEXT),
-        ..Default::default()
-    });
+    let ret: Vec<CompletionItem> = vec![
+        CompletionItem {
+            label: String::from("verify = true"),
+            kind: Some(CompletionItemKind::TEXT),
+            ..Default::default()
+        },
+        CompletionItem {
+            label: String::from("intrinsic"),
+            kind: Some(CompletionItemKind::TEXT),
+            ..Default::default()
+        },
+        CompletionItem {
+            label: String::from("timeout=1000"),
+            kind: Some(CompletionItemKind::TEXT),
+            ..Default::default()
+        },
+        CompletionItem {
+            label: String::from("verify_duration_estimate=1000"),
+            kind: Some(CompletionItemKind::TEXT),
+            ..Default::default()
+        },
+        CompletionItem {
+            label: String::from("seed"),
+            kind: Some(CompletionItemKind::TEXT),
+            ..Default::default()
+        },
+        CompletionItem {
+            label: String::from("aborts_if_is_strict"),
+            kind: Some(CompletionItemKind::TEXT),
+            ..Default::default()
+        },
+        CompletionItem {
+            label: String::from("opaque"),
+            kind: Some(CompletionItemKind::TEXT),
+            ..Default::default()
+        },
+        CompletionItem {
+            label: String::from("aborts_if_is_partial"),
+            kind: Some(CompletionItemKind::TEXT),
+            ..Default::default()
+        }
+    ];
     ret
 }
 

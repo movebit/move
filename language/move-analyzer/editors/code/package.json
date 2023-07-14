@@ -142,16 +142,6 @@
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.move.generate.spec.file",
-				"title": "Generate Move Spec File",
-				"category": "Move Analyzer"
-			},
-			{
-				"command": "move-analyzer.move.generate.spec.sel",
-				"title": "Generate Move Spec",
-				"category": "Move Analyzer"
-			},
-			{
 				"command": "move-analyzer.sui.reset.working.space",
 				"title": "Sui reset working space",
 				"category": "Move Analyzer"

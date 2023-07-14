@@ -1,10 +1,13 @@
+// Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use super::context::Context;
 use super::goto_definition;
 use super::item::*;
 use super::utils::*;
 use lsp_server::*;
 use lsp_types::*;
-use std::path::PathBuf;
 
 /// Handles hover request of the language server.
 pub fn on_hover_request(context: &Context, request: &Request) -> lsp_server::Response {
@@ -21,7 +24,7 @@ pub fn on_hover_request(context: &Context, request: &Request) -> lsp_server::Res
     let line = loc.line;
     let col = loc.character;
     let fpath = path_concat(
-        PathBuf::from(std::env::current_dir().unwrap()).as_path(),
+        std::env::current_dir().unwrap().as_path(),
         fpath.as_path(),
     );
     log::info!(

@@ -221,7 +221,7 @@ impl Project {
         provider.with_module(|addr, module_def| {
             let item = ItemOrAccess::Item(Item::ModuleName(ItemModuleName {
                 name: module_def.name,
-                is_test: attributes_has_test(&module_def.attributes).is_test(),
+                // is_test: attributes_has_test(&module_def.attributes).is_test(),
             }));
             visitor.handle_item_or_access(self, project_context, &item);
             if !module_def.is_spec_module {
@@ -641,7 +641,6 @@ impl Project {
                             ty: field_ty.clone(),
                             all_fields: struct_item.all_fields(),
                             item: None,
-                            has_ref: None,
                         }));
                         visitor.handle_item_or_access(self, project_context, &item);
                         if visitor.finished() {
@@ -726,19 +725,6 @@ impl Project {
                 }
             }
             if let Some(ref exp) = seq.3.as_ref() {
-                match exp.value {
-                    Exp_::UnaryExp(_, _) => {
-                        return;
-                    }
-                    Exp_::BinopExp(_, _, _) => {
-                        return;
-                    }
-                    Exp_::Dot(_, _) => {
-                        return;
-                    }
-                    _ => {}
-                }
-
                 log::trace!("visit_block exp = {:?}", exp);
                 self.visit_expr(exp, scopes, visitor);
             }
@@ -813,7 +799,6 @@ impl Project {
                     ty: def_field.1.clone(),
                     all_fields,
                     item: None,
-                    has_ref: _has_ref,
                 }));
                 visitor.handle_item_or_access(self, project_context, &item);
             } else {
@@ -823,7 +808,6 @@ impl Project {
                     ty: ResolvedType::UnKnown,
                     all_fields,
                     item: None,
-                    has_ref: _has_ref,
                 }));
                 visitor.handle_item_or_access(self, project_context, &item);
             }
@@ -918,6 +902,9 @@ impl Project {
                         module,
                         Box::new(item.unwrap_or_default()),
                     ));
+                    if visitor.current_vistor_handler_is_inlay_hints() {
+                        return;
+                    }
                     log::trace!("process Exp_::Call, item = {}", item);
                     visitor.handle_item_or_access(self, project_context, &item);
                     if visitor.finished() {
@@ -1000,7 +987,6 @@ impl Project {
                             ty: field_type.1.clone(),
                             all_fields,
                             item,
-                            has_ref: None,
                         }));
                         visitor.handle_item_or_access(self, project_context, &item);
                     } else {
@@ -1010,7 +996,6 @@ impl Project {
                             ty: ResolvedType::UnKnown,
                             all_fields,
                             item,
-                            has_ref: None,
                         }));
                         visitor.handle_item_or_access(self, project_context, &item);
                     }
@@ -1472,7 +1457,6 @@ impl Project {
                     }
                 }
                 // TODO why spec have function signature.
-                // 看起来是重复定义，必须和函数的定义一模一样。
                 if let Some(signature) = signature {
                     self.visit_signature(signature.as_ref(), project_context, visitor);
                     if visitor.finished() {
@@ -1708,7 +1692,6 @@ impl Project {
                                             ty: ty.clone(),
                                             all_fields: all_fields.clone(),
                                             item: None,
-                                            has_ref: None,
                                         }));
                                     visitor.handle_item_or_access(self, project_context, &item);
                                     if visitor.finished() {
@@ -1722,7 +1705,6 @@ impl Project {
                                             ty: ResolvedType::UnKnown,
                                             all_fields: all_fields.clone(),
                                             item: None,
-                                            has_ref: None,
                                         }));
                                     visitor.handle_item_or_access(self, project_context, &item);
                                     if visitor.finished() {
