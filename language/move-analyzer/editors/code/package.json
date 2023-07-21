@@ -5,7 +5,7 @@
 	"publisher": "move",
 	"icon": "images/move.png",
 	"license": "Apache-2.0",
-	"version": "0.0.10",
+	"version": "0.0.11",
 	"preview": true,
 	"homepage": "https://github.com/move-language/move",
 	"repository": {
@@ -16,7 +16,7 @@
 		"url": "https://github.com/move-language/move/issues"
 	},
 	"engines": {
-		"vscode": "^1.58.2"
+		"vscode": "^1.67.1"
 	},
 	"categories": [
 		"Programming Languages"
@@ -35,6 +35,116 @@
 				"command": "move-analyzer.serverVersion",
 				"title": "Show Server Version",
 				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.create_project",
+				"title": "Create aptos project",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.move.new",
+				"title": "Create a new move project.",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.move.build",
+				"title": "aptos move build",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.move.coverage",
+				"title": "aptos move coverage",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.move.test",
+				"title": "aptos move test",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.move.prove",
+				"title": "aptos move prove",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.client.active.address",
+				"title": "aptos client active-address",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.client.active.env",
+				"title": "aptos client active-env",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.client.addresses",
+				"title": "aptos client addresses",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.client.envs",
+				"title": "aptos client envs",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.client.gas",
+				"title": "aptos client gas",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.client.object",
+				"title": "aptos client object",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.client.objects",
+				"title": "aptos client objects",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.client.publish",
+				"title": "aptos client publish",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.client.new.address",
+				"title": "aptos client new address",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.keytool.generate",
+				"title": "aptos keytool generate",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.keytool.import",
+				"title": "aptos keytool import",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.keytool.list",
+				"title": "aptos keytool list",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.keytool.load.keypair",
+				"title": "aptos keytool load keypair",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.keytool.show",
+				"title": "aptos keytool show",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.keytool.unpack",
+				"title": "aptos keytool unpack",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.aptos.reset.working.space",
+				"title": "aptos reset working space",
+				"category": "Move Analyzer"
 			}
 		],
 		"configuration": {
@@ -45,6 +155,21 @@
 					"type": "string",
 					"default": "move-analyzer",
 					"markdownDescription": "Path and filename of the move-analyzer executable, e.g. `/usr/bin/move-analyzer`."
+				},
+				"move-analyzer.inlay.hints.parameter" : {
+					"type": "boolean",
+					"default" : true,
+					"markdownDescription": "inlay hints on parameter."
+				},
+				"move-analyzer.inlay.hints.field.type" : {
+					"type": "boolean",
+					"default" : true,
+					"markdownDescription": "inlay hints on field type."
+				},
+				"move-analyzer.inlay.hints.declare.var" : {
+					"type": "boolean",
+					"default" : true,
+					"markdownDescription": "inlay hints on declare var."
 				},
 				"move-analyzer.trace.server": {
 					"type": "string",
@@ -86,7 +211,7 @@
 		}
 	},
 	"scripts": {
-		"compile": "tsc -p ./ && cd ../../ && cargo build",
+		"compile": "tsc -p ./ && cd ../../ && cargo build --bin move-analyzer",
 		"watch": "tsc -watch -p ./",
 		"lint": "eslint . --ext ts --max-warnings 0",
 		"fix": "eslint . --ext ts --fix",
@@ -99,7 +224,7 @@
 		"publish": "npm run pretest && npm run test && vsce publish"
 	},
 	"extensionDependencies": [
-		"damirka.move-syntax"
+		"movebit.move-msl-syx"
 	],
 	"dependencies": {
 		"command-exists": "^1.2.9",

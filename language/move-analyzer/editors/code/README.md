@@ -1,4 +1,6 @@
-# move-analyzer
+# This a project modified from https://github.com/move-language/move
+
+# Aptos-Move-Analyzer
 
 Provides language support for the Move programming language.
 
@@ -10,7 +12,7 @@ For information about Move visit [the Move repository](https://github.com/move-l
 
 ## How to Install
 
-The move-analyzer Visual Studio Code extension works via two components: the extension itself and
+The aptos-move-analyzer Visual Studio Code extension works via two components: the extension itself and
 the `move-analyzer` language server.
 
 ### 1. Installing the `move-analyzer` language server<span id="Step1">
@@ -18,21 +20,28 @@ the `move-analyzer` language server.
 The `move-analyzer` language server is a Rust program that is part of the
 [Move repository](https://github.com/move-language/move). It may be installed in one of two ways:
 
-* Clone [the Move repository](https://github.com/move-language/move) yourself and build
-   `move-analyzer` from its source code, which is especially useful if you will work on core Move.
-   To do so, follow the instructions in the Move tutorial's
-   [Step 0: Installation](https://github.com/move-language/move/tree/main/language/documentation/tutorial#step-0-installation).
-* Use Rust's package manager `cargo` to install `move-analyzer` in your user's PATH. This
+* Use Cargo (Recommended)
+   Use Rust's package manager `cargo` to install `aptos-move-analyzer` in your user's PATH. This
    is recommended for people who do not work on core Move.
    1. If you don't already have a Rust toolchain installed, you should install
       [Rustup](https://rustup.rs/), which will install the latest stable Rust toolchain.
    2. Invoke `cargo install --git https://github.com/move-language/move move-analyzer` to install the
       `move-analyzer` language server in your Cargo binary directory. On macOS and Linux, this is
       usually `~/.cargo/bin`. You'll want to make sure this location is in your `PATH` environment
-      variable.
+      variable. If you plan to use the language server with Move language flavors different from core Move,
+      you should specify an additional option to `cargo install` command as different Move flavors
+      may enforce different max length of the Move address type: `--features "address20"` option for Move
+      flavors requiring 20-byte long addresses (e.g., Sui Move) and `--features "address32"` option
+      for Move flavors requiring 32-byte long addresses (e.g., Aptos Move).
 
 To confirm that you've installed the language server program successfully, execute
-`move-analyzer --version` on the command line. You should see the output `move-analyzer 1.0.0`.
+`move-analyzer --version` on the command line. You should see the output `move-analyzer version number`.
+
+* Manual Install
+   Clone [the Move repository](https://github.com/movebit/move) yourself and build
+   `move-analyzer` from its source code, which is especially useful if you will work on core Move.
+   To do so, follow the instructions in the Move tutorial's
+   [Step 0: Installation](https://github.com/move-language/move/tree/main/language/documentation/tutorial#step-0-installation).
 
 ### 2. Installing the move-analyzer Visual Studio Code extension
 
@@ -53,7 +62,7 @@ bottom-right of your Visual Studio Code screen when opening a Move file, it mean
 `move-analyzer` executable could not be found in your `PATH`. You may try the following:
 
 1. Confirm that invoking `move-analyzer --version` in a command line terminal prints out
-   `move-analyzer 1.0.0`. If it doesn't, then retry the instructions in [step 1](./Step1). If it
+   `move-analyzer version number`. If it doesn't, then retry the instructions in [step 1](./Step1). If it
    does successfully print this output, try closing and re-opening the Visual Studio Code
    application, as it may not have picked up the update to your `PATH`.
 2. If you installed the `move-analyzer` executable to a different location that is outside of your
@@ -83,3 +92,5 @@ Move source file (a file with a `.move` file extension) and:
   - go to references
   - type on hover
   - outline view showing symbol tree for Move source files
+  - aptos commands line tool
+  - aptos project template

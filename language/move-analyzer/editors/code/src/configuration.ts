@@ -6,13 +6,31 @@ import * as os from 'os';
 import * as vscode from 'vscode';
 import * as Path from 'path';
 
+class InlayHintsConfig {
+    field_type: boolean;
+
+    parameter: boolean;
+
+    declare_var: boolean;
+
+    constructor(fieldType: boolean,
+        parameter: boolean,
+        declareVar: boolean) {
+        this.field_type = fieldType;
+        this.parameter = parameter;
+        this.declare_var = declareVar;
+    }
+}
+
 /**
  * User-defined configuration values, such as those specified in VS Code settings.
  *
  * This provides a more strongly typed interface to the configuration values specified in this
  * extension's `package.json`, under the key `"contributes.configuration.properties"`.
  */
-export class Configuration {
+
+
+class Configuration {
     private readonly configuration: vscode.WorkspaceConfiguration;
 
     constructor() {
@@ -48,7 +66,18 @@ export class Configuration {
         if (process.platform === 'win32' && !serverPath.endsWith('.exe')) {
             serverPath = serverPath + '.exe';
         }
-
         return Path.resolve(serverPath);
     }
+
+    inlay_hints_config(): InlayHintsConfig {
+        const ft = this.configuration.get<boolean>('inlay.hints.field.type');
+
+        const p = this.configuration.get<boolean>('inlay.hints.parameter');
+
+        const dv = this.configuration.get<boolean>('inlay.hints.declare.var');
+
+        return new InlayHintsConfig(ft === true ? ft : false, p === true ? p : false, dv === true ? dv : false);
+    }
 }
+
+export { InlayHintsConfig, Configuration };
