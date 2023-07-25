@@ -1,7 +1,7 @@
 
 # aptos-move-analyzer
 
-### This a project modified from https://github.com/move-language/move 
+### This project is modified from https://github.com/move-language/move 
 
 ## aptos-move-analyzer Introduction
 The **aptos-move-analyzer** is a Visual Studio Code plugin based on **move-analyzer** improved for **Move & Aptos Move** by [MoveBit](https://movebit.xyz). Just now, we used this plugin in our dev member's daily work, and it's an alpha release.

@@ -367,7 +367,7 @@ pub fn cpu_pprof(_seconds: u64) {
         match guard.report().build() {
             Result::Ok(report) => {
                 // let mut tmp = std::env::temp_dir();
-                let mut tmp = PathBuf::from_str("/Users/yuyang/.move-analyzer").unwrap();
+                let mut tmp = PathBuf::from_str("~/.move-analyzer").unwrap();
 
                 tmp.push("move-analyzer-flamegraph.svg");
                 let file = File::create(tmp.clone()).unwrap();
