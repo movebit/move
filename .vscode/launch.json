@@ -35,6 +35,24 @@
             ],
             "outFiles": ["${workspaceFolder}/language/move-analyzer/editors/code/out/tests/**/*.js"],
             "preLaunchTask": "Pretest"
+        },
+        {
+            "name": "package Extension",
+            "type": "extensionHost",
+            "request": "launch",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}/language/move-analyzer/editors/code"
+            ],
+            "preLaunchTask": "Package"
+        },
+        {
+            "name": "publish Extension",
+            "type": "extensionHost",
+            "request": "launch",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}/language/move-analyzer/editors/code"
+            ],
+            "preLaunchTask": "Publish"
         }
     ]
 }

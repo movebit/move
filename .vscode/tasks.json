@@ -18,6 +18,36 @@
                     "${workspaceFolder}/language/move-analyzer/editors/code/"
                 ]
             }
+        },
+        {
+            "label": "Package",
+            "group": "build",
+            "isBackground": false,
+            "type": "npm",
+            "script": "package",
+            "path": "language/move-analyzer/editors/code/",
+            "problemMatcher": {
+                "base": "$tsc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/language/move-analyzer/editors/code/"
+                ]
+            }
+        },
+        {
+            "label": "Publish",
+            "group": "build",
+            "isBackground": false,
+            "type": "npm",
+            "script": "publish",
+            "path": "language/move-analyzer/editors/code/",
+            "problemMatcher": {
+                "base": "$tsc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/language/move-analyzer/editors/code/"
+                ]
+            }
         }
     ]
 }

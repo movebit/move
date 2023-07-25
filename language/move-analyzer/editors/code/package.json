@@ -1,11 +1,11 @@
 {
-	"name": "move-analyzer",
-	"displayName": "move-analyzer",
+	"name": "aptos-move-analyzer",
+	"displayName": "aptos-move-analyzer",
 	"description": "A language server and basic grammar for the Move programming language.",
-	"publisher": "move",
+	"publisher": "MoveBit",
 	"icon": "images/move.png",
 	"license": "Apache-2.0",
-	"version": "0.0.11",
+	"version": "0.0.2",
 	"preview": true,
 	"homepage": "https://github.com/move-language/move",
 	"repository": {
@@ -220,8 +220,8 @@
 		"test": "node ./out/tests/runTests.js",
 		"dev": "npm run pretest && cross-env mode=dev node ./out/tests/runTests.js",
 		"vscode:prepublish": "npm run pretest",
-		"package": "npm run pretest && vsce package -o move-analyzer.vsix",
-		"publish": "npm run pretest && npm run test && vsce publish"
+		"package": "npm run pretest && vsce package -o aptos-move-analyzer.vsix",
+		"publish": "vsce publish"
 	},
 	"extensionDependencies": [
 		"movebit.move-msl-syx"
