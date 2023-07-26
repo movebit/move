@@ -5,7 +5,7 @@
 	"publisher": "MoveBit",
 	"icon": "images/move.png",
 	"license": "Apache-2.0",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"preview": true,
 	"homepage": "https://github.com/move-language/move",
 	"repository": {
@@ -32,146 +32,146 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "move-analyzer.serverVersion",
+				"command": "aptos-move-analyzer.serverVersion",
 				"title": "Show Server Version",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.create_project",
+				"command": "aptos-move-analyzer.create_project",
 				"title": "Create aptos project",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.move.new",
+				"command": "aptos-move-analyzer.move.new",
 				"title": "Create a new move project.",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.move.build",
+				"command": "aptos-move-analyzer.move.build",
 				"title": "aptos move build",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.move.coverage",
+				"command": "aptos-move-analyzer.move.coverage",
 				"title": "aptos move coverage",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.move.test",
+				"command": "aptos-move-analyzer.move.test",
 				"title": "aptos move test",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.move.prove",
+				"command": "aptos-move-analyzer.move.prove",
 				"title": "aptos move prove",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.client.active.address",
+				"command": "aptos-move-analyzer.client.active.address",
 				"title": "aptos client active-address",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.client.active.env",
+				"command": "aptos-move-analyzer.client.active.env",
 				"title": "aptos client active-env",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.client.addresses",
+				"command": "aptos-move-analyzer.client.addresses",
 				"title": "aptos client addresses",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.client.envs",
+				"command": "aptos-move-analyzer.client.envs",
 				"title": "aptos client envs",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.client.gas",
+				"command": "aptos-move-analyzer.client.gas",
 				"title": "aptos client gas",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.client.object",
+				"command": "aptos-move-analyzer.client.object",
 				"title": "aptos client object",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.client.objects",
+				"command": "aptos-move-analyzer.client.objects",
 				"title": "aptos client objects",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.client.publish",
+				"command": "aptos-move-analyzer.client.publish",
 				"title": "aptos client publish",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.client.new.address",
+				"command": "aptos-move-analyzer.client.new.address",
 				"title": "aptos client new address",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.keytool.generate",
+				"command": "aptos-move-analyzer.keytool.generate",
 				"title": "aptos keytool generate",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.keytool.import",
+				"command": "aptos-move-analyzer.keytool.import",
 				"title": "aptos keytool import",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.keytool.list",
+				"command": "aptos-move-analyzer.keytool.list",
 				"title": "aptos keytool list",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.keytool.load.keypair",
+				"command": "aptos-move-analyzer.keytool.load.keypair",
 				"title": "aptos keytool load keypair",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.keytool.show",
+				"command": "aptos-move-analyzer.keytool.show",
 				"title": "aptos keytool show",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.keytool.unpack",
+				"command": "aptos-move-analyzer.keytool.unpack",
 				"title": "aptos keytool unpack",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.aptos.reset.working.space",
+				"command": "aptos-move-analyzer.reset.working.space",
 				"title": "aptos reset working space",
-				"category": "Move Analyzer"
+				"category": "Aptos Move Analyzer"
 			}
 		],
 		"configuration": {
 			"type": "object",
 			"title": "Move Analyzer",
 			"properties": {
-				"move-analyzer.server.path": {
+				"aptos-move-analyzer.server.path": {
 					"type": "string",
-					"default": "move-analyzer",
-					"markdownDescription": "Path and filename of the move-analyzer executable, e.g. `/usr/bin/move-analyzer`."
+					"default": "aptos-move-analyzer",
+					"markdownDescription": "Path and filename of the aptos-move-analyzer executable, e.g. `/usr/bin/aptos-move-analyzer`."
 				},
-				"move-analyzer.inlay.hints.parameter" : {
+				"aptos-move-analyzer.inlay.hints.parameter" : {
 					"type": "boolean",
 					"default" : true,
 					"markdownDescription": "inlay hints on parameter."
 				},
-				"move-analyzer.inlay.hints.field.type" : {
+				"aptos-move-analyzer.inlay.hints.field.type" : {
 					"type": "boolean",
 					"default" : true,
 					"markdownDescription": "inlay hints on field type."
 				},
-				"move-analyzer.inlay.hints.declare.var" : {
+				"aptos-move-analyzer.inlay.hints.declare.var" : {
 					"type": "boolean",
 					"default" : true,
 					"markdownDescription": "inlay hints on declare var."
 				},
-				"move-analyzer.trace.server": {
+				"aptos-move-analyzer.trace.server": {
 					"type": "string",
 					"scope": "window",
 					"enum": [
@@ -185,7 +185,7 @@
 						"Log each message and its contents."
 					],
 					"default": "off",
-					"description": "Traces the communication between the move-analyzer language server and Visual Studio Code. Note that this log can be very verbose, and so not recommended for anyone besides people working on or debugging move-analyzer itself."
+					"description": "Traces the communication between the aptos-move-analyzer language server and Visual Studio Code. Note that this log can be very verbose, and so not recommended for anyone besides people working on or debugging aptos-move-analyzer itself."
 				}
 			}
 		},
@@ -205,13 +205,13 @@
 		"menus": {
 			"commandPalette": [
 				{
-					"command": "move-analyzer.serverVersion"
+					"command": "aptos-move-analyzer.serverVersion"
 				}
 			]
 		}
 	},
 	"scripts": {
-		"compile": "tsc -p ./ && cd ../../ && cargo build --bin move-analyzer",
+		"compile": "tsc -p ./ && cd ../../ && cargo build --bin aptos-move-analyzer",
 		"watch": "tsc -watch -p ./",
 		"lint": "eslint . --ext ts --max-warnings 0",
 		"fix": "eslint . --ext ts --fix",

@@ -50,7 +50,7 @@ async function serverVersion(context: Readonly<Context>): Promise<void> {
         await vscode.window.showInformationMessage(version.stdout);
     } else if (version.error) {
         await vscode.window.showErrorMessage(
-            `Could not execute move-analyzer: ${version.error.message}.`,
+            `Could not execute aptos-move-analyzer: ${version.error.message}.`,
         );
     } else {
         await vscode.window.showErrorMessage(
@@ -166,7 +166,7 @@ const Reg = {
         const schemaTypes = ['ed25519', 'secp256k1', 'secp256r1'];
         const aptos_move_toml_template = `[package]
         name = "my_first_package"
-        version = "0.0.2"
+        version = "0.0.3"
 
         [addresses]
         my_first_package =  "0x0"

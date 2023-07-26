@@ -101,3 +101,7 @@ Move source file (a file with a `.move` file extension) and:
 * Added semantic analysis to the Move language and Aptos Move, and enhanced some features of the plug-in, such as go-to-definition, auto-completion, finding references, etc.;
 * Integrated common Aptos development commands into Command Palette, support Aptos Code Snippets automatic completion (currently only init function);
 * Support parallel development of multiple projects under the same directory;
+
+
+## Note:
+If you have move-analyzer or sui-move-analyzer installed locally, it is important to disable other plugins according to your current project needs to avoid conflicts and waste of computing resources when using aptos-move-analyzer.

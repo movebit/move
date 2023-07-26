@@ -221,7 +221,7 @@ impl std::fmt::Display for Handler {
 }
 
 /// TODO
-/// Release version of move-analyzer run fast.
+/// Release version of aptos-move-analyzer run fast.
 /// consider remove this.
 #[derive(Default)]
 pub struct ReferencesCache {

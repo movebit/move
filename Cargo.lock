@@ -132,6 +132,45 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "84450d0b4a8bd1ba4144ce8ce718fbc5d071358b1e5384bace6536b3d1f2d5b3"
 
 [[package]]
+name = "aptos-move-analyzer"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "bisection",
+ "cfg-if 1.0.0",
+ "clap 3.1.8",
+ "codespan",
+ "codespan-reporting",
+ "crossbeam",
+ "derivative",
+ "dirs-next",
+ "dunce",
+ "enum-iterator",
+ "im",
+ "log",
+ "lsp-server",
+ "lsp-types",
+ "move-cli",
+ "move-command-line-common",
+ "move-compiler",
+ "move-core-types",
+ "move-ir-types",
+ "move-package",
+ "move-symbol-pool",
+ "once_cell",
+ "petgraph 0.5.1",
+ "pprof",
+ "regex",
+ "serde 1.0.174",
+ "serde_json",
+ "stderrlog",
+ "tempfile",
+ "url",
+ "wait-timeout",
+ "walkdir",
+]
+
+[[package]]
 name = "arbitrary"
 version = "1.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2855,45 +2894,6 @@ dependencies = [
  "move-prover-test-utils",
  "serde 1.0.174",
  "tempfile",
-]
-
-[[package]]
-name = "move-analyzer"
-version = "1.1.0"
-dependencies = [
- "anyhow",
- "bisection",
- "cfg-if 1.0.0",
- "clap 3.1.8",
- "codespan",
- "codespan-reporting",
- "crossbeam",
- "derivative",
- "dirs-next",
- "dunce",
- "enum-iterator",
- "im",
- "log",
- "lsp-server",
- "lsp-types",
- "move-cli",
- "move-command-line-common",
- "move-compiler",
- "move-core-types",
- "move-ir-types",
- "move-package",
- "move-symbol-pool",
- "once_cell",
- "petgraph 0.5.1",
- "pprof",
- "regex",
- "serde 1.0.174",
- "serde_json",
- "stderrlog",
- "tempfile",
- "url",
- "wait-timeout",
- "walkdir",
 ]
 
 [[package]]

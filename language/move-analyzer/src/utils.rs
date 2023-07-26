@@ -323,7 +323,7 @@ impl MoveAnalyzerClientCommands {
         match self {
             MoveAnalyzerClientCommands::GotoDefinition(x) => Command::new(
                 "Goto Definition".to_string(),
-                "move-analyzer.goto_definition".to_string(),
+                "aptos-move-analyzer.goto_definition".to_string(),
                 Some(vec![serde_json::to_value(PathAndRange::from(x)).unwrap()]),
             ),
         }
@@ -367,9 +367,9 @@ pub fn cpu_pprof(_seconds: u64) {
         match guard.report().build() {
             Result::Ok(report) => {
                 // let mut tmp = std::env::temp_dir();
-                let mut tmp = PathBuf::from_str("~/.move-analyzer").unwrap();
+                let mut tmp = PathBuf::from_str("~/.aptos-move-analyzer").unwrap();
 
-                tmp.push("move-analyzer-flamegraph.svg");
+                tmp.push("aptos-move-analyzer-flamegraph.svg");
                 let file = File::create(tmp.clone()).unwrap();
                 report.flamegraph(file).unwrap();
                 eprintln!("pprof file at {:?}", tmp.as_path());
