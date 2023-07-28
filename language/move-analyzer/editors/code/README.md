@@ -17,12 +17,12 @@ The `aptos-move-analyzer` language server is a Rust program that is part of the
 [Move repository](https://github.com/movebit/move). It may be installed in one of two ways:
 
 * Use Cargo (Recommended)
-   Use Rust's package manager `cargo` to install `move-analyzer` in your user's PATH. This
+   Use Rust's package manager `cargo` to install `aptos-move-analyzer` in your user's PATH. This
    is recommended for people who do not work on core Move.
    1. If you don't already have a Rust toolchain installed, you should install
       [Rustup](https://rustup.rs/), which will install the latest stable Rust toolchain.
-   2. Invoke `cargo install --git https://github.com/movebit/move --branch feature/aptos_move_analyzer move-analyzer` to install the
-      `move-analyzer` language server in your Cargo binary directory. On macOS and Linux, this is
+   2. Invoke `cargo install --git https://github.com/movebit/move --branch feature/aptos_move_analyzer aptos-move-analyzer` to install the
+      `aptos-move-analyzer` language server in your Cargo binary directory. On macOS and Linux, this is
       usually `~/.cargo/bin`. You'll want to make sure this location is in your `PATH` environment
       variable.
 
@@ -33,7 +33,7 @@ The `aptos-move-analyzer` language server is a Rust program that is part of the
    [Step 0: Installation](https://github.com/movebit/move/tree/main/language/documentation/tutorial#step-0-installation).
 
 To confirm that you've installed the language server program successfully, execute
-`move-analyzer --version` on the command line. You should see the output `move-analyzer version number`.
+`aptos-move-analyzer --version` on the command line. You should see the output `aptos-move-analyzer version number`.
 
 ### 2. Installing the aptos-move-analyzer Visual Studio Code extension
 
@@ -49,18 +49,18 @@ To confirm that you've installed the language server program successfully, execu
 
 ### Troubleshooting
 
-If you see an error message *language server executable 'move-analyzer' could not be found* in the
+If you see an error message *language server executable 'aptos-move-analyzer' could not be found* in the
 bottom-right of your Visual Studio Code screen when opening a Move file, it means that the
-`move-analyzer` executable could not be found in your `PATH`. You may try the following:
+`aptos-move-analyzer` executable could not be found in your `PATH`. You may try the following:
 
-1. Confirm that invoking `move-analyzer --version` in a command line terminal prints out
-   `move-analyzer version number`. If it doesn't, then retry the instructions in **step 1**. If it
+1. Confirm that invoking `aptos-move-analyzer --version` in a command line terminal prints out
+   `aptos-move-analyzer version number`. If it doesn't, then retry the instructions in **step 1**. If it
    does successfully print this output, try closing and re-opening the Visual Studio Code
    application, as it may not have picked up the update to your `PATH`.
-2. If you installed the `move-analyzer` executable to a different location that is outside of your
+2. If you installed the `aptos-move-analyzer` executable to a different location that is outside of your
    `PATH`, then you may have the extension look at this location by using the the Visual Studio Code
    settings (`⌘,` on macOS, or use the menu item *Code > Preferences > Settings*). Search for the
-   `move-analyzer.server.path` setting, and set it to the location of the `move-analyzer` language
+   `aptos-move-analyzer.server.path` setting, and set it to the location of the `aptos-move-analyzer` language
    server you installed.
 3. If the above steps don't work, then report
    [a GitHub issue to the Move repository](https://github.com/move-language/move/issues) to get help.
@@ -91,7 +91,6 @@ Move source file (a file with a `.move` file extension) and:
 ## The changelogs:
 
 ### 2023/07/25 0.0.2
-* Added inlay hint switch.
 * Added inlay hint to variable.
 * Added inlay hint to parameter.
 * Added inlay hint to statement.

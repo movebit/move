@@ -5,7 +5,7 @@
 	"publisher": "MoveBit",
 	"icon": "images/move.png",
 	"license": "Apache-2.0",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"preview": true,
 	"homepage": "https://github.com/move-language/move",
 	"repository": {
@@ -149,7 +149,7 @@
 		],
 		"configuration": {
 			"type": "object",
-			"title": "Move Analyzer",
+			"title": "Aptos Move Analyzer",
 			"properties": {
 				"aptos-move-analyzer.server.path": {
 					"type": "string",
