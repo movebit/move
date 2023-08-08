@@ -1,6 +1,6 @@
 [package]
 name = "aptos-move-analyzer"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "A language server for Move"
 repository = "https://github.com/move-language/move"

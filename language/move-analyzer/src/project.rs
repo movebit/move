@@ -5,8 +5,8 @@
 use super::{item::*, project_context::*, types::*, utils::*};
 use crate::context::MultiProject;
 use anyhow::{Ok, Result};
-// use move_package::source_package::parsed_manifest::{CustomDepInfo, GitInfo};
-// use once_cell::sync::Lazy;
+use move_package::source_package::parsed_manifest::Dependency;
+use once_cell::sync::Lazy;
 
 use move_command_line_common::files::FileHash;
 use move_compiler::{
@@ -160,95 +160,77 @@ impl Project {
         };
         self.manifests.push(manifest.clone());
         // load depends.
-        // for (dep_name, de) in manifest
-        //     .dependencies
-        //     .iter()
-        //     .chain(manifest.dev_dependencies.iter())
-        // {
-        //     let move_home = Lazy::new(|| {
-        //         std::env::var("MOVE_HOME").unwrap_or_else(|_| {
-        //             format!(
-        //                 "{}/.move",
-        //                 dirs_next::home_dir()
-        //                     .expect("user's home directory not found")
-        //                     .to_str()
-        //                     .unwrap()
-        //             )
-        //         })
-        //     });
+        for (dep_name, de) in manifest
+            .dependencies
+            .iter()
+            .chain(manifest.dev_dependencies.iter())
+        {
+            let move_home: Lazy<String> = Lazy::new(|| {
+                std::env::var("MOVE_HOME").unwrap_or_else(|_| {
+                    format!(
+                        "{}/.move",
+                        dirs_next::home_dir()
+                            .expect("user's home directory not found")
+                            .to_str()
+                            .unwrap()
+                    )
+                })
+            });
 
-        //     let repository_path = |kind: &DependencyKind| -> PathBuf {
-        //         match kind {
-        //             DependencyKind::Local(path) => path.clone(),
+            let local_path = |kind: &Dependency| -> PathBuf {
+                let mut repo_path = kind.local.clone();
+                log::info!("0000 repo_path = '{:?}'", repo_path);
+                // Downloaded packages are of the form <sanitized_git_url>_<rev_name>
+                if let Some(git_info) = kind.git_info.clone() {
+                    let path: PathBuf =
+                    [
+                        &*move_home,
+                        &format!(
+                            "{}_{}",
+                            regex::Regex::new(r"/|:|\.|@")
+                                .unwrap()
+                                .replace_all(git_info.git_url.as_str(), "_"),
+                                git_info.git_rev.replace('/', "__"),
+                        ),
+                    ]
+                    .iter()
+                    .collect();
+                    repo_path.push(path);
+                }
+                log::info!("0001 repo_path = '{:?}'", repo_path);
 
-        //             // Downloaded packages are of the form <sanitized_git_url>_<rev_name>
-        //             DependencyKind::Git(GitInfo {
-        //                 git_url,
-        //                 git_rev,
-        //                 subdir: _,
-        //             }) => [
-        //                 &*move_home,
-        //                 &format!(
-        //                     "{}_{}",
-        //                     regex::Regex::new(r"/|:|\.|@")
-        //                         .unwrap()
-        //                         .replace_all(git_url.as_str(), "_"),
-        //                     git_rev.replace('/', "__"),
-        //                 ),
-        //             ]
-        //             .iter()
-        //             .collect(),
+                // Downloaded packages are of the form <sanitized_node_url>_<address>_<package>
+                if let Some(node_info) = kind.node_info.clone() {
+                    let path: PathBuf =
+                    [
+                        &*move_home,
+                        &format!(
+                            "{}_{}_{}",
+                            regex::Regex::new(r"/|:|\.|@")
+                                .unwrap()
+                                .replace_all(node_info.node_url.as_str(), "_"),
+                                node_info.package_address.as_str(),
+                                node_info.package_name.as_str(),
+                        ),
+                    ]
+                    .iter()
+                    .collect();
+                    repo_path.push(path);
+                }
+                log::info!("0002 repo_path = '{:?}'", repo_path);
+                repo_path
+            };
 
-        //             // Downloaded packages are of the form <sanitized_node_url>_<address>_<package>
-        //             DependencyKind::Custom(CustomDepInfo {
-        //                 node_url,
-        //                 package_address,
-        //                 package_name,
-        //                 subdir: _,
-        //             }) => [
-        //                 &*move_home,
-        //                 &format!(
-        //                     "{}_{}_{}",
-        //                     regex::Regex::new(r"/|:|\.|@")
-        //                         .unwrap()
-        //                         .replace_all(node_url.as_str(), "_"),
-        //                     package_address.as_str(),
-        //                     package_name.as_str(),
-        //                 ),
-        //             ]
-        //             .iter()
-        //             .collect(),
-        //         }
-        //     };
-
-        //     let local_path = |kind: &DependencyKind| -> PathBuf {
-        //         let mut repo_path = repository_path(kind);
-
-        //         if let DependencyKind::Git(GitInfo { subdir, .. })
-        //         | DependencyKind::Custom(CustomDepInfo { subdir, .. }) = kind
-        //         {
-        //             repo_path.push(subdir);
-        //         }
-
-        //         repo_path
-        //     };
-
-        //     use move_package::source_package::parsed_manifest::Dependency;
-        //     let de_path = match &de {
-        //         Dependency::External(_) => {
-        //             // TODO
-        //             continue;
-        //         }
-        //         Dependency::Internal(x) => local_path(&x.kind),
-        //     };
-        //     let p = path_concat(manifest_path.as_path(), &de_path);
-        //     log::info!(
-        //         "load dependency for '{:?}' dep_name '{}'",
-        //         &manifest_path,
-        //         dep_name
-        //     );
-        //     self.load_project(&p, multi, report_err.clone())?;
-        // }
+            let de_path = local_path(&de);
+            let p = path_concat(manifest_path.as_path(), &de_path);
+            log::info!(
+                "load dependency for '{:?}' dep_name '{}'",
+                &manifest_path,
+                dep_name
+            );
+            self.load_project(&p, multi, report_err.clone())?;
+            log::info!("dependency = '{:?}'", de);
+        }
         Ok(())
     }
 
