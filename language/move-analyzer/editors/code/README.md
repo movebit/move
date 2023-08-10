@@ -6,6 +6,9 @@
 ## aptos-move-analyzer Introduction
 The **aptos-move-analyzer** is a Visual Studio Code plugin based on **move-analyzer** improved for **Move & Aptos Move** by [MoveBit](https://movebit.xyz). Just now, we used this plugin in our dev member's daily work, and it's an alpha release.
 
+## Note:
+If you have move-analyzer or sui-move-analyzer installed locally, it is important to disable other plugins according to your current project needs to avoid conflicts and waste of computing resources when using aptos-move-analyzer.
+
 ## How to Install (Must Read)
 
 The aptos-move-analyzer Visual Studio Code extension works via two components: the extension itself and
@@ -85,8 +88,6 @@ Move source file (a file with a `.move` file extension) and:
   - type on hover
   - outline view showing symbol tree for Move source files
   - autocomplete
-  - aptos commands line tool
-  - aptos project template
 
 ## The changelogs:
 
@@ -101,6 +102,3 @@ Move source file (a file with a `.move` file extension) and:
 * Integrated common Aptos development commands into Command Palette, support Aptos Code Snippets automatic completion (currently only init function);
 * Support parallel development of multiple projects under the same directory;
 
-
-## Note:
-If you have move-analyzer or sui-move-analyzer installed locally, it is important to disable other plugins according to your current project needs to avoid conflicts and waste of computing resources when using aptos-move-analyzer.
