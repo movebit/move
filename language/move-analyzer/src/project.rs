@@ -165,66 +165,11 @@ impl Project {
             .iter()
             .chain(manifest.dev_dependencies.iter())
         {
-            let move_home: Lazy<String> = Lazy::new(|| {
-                std::env::var("MOVE_HOME").unwrap_or_else(|_| {
-                    format!(
-                        "{}/.move",
-                        dirs_next::home_dir()
-                            .expect("user's home directory not found")
-                            .to_str()
-                            .unwrap()
-                    )
-                })
-            });
-
-            let local_path = |kind: &Dependency| -> PathBuf {
-                let mut repo_path = kind.local.clone();
-                log::info!("0000 repo_path = '{:?}'", repo_path);
-                // Downloaded packages are of the form <sanitized_git_url>_<rev_name>
-                if let Some(git_info) = kind.git_info.clone() {
-                    let path: PathBuf =
-                    [
-                        &*move_home,
-                        &format!(
-                            "{}_{}",
-                            regex::Regex::new(r"/|:|\.|@")
-                                .unwrap()
-                                .replace_all(git_info.git_url.as_str(), "_"),
-                                git_info.git_rev.replace('/', "__"),
-                        ),
-                    ]
-                    .iter()
-                    .collect();
-                    repo_path.push(path);
-                }
-                log::info!("0001 repo_path = '{:?}'", repo_path);
-
-                // Downloaded packages are of the form <sanitized_node_url>_<address>_<package>
-                if let Some(node_info) = kind.node_info.clone() {
-                    let path: PathBuf =
-                    [
-                        &*move_home,
-                        &format!(
-                            "{}_{}_{}",
-                            regex::Regex::new(r"/|:|\.|@")
-                                .unwrap()
-                                .replace_all(node_info.node_url.as_str(), "_"),
-                                node_info.package_address.as_str(),
-                                node_info.package_name.as_str(),
-                        ),
-                    ]
-                    .iter()
-                    .collect();
-                    repo_path.push(path);
-                }
-                log::info!("0002 repo_path = '{:?}'", repo_path);
-                repo_path
-            };
-
-            let de_path = local_path(&de);
+            let de_path = de.local.clone();
             let p = path_concat(manifest_path.as_path(), &de_path);
             log::info!(
-                "load dependency for '{:?}' dep_name '{}'",
+                "load dependency for p '{:?}' manifest_path '{:?}' dep_name '{}'",
+                &p,
                 &manifest_path,
                 dep_name
             );

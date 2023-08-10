@@ -779,7 +779,7 @@ impl Project {
                           visitor: &mut dyn ItemOrAccessHandler,
                           _has_ref: Option<bool>| {
             log::trace!("handle_dot({})", field);
-            // self.visit_expr(e, project_context, visitor);
+            self.visit_expr(e, project_context, visitor);
             if visitor.finished() {
                 return;
             }

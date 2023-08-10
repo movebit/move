@@ -203,6 +203,7 @@ impl ItemOrAccessHandler for Handler {
             },
             ItemOrAccess::Access(access) => match access {
                 Access::AccessFiled(AccessFiled { from, to, item, .. }) => {
+                    log::info!("goto definition, handle_item_or_access(from({}) --> to({}))", from, to);
                     if self.match_loc(&from.loc(), services) {
                         if let Some(t) = services.convert_loc_range(&to.loc()) {
                             self.result = Some(t);
