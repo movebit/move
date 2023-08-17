@@ -8,17 +8,16 @@ use crossbeam::channel::{bounded, select, Sender};
 use log::{Level, Metadata, Record};
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
-    notification::Notification as _, request::Request as _, CompletionOptions, Diagnostic,
+    notification::Notification as _, request::Request as _, CompletionOptions,
     HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
     TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
 use move_command_line_common::files::FileHash;
 use move_compiler::{diagnostics::Diagnostics, shared::*, PASS_TYPING};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
-    thread,
 };
 
 use aptos_move_analyzer::{
@@ -27,11 +26,9 @@ use aptos_move_analyzer::{
     context::{Context, FileDiags, MultiProject},
     goto_definition, hover, inlay_hints, inlay_hints::*,
     project::ConvertLoc,
-    references, symbols,
+    references,
     utils::*,
-    vfs::VirtualFileSystem,
 };
-use move_symbol_pool::Symbol;
 use url::Url;
 
 struct SimpleLogger;
@@ -79,12 +76,9 @@ fn main() {
     );
 
     let (connection, io_threads) = Connection::stdio();
-    let symbols = Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols()));
     let mut context = Context {
         projects: MultiProject::new(),
         connection,
-        files: VirtualFileSystem::default(),
-        symbols: symbols.clone(),
         ref_caches: Default::default(),
         diag_version: FileDiags::new(),
     };
@@ -100,12 +94,6 @@ fn main() {
         text_document_sync: Some(TextDocumentSyncCapability::Options(
             TextDocumentSyncOptions {
                 open_close: Some(true),
-                // TODO: We request that the language server client send us the entire text of any
-                // files that are modified. We ought to use the "incremental" sync kind, which would
-                // have clients only send us what has changed and where, thereby requiring far less
-                // data be sent "over the wire." However, to do so, our language server would need
-                // to be capable of applying deltas to its view of the client's open files. See the
-                // 'aptos_move_analyzer::vfs' module for details.
                 change: Some(TextDocumentSyncKind::FULL),
                 will_save: None,
                 will_save_wait_until: None,
@@ -135,51 +123,17 @@ fn main() {
             },
             completion_item: None,
         }),
-        definition_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
+        definition_provider: Some(OneOf::Left(true)),
         type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(
-            symbols::DEFS_AND_REFS_SUPPORT,
+            true,
         )),
-        references_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
+        references_provider: Some(OneOf::Left(true)),
         document_symbol_provider: Some(OneOf::Left(true)),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
 
-    let (diag_sender_symbol, diag_receiver_symbol) =
-        bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
-    let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
-    if symbols::DEFS_AND_REFS_SUPPORT {
-        let initialize_params: lsp_types::InitializeParams =
-            serde_json::from_value(_client_response)
-                .expect("could not deserialize client capabilities");
 
-        symbolicator_runner = symbols::SymbolicatorRunner::new(symbols.clone(), diag_sender_symbol);
-
-        // If initialization information from the client contains a path to the directory being
-        // opened, try to initialize symbols before sending response to the client. Do not bother
-        // with diagnostics as they will be recomputed whenever the first source file is opened. The
-        // main reason for this is to enable unit tests that rely on the symbolication information
-        // to be available right after the client is initialized.
-        if let Some(uri) = initialize_params.root_uri {
-            if let Some(p) = symbols::SymbolicatorRunner::root_dir(&uri.to_file_path().unwrap()) {
-                // need to evaluate in a separate thread to allow for a larger stack size (needed on
-                // Windows)
-                thread::Builder::new()
-                    .stack_size(symbols::STACK_SIZE_BYTES)
-                    .spawn(move || {
-                        if let Ok((Some(new_symbols), _)) =
-                            symbols::Symbolicator::get_symbols(p.as_path())
-                        {
-                            let mut old_symbols = symbols.lock().unwrap();
-                            (*old_symbols).merge(new_symbols);
-                        }
-                    })
-                    .unwrap()
-                    .join()
-                    .unwrap();
-            }
-        }
-    };
 
     context
         .connection
@@ -202,43 +156,6 @@ fn main() {
                         send_diag(&mut context,mani,x);
                     }
                     Err(error) => log::error!("IDE diag message error: {:?}", error),
-                }
-            },
-            recv(diag_receiver_symbol) -> message => {
-                match message {
-                    Ok(result) => {
-                        match result {
-                            Ok(diags) => {
-                                for (k, v) in diags {
-                                    let url = Url::from_file_path(Path::new(&k.to_string())).unwrap();
-                                    let params = lsp_types::PublishDiagnosticsParams::new(url, v, None);
-                                    let notification = Notification::new(lsp_types::notification::PublishDiagnostics::METHOD.to_string(), params);
-                                    if let Err(err) = context
-                                        .connection
-                                        .sender
-                                        .send(lsp_server::Message::Notification(notification)) {
-                                            eprintln!("could not send diagnostics response: {:?}", err);
-                                        };
-                                }
-                            },
-                            Err(err) => {
-                                let typ = lsp_types::MessageType::ERROR;
-                                let message = format!("{err}");
-                                    // report missing manifest only once to avoid re-generating
-                                    // user-visible error in cases when the developer decides to
-                                    // keep editing a file that does not belong to a packages
-                                let params = lsp_types::ShowMessageParams { typ, message };
-                                let notification = Notification::new(lsp_types::notification::ShowMessage::METHOD.to_string(), params);
-                                if let Err(err) = context
-                                    .connection
-                                    .sender
-                                    .send(lsp_server::Message::Notification(notification)) {
-                                        eprintln!("could not send compiler error response: {:?}", err);
-                                    };
-                            },
-                        }
-                    },
-                    Err(error) => eprintln!("symbolicator message error: {:?}", error),
                 }
             },
             recv(context.connection.receiver) -> message => {
@@ -264,7 +181,6 @@ fn main() {
     }
 
     io_threads.join().expect("I/O threads could not finish");
-    symbolicator_runner.quit();
     eprintln!("Shut down language server '{}'.", exe);
 }
 
@@ -286,9 +202,6 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
         }
         lsp_types::request::HoverRequest::METHOD => {
             hover::on_hover_request(context, request);
-        }
-        lsp_types::request::DocumentSymbolRequest::METHOD => {
-            symbols::on_document_symbol_request(context, request, &context.symbols.lock().unwrap());
         }
         lsp_types::request::CodeLensRequest::METHOD => {
             code_lens::move_get_test_code_lens(context, request);

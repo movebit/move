@@ -243,7 +243,7 @@ fn mk_inlay_hits(pos: Position, label: InlayHintLabel, kind: InlayHintKind) -> I
         kind: Some(kind),
         text_edits: None,
         tooltip: None,
-        padding_left: Some(true),
+        padding_left: Some(false),
         padding_right: Some(true),
         data: None,
     }

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::utils::*;
-use crate::{project::*, references::ReferencesCache, symbols::Symbols, vfs::VirtualFileSystem};
+use crate::{project::*, references::ReferencesCache};
 use im::HashSet;
 use lsp_server::Connection;
 use lsp_types::{notification::Notification, MessageType};
@@ -16,17 +16,12 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     rc::Rc,
-    sync::{Arc, Mutex},
 };
 
 /// The context within which the language server is running.
 pub struct Context {
     /// The connection with the language server's client.
     pub connection: Connection,
-    /// The files that the language server is providing information about.
-    pub files: VirtualFileSystem,
-    /// Symbolication information
-    pub symbols: Arc<Mutex<Symbols>>,
     pub projects: MultiProject,
     pub ref_caches: ReferencesCache,
     pub diag_version: FileDiags,

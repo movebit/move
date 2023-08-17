@@ -5,8 +5,6 @@
 use super::{item::*, project_context::*, types::*, utils::*};
 use crate::context::MultiProject;
 use anyhow::{Ok, Result};
-use move_package::source_package::parsed_manifest::Dependency;
-use once_cell::sync::Lazy;
 
 use move_command_line_common::files::FileHash;
 use move_compiler::{
