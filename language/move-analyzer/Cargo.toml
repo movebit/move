@@ -32,6 +32,7 @@ clap = { version = "3.1.8", features = ["derive"] }
 crossbeam = "0.8"
 move-command-line-common = { path = "../move-command-line-common" }
 move-compiler = { path = "../move-compiler" }
+move-model = { path = "../move-model" }
 move-ir-types = { path = "../move-ir/types" }
 move-package = { path = "../tools/move-package" }
 move-symbol-pool = { path = "../move-symbol-pool" }
@@ -49,3 +50,11 @@ pprof = { version = "0.11.0" , features = ["flamegraph" , "protobuf"]}
 aptos = []
 sui = []
 pprof = []
+
+[[test]]
+name = "testsuite"
+harness = false
+
+[dev-dependencies]
+datatest-stable = "0.1.1"
+move-prover-test-utils = { path = "../move-prover/test-utils" }
