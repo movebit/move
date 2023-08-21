@@ -5,14 +5,9 @@
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
 use move_command_line_common::testing::EXP_EXT;
 use move_compiler::shared::PackagePaths;
-use move_model::{options::ModelBuilderOptions, run_model_builder_with_options,
-    model::EnvDisplay,
-};
+use move_model::{options::ModelBuilderOptions, run_model_builder_with_options};
 use move_prover_test_utils::baseline_test::verify_or_update_baseline;
-use std::{
-    cell::RefCell, fs,
-    path::{Path, PathBuf},
-};
+use std::path::Path;
 
 fn test_runner(path: &Path, options: ModelBuilderOptions) -> datatest_stable::Result<()> {
     eprintln!("lll >> test_runner");
@@ -23,8 +18,6 @@ fn test_runner(path: &Path, options: ModelBuilderOptions) -> datatest_stable::Re
     }];
     let env = run_model_builder_with_options(targets, vec![], options)?;
     eprintln!("env.get_module_count() = {:?}", &env.get_module_count());
-    let all_structs = &env.get_all_structs_with_conditions();
-    eprintln!("all_structs.len = {:?}", all_structs.len()); 
     let diags = if env.diag_count(Severity::Warning) > 0 {
         let mut writer = Buffer::ansi();
         env.report_diag(&mut writer, Severity::Warning);
@@ -33,29 +26,9 @@ fn test_runner(path: &Path, options: ModelBuilderOptions) -> datatest_stable::Re
         "All good, no errors!".to_string()
     };
     eprintln!("diags = {:?}", diags);
-
-    // Putting the generated test baseline into a Refcell to avoid problems with mut borrow
-    // in closures.
-    let test_output = RefCell::new(String::new());
-    
-    if let Some(file_stem) = path.file_stem() {
-        if let Some(file_stem_str) = file_stem.to_str() {
-            // let output_file = format!("{}{}.txt", "./output_global_env-", file_stem_str);
-            let out = &mut test_output.borrow_mut();
-            // out.push_str(&env.dump_env());
-            for struct_type in all_structs {  
-                eprintln!("{:?}", struct_type);  
-            }
-            eprintln!("sava env '{:?}'", env);  
-
-            // fs::write(output_file, env.dump_env());
-
-            // fs::write(output_file, &content)?
-            // eprintln!("sava env'{:?}' result =  '{:?}'", output_file.clone(), fs::write(output_file, env.dump_env()));
-        }
-    }
+    // eprintln!("sava env '{:?}'", env);
     let baseline_path = path.with_extension(EXP_EXT);
-    verify_or_update_baseline(baseline_path.as_path(), &test_output.borrow())?;
+    verify_or_update_baseline(baseline_path.as_path(), &diags)?;
     Ok(())
 }
 

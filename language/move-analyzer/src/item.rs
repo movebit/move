@@ -4,7 +4,27 @@
 use super::{scope::*, types::*};
 use crate::project_context::{AccessEnv, ProjectContext};
 use enum_iterator::Sequence;
-use move_compiler::{parser::ast::*, shared::*};
+use move_compiler::{
+    parser::ast::StructName,
+    parser::ast::StructTypeParameter,
+    parser::ast::FunctionName,
+    parser::ast::ConstantName,
+    parser::ast::PragmaProperty,
+    parser::ast::Visibility,
+    parser::ast::ModuleName,
+    parser::ast::ModuleIdent,
+    parser::ast::Exp,
+    parser::ast::Field,
+    parser::ast::Ability,
+    parser::ast::Type,
+    parser::ast::BindList,
+    parser::ast::Var,
+    parser::ast::NameAccessChain,
+    parser::ast::NameAccessChain_,
+    shared::Identifier,
+    shared::Name,
+    shared::TName,
+};
 use move_core_types::account_address::AccountAddress;
 
 use move_command_line_common::files::FileHash;

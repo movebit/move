@@ -8,9 +8,41 @@ use anyhow::{Ok, Result};
 
 use move_command_line_common::files::FileHash;
 use move_compiler::{
-    parser::ast::{Definition, *},
-    shared::{Identifier, *},
+    parser::ast::Definition,
+    parser::ast::SpecBlock,
+    parser::ast::LeadingNameAccess,
+    parser::ast::ModuleDefinition,
+    parser::ast::UseDecl,
+    parser::ast::StructDefinition,
+    parser::ast::ModuleMember,
+    parser::ast::Attributes,
+    parser::ast::Exp,
+    parser::ast::Value,
+    parser::ast::FunctionSignature,
+    parser::ast::Ability,
+    parser::ast::StructTypeParameter,
+    parser::ast::Type,
+    parser::ast::NameAccessChain,
+    parser::ast::FriendDecl,
+    parser::ast::Script,
+    parser::ast::Constant,
+    parser::ast::Function,
+    // 
+    parser::ast::Exp_,
+    parser::ast::Value_,
+    parser::ast::NameAccessChain_,
+    parser::ast::BinOp_,
+    parser::ast::LeadingNameAccess_,
+    parser::ast::Attribute_,
+    parser::ast::SpecBlockTarget_,
+    // 
+    shared::Identifier,
+    shared::CompilationEnv,
+    shared::Name,
+    Flags,
 };
+
+
 use move_core_types::account_address::*;
 
 use move_ir_types::location::*;

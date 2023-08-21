@@ -13,7 +13,11 @@ use lsp_types::{
     TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
 use move_command_line_common::files::FileHash;
-use move_compiler::{diagnostics::Diagnostics, shared::*, PASS_TYPING};
+use move_compiler::{
+    Flags,
+    diagnostics::Diagnostics, 
+    shared::CompilationEnv,
+    PASS_TYPING};
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -132,8 +136,6 @@ fn main() {
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
-
-
 
     context
         .connection

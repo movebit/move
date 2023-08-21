@@ -3,7 +3,16 @@
 
 use super::{item::*, project::*, scope::*, types::*, utils::*};
 use move_command_line_common::files::FileHash;
-use move_compiler::{parser::ast::*, shared::Identifier};
+use move_compiler::{
+    parser::ast::LeadingNameAccess,
+    parser::ast::Type,
+    parser::ast::NameAccessChain,
+    parser::ast::ModuleName,
+    parser::ast::Type_,
+    parser::ast::NameAccessChain_,
+    parser::ast::LeadingNameAccess_,
+    shared::Identifier
+};
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;

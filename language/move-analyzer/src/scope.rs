@@ -4,7 +4,7 @@
 use super::{item::*, types::*};
 use crate::project::ERR_ADDRESS;
 use move_command_line_common::files::FileHash;
-use move_compiler::parser::ast::*;
+use move_compiler::parser::ast::{ModuleName, ConstantName};
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::{Loc, Spanned};
 use move_symbol_pool::Symbol;

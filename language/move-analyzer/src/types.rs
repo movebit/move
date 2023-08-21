@@ -6,9 +6,13 @@ use crate::{item::ItemFun, project::ERR_ADDRESS, project_context::ProjectContext
 use enum_iterator::Sequence;
 use move_command_line_common::files::FileHash;
 use move_compiler::{
-    parser::ast::*,
-    shared::{Identifier, *},
+    parser::ast::StructName,
+    parser::ast::Ability,
+    shared::Identifier,
+    shared::Name,
 };
+
+// use crate::item::StructName;
 use move_ir_types::location::{Loc, Spanned};
 use move_symbol_pool::Symbol;
 use std::{collections::HashMap, fmt::Debug, vec};
