@@ -8,9 +8,9 @@ use crossbeam::channel::{bounded, select, Sender};
 use log::{Level, Metadata, Record};
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
-    notification::Notification as _, request::Request as _, CompletionOptions,
-    HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
+    notification::Notification as _, request::Request as _, 
+    OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
+    TextDocumentSyncOptions, TypeDefinitionProviderCapability
 };
 use move_command_line_common::files::FileHash;
 use move_compiler::{
@@ -25,12 +25,10 @@ use std::{
 };
 
 use aptos_move_analyzer::{
-    code_lens,
-    completion::on_completion_request,
-    context::{Context, FileDiags, MultiProject},
-    goto_definition, hover, inlay_hints, inlay_hints::*,
-    project::ConvertLoc,
-    references,
+    context::{Context, FileDiags},
+    multiproject::MultiProject,
+    goto_definition,
+    analyzer_handler::ConvertLoc,
     utils::*,
 };
 use url::Url;
@@ -83,7 +81,6 @@ fn main() {
     let mut context = Context {
         projects: MultiProject::new(),
         connection,
-        ref_caches: Default::default(),
         diag_version: FileDiags::new(),
     };
 
@@ -110,29 +107,10 @@ fn main() {
             },
         )),
         selection_range_provider: None,
-        hover_provider: Some(HoverProviderCapability::Simple(true)),
-        // The server provides completions as a user is typing.
-        completion_provider: Some(CompletionOptions {
-            resolve_provider: None,
-            // In Move, `foo::` and `foo.` should trigger completion suggestions for after
-            // the `:` or `.`
-            // (Trigger characters are just that: characters, such as `:`, and not sequences of
-            // characters, such as `::`. So when the language server encounters a completion
-            // request, it checks whether completions are being requested for `foo:`, and returns no
-            // completions in that case.)
-            trigger_characters: Some(vec![":".to_string(), ".".to_string()]),
-            all_commit_characters: None,
-            work_done_progress_options: WorkDoneProgressOptions {
-                work_done_progress: None,
-            },
-            completion_item: None,
-        }),
         definition_provider: Some(OneOf::Left(true)),
         type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(
             true,
         )),
-        references_provider: Some(OneOf::Left(true)),
-        document_symbol_provider: Some(OneOf::Left(true)),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
@@ -148,8 +126,6 @@ fn main() {
         .expect("could not finish connection initialization");
     let (diag_sender, diag_receiver) = bounded::<(PathBuf, Diagnostics)>(1);
     let diag_sender = Arc::new(Mutex::new(diag_sender));
-    let mut inlay_hints_config = InlayHintsConfig::default();
-
     loop {
         select! {
             recv(diag_receiver) -> message => {
@@ -161,9 +137,9 @@ fn main() {
                 }
             },
             recv(context.connection.receiver) -> message => {
-                try_reload_projects(&mut context);
+                context.projects.try_reload_projects(&context.connection);
                 match message {
-                    Ok(Message::Request(request)) => on_request(&mut context, &request , &mut inlay_hints_config),
+                    Ok(Message::Request(request)) => on_request(&mut context, &request),
                     Ok(Message::Response(response)) => on_response(&context, &response),
                     Ok(Message::Notification(notification)) => {
                         match notification.method.as_str() {
@@ -186,36 +162,14 @@ fn main() {
     eprintln!("Shut down language server '{}'.", exe);
 }
 
-fn try_reload_projects(context: &mut Context) {
-    context.projects.try_reload_projects(&context.connection);
-}
-fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut InlayHintsConfig) {
+fn on_request(context: &mut Context, request: &Request) {
     log::info!("aptos receive method:{}", request.method.as_str());
     match request.method.as_str() {
-        lsp_types::request::Completion::METHOD => on_completion_request(context, request),
         lsp_types::request::GotoDefinition::METHOD => {
             goto_definition::on_go_to_def_request(context, request);
         }
         lsp_types::request::GotoTypeDefinition::METHOD => {
             goto_definition::on_go_to_type_def_request(context, request);
-        }
-        lsp_types::request::References::METHOD => {
-            references::on_references_request(context, request);
-        }
-        lsp_types::request::HoverRequest::METHOD => {
-            hover::on_hover_request(context, request);
-        }
-        lsp_types::request::CodeLensRequest::METHOD => {
-            code_lens::move_get_test_code_lens(context, request);
-        }
-        lsp_types::request::InlayHintRequest::METHOD => {
-            inlay_hints::on_inlay_hints(context, request, *inlay_hints_config);
-        }
-        "move/lsp/client/inlay_hints/config" => {
-            let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
-                .expect("could not deserialize inlay hints request");
-            eprintln!("call inlay_hints config {:?}", parameters);
-            *inlay_hints_config = parameters;
         }
         _ => eprintln!("handle request '{}' from client", request.method),
     }
@@ -228,7 +182,7 @@ fn on_response(_context: &Context, _response: &Response) {
 type DiagSender = Arc<Mutex<Sender<(PathBuf, Diagnostics)>>>;
 
 fn on_notification(context: &mut Context, notification: &Notification, diag_sender: DiagSender) {
-    fn update_defs(context: &mut Context, fpath: PathBuf, content: &str) {
+    fn update_defs_on_changed(context: &mut Context, fpath: PathBuf, content: &str) {
         use aptos_move_analyzer::syntax::parse_file_string;
         let file_hash = FileHash::new(content);
         let mut env = CompilationEnv::new(Flags::testing());
@@ -242,7 +196,6 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
         };
         let (defs, _) = defs;
         context.projects.update_defs(fpath.clone(), defs);
-        context.ref_caches.clear();
         context
             .projects
             .hash_file
@@ -273,7 +226,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                     return;
                 }
             };
-            update_defs(context, fpath.clone(), content.as_str());
+            update_defs_on_changed(context, fpath.clone(), content.as_str());
             make_diag(context, diag_sender, fpath);
         }
         lsp_types::notification::DidChangeTextDocument::METHOD => {
@@ -283,7 +236,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                     .expect("could not deserialize DidChangeTextDocumentParams request");
             let fpath = parameters.text_document.uri.to_file_path().unwrap();
             let fpath = path_concat(&std::env::current_dir().unwrap(), &fpath);
-            update_defs(
+            update_defs_on_changed(
                 context,
                 fpath,
                 parameters.content_changes.last().unwrap().text.as_str(),
@@ -308,7 +261,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             match context.projects.get_project(&fpath) {
                 Some(_) => {
                     if let Ok(x) = std::fs::read_to_string(fpath.as_path()) {
-                        update_defs(context, fpath.clone(), x.as_str());
+                        update_defs_on_changed(context, fpath.clone(), x.as_str());
                     };
                     return;
                 }

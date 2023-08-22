@@ -36,8 +36,17 @@ mod tests {
         if let Some(file_stem) = fpath.file_stem() {
             if let Some(file_stem_str) = file_stem.to_str() {
                 let output_file = format!("{}{}.txt", "./output_global_env-", file_stem_str);
-                eprintln!("sava env '{:?}'", env);
+                // eprintln!("sava env '{:?}'", env);
                 let _ = fs::write(output_file, env.dump_env());
+            }
+        }
+
+        for module in env.get_modules() {
+            eprintln!("*module.get_name() = {:?}{:?}", module.get_name().addr(), module.get_name().name());
+            for fun in module.get_functions() {
+                let id = fun.get_qualified_id();
+                eprintln!("func id = {:?}", id);
+                eprintln!("func get_full_name_str = {:?}", fun.get_full_name_str());                
             }
         }
         Ok(())

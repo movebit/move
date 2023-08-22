@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{item::*, types::*};
-use crate::project::ERR_ADDRESS;
+use crate::analyzer_handler::ERR_ADDRESS;
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::ast::{ModuleName, ConstantName};
 use move_core_types::account_address::AccountAddress;

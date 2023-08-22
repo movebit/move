@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::item::*;
-use crate::{item::ItemFun, project::ERR_ADDRESS, project_context::ProjectContext};
+use crate::{item::ItemFun, analyzer_handler::ERR_ADDRESS, project_context::ProjectContext};
 use enum_iterator::Sequence;
 use move_command_line_common::files::FileHash;
 use move_compiler::{

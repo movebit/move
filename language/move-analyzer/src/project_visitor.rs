@@ -1,8 +1,9 @@
+// Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{item::*, project::*, project_context::*, scope::*, types::*};
-use crate::utils::discover_manifest_and_kind;
+use super::{item::*, project_context::*, types::*, utils::*, scope::*};
+use crate::{project::Project, analyzer_handler::*};
 use move_command_line_common::files::FileHash;
 use move_compiler::{
     parser::ast::StructFields,
@@ -13,12 +14,8 @@ use move_compiler::{
     parser::ast::Visibility,
     parser::ast::ModuleName,
     parser::ast::ModuleIdent,
-    parser::ast::Exp,
     parser::ast::Field,
     parser::ast::SpecBlockMember,
-    parser::ast::Ability,
-    parser::ast::SpecConditionKind,
-    parser::ast::Type,
     parser::ast::Sequence,
     parser::ast::SequenceItem,
     parser::ast::FriendDecl,
@@ -28,34 +25,31 @@ use move_compiler::{
     parser::ast::Bind,
     parser::ast::BindList,
     parser::ast::Var,
-    // 
+    parser::ast::Exp,
+    parser::ast::Type,
     parser::ast::Type_,
-    parser::ast::Exp_,
     parser::ast::Bind_,
     parser::ast::SequenceItem_,
-    parser::ast::NameAccessChain_,
     parser::ast::FunctionBody_,
     parser::ast::LeadingNameAccess_,
     parser::ast::SpecBlockMember_,
-    parser::ast::SpecConditionKind_,
     parser::ast::SpecBlockTarget_,
     parser::ast::SpecApplyFragment_,
-    // 
+    parser::ast::Exp_,
+    parser::ast::NameAccessChain_,
     shared::Identifier,
     shared::Name,
 };
-
 use move_core_types::account_address::*;
 use move_ir_types::location::*;
 use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;
 use std::{
+    vec,
     cell::RefCell,
     collections::{HashMap, HashSet},
-    path::PathBuf,
-    rc::Rc,
-    vec,
 };
+use std::{path::PathBuf, rc::Rc};
 
 impl Project {
     /// Collect field name like a in  spec schema IncrementAborts {
@@ -2035,15 +2029,5 @@ impl Project {
                 }
             }
         }
-    }
-}
-
-pub(crate) const SPEC_DOMAIN: &str = "$spec_domain";
-fn get_spec_condition_type_parameters(x: &SpecConditionKind) -> Option<&Vec<(Name, Vec<Ability>)>> {
-    match &x.value {
-        SpecConditionKind_::Invariant(x)
-        | SpecConditionKind_::InvariantUpdate(x)
-        | SpecConditionKind_::Axiom(x) => Some(x),
-        _ => None,
     }
 }

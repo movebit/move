@@ -30,18 +30,17 @@ macro_rules! impl_convert_loc {
     };
 }
 
-pub mod completion;
 pub mod context;
-pub mod code_lens;
 pub mod diagnostics;
 pub mod goto_definition;
-pub mod hover;
-pub mod inlay_hints;
 pub mod item;
 pub mod project;
-pub mod project_context;
+pub mod project_manager;
 pub mod project_visitor;
-pub mod references;
+pub mod project_visitor_by_move_model;
+pub mod multiproject;
+pub mod project_context;
+pub mod analyzer_handler;
 pub mod scope;
 pub mod syntax;
 pub mod types;

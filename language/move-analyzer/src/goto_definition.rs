@@ -1,7 +1,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{context::*, item::*, project::*, project_context::*, types::ResolvedType};
+use super::{context::*, item::*, analyzer_handler::*, project_context::*, types::ResolvedType};
 
 use crate::utils::{path_concat, FileRange, GetPosition, GetPositionStruct};
 use lsp_server::*;
