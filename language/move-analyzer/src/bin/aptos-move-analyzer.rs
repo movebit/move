@@ -14,9 +14,7 @@ use lsp_types::{
 };
 use move_command_line_common::files::FileHash;
 use move_compiler::{
-    Flags,
     diagnostics::Diagnostics, 
-    shared::CompilationEnv,
     PASS_TYPING};
 use std::{
     collections::HashMap,
@@ -185,8 +183,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
     fn update_defs_on_changed(context: &mut Context, fpath: PathBuf, content: &str) {
         use aptos_move_analyzer::syntax::parse_file_string;
         let file_hash = FileHash::new(content);
-        let mut env = CompilationEnv::new(Flags::testing());
-        let defs = parse_file_string(&mut env, file_hash, content);
+        let defs = parse_file_string(fpath.clone());
         let defs = match defs {
             std::result::Result::Ok(x) => x,
             std::result::Result::Err(d) => {
@@ -269,7 +266,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                     eprintln!("project '{:?}' not found try load.", fpath.as_path());
                 }
             };
-            let p = match context.projects.load_project(&context.connection, &mani) {
+            let p = match context.projects.load_projects(&context.connection, &mani) {
                 anyhow::Result::Ok(x) => x,
                 anyhow::Result::Err(e) => {
                     log::error!("load project failed,err:{:?}", e);
@@ -315,6 +312,12 @@ fn get_package_compile_diagnostics(
     // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
     // vector as the writer
     let resolution_graph = build_config.resolution_graph_for_package(pkg_path, &mut Vec::new())?;
+    // let named_address_mapping: Vec<_> = resolution_graph
+    //         .extract_named_address_mapping()
+    //         .map(|(name, addr)| format!("{}={}", name.as_str(), addr))
+    //         .collect();
+    // log::debug!("named_address_mapping = {:?}", named_address_mapping);
+    
     let build_plan = BuildPlan::create(resolution_graph)?;
     let mut diagnostics = None;
     build_plan.compile_with_driver(&mut std::io::sink(), None, |compiler| {

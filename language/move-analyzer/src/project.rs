@@ -26,4 +26,5 @@ pub struct Project {
     pub(crate) manifest_not_exists: HashSet<PathBuf>,
     pub(crate) manifest_load_failures: HashSet<PathBuf>,
     pub(crate) manifest_mod_time: HashMap<PathBuf, Option<SystemTime>>,
+    pub(crate) global_env: move_model::model::GlobalEnv,
 }

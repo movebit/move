@@ -160,6 +160,7 @@ dependencies = [
  "move-package",
  "move-prover-test-utils",
  "move-symbol-pool",
+ "num-bigint",
  "once_cell",
  "petgraph 0.5.1",
  "pprof",

@@ -164,11 +164,6 @@ impl Project {
             if visitor.finished() {
                 return;
             }
-            self.visit_scripts(
-                &self.project_context,
-                visitor,
-                ModulesAstProvider::new(self, m.clone(), SourcePackageLayout::Scripts),
-            );
         }
     }
 
@@ -186,7 +181,6 @@ impl Project {
                 provider.clone(),
                 enter_import,
             );
-            self.visit_scripts(&self.project_context, visitor, provider);
         })
     }
 
@@ -1305,38 +1299,6 @@ impl Project {
                 FunctionBody_::Defined(ref seq) => self.visit_block(seq, project_context, visitor),
             }
         })
-    }
-
-    pub(crate) fn visit_scripts(
-        &self,
-        project_context: &ProjectContext,
-        visitor: &mut dyn ItemOrAccessHandler,
-        provider: impl AstProvider,
-    ) {
-        provider.with_script(|script| {
-            project_context.enter_scope(|scopes| {
-                scopes.set_access_env(AccessEnv::default());
-                for u in script.uses.iter() {
-                    self.visit_use_decl(None, u, scopes, Some(visitor), false, true);
-                    if visitor.finished() {
-                        return;
-                    }
-                }
-                for c in script.constants.iter() {
-                    self.visit_const(None, c, scopes, visitor);
-                    if visitor.finished() {
-                        return;
-                    }
-                }
-                for c in script.specs.iter() {
-                    self.visit_spec(c, scopes, visitor);
-                    if visitor.finished() {
-                        return;
-                    }
-                }
-                self.visit_function(&script.function, scopes, visitor);
-            })
-        });
     }
 
     pub(crate) fn visit_sequence_item(

@@ -33,7 +33,7 @@ impl MultiProject {
         self.projects.insert(p.mk_multi_project_key(), p);
     }
 
-    pub fn load_project(
+    pub fn load_projects(
         &mut self,
         sender: &lsp_server::Connection,
         mani: &PathBuf,

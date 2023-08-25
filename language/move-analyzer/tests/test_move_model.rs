@@ -20,7 +20,7 @@ mod tests {
         }];
         let env = run_model_builder_with_options(
             targets, vec![], ModelBuilderOptions {
-                    compile_via_model: false,
+                    compile_via_model: true,
                     ..Default::default()
                 }
         )?;

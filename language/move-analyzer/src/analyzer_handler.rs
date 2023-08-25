@@ -19,7 +19,6 @@ use move_compiler::{
     parser::ast::Exp,
     parser::ast::Value,
     parser::ast::FriendDecl,
-    parser::ast::Script,
     parser::ast::Constant,
     parser::ast::Function,
     parser::ast::Value_,
@@ -123,7 +122,6 @@ pub fn get_spec_condition_type_parameters(x: &SpecConditionKind) -> Option<&Vec<
 }
 
 pub(crate) fn file_modify_time(x: &Path) -> Option<SystemTime> {
-    use std::result::Result::Ok;
     match x.metadata() {
         Ok(x) => match x.modified() {
             Ok(x) => Some(x),
@@ -444,13 +442,6 @@ pub trait AstProvider: Clone {
                 call_back(addr, module_name, c)
             }
         });
-    }
-    fn with_script(&self, mut call_back: impl FnMut(&Script)) {
-        self.with_definition(|x| {
-            if let Definition::Script(x) = x {
-                call_back(x);
-            }
-        })
     }
     fn with_use_decl(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &UseDecl, bool)) {
         self.with_module_member(|addr, module_name, member, is_spec| {
