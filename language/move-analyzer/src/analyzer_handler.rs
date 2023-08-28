@@ -464,25 +464,6 @@ pub trait AstProvider: Clone {
             }
         });
     }
-    fn with_spec(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &SpecBlock, bool)) {
-        self.with_module_member(|addr, module_name, member, is_spec_module| {
-            if let ModuleMember::Spec(c) = member {
-                call_back(addr, module_name, c, is_spec_module)
-            }
-        });
-    }
-    fn with_spec_schema(
-        &self,
-        mut call_back: impl FnMut(AccountAddress, Symbol, Name, &SpecBlock, bool),
-    ) {
-        self.with_module_member(|addr, module_name, member, is_spec_module| {
-            if let ModuleMember::Spec(c) = member {
-                if let SpecBlockTarget_::Schema(name, _) = &c.value.target.value {
-                    call_back(addr, module_name, *name, c, is_spec_module);
-                }
-            }
-        });
-    }
 }
 
 impl<'a> VecDefAstProvider<'a> {
