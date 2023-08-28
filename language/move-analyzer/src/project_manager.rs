@@ -62,40 +62,6 @@ pub(crate) fn determine_num_text_and_base22(s: &str) -> (&str, move_compiler::sh
 }
 
 // Parse an address from a decimal or hex encoding
-// pub fn parse_address_number22(s: &str) -> Option<([u8; AccountAddress::LENGTH], move_compiler::shared::NumberFormat)> {
-//     let before_after = s.split('=').collect::<Vec<_>>();
-//     if before_after.len() != 2 {
-//         log::info!(
-//             "Invalid named address assignment. Must be of the form <address_name>=<address>, but \
-//              found '{}'",
-//             s
-//         );
-//         return None;
-//     }
-//     let name = before_after[0].parse()?;
-//     let addr_str = &before_after[1][before_after[1].len() / 2..];    
-//     let (txt, base) = determine_num_text_and_base22(addr_str);
-//     log::info!("lll -- txt = {}", txt);
-//     log::info!("lll -- txt.as_bytes() = {:?}", txt.as_bytes());
-//     let parsed = BigUint::parse_bytes(txt.as_bytes(), match base {
-//         move_compiler::shared::NumberFormat::Hex => 16,
-//         move_compiler::shared::NumberFormat::Decimal => 10,
-//     });
-
-//     log::info!("lll -- parsed = {:?}", parsed);
-//     if let Some(parsed_real) = parsed {
-//         let bytes = parsed_real.to_bytes_be();
-//         log::info!("lll -- bytes = {:?}", bytes);
-//         log::info!("lll -- bytes.len() = {:?}", bytes.len());
-//         if bytes.len() < AccountAddress::LENGTH {
-//             let mut result = [0u8; AccountAddress::LENGTH];
-//             result[(AccountAddress::LENGTH - bytes.len())..].clone_from_slice(&bytes);
-//             return Some((result, base));
-//         }
-//     }
-//     None
-// }
-// Parse an address from a decimal or hex encoding
 pub fn parse_address_number22(s: &str) -> Option<([u8; AccountAddress::LENGTH], move_compiler::shared::NumberFormat)> {
     let (txt, base) = determine_num_text_and_base22(s);
     let parsed = BigUint::parse_bytes(txt.as_bytes(), match base {
@@ -188,23 +154,19 @@ impl Project {
         )?;
         log::info!("targets_paths.len() = {:?}", targets_paths.len());
         log::info!("dependents_paths.len() = {:?}", dependents_paths.len());
-        // let parsedtest = BigUint::parse_bytes("0000000000000000000000000a550c18".as_bytes(), 16);
-        // log::info!("lll -- parsedtest = {:?}", parsedtest);
-
+    
         let build_config = move_package::BuildConfig {
             test_mode: true,
             install_dir: Some(tempdir().unwrap().path().to_path_buf()),
             skip_fetch_latest_git_deps: true,
             ..Default::default()
         };
-        // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
-        // vector as the writer
         let resolution_graph = build_config.resolution_graph_for_package(&working_dir, &mut Vec::new())?;
         let named_address_mapping: Vec<_> = resolution_graph
                 .extract_named_address_mapping()
                 .map(|(name, addr)| format!("{}={}", name.as_str(), addr))
                 .collect();
-        log::info!("named_address_mapping = {:?}", named_address_mapping);
+        // log::info!("named_address_mapping = {:?}", named_address_mapping);
         let addrs = parse_addresses_from_options(named_address_mapping.clone())?;
 
         let targets = vec![PackagePaths {
@@ -229,34 +191,11 @@ impl Project {
                     ..Default::default()
                 }
         ).expect("Failed to create GlobalEnv!");
-        use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
-        if new_project.global_env.has_errors() {
-            let mut error_writer = Buffer::no_color();
-            new_project.global_env.report_diag(&mut error_writer, Severity::Error);
-            eprintln!(
-                "{}",
-                String::from_utf8_lossy(&error_writer.into_inner()).to_string()
-            );
-        } else {
-            eprintln!("env.get_module_count() = {:?}", &new_project.global_env.get_module_count());
-            // for module in env.get_modules() {
-            //     for fun in module.get_functions() {
-            //         let id = fun.get_qualified_id();
-            //     }
-            // }
-        }
 
-        eprintln!("lll >> 00, env.get_module_count() = {:?}", new_project.global_env.get_module_count());
-        for module in new_project.global_env.get_modules() {
-            eprintln!("lll >> 00, env.get_function_count() = {:?}", module.get_function_count());
-            for fun in module.get_functions() {
-                // let id = fun.get_qualified_id();
-                log::info!("lll >> 01, fun.get_def() = {:?}", fun.get_def());
-                if let Some(exp) = fun.get_def() {
-                    log::info!("lll >> 02, fn body = {}", exp.display_for_fun(fun.clone()));
-                }
-            }
-        }
+        new_project.get_project_def(&working_dir, SourcePackageLayout::Sources);
+        new_project.get_project_def(&working_dir, SourcePackageLayout::Tests);
+        new_project.get_project_def(&working_dir, SourcePackageLayout::Scripts);
+
         let mut dummy = DummyHandler;
         // new_project.run_full_visitor(&mut dummy);
         new_project.run_full_visitor_by_move_model(&mut dummy);
@@ -312,13 +251,10 @@ impl Project {
             let d: Rc<RefCell<SourceDefs>> = Default::default();
             self.modules.insert(manifest_path.clone(), d.clone());
             multi.asts.insert(manifest_path.clone(), d);
-            let mut source_paths1 = self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Sources)?;
-            let mut source_paths2 = self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Tests)?;
-            let mut source_paths3 = self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Scripts)?;
+            let source_paths1 = self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Sources)?;
+            let source_paths2 = self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Tests)?;
+            let source_paths3 = self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Scripts)?;
             if is_main_source {
-                // source_paths1.append(&mut source_paths2);
-                // source_paths1.append(&mut source_paths3);
-                // targets_paths.clone_from_slice(&source_paths1);
                 targets_paths.extend(source_paths1);
                 targets_paths.extend(source_paths2);
                 targets_paths.extend(source_paths3);
@@ -507,15 +443,14 @@ impl Project {
                     .update(file.path().to_path_buf(), file_content.as_str());
             }
         }
-        log::info!("lll << load_layout_files_v2");
+        // log::info!("lll << load_layout_files_v2");
         Ok(ret_paths)
     }
 
-    pub(crate) fn compile_project_package(
+    pub(crate) fn get_project_def(
         &mut self, 
         manifest_path: &PathBuf, 
-        kind: SourcePackageLayout, 
-        env: &move_model::model::GlobalEnv) {
+        kind: SourcePackageLayout) {
         use super::syntax::get_definition_in_global_env_by_move_file;
         let mut p = manifest_path.clone();
         p.push(kind.location_str());
@@ -543,7 +478,7 @@ impl Project {
                 log::info!("parse source file {:?}", file.path());
                 let file_hash = FileHash::new(file_content.as_str());
 
-                let defs = get_definition_in_global_env_by_move_file(&env, file.path());
+                let defs = get_definition_in_global_env_by_move_file(&self.global_env, file.path());
                 let defs = match defs {
                     std::result::Result::Ok(x) => x,
                     std::result::Result::Err(diags) => {
@@ -581,7 +516,7 @@ impl Project {
                 }
             }
         }
-        log::info!("lll << compile_project_package");
+        // log::info!("lll << get_project_def");
     }
 
     pub(crate) fn name_to_addr_impl(&self, name: Symbol) -> AccountAddress {

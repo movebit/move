@@ -7,14 +7,16 @@ use move_compiler::{
     parser::ast::*,
     MatchedFileCommentMap,
 };
+use move_command_line_common::files::FileHash;
+use move_ir_types::location::*;
 use move_package::{source_package::layout::SourcePackageLayout, BuildConfig, ModelConfig};
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
-use move_model::{model::GlobalEnv, options::ModelBuilderOptions, run_model_builder_with_options};
+use move_model::{model::{GlobalEnv, ModuleEnv, ModuleId}, options::ModelBuilderOptions, run_model_builder_with_options};
 use std::{
     path::Path,
     path::PathBuf,
 };
-
+use move_symbol_pool::Symbol;
 pub fn reroot_path(path: Option<PathBuf>) -> anyhow::Result<PathBuf> {
     let path: PathBuf = path.unwrap_or_else(|| PathBuf::from("."));
     // find the root dir where Move.toml is located.
@@ -62,16 +64,46 @@ pub fn parse_package(path: &Path) -> GlobalEnv {
 pub fn get_definition_in_global_env_by_move_file(env: &GlobalEnv, move_file_path: &Path)
  -> Result<(Vec<Definition>, MatchedFileCommentMap), Diagnostics> {
     let defs = vec![];
-    for module in env.get_modules() {
-        eprintln!("lll >> get_definition_in_global_env_by_move_file, env.get_function_count() = {:?}", module.get_function_count());
-        for fun in module.get_functions() {
-            // let id = fun.get_qualified_id();
-            log::info!("lll >> get_definition_in_global_env_by_move_file, fun.get_def() = {:?}", fun.get_def());
-            if let Some(exp) = fun.get_def() {
-                log::info!("lll >> get_definition_in_global_env_by_move_file, fn body = {}", exp.display_for_fun(fun.clone()));
+    let get_target_module_id = |env: &GlobalEnv, move_file_path: &Path| -> Option<ModuleId> {
+        for module in env.get_target_modules() {
+            let move_file_name = module.get_full_name_str();
+            if let Some(file_stem) = move_file_path.file_stem() {
+                if let Some(file_stem_str) = file_stem.to_str() {
+                    if move_file_name.contains(file_stem_str) {
+                        let module_id = module.get_id();
+                        return Some(module_id);
+                    }
+                }
+            }
+        }
+        None
+    };
+
+    let current_module = ModuleDefinition {
+        loc: Spanned::unsafe_no_loc(0).loc,
+        attributes: Vec::new(),
+        address: None,
+        name: ModuleName(Spanned {
+            loc: Loc::new(FileHash::empty(), 0, 0),
+            value: Symbol::from("_"),
+        }),
+        is_spec_module: false,
+        members: Vec::new(),
+    };
+
+    if let Some(target_module_id) = get_target_module_id(env, move_file_path) {
+        if let target_module = env.get_module(target_module_id) {
+            eprintln!("lll >> get_definition_in_global_env_by_move_file, env.get_function_count() = {:?}", target_module.get_function_count());
+            for fun in target_module.get_functions() {
+                let id = fun.get_qualified_id();
+                if let Some(exp) = fun.get_def() {
+                    log::info!("lll >> get_definition_in_global_env_by_move_file, fn body = {}", exp.display_for_fun(fun.clone()));
+                }
             }
         }
     }
+
+    // log::info!("lll << get_definition_in_global_env_by_move_file");
     Ok((defs, MatchedFileCommentMap::new()))
 }
 
