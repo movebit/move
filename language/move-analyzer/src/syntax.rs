@@ -26,6 +26,7 @@ pub fn reroot_path(path: Option<PathBuf>) -> anyhow::Result<PathBuf> {
     // Ok(PathBuf::from("."))
 }
 
+// TODO: parse_package will change to using the method of run_model_builder_with_options
 pub fn parse_package(path: &Path) -> GlobalEnv {
     let config = BuildConfig {
         ..Default::default()
@@ -52,14 +53,94 @@ pub fn parse_package(path: &Path) -> GlobalEnv {
         );
     } else {
         eprintln!("env.get_module_count() = {:?}", &env.get_module_count());
-        // for module in env.get_modules() {
-        //     for fun in module.get_functions() {
-        //         let id = fun.get_qualified_id();
-        //     }
-        // }
     }
     env
 }
+
+// step1: get parser::ast::Function
+pub fn get_ast_func(module_env: &ModuleEnv) -> Vec<Function> {
+    eprintln!("lll >> get_ast_func, env.get_function_count() = {:?}", module_env.get_function_count());
+    for fun in module_env.get_functions() {
+        let id = fun.get_qualified_id();
+        if let Some(exp) = fun.get_def() {
+            log::info!("lll >> get_definition_in_global_env_by_move_file, fn body = {}", exp.display_for_fun(fun.clone()));
+        }
+        // fun.get_def()
+
+        // fun.get_friend_env()
+        
+        // fun.get_friend_name()
+
+        // fun.get_full_name_str()
+      
+        // fun.get_type_parameter_count()
+
+        // fun.get_type_parameters()
+
+        // fun.get_parameter_count()
+
+        // fun.get_parameter_types()
+
+        // fun.get_result_type()
+
+        // fun.get_loc()
+
+        // fun.get_attributes()
+
+        // fun.visibility()
+    }
+
+
+    vec![Function {
+        attributes: Vec::new(),
+        loc: Loc::new(FileHash::empty(), 0, 0),
+        visibility: Visibility::Public(Loc::new(FileHash::empty(), 0, 0)),
+        entry: None,
+        signature: FunctionSignature {
+            type_parameters: Vec::new(),
+            parameters: Vec::new(),
+            return_type: Type::new(Loc::new(FileHash::empty(), 0, 0), Type_::Unit),
+        },
+        acquires: Vec::new(),
+        name: FunctionName(Spanned {
+            loc: Loc::new(FileHash::empty(), 0, 0),
+            value: Symbol::from("_"),
+        }),
+        inline: false,
+        body: FunctionBody::new(Loc::new(FileHash::empty(), 0, 0), FunctionBody_::Native),
+    }]
+}
+
+// step2: get parser::ast::StructDefinition
+pub fn get_ast_struct() -> StructDefinition {
+    StructDefinition {
+        attributes: Vec::new(),
+        loc: Loc::new(FileHash::empty(), 0, 0),
+        abilities: Vec::new(),
+        name: StructName(Spanned {
+            loc: Loc::new(FileHash::empty(), 0, 0),
+            value: Symbol::from("_"),
+        }),
+        type_parameters: Vec::new(),
+        fields: StructFields::Native(Loc::new(FileHash::empty(), 0, 0)),
+    }
+}
+
+// step3: get parser::ast::UseDecl
+pub fn get_ast_usedecl() {
+    
+}
+
+// step4: get parser::ast::FriendDecl
+pub fn get_ast_frind() {
+    
+}
+
+// step5: get parser::ast::Constant
+pub fn get_ast_constant() {
+    
+}
+
 
 pub fn get_definition_in_global_env_by_move_file(env: &GlobalEnv, move_file_path: &Path)
  -> Result<(Vec<Definition>, MatchedFileCommentMap), Diagnostics> {
@@ -93,57 +174,13 @@ pub fn get_definition_in_global_env_by_move_file(env: &GlobalEnv, move_file_path
 
     if let Some(target_module_id) = get_target_module_id(env, move_file_path) {
         if let target_module = env.get_module(target_module_id) {
-            eprintln!("lll >> get_definition_in_global_env_by_move_file, env.get_function_count() = {:?}", target_module.get_function_count());
-            for fun in target_module.get_functions() {
-                let id = fun.get_qualified_id();
-                if let Some(exp) = fun.get_def() {
-                    log::info!("lll >> get_definition_in_global_env_by_move_file, fn body = {}", exp.display_for_fun(fun.clone()));
-                }
-            }
+            get_ast_func(&target_module);
         }
     }
 
     // log::info!("lll << get_definition_in_global_env_by_move_file");
     Ok((defs, MatchedFileCommentMap::new()))
 }
-
-use move_compiler::shared::PackagePaths;
-pub fn parse_package_v2(fpath: &Path) -> GlobalEnv {
-    eprintln!("fpath = {:?}", fpath);
-    let targets = vec![PackagePaths {
-        name: None,
-        paths: vec![fpath.to_str().unwrap().to_string()],
-        named_address_map: std::collections::BTreeMap::<String, _>::new(),
-    }];
-    let dependents = vec![PackagePaths {
-        name: None,
-        paths: vec![fpath.to_str().unwrap().to_string()],
-        named_address_map: std::collections::BTreeMap::<String, _>::new(),
-    }];
-    let env = run_model_builder_with_options(
-        targets, dependents, ModelBuilderOptions {
-                compile_via_model: true,
-                ..Default::default()
-            }
-    );
-    match env {
-        Ok(env) => {
-            if !env.has_errors() {
-                eprintln!("env.get_module_count() = {:?}", &env.get_module_count());
-                // for module in env.get_target_modules() {
-                //     for fun in module.get_functions() {
-                //         let id = fun.get_qualified_id();
-                //         eprintln!("func id = {:?}", id);
-                //         eprintln!("func get_full_name_str = {:?}", fun.get_full_name_str());                
-                //     }
-                // }
-            }
-            env
-        },
-        Err(_) => {return GlobalEnv::new()},
-    }
-}
-
 
 /// Parse the `input` string as a file of Move source code and return the
 /// result as either a pair of FileDefinition and doc comments or some Diagnostics. The `file` name
