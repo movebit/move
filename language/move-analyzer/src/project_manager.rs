@@ -48,12 +48,6 @@ use move_package::compilation::build_plan::BuildPlan;
 use tempfile::tempdir;
 use num_bigint::BigUint;
 
-
-// pub enum NumberFormat {
-//     Decimal = 10,
-//     Hex = 16,
-// }
-
 // Determines the base of the number literal, depending on the prefix
 pub(crate) fn determine_num_text_and_base22(s: &str) -> (&str, move_compiler::shared::NumberFormat) {
     for c in s.chars() {

@@ -14,18 +14,29 @@ use move_package::{source_package::layout::SourcePackageLayout, BuildConfig, Mod
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
 use move_model::model::{GlobalEnv, ModuleEnv, ModuleId};
 use std::{
-    path::Path,
-    path::PathBuf,
+    fs,
+    path::{Path, PathBuf},
+    fmt::format,
 };
 use move_symbol_pool::Symbol;
 
 // step1: get parser::ast::Function
 pub fn get_ast_func(module_env: &ModuleEnv) -> Vec<Function> {
     eprintln!("lll >> get_ast_func, env.get_function_count() = {:?}", module_env.get_function_count());
+    // eprintln!("sava env '{:?}'", env);
+    // let _ = fs::write(output_file, env.dump_env());
+
     for fun in module_env.get_functions() {
-        let id = fun.get_qualified_id();
-        if let Some(exp) = fun.get_def() {
+        if let Some(exp) = fun.get_def() {            
             log::info!("lll >> get_ast_func, fn body = {}", exp.display_for_fun(fun.clone()));
+            let output_file = format!("{}{}.txt", "./output_global_env-", fun.get_full_name_str());
+            let mut func_exp_content = String::from("");
+
+            exp.visit(&mut |e| {
+                // log::info!("lll >> exp.visit e = {:?}", e);
+                func_exp_content.push_str(format!("{:?}", e).as_str());
+            });
+            let _ = fs::write(output_file, func_exp_content);
         }
         // fun.get_def()
 
@@ -103,9 +114,7 @@ pub fn get_ast_constant() {
     
 }
 
-pub fn run_move_model_visitor_for_file(env: &GlobalEnv, move_file_path: &Path)
- -> Result<(Vec<Definition>, MatchedFileCommentMap), Diagnostics> {
-    let defs = vec![];
+pub fn run_move_model_visitor_for_file(env: &GlobalEnv, move_file_path: &Path) {
     let get_target_module_id = |env: &GlobalEnv, move_file_path: &Path| -> Option<ModuleId> {
         for module in env.get_target_modules() {
             let move_file_name = module.get_full_name_str();
@@ -138,9 +147,6 @@ pub fn run_move_model_visitor_for_file(env: &GlobalEnv, move_file_path: &Path)
             get_ast_func(&target_module);
         }
     }
-
-    // log::info!("lll << get_definition_in_global_env_by_move_file");
-    Ok((defs, MatchedFileCommentMap::new()))
 }
 
 impl Project {
@@ -149,19 +155,9 @@ impl Project {
         log::info!("lll >> run_full_visitor_by_move_model {} ", visitor);
         log::info!("lll >> after load project, self.manifest_paths.len = {:?}", self.manifest_paths.len());
         self.project_context.clear_scopes_and_addresses();
-
-        // visit should `rev`.
-        // let manifests: Vec<_> = self.manifest_paths.iter().rev().cloned().collect();
-        // for m in manifests.iter() {
-        //     self.visit_by_move_model(
-        //         &self.project_context,
-        //         visitor,
-        //         true,
-        //     );
-        //     if visitor.finished() {
-        //         return;
-        //     }
-        // }
+        for module in self.global_env.get_target_modules() {
+            get_ast_func(&module);
+        }
     }
 
     pub fn run_visitor_for_file(
@@ -171,5 +167,6 @@ impl Project {
         enter_import: bool,
     ) {
         log::info!("run visitor part for {} ", visitor);
+        run_move_model_visitor_for_file(&self.global_env, &filepath);
     }
 }
