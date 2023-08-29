@@ -7,6 +7,8 @@ use crate::{project::Project, multiproject::MultiProject, analyzer_handler::*};
 use anyhow::{Ok, Result};
 use move_command_line_common::files::FileHash;
 use move_compiler::{
+    parser::ast::LeadingNameAccess,
+    parser::ast::ModuleDefinition,
     parser::ast::Definition,
     parser::ast::Exp,
     parser::ast::FunctionSignature,
@@ -17,6 +19,7 @@ use move_compiler::{
     parser::ast::Exp_,
     parser::ast::Value_,
     parser::ast::NameAccessChain_,
+    parser::ast::LeadingNameAccess_,
     parser::ast::BinOp_,
     shared::Identifier,
     shared::Name,
@@ -192,9 +195,9 @@ impl Project {
                 }
         ).expect("Failed to create GlobalEnv!");
 
-        new_project.get_project_def(&working_dir, SourcePackageLayout::Sources);
-        new_project.get_project_def(&working_dir, SourcePackageLayout::Tests);
-        new_project.get_project_def(&working_dir, SourcePackageLayout::Scripts);
+        // new_project.get_project_def(&working_dir, SourcePackageLayout::Sources);
+        // new_project.get_project_def(&working_dir, SourcePackageLayout::Tests);
+        // new_project.get_project_def(&working_dir, SourcePackageLayout::Scripts);
 
         let mut dummy = DummyHandler;
         // new_project.run_full_visitor(&mut dummy);
@@ -868,7 +871,8 @@ impl Project {
                 if let Some(expr) = b.3.as_ref() {
                     project_context.enter_scope(|scopes| {
                         let mut handler = DummyHandler;
-                        self.visit_block(b, scopes, &mut handler);
+                        // TODO: lll
+                        // self.visit_block(b, scopes, &mut handler);
                         self.get_expr_type(expr, scopes)
                     })
                 } else {
@@ -1021,7 +1025,8 @@ impl Project {
             }
         }
         for (v, t) in signature.parameters.iter() {
-            self.visit_type_apply(t, project_context, visitor);
+            // TODO: lll
+            // self.visit_type_apply(t, project_context, visitor);
             let t = project_context.resolve_type(t, self);
             let item = ItemOrAccess::Item(Item::Parameter(*v, t));
             // found
@@ -1031,7 +1036,8 @@ impl Project {
             }
             project_context.enter_item(self, v.value(), item)
         }
-        self.visit_type_apply(&signature.return_type, project_context, visitor);
+        // TODO: lll
+        // self.visit_type_apply(&signature.return_type, project_context, visitor);
     }
 
     pub(crate) fn manifest_beed_modified(&self) -> bool {
@@ -1048,5 +1054,63 @@ impl Project {
                 false
             }
         })
+    }
+
+    pub(crate) fn get_defs(
+        &self,
+        filepath: &PathBuf,
+        call_back: impl FnOnce(VecDefAstProvider),
+    ) -> anyhow::Result<()> {
+        let (manifest_path, layout) = match discover_manifest_and_kind(filepath.as_path()) {
+            Some(x) => x,
+            None => {
+                return anyhow::Result::Err(anyhow::anyhow!(
+                    "manifest not found for '{:?}'",
+                    filepath.as_path()
+                ))
+            }
+        };
+        let d = Default::default();
+        let d2 = Default::default();
+        let b = self
+            .modules
+            .get(&manifest_path)
+            .unwrap_or(&d2)
+            .as_ref()
+            .borrow();
+        call_back(VecDefAstProvider::new(
+            if layout == SourcePackageLayout::Sources {
+                b.sources.get(filepath).unwrap_or(&d)
+            } else if layout == SourcePackageLayout::Tests {
+                b.tests.get(filepath).unwrap_or(&d)
+            } else if layout == SourcePackageLayout::Scripts {
+                b.scripts.get(filepath).unwrap_or(&d)
+            } else {
+                unreachable!()
+            },
+            self,
+            layout,
+        ));
+        anyhow::Ok(())
+    }
+
+    pub(crate) fn get_module_addr(
+        &self,
+        addr: Option<LeadingNameAccess>,
+        m: &ModuleDefinition,
+    ) -> AccountAddress {
+        match addr {
+            Some(x) => match x.value {
+                LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
+                LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
+            },
+            None => match m.address {
+                Some(x) => match x.value {
+                    LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
+                    LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
+                },
+                None => *ERR_ADDRESS,
+            },
+        }
     }
 }

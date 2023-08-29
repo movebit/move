@@ -52,64 +52,6 @@ use std::{
 use std::{path::PathBuf, rc::Rc};
 
 impl Project {
-    pub(crate) fn get_defs(
-        &self,
-        filepath: &PathBuf,
-        call_back: impl FnOnce(VecDefAstProvider),
-    ) -> anyhow::Result<()> {
-        let (manifest_path, layout) = match discover_manifest_and_kind(filepath.as_path()) {
-            Some(x) => x,
-            None => {
-                return anyhow::Result::Err(anyhow::anyhow!(
-                    "manifest not found for '{:?}'",
-                    filepath.as_path()
-                ))
-            }
-        };
-        let d = Default::default();
-        let d2 = Default::default();
-        let b = self
-            .modules
-            .get(&manifest_path)
-            .unwrap_or(&d2)
-            .as_ref()
-            .borrow();
-        call_back(VecDefAstProvider::new(
-            if layout == SourcePackageLayout::Sources {
-                b.sources.get(filepath).unwrap_or(&d)
-            } else if layout == SourcePackageLayout::Tests {
-                b.tests.get(filepath).unwrap_or(&d)
-            } else if layout == SourcePackageLayout::Scripts {
-                b.scripts.get(filepath).unwrap_or(&d)
-            } else {
-                unreachable!()
-            },
-            self,
-            layout,
-        ));
-        anyhow::Ok(())
-    }
-
-    pub(crate) fn get_module_addr(
-        &self,
-        addr: Option<LeadingNameAccess>,
-        m: &ModuleDefinition,
-    ) -> AccountAddress {
-        match addr {
-            Some(x) => match x.value {
-                LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
-                LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
-            },
-            None => match m.address {
-                Some(x) => match x.value {
-                    LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
-                    LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
-                },
-                None => *ERR_ADDRESS,
-            },
-        }
-    }
-
     /// Entrance for `ItemOrAccessHandler` base on analyze.
     pub fn run_full_visitor(&self, visitor: &mut dyn ItemOrAccessHandler) {
         log::info!("run visitor for {} ", visitor);
