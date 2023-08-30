@@ -38,7 +38,7 @@ use std::{
     time::SystemTime,
 };
 use std::{hash::Hash, path::PathBuf};
-
+use move_model::model::GlobalEnv;
 // ======================================================================================
 // static and const var
 pub static ERR_ADDRESS: once_cell::sync::Lazy<AccountAddress> =
@@ -260,6 +260,10 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
         false
     }
     fn handle_para_arg_pair(&mut self, _services: &dyn HandleItemService, _para: Name, _exp: &Exp) {
+    }
+
+    fn handle_project_env(&mut self, _services: &dyn HandleItemService, env: &GlobalEnv, move_file_path: &Path) {
+
     }
 }
 

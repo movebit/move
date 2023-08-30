@@ -20,6 +20,7 @@ use std::{
 };
 use move_symbol_pool::Symbol;
 
+
 // step1: get parser::ast::Function
 pub fn get_ast_func(module_env: &ModuleEnv) -> Vec<Function> {
     eprintln!("lll >> get_ast_func, env.get_function_count() = {:?}", module_env.get_function_count());
@@ -32,9 +33,78 @@ pub fn get_ast_func(module_env: &ModuleEnv) -> Vec<Function> {
             let output_file = format!("{}{}.txt", "./output_global_env-", fun.get_full_name_str());
             let mut func_exp_content = String::from("");
 
+
             exp.visit(&mut |e| {
+                use move_model::ast::ExpData::*;
                 // log::info!("lll >> exp.visit e = {:?}", e);
-                func_exp_content.push_str(format!("{:?}", e).as_str());
+                // func_exp_content.push_str(format!("{:?}", e).as_str());
+                match e {                    
+                    Call(_, _, args) => {
+                        log::info!("lll >> exp.visit args = {:?}", args);
+                    },
+                    Invoke(_, target, args) => {
+                        log::info!("lll >> exp.visit args = {:?}", args);
+                        // for exp in args {
+                            
+                        // }
+                    },
+                    Lambda(_, _, body) => {
+                        log::info!("lll >> exp.visit Lambda body = {:?}", body);
+                    },
+                    Quant(_, _, ranges, triggers, condition, body) => {
+                        log::info!("lll >> exp.visit Quant ranges = {:?}", ranges);
+                        for (_, range) in ranges {
+
+                        }
+                        log::info!("lll >> exp.visit Quant triggers = {:?}", triggers);
+                        for trigger in triggers {
+                            // for e in trigger {
+                            // }
+                        }
+                        log::info!("lll >> exp.visit Quant condition = {:?}", condition);
+                        if let Some(exp) = condition {
+                            
+                        }
+                    },
+                    Block(_, _, binding, body) => {
+                        log::info!("lll >> exp.visit Block binding = {:?}", binding);
+                        if let Some(exp) = binding {
+                     
+                        }
+                    },
+                    IfElse(_, c, t, e) => { 
+                        log::info!("lll >> exp.visit IfElse e = {:?}", e);
+                    },
+                    Loop(_, e) => {
+                        log::info!("lll >> exp.visit Loop e = {:?}", e);
+                    },
+                    Return(_, e) => {
+                        log::info!("lll >> exp.visit Return e = {:?}", e);
+                    },
+                    Sequence(_, es) => {
+                        log::info!("lll >> exp.visit Sequence es = {:?}", es);
+                        // for e in es {
+                            
+                        // }
+                    },
+                    Assign(_, _, e) => {
+                        log::info!("lll >> exp.visit Assign e = {:?}", e);
+                    },
+                    Mutate(_, lhs, rhs) => {
+                        log::info!("lll >> exp.visit Mutate rhs = {:?}", rhs);
+                    },
+                    Value(_, v) => {
+                        log::info!("lll >> exp.visit Explicitly list all enum variants");
+                        // if let Some(name) = get_name_from_value(v) {
+                        //     let item = ItemOrAccess::Access(Access::ExprAddressName(*name));
+                        //     visitor.handle_item_or_access(self, project_context, &item);
+                        // }
+                    },
+                    // Explicitly list all enum variants
+                    LoopCont(..) | LocalVar(..) | Temporary(..) | Invalid(..) => {
+                        log::info!("lll >> exp.visit Explicitly list all enum variants");
+                    },
+                }
             });
             let _ = fs::write(output_file, func_exp_content);
         }
@@ -155,9 +225,9 @@ impl Project {
         log::info!("lll >> run_full_visitor_by_move_model {} ", visitor);
         log::info!("lll >> after load project, self.manifest_paths.len = {:?}", self.manifest_paths.len());
         self.project_context.clear_scopes_and_addresses();
-        for module in self.global_env.get_target_modules() {
-            get_ast_func(&module);
-        }
+        // for module in self.global_env.get_target_modules() {
+        //     get_ast_func(&module);
+        // }
     }
 
     pub fn run_visitor_for_file(
@@ -167,6 +237,7 @@ impl Project {
         enter_import: bool,
     ) {
         log::info!("run visitor part for {} ", visitor);
-        run_move_model_visitor_for_file(&self.global_env, &filepath);
+        // run_move_model_visitor_for_file(&self.global_env, &filepath);
+        visitor.handle_project_env(self, &self.global_env, &filepath);
     }
 }
