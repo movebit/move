@@ -159,9 +159,12 @@ impl Handler {
             for fun in target_module.get_functions() {
                 let this_fun_loc = fun.get_loc();
                 let (_, func_start_pos) = env.get_file_and_location(&this_fun_loc).unwrap();
-                if line > func_start_pos.line.0 {
+                let (_, func_end_pos) = env.get_file_and_location(&move_model::model::Loc::new(this_fun_loc.file_id(), 
+                    codespan::Span::new(this_fun_loc.span().end(), this_fun_loc.span().end()))).unwrap();
+                if func_start_pos.line.0 < line && line < func_end_pos.line.0 {
                     target_fun_id = fun.get_id();
                     found_target_fun = true;
+                    break;
                 }
             }
         }
@@ -176,6 +179,76 @@ impl Handler {
         let func_start_pos = env.get_location(&this_fun_loc).unwrap();
         log::info!("lll >> func_start_pos = {:?}", func_start_pos);
 
+
+        let mut mouse_line_first_col = move_model::model::Loc::new(this_fun_loc.file_id(), 
+            codespan::Span::new(
+                this_fun_loc.span().start() + codespan::ByteOffset(1), 
+                this_fun_loc.span().start() + codespan::ByteOffset(2)));
+        let mut mouse_loc = env.get_location(&mouse_line_first_col).unwrap();
+        // locate to line first column
+        while mouse_loc.line.0 < line {
+            mouse_line_first_col = move_model::model::Loc::new(this_fun_loc.file_id(), 
+                codespan::Span::new(mouse_line_first_col.span().start() + codespan::ByteOffset(1), this_fun_loc.span().end()));
+            mouse_loc = env.get_location(&mouse_line_first_col).unwrap();
+        }
+        // locate to line last column
+        let mut mouse_line_last_col = move_model::model::Loc::new(this_fun_loc.file_id(), 
+            codespan::Span::new(
+                mouse_line_first_col.span().start() + codespan::ByteOffset(1), 
+                mouse_line_first_col.span().start() + codespan::ByteOffset(2)));
+
+        mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
+        // locate to line first column
+        while mouse_loc.column.0 < col {
+            mouse_line_last_col = move_model::model::Loc::new(this_fun_loc.file_id(), 
+                codespan::Span::new(mouse_line_last_col.span().start() + codespan::ByteOffset(1), this_fun_loc.span().end()));
+            mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
+            // log::info!("lll >> loop: mouse_loc = {:?}", mouse_loc);
+        }
+
+        let mouse_source = env.get_source(&move_model::model::Loc::new(this_fun_loc.file_id(), 
+            codespan::Span::new(mouse_line_first_col.span().start(), mouse_line_last_col.span().start())));
+        log::info!("lll >> mouse_source = {:?}", mouse_source);
+
+        if let Some(exp) = target_fun.get_def() {
+            log::info!("lll >> target_fun.get_def = {}", exp.display_for_fun(target_fun.clone()));
+            exp.visit(&mut |e| {
+                use move_model::ast::ExpData::*;
+                use move_model::ast::Operation::MoveFunction;
+                // use move_model::ast::Value::*;
+                match e {
+                    // if let ExpData::Call(_, Operation::MoveFunction(mid, fid), _) = e {
+                    //     called.insert(mid.qualified(*fid));
+                    // }
+                    Call(node_id, MoveFunction(mid, fid), args) => {
+                        let this_call_loc = env.get_node_loc(*node_id);
+                        log::info!("lll >> exp.visit call loc = {:?}", env.get_location(&this_call_loc));
+                        if this_call_loc.span().start() < mouse_line_last_col.span().start() &&
+                           mouse_line_last_col.span().start() < this_call_loc.span().end() {
+                            let called_module = env.get_module(*mid);
+                            let called_fun = called_module.get_function(*fid);
+                            log::info!("lll >> get_called_functions = {:?}", called_fun.get_full_name_str());
+                            let called_fun_loc = called_fun.get_loc();
+                            log::info!("lll >> called_fun_loc = {:?}", called_fun_loc);
+                            let (called_fun_file, called_fun_line) = env.get_file_and_location(&called_fun_loc).unwrap();
+                            let path_buf = PathBuf::from(called_fun_file);
+                            let result = FileRange {
+                                path: path_buf,
+                                line_start: called_fun_line.line.0,
+                                col_start: called_fun_line.column.0,
+                                line_end: called_fun_line.line.0,
+                                col_end: called_fun_line.column.0 + called_fun.get_full_name_str().len()as u32,
+                            };
+                            self.result = Some(result);
+                            return;
+                        }
+
+                    },
+                    _ => {}
+                }
+            });
+        }
+        /*
         // called func
         if let Some(called_func) = target_fun.get_called_functions() {
             for item in called_func.iter() {
@@ -183,24 +256,26 @@ impl Handler {
                 let called_fun = called_module.get_function(item.id);
                 log::info!("lll >> get_called_functions = {:?}", called_fun.get_full_name_str());
                 let called_fun_loc = called_fun.get_loc();
-                // let called_fun_file_and_line = env.get_file_and_location(&called_fun_loc).unwrap();
+                log::info!("lll >> called_fun_loc = {:?}", called_fun_loc);
                 let (called_fun_file, called_fun_line) = env.get_file_and_location(&called_fun_loc).unwrap();
-                let path_buf = PathBuf::from(called_fun_file);
-                let result = FileRange {
-                    path: path_buf,
-                    /// Start.
-                    line_start: called_fun_line.line.0,
-                    col_start: called_fun_line.column.0,
-                
-                    /// End.
-                    line_end: called_fun_line.line.0,
-                    col_end: called_fun_line.column.0 + called_fun.get_full_name_str().len()as u32,
-                };
-                self.result = Some(result);
-                // log::info!("lll >> called_fun_start_pos = {:?}", env.get_file_and_location(&called_fun_loc));
+
+
+                // if called_fun_line.line.0 == line 
+                {
+                    let path_buf = PathBuf::from(called_fun_file);
+                    let result = FileRange {
+                        path: path_buf,
+                        line_start: called_fun_line.line.0,
+                        col_start: called_fun_line.column.0,
+                        line_end: called_fun_line.line.0,
+                        col_end: called_fun_line.column.0 + called_fun.get_full_name_str().len()as u32,
+                    };
+                    self.result = Some(result);
+                    return;
+                }
             }
         }
-        
+
         // log::info!("lll >> get_parameter_types = {:?}", target_fun.get_parameter_types());
         // log::info!("lll >> get_parameters = {:?}", target_fun.get_parameters());
         // log::info!("lll >> get_result_type = {:?}", target_fun.get_result_type());
@@ -210,6 +285,7 @@ impl Handler {
         for local_idx in local_cnt {
             log::info!("lll >> get_local_type = {:?}", target_fun.get_local_type(local_idx));    
         }
+        */
     }
 
 
