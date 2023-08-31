@@ -31,7 +31,7 @@ pub fn get_ast_func(module_env: &ModuleEnv) -> Vec<Function> {
         if let Some(exp) = fun.get_def() {            
             log::info!("lll >> get_ast_func, fn body = {}", exp.display_for_fun(fun.clone()));
             let output_file = format!("{}{}.txt", "./output_global_env-", fun.get_full_name_str());
-            let mut func_exp_content = String::from("");
+            let func_exp_content = String::from("");
 
 
             exp.visit(&mut |e| {

@@ -11,7 +11,7 @@ use move_compiler::shared::Identifier;
 use move_ir_types::location::Loc;
 use std::{
     collections::{HashMap, HashSet},
-    time::SystemTime,
+    time::SystemTime, str::FromStr,
 };
 use crate::{project::Project, project_context::*, multiproject::MultiProject, analyzer_handler::*};
 use move_compiler::{
@@ -134,6 +134,96 @@ impl Handler {
         }
         ret
     }
+
+    
+    fn process_func(&mut self, env: &GlobalEnv, move_file_path: &Path, line: u32, col: u32) {
+        let mut found_target_module = false;
+        let mut found_target_fun = false;
+        let mut target_module_id = ModuleId::new(0);
+        let mut target_fun_id = FunId::new(env.symbol_pool().make("name"));
+
+        for module in env.get_target_modules() {
+            let move_file_name = module.get_full_name_str();
+            if let Some(file_stem) = move_file_path.file_stem() {
+                if let Some(file_stem_str) = file_stem.to_str() {
+                    if move_file_name.contains(file_stem_str) {
+                        target_module_id = module.get_id();
+                        found_target_module = true;
+                    }
+                }
+            }
+        }
+
+        if found_target_module {
+            let target_module = env.get_module(target_module_id);
+            for fun in target_module.get_functions() {
+                let this_fun_loc = fun.get_loc();
+                let (_, func_start_pos) = env.get_file_and_location(&this_fun_loc).unwrap();
+                if line > func_start_pos.line.0 {
+                    target_fun_id = fun.get_id();
+                    found_target_fun = true;
+                }
+            }
+        }
+
+        if !found_target_fun {
+            return;
+        }
+
+        let target_module = env.get_module(target_module_id);
+        let target_fun = target_module.get_function(target_fun_id);
+        let this_fun_loc = target_fun.get_loc();
+        let func_start_pos = env.get_location(&this_fun_loc).unwrap();
+        log::info!("lll >> func_start_pos = {:?}", func_start_pos);
+
+        // called func
+        if let Some(called_func) = target_fun.get_called_functions() {
+            for item in called_func.iter() {
+                let called_module = env.get_module(item.module_id);
+                let called_fun = called_module.get_function(item.id);
+                log::info!("lll >> get_called_functions = {:?}", called_fun.get_full_name_str());
+                let called_fun_loc = called_fun.get_loc();
+                // let called_fun_file_and_line = env.get_file_and_location(&called_fun_loc).unwrap();
+                let (called_fun_file, called_fun_line) = env.get_file_and_location(&called_fun_loc).unwrap();
+                let path_buf = PathBuf::from(called_fun_file);
+                let result = FileRange {
+                    path: path_buf,
+                    /// Start.
+                    line_start: called_fun_line.line.0,
+                    col_start: called_fun_line.column.0,
+                
+                    /// End.
+                    line_end: called_fun_line.line.0,
+                    col_end: called_fun_line.column.0 + called_fun.get_full_name_str().len()as u32,
+                };
+                self.result = Some(result);
+                // log::info!("lll >> called_fun_start_pos = {:?}", env.get_file_and_location(&called_fun_loc));
+            }
+        }
+        
+        // log::info!("lll >> get_parameter_types = {:?}", target_fun.get_parameter_types());
+        // log::info!("lll >> get_parameters = {:?}", target_fun.get_parameters());
+        // log::info!("lll >> get_result_type = {:?}", target_fun.get_result_type());
+        // log::info!("lll >> get_type_parameters = {:?}", target_fun.get_type_parameters());
+
+        let local_cnt = target_fun.get_local_count();
+        for local_idx in local_cnt {
+            log::info!("lll >> get_local_type = {:?}", target_fun.get_local_type(local_idx));    
+        }
+    }
+
+
+    fn process_struct(&self, env: &GlobalEnv, move_file_path: &Path, line: u32, col: u32) {
+
+    }
+
+    fn process_expr(&self) {
+        
+    }
+
+    fn run_move_model_visitor_internal(&mut self, env: &GlobalEnv, move_file_path: &Path, line: u32, col: u32) {
+        self.process_func(env, move_file_path, line, col);
+    }
 }
 
 impl ItemOrAccessHandler for Handler {
@@ -213,7 +303,7 @@ impl ItemOrAccessHandler for Handler {
     }
 
     fn handle_project_env(&mut self, _services: &dyn HandleItemService, env: &GlobalEnv, move_file_path: &Path) {
-        run_move_model_visitor_internal(env, move_file_path, self.line, self.col);
+        self.run_move_model_visitor_internal(env, move_file_path, self.line, self.col);
     }
  
 }
@@ -234,155 +324,8 @@ impl GetPosition for Handler {
     }
 }
 
-fn process_func(env: &GlobalEnv, move_file_path: &Path, line: u32, col: u32) {
-    let mut found_target_module = false;
-    let mut found_target_fun = false;
-    let mut target_module_id = ModuleId::new(0);
-    let mut target_fun_id = FunId::new(env.symbol_pool().make("name"));
 
-    for module in env.get_target_modules() {
-        let move_file_name = module.get_full_name_str();
-        if let Some(file_stem) = move_file_path.file_stem() {
-            if let Some(file_stem_str) = file_stem.to_str() {
-                if move_file_name.contains(file_stem_str) {
-                    target_module_id = module.get_id();
-                    found_target_module = true;
-                }
-            }
-        }
-    }
 
-    if found_target_module {
-        let target_module = env.get_module(target_module_id);
-        for fun in target_module.get_functions() {
-            let this_fun_loc = fun.get_loc();
-            let (_, func_start_pos) = env.get_file_and_location(&this_fun_loc).unwrap();
-            if line > func_start_pos.line.0 {
-                target_fun_id = fun.get_id();
-                found_target_fun = true;
-            }
-        }
-    }
-
-    if found_target_fun {
-        let target_module = env.get_module(target_module_id);
-        let target_fun = target_module.get_function(target_fun_id);
-        let this_fun_loc = target_fun.get_loc();
-        let func_start_pos = env.get_location(&this_fun_loc).unwrap();
-        log::info!("lll >> func_start_pos = {:?}", func_start_pos);
-        if let Some(exp) = target_fun.get_def() {
-            log::info!("lll >> get_ast_func, fn body = {}", exp.display_for_fun(target_fun.clone()));
-            let output_file = format!("{}{}.txt", "./output_global_env-", target_fun.get_full_name_str());
-            let mut func_exp_content = String::from("");
-
-            exp.visit(&mut |e| {
-                use move_model::ast::ExpData::*;
-                use move_model::ast::Value::*;
-                // log::info!("lll >> exp.visit e = {:?}", e);
-                // func_exp_content.push_str(format!("{:?}", e).as_str());
-                match e {
-                    Call(node_id, operation, args) => {
-                        let this_call_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit call loc = {:?}", env.get_location(&this_call_loc));
-                    },
-                    Invoke(node_id, target, args) => {
-                        let this_invoke_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit this_invoke_loc = {:?}", env.get_location(&this_invoke_loc));
-                        // log::info!("lll >> exp.visit args = {:?}", args);
-                        // for exp in args {
-                            
-                        // }
-                    },
-                    Lambda(node_id, _, body) => {
-                        let this_lambda_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit this_lambda_loc = {:?}", env.get_location(&this_lambda_loc));
-                        // log::info!("lll >> exp.visit Lambda body = {:?}", body);
-                    },
-                    Quant(node_id, _, ranges, triggers, condition, body) => {
-                        let this_quant_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit this_quant_loc = {:?}", env.get_location(&this_quant_loc));
-                        // log::info!("lll >> exp.visit Quant ranges = {:?}", ranges);
-                        for (node_id, range) in ranges {
-
-                        }
-                        // log::info!("lll >> exp.visit Quant triggers = {:?}", triggers);
-                        for trigger in triggers {
-                            // for e in trigger {
-                            // }
-                        }
-                        // log::info!("lll >> exp.visit Quant condition = {:?}", condition);
-                        if let Some(exp) = condition {
-                            
-                        }
-                    },
-                    Block(node_id, _, binding, body) => {
-                        let this_block_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit this_block_loc = {:?}", env.get_location(&this_block_loc));
-                        // log::info!("lll >> exp.visit Block binding = {:?}", binding);
-                        if let Some(exp) = binding {
-                     
-                        }
-                    },
-                    IfElse(node_id, c, t, e) => {
-                        let this_ifelse_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit this_ifelse_loc = {:?}", env.get_location(&this_ifelse_loc));
-                        // log::info!("lll >> exp.visit IfElse e = {:?}", e);
-                    },
-                    Loop(node_id, e) => {
-                        let this_loop_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit this_loop_loc = {:?}", env.get_location(&this_loop_loc));
-                        // log::info!("lll >> exp.visit Loop e = {:?}", e);
-                    },
-                    Return(node_id, e) => {
-                        let this_return_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit this_return_loc = {:?}", env.get_location(&this_return_loc));
-                        // log::info!("lll >> exp.visit Return e = {:?}", e);
-                    },
-                    Sequence(node_id, es) => {
-                        let this_sequence_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit this_sequence_loc = {:?}", env.get_location(&this_sequence_loc));
-                        // log::info!("lll >> exp.visit Sequence es = {:?}", es);
-                        // for e in es {
-                            
-                        // }
-                    },
-                    Assign(node_id, _, e) => {
-                        let this_assign_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit this_assign_loc = {:?}", env.get_location(&this_assign_loc));
-                        // log::info!("lll >> exp.visit Assign e = {:?}", e);
-                    },
-                    Mutate(node_id, lhs, rhs) => {
-                        let this_mutate_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit this_mutate_loc = {:?}", env.get_location(&this_mutate_loc));
-                        // log::info!("lll >> exp.visit Mutate rhs = {:?}", rhs);
-                    },
-                    Value(node_id, v) => {
-                        let this_value_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit this_value_loc = {:?}", env.get_location(&this_value_loc));
-                        match v {
-                            Address(address) => log::info!("address = {}", env.display(address)),
-                            Number(int) => log::info!("int = {}", int),
-                            Bool(b) => log::info!("b = {}", b),
-                            ByteArray(bytes) => log::info!("bytes = {:?}", bytes),
-                            AddressArray(array) => log::info!("array = {:?}", array),
-                            Vector(array) => log::info!("array = {:?}", array),
-                        }
-                        // log::info!("lll >> exp.visit Explicitly list all enum variants");
-                        // if let Some(name) = get_name_from_value(v) {
-                        //     let item = ItemOrAccess::Access(Access::ExprAddressName(*name));
-                        //     visitor.handle_item_or_access(self, project_context, &item);
-                        // }
-                    },
-                    // Explicitly list all enum variants
-                    LoopCont(node_id, _) | LocalVar(node_id, _) | Temporary(node_id, _) | Invalid(node_id) => {
-                        let this_default_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit this_default_loc = {:?}", env.get_location(&this_default_loc));
-                    },
-                }
-            });
-            let _ = fs::write(output_file, func_exp_content);
-        }
-    }
     /*
     // fun.get_friend_env()
                     
@@ -403,20 +346,118 @@ fn process_func(env: &GlobalEnv, move_file_path: &Path, line: u32, col: u32) {
     // fun.get_attributes()
 
     // fun.visibility()
-    */
-}
-
-
-fn process_struct(env: &GlobalEnv, move_file_path: &Path, line: u32, col: u32) {
-
-}
-
-fn process_expr() {
     
-}
+    if let Some(exp) = target_fun.get_def() {
+        log::info!("lll >> get_ast_func, fn body = {}", exp.display_for_fun(target_fun.clone()));
+        let output_file = format!("{}{}.txt", "./output_global_env-", target_fun.get_full_name_str());
+        let mut func_exp_content = String::from("");
 
-fn run_move_model_visitor_internal(env: &GlobalEnv, move_file_path: &Path, line: u32, col: u32) {
-    process_func(env, move_file_path, line, col);
+        exp.visit(&mut |e| {
+            use move_model::ast::ExpData::*;
+            use move_model::ast::Value::*;
+            // log::info!("lll >> exp.visit e = {:?}", e);
+            // func_exp_content.push_str(format!("{:?}", e).as_str());
+            match e {
+                Call(node_id, operation, args) => {
+                    let this_call_loc = env.get_node_loc(*node_id);
+                    log::info!("lll >> exp.visit call loc = {:?}", env.get_location(&this_call_loc));
+                },
+                Invoke(node_id, target, args) => {
+                    let this_invoke_loc = env.get_node_loc(*node_id);
+                    log::info!("lll >> exp.visit this_invoke_loc = {:?}", env.get_location(&this_invoke_loc));
+                    // log::info!("lll >> exp.visit args = {:?}", args);
+                    // for exp in args {
+                        
+                    // }
+                },
+                Lambda(node_id, _, body) => {
+                    let this_lambda_loc = env.get_node_loc(*node_id);
+                    log::info!("lll >> exp.visit this_lambda_loc = {:?}", env.get_location(&this_lambda_loc));
+                    // log::info!("lll >> exp.visit Lambda body = {:?}", body);
+                },
+                Quant(node_id, _, ranges, triggers, condition, body) => {
+                    let this_quant_loc = env.get_node_loc(*node_id);
+                    log::info!("lll >> exp.visit this_quant_loc = {:?}", env.get_location(&this_quant_loc));
+                    // log::info!("lll >> exp.visit Quant ranges = {:?}", ranges);
+                    for (node_id, range) in ranges {
 
-}
-
+                    }
+                    // log::info!("lll >> exp.visit Quant triggers = {:?}", triggers);
+                    for trigger in triggers {
+                        // for e in trigger {
+                        // }
+                    }
+                    // log::info!("lll >> exp.visit Quant condition = {:?}", condition);
+                    if let Some(exp) = condition {
+                        
+                    }
+                },
+                Block(node_id, _, binding, body) => {
+                    let this_block_loc = env.get_node_loc(*node_id);
+                    log::info!("lll >> exp.visit this_block_loc = {:?}", env.get_location(&this_block_loc));
+                    // log::info!("lll >> exp.visit Block binding = {:?}", binding);
+                    if let Some(exp) = binding {
+                    
+                    }
+                },
+                IfElse(node_id, c, t, e) => {
+                    let this_ifelse_loc = env.get_node_loc(*node_id);
+                    log::info!("lll >> exp.visit this_ifelse_loc = {:?}", env.get_location(&this_ifelse_loc));
+                    // log::info!("lll >> exp.visit IfElse e = {:?}", e);
+                },
+                Loop(node_id, e) => {
+                    let this_loop_loc = env.get_node_loc(*node_id);
+                    log::info!("lll >> exp.visit this_loop_loc = {:?}", env.get_location(&this_loop_loc));
+                    // log::info!("lll >> exp.visit Loop e = {:?}", e);
+                },
+                Return(node_id, e) => {
+                    let this_return_loc = env.get_node_loc(*node_id);
+                    log::info!("lll >> exp.visit this_return_loc = {:?}", env.get_location(&this_return_loc));
+                    // log::info!("lll >> exp.visit Return e = {:?}", e);
+                },
+                Sequence(node_id, es) => {
+                    let this_sequence_loc = env.get_node_loc(*node_id);
+                    log::info!("lll >> exp.visit this_sequence_loc = {:?}", env.get_location(&this_sequence_loc));
+                    // log::info!("lll >> exp.visit Sequence es = {:?}", es);
+                    // for e in es {
+                        
+                    // }
+                },
+                Assign(node_id, _, e) => {
+                    let this_assign_loc = env.get_node_loc(*node_id);
+                    log::info!("lll >> exp.visit this_assign_loc = {:?}", env.get_location(&this_assign_loc));
+                    // log::info!("lll >> exp.visit Assign e = {:?}", e);
+                },
+                Mutate(node_id, lhs, rhs) => {
+                    let this_mutate_loc = env.get_node_loc(*node_id);
+                    log::info!("lll >> exp.visit this_mutate_loc = {:?}", env.get_location(&this_mutate_loc));
+                    // log::info!("lll >> exp.visit Mutate rhs = {:?}", rhs);
+                },
+                Value(node_id, v) => {
+                    let this_value_loc = env.get_node_loc(*node_id);
+                    log::info!("lll >> exp.visit this_value_loc = {:?}", env.get_location(&this_value_loc));
+                    match v {
+                        Address(address) => log::info!("address = {}", env.display(address)),
+                        Number(int) => log::info!("int = {}", int),
+                        Bool(b) => log::info!("b = {}", b),
+                        ByteArray(bytes) => log::info!("bytes = {:?}", bytes),
+                        AddressArray(array) => log::info!("array = {:?}", array),
+                        Vector(array) => log::info!("array = {:?}", array),
+                    }
+                    // log::info!("lll >> exp.visit Explicitly list all enum variants");
+                    // if let Some(name) = get_name_from_value(v) {
+                    //     let item = ItemOrAccess::Access(Access::ExprAddressName(*name));
+                    //     visitor.handle_item_or_access(self, project_context, &item);
+                    // }
+                },
+                // Explicitly list all enum variants
+                LoopCont(node_id, _) | LocalVar(node_id, _) | 
+                Temporary(node_id, _) | Invalid(node_id) => {
+                    let this_default_loc = env.get_node_loc(*node_id);
+                    log::info!("lll >> exp.visit this_default_loc = {:?}", env.get_location(&this_default_loc));
+                },
+            }
+        });
+        let _ = fs::write(output_file, func_exp_content);
+    }
+    */
