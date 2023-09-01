@@ -4,6 +4,7 @@
 use super::{context::*, item::*, analyzer_handler::*, project_context::*, types::ResolvedType};
 
 use crate::utils::{path_concat, FileRange, GetPosition, GetPositionStruct};
+use codespan::ByteOffset;
 use lsp_server::*;
 
 use lsp_types::*;
@@ -95,6 +96,8 @@ pub(crate) struct Handler {
     pub(crate) result_loc: Option<Loc>,
 
     pub(crate) result_item_or_access: Option<ItemOrAccess>,
+    pub(crate) capture_items_span : Vec<codespan::Span>,
+    pub(crate) result_candidates : Vec<FileRange>,
 }
 
 impl Handler {
@@ -107,6 +110,8 @@ impl Handler {
             result_loc: None,
             result2: None,
             result_item_or_access: None,
+            capture_items_span: vec![],
+            result_candidates: vec![],
         }
     }
 
@@ -124,7 +129,13 @@ impl Handler {
             None => false,
         }
     }
-    fn to_locations(&self) -> Vec<Location> {
+    fn to_locations(&mut self) -> Vec<Location> {
+        if let Some(most_clost_item_idx) = find_smallest_length_index(&self.capture_items_span) {
+            if most_clost_item_idx < self.result_candidates.len() {
+                self.result = Some(self.result_candidates[most_clost_item_idx].clone());
+            }
+        }
+
         let mut ret = Vec::with_capacity(2);
         if let Some(x) = self.result.as_ref() {
             ret.push(x.mk_location());
@@ -132,6 +143,8 @@ impl Handler {
         if let Some(x) = self.result2.as_ref() {
             ret.push(x.mk_location());
         }
+        self.capture_items_span.clear();
+        self.result_candidates.clear();
         ret
     }
 
@@ -220,14 +233,11 @@ impl Handler {
             exp.visit(&mut |e| {
                 use move_model::ast::ExpData::*;
                 use move_model::ast::Operation::MoveFunction;
-                // use move_model::ast::Value::*;
+                use move_model::ast::Value::*;
                 match e {
-                    // if let ExpData::Call(_, Operation::MoveFunction(mid, fid), _) = e {
-                    //     called.insert(mid.qualified(*fid));
-                    // }
-                    Call(node_id, MoveFunction(mid, fid), args) => {
+                    Call(node_id, MoveFunction(mid, fid), _) => {
                         let this_call_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit call loc = {:?}", env.get_location(&this_call_loc));
+                        log::info!("lll >> exp.visit call loc = {:?}", this_call_loc);
                         if this_call_loc.span().start() < mouse_line_last_col.span().start() &&
                            mouse_line_last_col.span().start() < this_call_loc.span().end() {
                             let called_module = env.get_module(*mid);
@@ -244,11 +254,118 @@ impl Handler {
                                 line_end: called_fun_line.line.0,
                                 col_end: called_fun_line.column.0 + called_fun.get_full_name_str().len()as u32,
                             };
-                            if let None = self.result {
-                                self.result = Some(result);
-                            }
+                            self.result_candidates.push(result);
+                            self.capture_items_span.push(this_call_loc.span());
                         }
                     },
+                    Value(node_id, v) => {
+                        let this_value_loc = env.get_node_loc(*node_id);
+                        log::info!("lll >> exp.visit this_value_loc = {:?}", env.get_location(&this_value_loc));
+                        match v {
+                            Address(address) => log::info!("address = {}", env.display(address)),
+                            Number(int) => log::info!("int = {}", int),
+                            Bool(b) => log::info!("b = {}", b),
+                            ByteArray(bytes) => log::info!("bytes = {:?}", bytes),
+                            AddressArray(array) => log::info!("array = {:?}", array),
+                            Vector(array) => log::info!("array = {:?}", array),
+                        }
+                        // log::info!("lll >> exp.visit Explicitly list all enum variants");
+                        // if let Some(name) = get_name_from_value(v) {
+                        //     let item = ItemOrAccess::Access(Access::ExprAddressName(*name));
+                        //     visitor.handle_item_or_access(self, project_context, &item);
+                        // }
+                    },
+                    LocalVar(node_id, symbol) => {
+                        use move_model::ty::Type::*;
+                        let localvar_loc = env.get_node_loc(*node_id);
+                        log::info!("lll >> exp.visit localvar_loc = {:?}", env.get_location(&localvar_loc));
+                        if let Some(node_type) = env.get_node_type_opt(*node_id) {
+                            match node_type {
+                                Tuple(..) => {
+                                    log::info!("lll >> local val is tuple");
+                                },
+                                Vector(..) => {
+                                    log::info!("lll >> local val is Vector");
+                                },
+                                Struct(..) => {
+                                    log::info!("lll >> local val is Struct");
+                                },
+                                TypeParameter(..) => {
+                                    log::info!("lll >> local val is TypeParameter");
+                                },
+                                Reference(kind, type_ptr) => {
+                                    log::info!("lll >> local val is Reference {:?}-{:?}", kind, type_ptr);
+                                },
+                                Fun(..) => {
+                                    log::info!("lll >> local val is Fun");
+                                },
+                                TypeDomain(..) => {
+                                    log::info!("lll >> local val is TypeDomain");
+                                },
+                                Var(..) => {
+                                    log::info!("lll >> local val is Var");
+                                },
+                                _ => {}
+                            }
+                        }
+                        
+                    },
+                    Temporary(node_id, _) => {
+                        use move_model::ty::Type::*;
+                        let tmpvar_loc = env.get_node_loc(*node_id);
+                        // log::info!("lll >> exp.visit tmpvar_loc = {:?}", env.get_location(&tmpvar_loc));
+                        if tmpvar_loc.span().start() > mouse_line_last_col.span().start() ||
+                           mouse_line_last_col.span().start() > tmpvar_loc.span().end() {
+                            return;
+                        }
+
+                        if let Some(node_type) = env.get_node_type_opt(*node_id) {
+                            match node_type {
+                                Tuple(..) => {
+                                    log::info!("lll >> tmp_var is tuple");
+                                },
+                                Vector(..) => {
+                                    log::info!("lll >> tmp_var is Vector");
+                                },
+                                Struct(mid, stid, _) => {
+                                    let struct_from_module = env.get_module(mid);
+                                    let tmp_struct = struct_from_module.get_struct(stid);
+                                    log::info!("lll >> tmp_struct = {:?}", tmp_struct.get_full_name_str());
+                                    let tmp_struct_loc = tmp_struct.get_loc();
+                                    log::info!("lll >> tmp_struct_loc = {:?}", tmp_struct_loc);
+                                    let (tmp_struct_file, called_fun_line) = env.get_file_and_location(&tmp_struct_loc).unwrap();
+                                    let path_buf = PathBuf::from(tmp_struct_file);
+                                    let result = FileRange {
+                                        path: path_buf,
+                                        line_start: called_fun_line.line.0,
+                                        col_start: called_fun_line.column.0,
+                                        line_end: called_fun_line.line.0,
+                                        col_end: called_fun_line.column.0 + tmp_struct.get_full_name_str().len()as u32,
+                                    };
+                                    self.result_candidates.push(result);
+                                    self.capture_items_span.push(tmpvar_loc.span());
+                                    log::info!("lll >> tmp_var is Struct");
+                                },
+                                TypeParameter(..) => {
+                                    log::info!("lll >> tmp_var is TypeParameter");
+                                },
+                                Reference(kind, type_ptr) => {
+                                    log::info!("lll >> tmp_var is Reference {:?}-{:?}", kind, type_ptr);
+                                },
+                                Fun(..) => {
+                                    log::info!("lll >> tmp_var is Fun");
+                                },
+                                TypeDomain(..) => {
+                                    log::info!("lll >> tmp_var is TypeDomain");
+                                },
+                                Var(..) => {
+                                    log::info!("lll >> tmp_var is Var");
+                                },
+                                _ => {}
+                            }
+                        }
+                        
+                    }
                     _ => {}
                 }
             });
@@ -379,7 +496,20 @@ impl GetPosition for Handler {
     }
 }
 
+pub fn find_smallest_length_index(spans: &Vec<codespan::Span>) -> Option<usize> {
+    let mut smallest_length = i64::MAX;
+    let mut smallest_index = None;
+    
+    for (index, span) in spans.iter().enumerate() {
+        let length = span.end() - span.start();
+        if length.0 < smallest_length {
+            smallest_length = length.0;
+            smallest_index = Some(index);
+        }
+    }
 
+    smallest_index
+}
 
     /*
     // fun.get_friend_env()
@@ -516,3 +646,4 @@ impl GetPosition for Handler {
         let _ = fs::write(output_file, func_exp_content);
     }
     */
+
