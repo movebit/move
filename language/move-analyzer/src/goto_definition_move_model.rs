@@ -142,15 +142,20 @@ impl Handler {
         let mut target_module_id = ModuleId::new(0);
         let mut target_fun_id = FunId::new(env.symbol_pool().make("name"));
 
+        let mut move_file_str: &str = "null_move_file";
+        if let Some(file_stem) = move_file_path.file_stem() {
+            if let Some(file_stem_str) = file_stem.to_str() {
+                move_file_str = file_stem_str;
+            }
+        }
         for module in env.get_target_modules() {
-            let move_file_name = module.get_full_name_str();
-            if let Some(file_stem) = move_file_path.file_stem() {
-                if let Some(file_stem_str) = file_stem.to_str() {
-                    if move_file_name.contains(file_stem_str) {
-                        target_module_id = module.get_id();
-                        found_target_module = true;
-                    }
-                }
+            // let module_file_name = module.get_full_name_str();
+            // if module_file_name.contains(move_file_str) {
+            if module.matches_name(move_file_str) {
+                target_module_id = module.get_id();
+                found_target_module = true;
+                log::info!("lll >> module_file_name = {:?}", module.get_full_name_str());
+                break;
             }
         }
 
@@ -166,6 +171,7 @@ impl Handler {
                     found_target_fun = true;
                     break;
                 }
+                // log::info!("lll >> func_start_pos = {:?}, func_end_pos = {:?}", func_start_pos, func_end_pos);
             }
         }
 
@@ -176,9 +182,8 @@ impl Handler {
         let target_module = env.get_module(target_module_id);
         let target_fun = target_module.get_function(target_fun_id);
         let this_fun_loc = target_fun.get_loc();
-        let func_start_pos = env.get_location(&this_fun_loc).unwrap();
-        log::info!("lll >> func_start_pos = {:?}", func_start_pos);
-
+        // let func_start_pos = env.get_location(&this_fun_loc).unwrap();
+        // log::info!("lll >> func_start_pos = {:?}", func_start_pos);
 
         let mut mouse_line_first_col = move_model::model::Loc::new(this_fun_loc.file_id(), 
             codespan::Span::new(
@@ -239,10 +244,10 @@ impl Handler {
                                 line_end: called_fun_line.line.0,
                                 col_end: called_fun_line.column.0 + called_fun.get_full_name_str().len()as u32,
                             };
-                            self.result = Some(result);
-                            return;
+                            if let None = self.result {
+                                self.result = Some(result);
+                            }
                         }
-
                     },
                     _ => {}
                 }
@@ -250,32 +255,6 @@ impl Handler {
         }
         /*
         // called func
-        if let Some(called_func) = target_fun.get_called_functions() {
-            for item in called_func.iter() {
-                let called_module = env.get_module(item.module_id);
-                let called_fun = called_module.get_function(item.id);
-                log::info!("lll >> get_called_functions = {:?}", called_fun.get_full_name_str());
-                let called_fun_loc = called_fun.get_loc();
-                log::info!("lll >> called_fun_loc = {:?}", called_fun_loc);
-                let (called_fun_file, called_fun_line) = env.get_file_and_location(&called_fun_loc).unwrap();
-
-
-                // if called_fun_line.line.0 == line 
-                {
-                    let path_buf = PathBuf::from(called_fun_file);
-                    let result = FileRange {
-                        path: path_buf,
-                        line_start: called_fun_line.line.0,
-                        col_start: called_fun_line.column.0,
-                        line_end: called_fun_line.line.0,
-                        col_end: called_fun_line.column.0 + called_fun.get_full_name_str().len()as u32,
-                    };
-                    self.result = Some(result);
-                    return;
-                }
-            }
-        }
-
         // log::info!("lll >> get_parameter_types = {:?}", target_fun.get_parameter_types());
         // log::info!("lll >> get_parameters = {:?}", target_fun.get_parameters());
         // log::info!("lll >> get_result_type = {:?}", target_fun.get_result_type());
