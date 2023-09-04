@@ -236,7 +236,7 @@ impl Handler {
                 use move_model::ast::Operation::MoveFunction;
                 use move_model::ast::Value::*;
                 match e {
-                    Value(node_id, v) => {
+                    Value(node_id, v) => { // Const variable
                         let this_value_loc = env.get_node_loc(*node_id);
                         log::info!("lll >> exp.visit this_value_loc = {:?}", env.get_location(&this_value_loc));
                         match v {
@@ -253,13 +253,16 @@ impl Handler {
                         //     visitor.handle_item_or_access(self, project_context, &item);
                         // }
                     },
-                    LocalVar(node_id, symbol) => {
+                    LocalVar(node_id, localvar_symbol) => {
                         use move_model::ty::Type::*;
                         let localvar_loc = env.get_node_loc(*node_id);
                         log::info!("lll >> exp.visit localvar_loc = {:?}", env.get_location(&localvar_loc));
-                        return;
+                        log::info!("lll >> exp.visit localvar_symbol = {}", localvar_symbol.display(env.symbol_pool()));
+                        let local_source = env.get_source(&localvar_loc);
+                        log::info!("lll >> local_source = {:?}", local_source);
                         if localvar_loc.span().start() > mouse_line_last_col.span().start() ||
                             mouse_line_last_col.span().start() > localvar_loc.span().end() {
+                            // log::info!("??? localvar return");
                             return;
                         }
                         if let Some(node_type) = env.get_node_type_opt(*node_id) {
@@ -270,12 +273,12 @@ impl Handler {
                                 Vector(..) => {
                                     log::info!("lll >> local_var is Vector");
                                 },
-                                Struct(mid, stid, _) => {
+                                Struct(mid, stid, ty_vec) => {
                                     let struct_from_module = env.get_module(mid);
                                     let local_struct = struct_from_module.get_struct(stid);
                                     log::info!("lll >> local_struct = {:?}", local_struct.get_full_name_str());
                                     let local_struct_loc = local_struct.get_loc();
-                                    log::info!("lll >> local_struct_loc = {:?}", local_struct_loc);
+                                    log::info!("lll >> local_struct_loc = {:?}", env.get_location(&local_struct_loc));
                                     let (local_struct_file, local_struct_pos) = env.get_file_and_location(&local_struct_loc).unwrap();
                                     let path_buf = PathBuf::from(local_struct_file);
                                     let result = FileRange {
@@ -287,13 +290,53 @@ impl Handler {
                                     };
                                     self.result_candidates.push(result);
                                     self.capture_items_span.push(localvar_loc.span());
-                                    log::info!("lll >> local_var is Struct");
+                                    log::info!("lll >> local_var is Struct, and ty_vec.len = {}", ty_vec.len());
+
+                                    for item in ty_vec {
+                                        match item {
+                                            Primitive(..) => {
+                                                log::info!("lll >> struct ty_vec maybe field is Primitive");
+                                            },
+                                            Vector(..) => {
+                                                log::info!("lll >> struct ty_vec maybe field is Vector");
+                                            },
+                                            Struct(..) => {
+                                                log::info!("lll >> struct ty_vec maybe field is Struct");
+                                            },
+                                            Reference(..) => {
+                                                log::info!("lll >> struct ty_vec maybe field is Reference");
+                                            },
+                                            _ => {
+                                                log::info!("lll >> struct ty_vec maybe field is Default");
+                                            },
+                                        }
+                                    }
                                 },
                                 TypeParameter(..) => {
                                     log::info!("lll >> local_var is TypeParameter");
                                 },
                                 Reference(kind, type_ptr) => {
                                     log::info!("lll >> local_var is Reference {:?}-{:?}", kind, type_ptr);
+                                    // local_var is Reference Mutable-Struct(ModuleId(37), StructId(Symbol(1531)), [TypeParameter(0)])
+                                    if let Struct(mid, stid, _) = *type_ptr {
+                                        let struct_from_module = env.get_module(mid);
+                                        let local_struct = struct_from_module.get_struct(stid);
+                                        log::info!("lll >> local_struct = {:?}", local_struct.get_full_name_str());
+                                        let local_struct_loc = local_struct.get_loc();
+                                        log::info!("lll >> local_struct_loc = {:?}", local_struct_loc);
+                                        let (local_struct_file, local_struct_pos) = env.get_file_and_location(&local_struct_loc).unwrap();
+                                        let path_buf = PathBuf::from(local_struct_file);
+                                        let result = FileRange {
+                                            path: path_buf,
+                                            line_start: local_struct_pos.line.0,
+                                            col_start: local_struct_pos.column.0,
+                                            line_end: local_struct_pos.line.0,
+                                            col_end: local_struct_pos.column.0 + local_struct.get_full_name_str().len()as u32,
+                                        };
+                                        self.result_candidates.push(result);
+                                        self.capture_items_span.push(localvar_loc.span());
+                                        log::info!("lll >> local_var is Struct");
+                                    }
                                 },
                                 Fun(..) => {
                                     log::info!("lll >> local_var is Fun");
@@ -318,7 +361,6 @@ impl Handler {
                         use move_model::ty::Type::*;
                         let tmpvar_loc = env.get_node_loc(*node_id);
                         log::info!("lll >> exp.visit tmpvar_loc = {:?}", env.get_location(&tmpvar_loc));
-                        return;
                         if tmpvar_loc.span().start() > mouse_line_last_col.span().start() ||
                            mouse_line_last_col.span().start() > tmpvar_loc.span().end() {
                             return;
@@ -367,8 +409,7 @@ impl Handler {
                     },
                     Call(node_id, MoveFunction(mid, fid), _) => {
                         let this_call_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit call loc = {:?}", this_call_loc);
-                        return;
+                        log::info!("lll >> exp.visit this_call_loc = {:?}", env.get_location(&this_call_loc));
                         if this_call_loc.span().start() < mouse_line_last_col.span().start() &&
                            mouse_line_last_col.span().start() < this_call_loc.span().end() {
                             let called_module = env.get_module(*mid);
@@ -389,32 +430,68 @@ impl Handler {
                             self.capture_items_span.push(this_call_loc.span());
                         }
                     },
-                    Invoke(..) => {
+                    Invoke(node_id, ..) => {
                         log::info!("lll >> expdata is Invoke");
+                        let invoke_loc = env.get_node_loc(*node_id);
+                        log::info!("lll >> exp.visit invoke_loc = {:?}", env.get_location(&invoke_loc));
                     },
-                    Lambda(..) => {
+                    Lambda(node_id, ..) => {
                         log::info!("lll >> expdata is Lambda");
+                        let lambda_loc = env.get_node_loc(*node_id);
+                        log::info!("lll >> exp.visit lambda_loc = {:?}", env.get_location(&lambda_loc));
                     },
-                    Quant(..) => {
+                    Quant(node_id, ..) => {
                         log::info!("lll >> expdata is Quant");
+                        let quant_loc = env.get_node_loc(*node_id);
+                        log::info!("lll >> exp.visit quant_loc = {:?}", env.get_location(&quant_loc));
                     },
-                    Block(node_id, ..) => {
+                    Block(node_id, pattern, Some(option_exp), exp) => {
+                        // Statement block in '{' and '}' which contains let
                         log::info!("lll >> expdata is Block");
                         let block_loc = env.get_node_loc(*node_id);
                         log::info!("lll >> exp.visit block_loc = {:?}", env.get_location(&block_loc));
-                        return;
+                        /*
+                        // for (item_id, item_symbol) in pattern.vars() {
+                        //     let item_loc = env.get_node_loc(item_id);
+                        //     let item_source = env.get_source(&item_loc);
+                        //     log::info!("lll >> item_source = {:?}", item_source);
+                        //     log::info!("lll >> item_symbol = {}", item_symbol.display(env.symbol_pool()));
+                        // }
+                        use move_model::ast::Pattern;
+                        match pattern {
+                            Pattern::Var(id, var_symbol) => {
+                                log::info!("lll >> var_symbol = {}", var_symbol.display(env.symbol_pool()));
+                                // option_exp.
+                            },
+                            Pattern::Tuple(..) => {
+                                log::info!("lll >> Block's pattern is Pattern::Tuple");
+                            },
+                            Pattern::Struct(id, structid, struct_pattern) => {
+                                log::info!("lll >> Block's pattern is Pattern::Struct");
+                            },
+                            _ => {
+                                log::info!("lll >> Block's pattern is Pattern::_");
+                            }
+                        }
+                        */
                     },
-                    IfElse(..) => {
+                    IfElse(node_id, ..) => {
                         log::info!("lll >> expdata is IfElse");
+                        let ifelse_loc = env.get_node_loc(*node_id);
+                        log::info!("lll >> exp.visit ifelse_loc = {:?}", env.get_location(&ifelse_loc));
                     },
-                    Return(..) => {
+                    Return(node_id, ..) => {
                         log::info!("lll >> expdata is Return");
+                        let return_loc = env.get_node_loc(*node_id);
+                        log::info!("lll >> exp.visit return_loc = {:?}", env.get_location(&return_loc));
                     },
                     Sequence(node_id, ..) => {
+                        // Statement block in '{' and '}'
                         log::info!("lll >> expdata is Sequence");
                         let sequence_loc = env.get_node_loc(*node_id);
                         log::info!("lll >> exp.visit sequence_loc = {:?}", env.get_location(&sequence_loc));
-                        return;
+                        // let sequence_source = env.get_source(&sequence_loc);
+                        // log::info!("lll >> sequence_source = {:?}", sequence_source);
                     },
                     Loop(..) => {
                         log::info!("lll >> expdata is Loop");
@@ -422,11 +499,18 @@ impl Handler {
                     LoopCont(..) => {
                         log::info!("lll >> expdata is LoopCont");
                     },
-                    Assign(..) => {
+                    Assign(node_id, ..) => {
                         log::info!("lll >> expdata is Assign");
+                        let assign_loc = env.get_node_loc(*node_id);
+                        log::info!("lll >> exp.visit assign_loc = {:?}", env.get_location(&assign_loc));
                     },
-                    Mutate(..) => {
+                    Mutate(node_id, ..) => {
                         log::info!("lll >> expdata is Mutate");
+                        let mutate_loc = env.get_node_loc(*node_id);
+                        log::info!("lll >> exp.visit mutate_loc = {:?}", env.get_location(&mutate_loc));
+                        let mutate_source = env.get_source(&mutate_loc);
+                        log::info!("lll >> mutate_source = {:?}", mutate_source);
+                        // todo: this maybe has link access of struct field
                     },
                     _ => {}
                 }
