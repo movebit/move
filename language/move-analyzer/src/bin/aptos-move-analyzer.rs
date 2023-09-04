@@ -161,7 +161,7 @@ fn main() {
 }
 
 fn on_request(context: &mut Context, request: &Request) {
-    log::info!("aptos receive method:{}", request.method.as_str());
+    // log::info!("aptos receive method:{}", request.method.as_str());
     match request.method.as_str() {
         lsp_types::request::GotoDefinition::METHOD => {
             goto_definition_move_model::on_go_to_def_request(context, request);
@@ -169,7 +169,9 @@ fn on_request(context: &mut Context, request: &Request) {
         // lsp_types::request::GotoTypeDefinition::METHOD => {
         //     goto_definition_move_model::on_go_to_type_def_request(context, request);
         // }
-        _ => eprintln!("handle request '{}' from client", request.method),
+        _ => {
+            // eprintln!("handle request '{}' from client", request.method)
+        },
     }
 }
 

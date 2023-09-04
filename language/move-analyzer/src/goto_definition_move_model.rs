@@ -150,6 +150,7 @@ impl Handler {
 
     
     fn process_func(&mut self, env: &GlobalEnv, move_file_path: &Path, line: u32, col: u32) {
+        log::info!("lll >> process_func =======================================\n\n");
         let mut found_target_module = false;
         let mut found_target_fun = false;
         let mut target_module_id = ModuleId::new(0);
@@ -167,7 +168,7 @@ impl Handler {
             if module.matches_name(move_file_str) {
                 target_module_id = module.get_id();
                 found_target_module = true;
-                log::info!("lll >> module_file_name = {:?}", module.get_full_name_str());
+                // log::info!("lll >> module_file_name = {:?}", module.get_full_name_str());
                 break;
             }
         }
@@ -229,35 +230,12 @@ impl Handler {
         log::info!("lll >> mouse_source = {:?}", mouse_source);
 
         if let Some(exp) = target_fun.get_def() {
-            log::info!("lll >> target_fun.get_def = {}", exp.display_for_fun(target_fun.clone()));
+            // log::info!("lll >> target_fun.get_def = {}", exp.display_for_fun(target_fun.clone()));
             exp.visit(&mut |e| {
                 use move_model::ast::ExpData::*;
                 use move_model::ast::Operation::MoveFunction;
                 use move_model::ast::Value::*;
                 match e {
-                    Call(node_id, MoveFunction(mid, fid), _) => {
-                        let this_call_loc = env.get_node_loc(*node_id);
-                        log::info!("lll >> exp.visit call loc = {:?}", this_call_loc);
-                        if this_call_loc.span().start() < mouse_line_last_col.span().start() &&
-                           mouse_line_last_col.span().start() < this_call_loc.span().end() {
-                            let called_module = env.get_module(*mid);
-                            let called_fun = called_module.get_function(*fid);
-                            log::info!("lll >> get_called_functions = {:?}", called_fun.get_full_name_str());
-                            let called_fun_loc = called_fun.get_loc();
-                            log::info!("lll >> called_fun_loc = {:?}", called_fun_loc);
-                            let (called_fun_file, called_fun_line) = env.get_file_and_location(&called_fun_loc).unwrap();
-                            let path_buf = PathBuf::from(called_fun_file);
-                            let result = FileRange {
-                                path: path_buf,
-                                line_start: called_fun_line.line.0,
-                                col_start: called_fun_line.column.0,
-                                line_end: called_fun_line.line.0,
-                                col_end: called_fun_line.column.0 + called_fun.get_full_name_str().len()as u32,
-                            };
-                            self.result_candidates.push(result);
-                            self.capture_items_span.push(this_call_loc.span());
-                        }
-                    },
                     Value(node_id, v) => {
                         let this_value_loc = env.get_node_loc(*node_id);
                         log::info!("lll >> exp.visit this_value_loc = {:?}", env.get_location(&this_value_loc));
@@ -279,33 +257,59 @@ impl Handler {
                         use move_model::ty::Type::*;
                         let localvar_loc = env.get_node_loc(*node_id);
                         log::info!("lll >> exp.visit localvar_loc = {:?}", env.get_location(&localvar_loc));
+                        return;
+                        if localvar_loc.span().start() > mouse_line_last_col.span().start() ||
+                            mouse_line_last_col.span().start() > localvar_loc.span().end() {
+                            return;
+                        }
                         if let Some(node_type) = env.get_node_type_opt(*node_id) {
                             match node_type {
                                 Tuple(..) => {
-                                    log::info!("lll >> local val is tuple");
+                                    log::info!("lll >> local_var is Tuple");
                                 },
                                 Vector(..) => {
-                                    log::info!("lll >> local val is Vector");
+                                    log::info!("lll >> local_var is Vector");
                                 },
-                                Struct(..) => {
-                                    log::info!("lll >> local val is Struct");
+                                Struct(mid, stid, _) => {
+                                    let struct_from_module = env.get_module(mid);
+                                    let local_struct = struct_from_module.get_struct(stid);
+                                    log::info!("lll >> local_struct = {:?}", local_struct.get_full_name_str());
+                                    let local_struct_loc = local_struct.get_loc();
+                                    log::info!("lll >> local_struct_loc = {:?}", local_struct_loc);
+                                    let (local_struct_file, local_struct_pos) = env.get_file_and_location(&local_struct_loc).unwrap();
+                                    let path_buf = PathBuf::from(local_struct_file);
+                                    let result = FileRange {
+                                        path: path_buf,
+                                        line_start: local_struct_pos.line.0,
+                                        col_start: local_struct_pos.column.0,
+                                        line_end: local_struct_pos.line.0,
+                                        col_end: local_struct_pos.column.0 + local_struct.get_full_name_str().len()as u32,
+                                    };
+                                    self.result_candidates.push(result);
+                                    self.capture_items_span.push(localvar_loc.span());
+                                    log::info!("lll >> local_var is Struct");
                                 },
                                 TypeParameter(..) => {
-                                    log::info!("lll >> local val is TypeParameter");
+                                    log::info!("lll >> local_var is TypeParameter");
                                 },
                                 Reference(kind, type_ptr) => {
-                                    log::info!("lll >> local val is Reference {:?}-{:?}", kind, type_ptr);
+                                    log::info!("lll >> local_var is Reference {:?}-{:?}", kind, type_ptr);
                                 },
                                 Fun(..) => {
-                                    log::info!("lll >> local val is Fun");
+                                    log::info!("lll >> local_var is Fun");
                                 },
                                 TypeDomain(..) => {
-                                    log::info!("lll >> local val is TypeDomain");
+                                    log::info!("lll >> local_var is TypeDomain");
+                                },
+                                ResourceDomain(..) => {
+                                    log::info!("lll >> local_var is ResourceDomain");
                                 },
                                 Var(..) => {
-                                    log::info!("lll >> local val is Var");
+                                    log::info!("lll >> local_var is Var");
                                 },
-                                _ => {}
+                                _ => {
+                                    log::info!("lll >> local_var is default");
+                                }
                             }
                         }
                         
@@ -313,7 +317,8 @@ impl Handler {
                     Temporary(node_id, _) => {
                         use move_model::ty::Type::*;
                         let tmpvar_loc = env.get_node_loc(*node_id);
-                        // log::info!("lll >> exp.visit tmpvar_loc = {:?}", env.get_location(&tmpvar_loc));
+                        log::info!("lll >> exp.visit tmpvar_loc = {:?}", env.get_location(&tmpvar_loc));
+                        return;
                         if tmpvar_loc.span().start() > mouse_line_last_col.span().start() ||
                            mouse_line_last_col.span().start() > tmpvar_loc.span().end() {
                             return;
@@ -321,36 +326,30 @@ impl Handler {
 
                         if let Some(node_type) = env.get_node_type_opt(*node_id) {
                             match node_type {
-                                Tuple(..) => {
-                                    log::info!("lll >> tmp_var is tuple");
-                                },
-                                Vector(..) => {
-                                    log::info!("lll >> tmp_var is Vector");
-                                },
                                 Struct(mid, stid, _) => {
                                     let struct_from_module = env.get_module(mid);
                                     let tmp_struct = struct_from_module.get_struct(stid);
                                     log::info!("lll >> tmp_struct = {:?}", tmp_struct.get_full_name_str());
                                     let tmp_struct_loc = tmp_struct.get_loc();
                                     log::info!("lll >> tmp_struct_loc = {:?}", tmp_struct_loc);
-                                    let (tmp_struct_file, called_fun_line) = env.get_file_and_location(&tmp_struct_loc).unwrap();
+                                    let (tmp_struct_file, tmp_struct_loc) = env.get_file_and_location(&tmp_struct_loc).unwrap();
                                     let path_buf = PathBuf::from(tmp_struct_file);
                                     let result = FileRange {
                                         path: path_buf,
-                                        line_start: called_fun_line.line.0,
-                                        col_start: called_fun_line.column.0,
-                                        line_end: called_fun_line.line.0,
-                                        col_end: called_fun_line.column.0 + tmp_struct.get_full_name_str().len()as u32,
+                                        line_start: tmp_struct_loc.line.0,
+                                        col_start: tmp_struct_loc.column.0,
+                                        line_end: tmp_struct_loc.line.0,
+                                        col_end: tmp_struct_loc.column.0 + tmp_struct.get_full_name_str().len()as u32,
                                     };
                                     self.result_candidates.push(result);
                                     self.capture_items_span.push(tmpvar_loc.span());
                                     log::info!("lll >> tmp_var is Struct");
                                 },
-                                TypeParameter(..) => {
-                                    log::info!("lll >> tmp_var is TypeParameter");
-                                },
                                 Reference(kind, type_ptr) => {
                                     log::info!("lll >> tmp_var is Reference {:?}-{:?}", kind, type_ptr);
+                                },
+                                TypeParameter(..) => {
+                                    log::info!("lll >> tmp_var is TypeParameter");
                                 },
                                 Fun(..) => {
                                     log::info!("lll >> tmp_var is Fun");
@@ -365,7 +364,70 @@ impl Handler {
                             }
                         }
                         
-                    }
+                    },
+                    Call(node_id, MoveFunction(mid, fid), _) => {
+                        let this_call_loc = env.get_node_loc(*node_id);
+                        log::info!("lll >> exp.visit call loc = {:?}", this_call_loc);
+                        return;
+                        if this_call_loc.span().start() < mouse_line_last_col.span().start() &&
+                           mouse_line_last_col.span().start() < this_call_loc.span().end() {
+                            let called_module = env.get_module(*mid);
+                            let called_fun = called_module.get_function(*fid);
+                            log::info!("lll >> get_called_functions = {:?}", called_fun.get_full_name_str());
+                            let called_fun_loc = called_fun.get_loc();
+                            log::info!("lll >> called_fun_loc = {:?}", called_fun_loc);
+                            let (called_fun_file, called_fun_line) = env.get_file_and_location(&called_fun_loc).unwrap();
+                            let path_buf = PathBuf::from(called_fun_file);
+                            let result = FileRange {
+                                path: path_buf,
+                                line_start: called_fun_line.line.0,
+                                col_start: called_fun_line.column.0,
+                                line_end: called_fun_line.line.0,
+                                col_end: called_fun_line.column.0 + called_fun.get_full_name_str().len()as u32,
+                            };
+                            self.result_candidates.push(result);
+                            self.capture_items_span.push(this_call_loc.span());
+                        }
+                    },
+                    Invoke(..) => {
+                        log::info!("lll >> expdata is Invoke");
+                    },
+                    Lambda(..) => {
+                        log::info!("lll >> expdata is Lambda");
+                    },
+                    Quant(..) => {
+                        log::info!("lll >> expdata is Quant");
+                    },
+                    Block(node_id, ..) => {
+                        log::info!("lll >> expdata is Block");
+                        let block_loc = env.get_node_loc(*node_id);
+                        log::info!("lll >> exp.visit block_loc = {:?}", env.get_location(&block_loc));
+                        return;
+                    },
+                    IfElse(..) => {
+                        log::info!("lll >> expdata is IfElse");
+                    },
+                    Return(..) => {
+                        log::info!("lll >> expdata is Return");
+                    },
+                    Sequence(node_id, ..) => {
+                        log::info!("lll >> expdata is Sequence");
+                        let sequence_loc = env.get_node_loc(*node_id);
+                        log::info!("lll >> exp.visit sequence_loc = {:?}", env.get_location(&sequence_loc));
+                        return;
+                    },
+                    Loop(..) => {
+                        log::info!("lll >> expdata is Loop");
+                    },
+                    LoopCont(..) => {
+                        log::info!("lll >> expdata is LoopCont");
+                    },
+                    Assign(..) => {
+                        log::info!("lll >> expdata is Assign");
+                    },
+                    Mutate(..) => {
+                        log::info!("lll >> expdata is Mutate");
+                    },
                     _ => {}
                 }
             });
