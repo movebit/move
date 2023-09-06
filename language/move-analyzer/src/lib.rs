@@ -43,5 +43,4 @@ pub mod scope;
 pub mod syntax;
 pub mod types;
 pub mod utils;
-// pub mod goto_definition;
 pub mod goto_definition_move_model;

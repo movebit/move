@@ -3,7 +3,7 @@
 
 use super::{context::*, item::*, analyzer_handler::*, project_context::*, types::ResolvedType};
 
-use crate::utils::{path_concat, FileRange, GetPosition, GetPositionStruct};
+use crate::utils::{path_concat, FileRange, GetPositionStruct};
 use codespan::ByteOffset;
 use lsp_server::*;
 
@@ -31,7 +31,6 @@ use std::{
     fmt::format,
 };
 use move_symbol_pool::Symbol;
-
 
 /// Handles go-to-def request of the language server.
 pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server::Response {
@@ -115,20 +114,6 @@ impl Handler {
         }
     }
 
-    fn match_loc(&self, loc: &Loc, services: &dyn HandleItemService) -> bool {
-        let r = services.convert_loc_range(loc);
-        match &r {
-            Some(r) => GetPositionStruct::in_range(
-                &GetPositionStruct {
-                    fpath: self.filepath.clone(),
-                    line: self.line,
-                    col: self.col,
-                },
-                r,
-            ),
-            None => false,
-        }
-    }
     fn to_locations(&mut self) -> Vec<Location> {
         if let Some(most_clost_item_idx) = find_smallest_length_index(&self.capture_items_span) {
             if most_clost_item_idx < self.result_candidates.len() {
@@ -752,77 +737,19 @@ impl ItemOrAccessHandler for Handler {
         services: &dyn HandleItemService,
         _project_context: &ProjectContext,
         item_or_access: &ItemOrAccess,
-    ) {
-        match item_or_access {
-            ItemOrAccess::Item(item) => {
-                let loc = item.def_loc();
-                if self.match_loc(&loc, services) {
-                    if let Some(t) = services.convert_loc_range(&loc) {
-                        self.result = Some(t);
-                        self.result_loc = Some(loc);
-                        self.result_item_or_access = Some(item_or_access.clone());
-                    }
-                }
-            },
-            ItemOrAccess::Access(access) => match access {
-                Access::AccessFiled(AccessFiled { from, to, item, .. }) => {
-                    log::info!("goto definition, handle_item_or_access(from({}) --> to({}))", from, to);
-                    if self.match_loc(&from.loc(), services) {
-                        if let Some(t) = services.convert_loc_range(&to.loc()) {
-                            self.result = Some(t);
-                            self.result_loc = Some(to.loc());
-                            self.result_item_or_access = Some(item_or_access.clone());
-                            if let Some(item) = item {
-                                self.result2 = services.convert_loc_range(&item.def_loc());
-                            }
-                        }
-                    }
-                }
-                Access::ExprAccessChain(chain, _, item) if item.is_build_in() => {
-                    if self.match_loc(&chain.loc, services) {
-                        if let Some(t) = services.convert_loc_range(&chain.loc) {
-                            self.result = Some(t);
-                            self.result_item_or_access = Some(item_or_access.clone());
-                        }
-                    }
-                }
-                _ => {
-                    log::trace!("access:{}", access);
-                    if let Some((access, def)) = access.access_module() {
-                        if self.match_loc(&access, services) {
-                            if let Some(t) = services.convert_loc_range(&def) {
-                                self.result = Some(t);
-                                self.result_loc = Some(def);
-                                self.result_item_or_access = Some(item_or_access.clone());
-                                return;
-                            }
-                        }
-                    }
-                    let locs = access.access_def_loc();
-                    if self.match_loc(&locs.0, services) {
-                        if let Some(t) = services.convert_loc_range(&locs.1) {
-                            self.result = Some(t);
-                            self.result_loc = Some(locs.1);
-                            self.result_item_or_access = Some(item_or_access.clone());
-                        }
-                    }
-                }
-            },
-        }
-    }
+    ) {}
 
     fn function_or_spec_body_should_visit(&self, range: &FileRange) -> bool {
-        Self::in_range(self, range)
+        false
     }
 
     fn finished(&self) -> bool {
-        self.result.is_some()
+        false
     }
 
     fn handle_project_env(&mut self, _services: &dyn HandleItemService, env: &GlobalEnv, move_file_path: &Path) {
         self.run_move_model_visitor_internal(env, move_file_path, self.line, self.col);
     }
- 
 }
 
 impl std::fmt::Display for Handler {
@@ -832,12 +759,6 @@ impl std::fmt::Display for Handler {
             "goto_definition,file:{:?} line:{} col:{}",
             self.filepath, self.line, self.col
         )
-    }
-}
-
-impl GetPosition for Handler {
-    fn get_position(&self) -> (PathBuf, u32, u32) {
-        (self.filepath.clone(), self.line, self.col)
     }
 }
 
@@ -855,140 +776,3 @@ pub fn find_smallest_length_index(spans: &Vec<codespan::Span>) -> Option<usize> 
 
     smallest_index
 }
-
-    /*
-    // fun.get_friend_env()
-                    
-    // fun.get_friend_name()
-
-    // fun.get_full_name_str()
-
-    // fun.get_type_parameter_count()
-
-    // fun.get_type_parameters()
-
-    // fun.get_parameter_count()
-
-    // fun.get_parameter_types()
-
-    // fun.get_result_type()
-
-    // fun.get_attributes()
-
-    // fun.visibility()
-    
-    if let Some(exp) = target_fun.get_def() {
-        log::info!("lll >> get_ast_func, fn body = {}", exp.display_for_fun(target_fun.clone()));
-        let output_file = format!("{}{}.txt", "./output_global_env-", target_fun.get_full_name_str());
-        let mut func_exp_content = String::from("");
-
-        exp.visit(&mut |e| {
-            use move_model::ast::ExpData::*;
-            use move_model::ast::Value::*;
-            // log::info!("lll >> exp.visit e = {:?}", e);
-            // func_exp_content.push_str(format!("{:?}", e).as_str());
-            match e {
-                Call(node_id, operation, args) => {
-                    let this_call_loc = env.get_node_loc(*node_id);
-                    log::info!("lll >> exp.visit call loc = {:?}", env.get_location(&this_call_loc));
-                },
-                Invoke(node_id, target, args) => {
-                    let this_invoke_loc = env.get_node_loc(*node_id);
-                    log::info!("lll >> exp.visit this_invoke_loc = {:?}", env.get_location(&this_invoke_loc));
-                    // log::info!("lll >> exp.visit args = {:?}", args);
-                    // for exp in args {
-                        
-                    // }
-                },
-                Lambda(node_id, _, body) => {
-                    let this_lambda_loc = env.get_node_loc(*node_id);
-                    log::info!("lll >> exp.visit this_lambda_loc = {:?}", env.get_location(&this_lambda_loc));
-                    // log::info!("lll >> exp.visit Lambda body = {:?}", body);
-                },
-                Quant(node_id, _, ranges, triggers, condition, body) => {
-                    let this_quant_loc = env.get_node_loc(*node_id);
-                    log::info!("lll >> exp.visit this_quant_loc = {:?}", env.get_location(&this_quant_loc));
-                    // log::info!("lll >> exp.visit Quant ranges = {:?}", ranges);
-                    for (node_id, range) in ranges {
-
-                    }
-                    // log::info!("lll >> exp.visit Quant triggers = {:?}", triggers);
-                    for trigger in triggers {
-                        // for e in trigger {
-                        // }
-                    }
-                    // log::info!("lll >> exp.visit Quant condition = {:?}", condition);
-                    if let Some(exp) = condition {
-                        
-                    }
-                },
-                Block(node_id, _, binding, body) => {
-                    let this_block_loc = env.get_node_loc(*node_id);
-                    log::info!("lll >> exp.visit this_block_loc = {:?}", env.get_location(&this_block_loc));
-                    // log::info!("lll >> exp.visit Block binding = {:?}", binding);
-                    if let Some(exp) = binding {
-                    
-                    }
-                },
-                IfElse(node_id, c, t, e) => {
-                    let this_ifelse_loc = env.get_node_loc(*node_id);
-                    log::info!("lll >> exp.visit this_ifelse_loc = {:?}", env.get_location(&this_ifelse_loc));
-                    // log::info!("lll >> exp.visit IfElse e = {:?}", e);
-                },
-                Loop(node_id, e) => {
-                    let this_loop_loc = env.get_node_loc(*node_id);
-                    log::info!("lll >> exp.visit this_loop_loc = {:?}", env.get_location(&this_loop_loc));
-                    // log::info!("lll >> exp.visit Loop e = {:?}", e);
-                },
-                Return(node_id, e) => {
-                    let this_return_loc = env.get_node_loc(*node_id);
-                    log::info!("lll >> exp.visit this_return_loc = {:?}", env.get_location(&this_return_loc));
-                    // log::info!("lll >> exp.visit Return e = {:?}", e);
-                },
-                Sequence(node_id, es) => {
-                    let this_sequence_loc = env.get_node_loc(*node_id);
-                    log::info!("lll >> exp.visit this_sequence_loc = {:?}", env.get_location(&this_sequence_loc));
-                    // log::info!("lll >> exp.visit Sequence es = {:?}", es);
-                    // for e in es {
-                        
-                    // }
-                },
-                Assign(node_id, _, e) => {
-                    let this_assign_loc = env.get_node_loc(*node_id);
-                    log::info!("lll >> exp.visit this_assign_loc = {:?}", env.get_location(&this_assign_loc));
-                    // log::info!("lll >> exp.visit Assign e = {:?}", e);
-                },
-                Mutate(node_id, lhs, rhs) => {
-                    let this_mutate_loc = env.get_node_loc(*node_id);
-                    log::info!("lll >> exp.visit this_mutate_loc = {:?}", env.get_location(&this_mutate_loc));
-                    // log::info!("lll >> exp.visit Mutate rhs = {:?}", rhs);
-                },
-                Value(node_id, v) => {
-                    let this_value_loc = env.get_node_loc(*node_id);
-                    log::info!("lll >> exp.visit this_value_loc = {:?}", env.get_location(&this_value_loc));
-                    match v {
-                        Address(address) => log::info!("address = {}", env.display(address)),
-                        Number(int) => log::info!("int = {}", int),
-                        Bool(b) => log::info!("b = {}", b),
-                        ByteArray(bytes) => log::info!("bytes = {:?}", bytes),
-                        AddressArray(array) => log::info!("array = {:?}", array),
-                        Vector(array) => log::info!("array = {:?}", array),
-                    }
-                    // log::info!("lll >> exp.visit Explicitly list all enum variants");
-                    // if let Some(name) = get_name_from_value(v) {
-                    //     let item = ItemOrAccess::Access(Access::ExprAddressName(*name));
-                    //     visitor.handle_item_or_access(self, project_context, &item);
-                    // }
-                },
-                // Explicitly list all enum variants
-                LoopCont(node_id, _) | LocalVar(node_id, _) | 
-                Temporary(node_id, _) | Invalid(node_id) => {
-                    let this_default_loc = env.get_node_loc(*node_id);
-                    log::info!("lll >> exp.visit this_default_loc = {:?}", env.get_location(&this_default_loc));
-                },
-            }
-        });
-        let _ = fs::write(output_file, func_exp_content);
-    }
-    */
-
