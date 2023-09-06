@@ -1,37 +1,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{analyzer_handler::*, context::*, item::*, project_context::*, types::ResolvedType};
-
-use crate::utils::{path_concat, FileRange, GetPositionStruct};
-use codespan::ByteOffset;
+use crate::{analyzer_handler::*, context::*, item::*, project_context::*, utils::{path_concat, FileRange}};
 use lsp_server::*;
-
-use crate::{
-    analyzer_handler::*, multiproject::MultiProject, project::Project, project_context::*,
-};
-use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
 use lsp_types::*;
-use move_command_line_common::files::FileHash;
-use move_compiler::{
-    diagnostics::Diagnostics, parser::ast::*, shared::Identifier, MatchedFileCommentMap,
-};
-use move_ir_types::location::{Loc, *};
 use move_model::{
     ast::{ExpData::*, Operation::*, Value, Value::*},
-    model::{FunId, FunctionEnv, GlobalEnv, ModuleEnv, ModuleId, StructId},
+    model::{FunId, GlobalEnv, ModuleId, StructId},
 };
-use move_package::{source_package::layout::SourcePackageLayout, BuildConfig, ModelConfig};
-use move_symbol_pool::Symbol;
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::format,
-    fs,
-    hash::Hash,
-    path::{Path, PathBuf},
-    str::FromStr,
-    time::SystemTime,
-};
+use std::path::{Path, PathBuf};
 
 /// Handles go-to-def request of the language server.
 pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server::Response {
@@ -88,14 +65,7 @@ pub(crate) struct Handler {
     pub(crate) line: u32,
     pub(crate) col: u32,
     pub(crate) result: Option<FileRange>,
-    /// AccessFiled ... can have this field.
-    pub(crate) result2: Option<FileRange>,
 
-    /// result_loc not convert to a FileRange
-    /// Current references find depend on this field.
-    pub(crate) result_loc: Option<Loc>,
-
-    pub(crate) result_item_or_access: Option<ItemOrAccess>,
     pub(crate) capture_items_span: Vec<codespan::Span>,
     pub(crate) result_candidates: Vec<FileRange>,
 }
@@ -107,9 +77,6 @@ impl Handler {
             line,
             col,
             result: None,
-            result_loc: None,
-            result2: None,
-            result_item_or_access: None,
             capture_items_span: vec![],
             result_candidates: vec![],
         }
@@ -124,9 +91,6 @@ impl Handler {
 
         let mut ret = Vec::with_capacity(2);
         if let Some(x) = self.result.as_ref() {
-            ret.push(x.mk_location());
-        }
-        if let Some(x) = self.result2.as_ref() {
             ret.push(x.mk_location());
         }
         self.capture_items_span.clear();
