@@ -331,16 +331,16 @@ impl Handler {
                             let atomic_field_source = env.get_source(&atomic_field_loc);
                             log::info!("lll >> atomic_field_source = {:?}", atomic_field_source);
                             // todo: should check mouse_last_col between in scope by atomic_field_loc
-                            // if atomic_field_loc.span().start() < 
+                            if atomic_field_loc.span().end() < mouse_line_last_col.span().start() ||
+                               atomic_field_loc.span().start() > mouse_line_last_col.span().end() {
+                                continue;
+                            }
+                            let field_type = field_env.get_type();
+                            self.process_type(env, &atomic_field_loc.span().clone(), &field_type);
                         }
                     }
-                    
-                    // todo: should get type string of this field
                 }
             }
-
-            let field_type = field_env.get_type();
-            self.process_type(env, &mouse_line_last_col, &field_type);
         }
 
     }
@@ -570,7 +570,7 @@ impl Handler {
                     let called_struct_loc = called_struct.get_loc();
                     // let (called_struct_file, called_struct_line) = env.get_file_and_location(&called_struct_loc).unwrap();
                     let call_struct_source = env.get_source(&called_struct_loc);
-                    log::info!("lll >> call_struct_source = {:?}", call_struct_source);
+                    // log::info!("lll >> call_struct_source = {:?}", call_struct_source);
                     if let Ok(call_struct_str) = call_struct_source {
                         if let Some(index) = call_struct_str.find(field_name_str.to_string().as_str()) {
                             let field_start = called_struct_loc.span().start() + codespan::ByteOffset(index.try_into().unwrap());
@@ -685,7 +685,7 @@ impl Handler {
     }
 
     fn process_type(&mut self, env: &GlobalEnv, 
-        mouse_line_last_col: &move_model::model::Loc, ty: &move_model::ty::Type) {
+        capture_items_span: &codespan::Span, ty: &move_model::ty::Type) {
         use move_model::ty::Type::*;
         match ty {
             Tuple(..) => {
@@ -699,48 +699,24 @@ impl Handler {
                 let type_struct = struct_from_module.get_struct(*stid);
                 log::info!("lll >> type_struct = {:?}", type_struct.get_full_name_str());
                 let type_struct_loc = type_struct.get_loc();
-                log::info!("lll >> type_struct_loc = {:?}", env.get_location(&type_struct_loc));
-                // if type_struct_occur_loc.span().start() > mouse_line_last_col.span().start() ||
-                //     mouse_line_last_col.span().start() > type_struct_occur_loc.span().end() {
-                //     return;
-                // }
-                // let (type_struct_file, type_struct_pos) = env.get_file_and_location(&type_struct_loc).unwrap();
-                // let path_buf = PathBuf::from(type_struct_file);
-                // let result = FileRange {
-                //     path: path_buf,
-                //     line_start: type_struct_pos.line.0,
-                //     col_start: type_struct_pos.column.0,
-                //     line_end: type_struct_pos.line.0,
-                //     col_end: type_struct_pos.column.0 + type_struct.get_full_name_str().len()as u32,
-                // };
-                // self.result_candidates.push(result);
-                // self.capture_items_span.push(var_loc.span());
+                log::info!("lll >> type_struct_loc = {:?}", env.get_file_and_location(&type_struct_loc));                
+                let (type_struct_file, type_struct_pos) = env.get_file_and_location(&type_struct_loc).unwrap();
+                let path_buf = PathBuf::from(type_struct_file);
+                let result = FileRange {
+                    path: path_buf,
+                    line_start: type_struct_pos.line.0,
+                    col_start: type_struct_pos.column.0,
+                    line_end: type_struct_pos.line.0,
+                    col_end: type_struct_pos.column.0 + type_struct.get_full_name_str().len()as u32,
+                };
+                self.capture_items_span.push(*capture_items_span);
+                self.result_candidates.push(result);
             },
             TypeParameter(..) => {
                 log::info!("lll >> type_var is TypeParameter");
             },
             Reference(kind, type_ptr) => {
                 log::info!("lll >> type_var is Reference {:?}-{:?}", kind, type_ptr);
-                // type_var is Reference Mutable-Struct(ModuleId(37), StructId(Symbol(1531)), [TypeParameter(0)])
-                // if let Struct(mid, stid, _) = *type_ptr {
-                //     let struct_from_module = env.get_module(mid);
-                //     let type_struct = struct_from_module.get_struct(stid);
-                //     log::info!("lll >> type_struct = {:?}", type_struct.get_full_name_str());
-                //     let type_struct_loc = type_struct.get_loc();
-                //     log::info!("lll >> type_struct_loc = {:?}", type_struct_loc);
-                //     let (type_struct_file, type_struct_pos) = env.get_file_and_location(&type_struct_loc).unwrap();
-                //     let path_buf = PathBuf::from(type_struct_file);
-                //     let result = FileRange {
-                //         path: path_buf,
-                //         line_start: type_struct_pos.line.0,
-                //         col_start: type_struct_pos.column.0,
-                //         line_end: type_struct_pos.line.0,
-                //         col_end: type_struct_pos.column.0 + type_struct.get_full_name_str().len()as u32,
-                //     };
-                //     self.result_candidates.push(result);
-                //     self.capture_items_span.push(var_loc.span());
-                //     log::info!("lll >> type_var is Struct");
-                // }
             },
             Fun(..) => {
                 log::info!("lll >> type_var is Fun");
