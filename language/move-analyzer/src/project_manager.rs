@@ -7,32 +7,23 @@ use crate::{analyzer_handler::*, multiproject::MultiProject, project::Project};
 use anyhow::{Ok, Result};
 use move_command_line_common::files::FileHash;
 use move_compiler::{
-    parser::ast::{
-        Ability, BinOp_, Definition, Exp, Exp_, FunctionSignature, LeadingNameAccess,
-        LeadingNameAccess_, ModuleDefinition, NameAccessChain, NameAccessChain_,
-        StructTypeParameter, Type, Value_,
-    },
-    shared::{Identifier, Name, NumericalAddress},
+    parser::ast::{Definition, LeadingNameAccess, LeadingNameAccess_, ModuleDefinition},
+    shared::{NumericalAddress, PackagePaths},
 };
 use move_core_types::account_address::*;
-use move_ir_types::location::*;
 use move_package::source_package::{layout::SourcePackageLayout, manifest_parser::*};
 use move_symbol_pool::Symbol;
 use std::{
     cell::RefCell,
     cmp::Ordering,
-    collections::{BTreeMap, HashMap},
+    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
     rc::Rc,
 };
 use walkdir::WalkDir;
-// use move_symbol_pool::Symbol;
-use move_compiler::shared::{NamedAddressMap, PackagePaths};
-use move_model::{model::GlobalEnv, options::ModelBuilderOptions, run_model_builder_with_options};
+use move_model::{options::ModelBuilderOptions, run_model_builder_with_options};
 
-use anyhow::*;
-use move_package::compilation::build_plan::BuildPlan;
 use num_bigint::BigUint;
 use tempfile::tempdir;
 
@@ -217,15 +208,15 @@ impl Project {
         );
         // delete old items.
         if let Some(defs) = old_defs.as_ref() {
-            let x = VecDefAstProvider::new(defs, self, layout);
-            x.with_module(|addr, d| {
-                // self.project_context
-                //     .delete_module_items(addr, d.name.value(), d.is_spec_module);
-            });
+            // let x = VecDefAstProvider::new(defs, self, layout);
+            // x.with_module(|addr, d| {
+            //     // self.project_context
+            //     //     .delete_module_items(addr, d.name.value(), d.is_spec_module);
+            // });
         };
         // Update defs.
         let mut dummy = DummyHandler;
-        let _ = self.run_visitor_for_file(&mut dummy, file_path, true);
+        let _ = self.run_visitor_for_file(&mut dummy, file_path);
     }
 
     /// Load a Move.toml project.
@@ -320,97 +311,6 @@ impl Project {
         Ok(())
     }
 
-    /// Load move files locate in sources and tests ...
-    pub(crate) fn load_layout_files(&mut self, manifest_path: &PathBuf, kind: SourcePackageLayout) {
-        use super::syntax::parse_file_string;
-        let mut p = manifest_path.clone();
-        p.push(kind.location_str());
-        for item in WalkDir::new(&p) {
-            let file = match item {
-                std::result::Result::Err(_e) => continue,
-                std::result::Result::Ok(x) => x,
-            };
-            if file.file_type().is_file()
-                && match file.file_name().to_str() {
-                    Some(s) => s.ends_with(".move"),
-                    None => continue,
-                }
-            {
-                if file
-                    .file_name()
-                    .to_str()
-                    .map(|x| x.starts_with('.'))
-                    .unwrap_or(false)
-                {
-                    continue;
-                }
-                let file_content = fs::read_to_string(file.path())
-                    .unwrap_or_else(|_| panic!("'{:?}' can't read_to_string", file.path()));
-                // log::info!("load source file {:?}", file.path());
-                let file_hash = FileHash::new(file_content.as_str());
-
-                // This is a move file.
-                let defs = parse_file_string(file.path().to_path_buf());
-                let defs = match defs {
-                    std::result::Result::Ok(x) => x,
-                    std::result::Result::Err(diags) => {
-                        let mut m = HashMap::new();
-                        m.insert(
-                            file_hash,
-                            (
-                                Symbol::from(file.path().to_str().unwrap()),
-                                file_content.clone(),
-                            ),
-                        );
-                        let buffer =
-                            move_compiler::diagnostics::report_diagnostics_to_buffer(&m, diags);
-                        let s = String::from_utf8_lossy(buffer.as_slice());
-                        log::error!("{}", s);
-                        continue;
-                    },
-                };
-
-                let defs = defs.0;
-
-                if kind == SourcePackageLayout::Sources {
-                    self.modules
-                        .get_mut(manifest_path)
-                        .unwrap()
-                        .as_ref()
-                        .borrow_mut()
-                        .sources
-                        .insert(file.path().to_path_buf().clone(), defs);
-                } else if kind == SourcePackageLayout::Tests {
-                    self.modules
-                        .get_mut(manifest_path)
-                        .unwrap()
-                        .as_ref()
-                        .borrow_mut()
-                        .tests
-                        .insert(file.path().to_path_buf().clone(), defs);
-                } else {
-                    self.modules
-                        .get_mut(manifest_path)
-                        .unwrap()
-                        .as_ref()
-                        .borrow_mut()
-                        .scripts
-                        .insert(file.path().to_path_buf().clone(), defs);
-                }
-                // update hash
-                self.hash_file
-                    .as_ref()
-                    .borrow_mut()
-                    .update(file.path().to_path_buf(), file_hash);
-                // update line mapping.
-                self.file_line_mapping
-                    .as_ref()
-                    .borrow_mut()
-                    .update(file.path().to_path_buf(), file_content.as_str());
-            }
-        }
-    }
-
     pub(crate) fn load_layout_files_v2(
         &mut self,
         manifest_path: &PathBuf,
@@ -459,84 +359,84 @@ impl Project {
         Ok(ret_paths)
     }
 
-    pub(crate) fn get_project_def(&mut self, manifest_path: &PathBuf, kind: SourcePackageLayout) {
-        use super::syntax::get_definition_in_global_env_by_move_file;
-        let mut p = manifest_path.clone();
-        p.push(kind.location_str());
-        for item in WalkDir::new(&p) {
-            let file = match item {
-                std::result::Result::Err(_e) => continue,
-                std::result::Result::Ok(x) => x,
-            };
-            if file.file_type().is_file()
-                && match file.file_name().to_str() {
-                    Some(s) => s.ends_with(".move"),
-                    None => continue,
-                }
-            {
-                if file
-                    .file_name()
-                    .to_str()
-                    .map(|x| x.starts_with('.'))
-                    .unwrap_or(false)
-                {
-                    continue;
-                }
-                let file_content = fs::read_to_string(file.path())
-                    .unwrap_or_else(|_| panic!("'{:?}' can't read_to_string", file.path()));
-                log::info!("parse source file {:?}", file.path());
-                let file_hash = FileHash::new(file_content.as_str());
+    // pub(crate) fn get_project_def(&mut self, manifest_path: &PathBuf, kind: SourcePackageLayout) {
+    //     use super::syntax::get_definition_in_global_env_by_move_file;
+    //     let mut p = manifest_path.clone();
+    //     p.push(kind.location_str());
+    //     for item in WalkDir::new(&p) {
+    //         let file = match item {
+    //             std::result::Result::Err(_e) => continue,
+    //             std::result::Result::Ok(x) => x,
+    //         };
+    //         if file.file_type().is_file()
+    //             && match file.file_name().to_str() {
+    //                 Some(s) => s.ends_with(".move"),
+    //                 None => continue,
+    //             }
+    //         {
+    //             if file
+    //                 .file_name()
+    //                 .to_str()
+    //                 .map(|x| x.starts_with('.'))
+    //                 .unwrap_or(false)
+    //             {
+    //                 continue;
+    //             }
+    //             let file_content = fs::read_to_string(file.path())
+    //                 .unwrap_or_else(|_| panic!("'{:?}' can't read_to_string", file.path()));
+    //             log::info!("parse source file {:?}", file.path());
+    //             let file_hash = FileHash::new(file_content.as_str());
 
-                let defs = get_definition_in_global_env_by_move_file(&self.global_env, file.path());
-                let defs = match defs {
-                    std::result::Result::Ok(x) => x,
-                    std::result::Result::Err(diags) => {
-                        let mut m = HashMap::new();
-                        m.insert(
-                            file_hash,
-                            (
-                                Symbol::from(file.path().to_str().unwrap()),
-                                file_content.clone(),
-                            ),
-                        );
-                        let buffer =
-                            move_compiler::diagnostics::report_diagnostics_to_buffer(&m, diags);
-                        let s = String::from_utf8_lossy(buffer.as_slice());
-                        log::error!("{}", s);
-                        continue;
-                    },
-                };
+    //             let defs = get_definition_in_global_env_by_move_file(&self.global_env, file.path());
+    //             let defs = match defs {
+    //                 std::result::Result::Ok(x) => x,
+    //                 std::result::Result::Err(diags) => {
+    //                     let mut m = HashMap::new();
+    //                     m.insert(
+    //                         file_hash,
+    //                         (
+    //                             Symbol::from(file.path().to_str().unwrap()),
+    //                             file_content.clone(),
+    //                         ),
+    //                     );
+    //                     let buffer =
+    //                         move_compiler::diagnostics::report_diagnostics_to_buffer(&m, diags);
+    //                     let s = String::from_utf8_lossy(buffer.as_slice());
+    //                     log::error!("{}", s);
+    //                     continue;
+    //                 },
+    //             };
 
-                let defs = defs.0;
-                if kind == SourcePackageLayout::Sources {
-                    self.modules
-                        .get_mut(manifest_path)
-                        .unwrap()
-                        .as_ref()
-                        .borrow_mut()
-                        .sources
-                        .insert(file.path().to_path_buf().clone(), defs);
-                } else if kind == SourcePackageLayout::Tests {
-                    self.modules
-                        .get_mut(manifest_path)
-                        .unwrap()
-                        .as_ref()
-                        .borrow_mut()
-                        .tests
-                        .insert(file.path().to_path_buf().clone(), defs);
-                } else {
-                    self.modules
-                        .get_mut(manifest_path)
-                        .unwrap()
-                        .as_ref()
-                        .borrow_mut()
-                        .scripts
-                        .insert(file.path().to_path_buf().clone(), defs);
-                }
-            }
-        }
-        // log::info!("lll << get_project_def");
-    }
+    //             let defs = defs.0;
+    //             if kind == SourcePackageLayout::Sources {
+    //                 self.modules
+    //                     .get_mut(manifest_path)
+    //                     .unwrap()
+    //                     .as_ref()
+    //                     .borrow_mut()
+    //                     .sources
+    //                     .insert(file.path().to_path_buf().clone(), defs);
+    //             } else if kind == SourcePackageLayout::Tests {
+    //                 self.modules
+    //                     .get_mut(manifest_path)
+    //                     .unwrap()
+    //                     .as_ref()
+    //                     .borrow_mut()
+    //                     .tests
+    //                     .insert(file.path().to_path_buf().clone(), defs);
+    //             } else {
+    //                 self.modules
+    //                     .get_mut(manifest_path)
+    //                     .unwrap()
+    //                     .as_ref()
+    //                     .borrow_mut()
+    //                     .scripts
+    //                     .insert(file.path().to_path_buf().clone(), defs);
+    //             }
+    //         }
+    //     }
+    //     // log::info!("lll << get_project_def");
+    // }
 
     pub(crate) fn name_to_addr_impl(&self, name: Symbol) -> AccountAddress {
         for x in self.manifests.iter() {
@@ -568,44 +468,6 @@ impl Project {
                 false
             }
         })
-    }
-
-    pub(crate) fn get_defs(
-        &self,
-        filepath: &PathBuf,
-        call_back: impl FnOnce(VecDefAstProvider),
-    ) -> anyhow::Result<()> {
-        let (manifest_path, layout) = match discover_manifest_and_kind(filepath.as_path()) {
-            Some(x) => x,
-            None => {
-                return anyhow::Result::Err(anyhow::anyhow!(
-                    "manifest not found for '{:?}'",
-                    filepath.as_path()
-                ))
-            },
-        };
-        let d = Default::default();
-        let d2 = Default::default();
-        let b = self
-            .modules
-            .get(&manifest_path)
-            .unwrap_or(&d2)
-            .as_ref()
-            .borrow();
-        call_back(VecDefAstProvider::new(
-            if layout == SourcePackageLayout::Sources {
-                b.sources.get(filepath).unwrap_or(&d)
-            } else if layout == SourcePackageLayout::Tests {
-                b.tests.get(filepath).unwrap_or(&d)
-            } else if layout == SourcePackageLayout::Scripts {
-                b.scripts.get(filepath).unwrap_or(&d)
-            } else {
-                unreachable!()
-            },
-            self,
-            layout,
-        ));
-        anyhow::Ok(())
     }
 
     pub(crate) fn get_module_addr(

@@ -163,17 +163,6 @@ impl std::fmt::Display for FileRange {
         )
     }
 }
-impl FileRange {
-    pub(crate) fn unknown() -> Self {
-        Self {
-            path: PathBuf::from("<unknown>"),
-            line_start: 0,
-            col_start: 0,
-            col_end: 0,
-            line_end: 0,
-        }
-    }
-}
 
 /// Path concat from
 pub fn path_concat(p1: &Path, p2: &Path) -> PathBuf {

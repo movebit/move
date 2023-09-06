@@ -26,6 +26,7 @@ use aptos_move_analyzer::{
     goto_definition_move_model,
     multiproject::MultiProject,
     utils::*,
+    syntax::parse_file_string,
 };
 use url::Url;
 
@@ -179,7 +180,6 @@ type DiagSender = Arc<Mutex<Sender<(PathBuf, Diagnostics)>>>;
 
 fn on_notification(context: &mut Context, notification: &Notification, diag_sender: DiagSender) {
     fn update_defs_on_changed(context: &mut Context, fpath: PathBuf, content: &str) {
-        use aptos_move_analyzer::syntax::parse_file_string;
         let file_hash = FileHash::new(content);
         let defs = parse_file_string(fpath.clone());
         let defs = match defs {

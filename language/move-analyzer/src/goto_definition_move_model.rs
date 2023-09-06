@@ -49,7 +49,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server:
             };
         },
     }
-    .run_visitor_for_file(&mut handler, &fpath, false);
+    .run_visitor_for_file(&mut handler, &fpath);
     let locations = handler.to_locations();
     let r = Response::new_ok(
         request.id.clone(),
