@@ -2,18 +2,15 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    analyzer_handler::*, multiproject::MultiProject, project::Project, project_context::*,
-};
-use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
+use crate::{analyzer_handler::*, project::Project};
+// use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
 use move_command_line_common::files::FileHash;
-use move_compiler::{diagnostics::Diagnostics, parser::ast::*, MatchedFileCommentMap};
+use move_compiler::parser::ast::*;
 use move_ir_types::location::*;
 use move_model::model::{GlobalEnv, ModuleEnv, ModuleId};
-use move_package::{source_package::layout::SourcePackageLayout, BuildConfig, ModelConfig};
+// use move_package::{source_package::layout::SourcePackageLayout, BuildConfig, ModelConfig};
 use move_symbol_pool::Symbol;
 use std::{
-    fmt::format,
     fs,
     path::{Path, PathBuf},
 };
@@ -216,7 +213,6 @@ impl Project {
             "lll >> after load project, self.manifest_paths.len = {:?}",
             self.manifest_paths.len()
         );
-        self.project_context.clear_scopes_and_addresses();
         // for module in self.global_env.get_target_modules() {
         //     get_ast_func(&module);
         // }

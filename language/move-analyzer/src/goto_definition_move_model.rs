@@ -1,7 +1,12 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{analyzer_handler::*, context::*, item::*, project_context::*, utils::{path_concat, FileRange}};
+use crate::{
+    analyzer_handler::*,
+    context::*,
+    item::*,
+    utils::{path_concat, FileRange},
+};
 use lsp_server::*;
 use lsp_types::*;
 use move_model::{
@@ -695,7 +700,6 @@ impl ItemOrAccessHandler for Handler {
     fn handle_item_or_access(
         &mut self,
         services: &dyn HandleItemService,
-        _project_context: &ProjectContext,
         item_or_access: &ItemOrAccess,
     ) {
     }
