@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #[cfg(test)]
 mod tests {
+    use aptos_move_analyzer::utils::*;
     use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
     use move_compiler::shared::PackagePaths;
     use move_model::{options::ModelBuilderOptions, run_model_builder_with_options};
@@ -9,9 +10,8 @@ mod tests {
         fs,
         path::{Path, PathBuf},
     };
-    use aptos_move_analyzer::utils::*;
 
-    fn test_run_model_builder_with_options(fpath: &Path) -> datatest_stable::Result<()>  {
+    fn test_run_model_builder_with_options(fpath: &Path) -> datatest_stable::Result<()> {
         eprintln!("fpath = {:?}", fpath);
         let targets = vec![PackagePaths {
             name: None,
@@ -19,10 +19,12 @@ mod tests {
             named_address_map: std::collections::BTreeMap::<String, _>::new(),
         }];
         let env = run_model_builder_with_options(
-            targets, vec![], ModelBuilderOptions {
-                    compile_via_model: true,
-                    ..Default::default()
-                }
+            targets,
+            vec![],
+            ModelBuilderOptions {
+                compile_via_model: true,
+                ..Default::default()
+            },
         )?;
         eprintln!("env.get_module_count() = {:?}", &env.get_module_count());
         let diags = if env.diag_count(Severity::Warning) > 0 {
@@ -42,11 +44,15 @@ mod tests {
         }
 
         for module in env.get_modules() {
-            eprintln!("*module.get_name() = {:?}{:?}", module.get_name().addr(), module.get_name().name());
+            eprintln!(
+                "*module.get_name() = {:?}{:?}",
+                module.get_name().addr(),
+                module.get_name().name()
+            );
             for fun in module.get_functions() {
                 let id = fun.get_qualified_id();
                 eprintln!("func id = {:?}", id);
-                eprintln!("func get_full_name_str = {:?}", fun.get_full_name_str());                
+                eprintln!("func get_full_name_str = {:?}", fun.get_full_name_str());
             }
         }
         Ok(())

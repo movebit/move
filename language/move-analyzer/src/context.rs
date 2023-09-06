@@ -4,10 +4,7 @@
 
 use crate::multiproject::MultiProject;
 use lsp_server::Connection;
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-};
+use std::{collections::HashMap, path::PathBuf};
 
 /// The context within which the language server is running.
 pub struct Context {

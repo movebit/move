@@ -7,9 +7,9 @@ use crate::analyzer_handler::*;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
+    path::PathBuf,
+    rc::Rc,
     time::SystemTime,
-    path::PathBuf, 
-    rc::Rc
 };
 
 /// Project

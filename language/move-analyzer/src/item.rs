@@ -5,25 +5,12 @@ use super::{scope::*, types::*};
 use crate::project_context::{AccessEnv, ProjectContext};
 use enum_iterator::Sequence;
 use move_compiler::{
-    parser::ast::StructName,
-    parser::ast::StructTypeParameter,
-    parser::ast::FunctionName,
-    parser::ast::ConstantName,
-    parser::ast::PragmaProperty,
-    parser::ast::Visibility,
-    parser::ast::ModuleName,
-    parser::ast::ModuleIdent,
-    parser::ast::Exp,
-    parser::ast::Field,
-    parser::ast::Ability,
-    parser::ast::Type,
-    parser::ast::BindList,
-    parser::ast::Var,
-    parser::ast::NameAccessChain,
-    parser::ast::NameAccessChain_,
-    shared::Identifier,
-    shared::Name,
-    shared::TName,
+    parser::ast::{
+        Ability, BindList, ConstantName, Exp, Field, FunctionName, ModuleIdent, ModuleName,
+        NameAccessChain, NameAccessChain_, PragmaProperty, StructName, StructTypeParameter, Type,
+        Var, Visibility,
+    },
+    shared::{Identifier, Name, TName},
 };
 use move_core_types::account_address::AccountAddress;
 
@@ -225,8 +212,8 @@ impl ItemFun {
                 if project_context.get_current_addr_and_module_name() != self.addr_and_name {
                     return false;
                 }
-            }
-            Visibility::Public(_) => {}
+            },
+            Visibility::Public(_) => {},
             Visibility::Friend(_) => {
                 if !project_context.with_friends(
                     self.addr_and_name.addr,
@@ -235,7 +222,7 @@ impl ItemFun {
                 ) {
                     return false;
                 }
-            }
+            },
             Visibility::Script(_) => return true, // TODO script.
         }
         true
@@ -289,13 +276,13 @@ impl Item {
             Item::BuildInType(b) => ResolvedType::BuildInType(*b),
             Item::Parameter(_, ty) | Item::Var { ty, .. } | Item::Const(ItemConst { ty, .. }) => {
                 ty.clone()
-            }
+            },
             Item::Field(_, ty) => ty.clone(),
             Item::Fun(x) => ResolvedType::Fun(x.clone()),
             Item::Use(x) => {
                 for x in x.iter() {
                     match x {
-                        ItemUse::Module(_) => {}
+                        ItemUse::Module(_) => {},
                         ItemUse::Item(ItemUseItem { members, name, .. }) => {
                             return members
                                 .as_ref()
@@ -304,11 +291,11 @@ impl Item {
                                 .items
                                 .get(&name.value)
                                 .and_then(|i| i.to_type());
-                        }
+                        },
                     }
                 }
                 return None;
-            }
+            },
             Item::Dummy => return None,
             Item::SpecSchema(_, _) => return None,
             Item::ModuleName(_) => return None,
@@ -327,7 +314,7 @@ impl Item {
                     match x {
                         ItemUse::Module(ItemUseModule { members, .. }) => {
                             return members.borrow().name_and_addr.name.loc();
-                        }
+                        },
                         ItemUse::Item(ItemUseItem { members, name, .. }) => {
                             if let Some(t) = members
                                 .borrow()
@@ -346,11 +333,11 @@ impl Item {
                                     .map(|u| u.def_loc())
                                     .unwrap_or_else(|| Loc::new(FileHash::empty(), 0, 0));
                             }
-                        }
+                        },
                     }
                 }
                 Loc::new(FileHash::empty(), 0, 0)
-            }
+            },
             Item::Struct(x) => x.name.loc(),
             Item::BuildInType(_) => Loc::new(FileHash::empty(), 0, 0),
             Item::TParam(name, _) => name.loc,
@@ -436,15 +423,15 @@ impl std::fmt::Display for Item {
         match self {
             Item::Parameter(var, t) => {
                 write!(f, "{}:{}", var.0.value.as_str(), t)
-            }
+            },
             Item::ModuleName(ItemModuleName { name, .. }) => {
                 write!(f, "{}", name.value().as_str())
-            }
+            },
             Item::Use(x) => Ok(for x in x.iter() {
                 match x {
                     ItemUse::Module(ItemUseModule { module_ident, .. }) => {
                         write!(f, "use {:?} _", module_ident)?;
-                    }
+                    },
                     ItemUse::Item(ItemUseItem {
                         module_ident,
                         name,
@@ -462,26 +449,26 @@ impl std::fmt::Display for Item {
                                 String::from_str("").unwrap()
                             },
                         )?;
-                    }
+                    },
                 }
             }),
 
             Item::Const(ItemConst { name, ty, .. }) => {
                 write!(f, "{}:{}", name.0.value.as_str(), ty)
-            }
+            },
             Item::SpecConst(ItemConst { name, ty, .. }) => {
                 write!(f, "{}:{}", name.0.value.as_str(), ty)
-            }
+            },
             Item::Struct(s) => {
                 write!(f, "{}", s)
-            }
+            },
             Item::StructNameRef(ItemStructNameRef { name, .. }) => {
                 write!(f, "{}", name.value().as_str())
-            }
+            },
             Item::Fun(x) => write!(f, "{}", x),
             Item::BuildInType(x) => {
                 write!(f, "{}", x.to_static_str())
-            }
+            },
             Item::TParam(tname, abilities) => {
                 write!(f, "{}:", tname.value.as_str())?;
                 for i in 0..abilities.len() {
@@ -489,19 +476,19 @@ impl std::fmt::Display for Item {
                     write!(f, "{:?},", x.value)?;
                 }
                 std::result::Result::Ok(())
-            }
+            },
             Item::Var { var, ty, .. } => {
                 write!(f, "{}:{}", var.0.value.as_str(), ty)
-            }
+            },
             Item::Field(x, ty) => {
                 write!(f, "{}:{}", x.0.value.as_str(), ty)
-            }
+            },
             Item::Dummy => {
                 write!(f, "dummy")
-            }
+            },
             Item::SpecSchema(name, _) => {
                 write!(f, "{}", name.value.as_str())
-            }
+            },
             Item::MoveBuildInFun(x) => write!(f, "move_build_in_fun {}", x.to_static_str()),
             Item::SpecBuildInFun(x) => write!(f, "spec_build_in_fun {}", x.to_static_str()),
         }
@@ -561,20 +548,20 @@ impl std::fmt::Display for Access {
         match self {
             Access::ApplyType(a, _, x) => {
                 write!(f, "apply type {:?}->{}", a.value, x)
-            }
+            },
 
             Access::ExprVar(var, item) => {
                 write!(f, "expr {}->{}", var.borrow().1.as_str(), item)
-            }
+            },
             Access::ExprAccessChain(chain, _, item) => {
                 write!(f, "expr {:?}->{}", chain, item)
-            }
+            },
             Access::ExprAddressName(chain) => {
                 write!(f, "{:?}", chain)
-            }
+            },
             Access::AccessFiled(AccessFiled { from, to, .. }) => {
                 write!(f, "access_field {:?}->{:?}", from, to)
-            }
+            },
             Access::KeyWords(k) => write!(f, "{}", *k),
             Access::MacroCall(macro_, _) => write!(f, "{:?}", macro_),
             Access::Friend(name, item) => {
@@ -584,7 +571,7 @@ impl std::fmt::Display for Access {
                     get_name_chain_last_name(name).value.as_str(),
                     item
                 )
-            }
+            },
             Access::ApplySchemaTo(name, item) => {
                 write!(
                     f,
@@ -592,10 +579,10 @@ impl std::fmt::Display for Access {
                     get_name_chain_last_name(name).value.as_str(),
                     item
                 )
-            }
+            },
             Access::SpecFor(name, _) => {
                 write!(f, "spec for {}", name.value.as_str())
-            }
+            },
             Access::PragmaProperty(x) => {
                 write!(
                     f,
@@ -608,14 +595,14 @@ impl std::fmt::Display for Access {
                         String::from("...")
                     }
                 )
-            }
+            },
             Access::IncludeSchema(name, _def) => {
                 write!(
                     f,
                     "include {}",
                     get_name_chain_last_name(name).value.as_str()
                 )
-            }
+            },
         }
     }
 }
@@ -625,11 +612,11 @@ impl Access {
         match self {
             Access::ApplyType(name, _, x) => {
                 (get_name_chain_last_name(name).loc, x.as_ref().def_loc())
-            }
+            },
             Access::ExprVar(var, x) => (var.loc(), x.def_loc()),
             Access::ExprAccessChain(name, _, item) => {
                 (get_name_chain_last_name(name).loc, item.as_ref().def_loc())
-            }
+            },
 
             Access::ExprAddressName(_) => (
                 Loc::new(FileHash::empty(), 0, 0),
@@ -683,7 +670,7 @@ impl ItemOrAccess {
             ItemOrAccess::Access(access) => match access {
                 Access::ExprVar(_, item) | Access::ExprAccessChain(_, _, item) => {
                     item_is_local(item.as_ref())
-                }
+                },
                 _ => false,
             },
         }

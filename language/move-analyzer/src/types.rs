@@ -2,14 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::item::*;
-use crate::{item::ItemFun, analyzer_handler::ERR_ADDRESS, project_context::ProjectContext};
+use crate::{analyzer_handler::ERR_ADDRESS, item::ItemFun, project_context::ProjectContext};
 use enum_iterator::Sequence;
 use move_command_line_common::files::FileHash;
 use move_compiler::{
-    parser::ast::StructName,
-    parser::ast::Ability,
-    shared::Identifier,
-    shared::Name,
+    parser::ast::{Ability, StructName},
+    shared::{Identifier, Name},
 };
 
 // use crate::item::StructName;
@@ -109,23 +107,23 @@ impl ResolvedType {
     /// bind type parameter to concrete type
     pub(crate) fn bind_type_parameter(&mut self, types: &HashMap<Symbol, ResolvedType>) {
         match self {
-            ResolvedType::UnKnown => {}
-            ResolvedType::BuildInType(_) => {}
+            ResolvedType::UnKnown => {},
+            ResolvedType::BuildInType(_) => {},
             ResolvedType::TParam(name, _) => {
                 if let Some(x) = types.get(&name.value) {
                     *self = x.clone();
                 }
-            }
+            },
             ResolvedType::Ref(_, ref mut b) => {
                 b.as_mut().bind_type_parameter(types);
-            }
-            ResolvedType::Unit => {}
+            },
+            ResolvedType::Unit => {},
             ResolvedType::Multiple(ref mut xs) => {
                 for i in 0..xs.len() {
                     let t = xs.get_mut(i).unwrap();
                     t.bind_type_parameter(types);
                 }
-            }
+            },
             ResolvedType::Fun(x) => {
                 let xs = &mut x.parameters;
                 for i in 0..xs.len() {
@@ -133,23 +131,23 @@ impl ResolvedType {
                     t.1.bind_type_parameter(types);
                 }
                 x.ret_type.as_mut().bind_type_parameter(types);
-            }
+            },
             ResolvedType::Vec(ref mut b) => {
                 b.as_mut().bind_type_parameter(types);
-            }
+            },
 
             ResolvedType::Struct(_, ts) => {
                 for index in 0..ts.len() {
                     ts.get_mut(index).unwrap().bind_type_parameter(types);
                 }
-            }
-            ResolvedType::Range => {}
+            },
+            ResolvedType::Range => {},
             ResolvedType::Lambda { args, ret_ty } => {
                 for a in args.iter_mut() {
                     a.bind_type_parameter(types);
                 }
                 ret_ty.bind_type_parameter(types);
-            }
+            },
         }
     }
 }
@@ -236,14 +234,14 @@ impl std::fmt::Display for ResolvedType {
             ResolvedType::UnKnown => write!(f, "unknown"),
             ResolvedType::Struct(ItemStructNameRef { name, .. }, _) => {
                 write!(f, "{}", name.value().as_str())
-            }
+            },
             ResolvedType::BuildInType(x) => write!(f, "{}", x.to_static_str()),
             ResolvedType::TParam(name, _) => {
                 write!(f, "{}", name.value.as_str())
-            }
+            },
             ResolvedType::Ref(is_mut, ty) => {
                 write!(f, "&{}{}", if *is_mut { "mut " } else { "" }, ty.as_ref())
-            }
+            },
             ResolvedType::Unit => write!(f, "()"),
             ResolvedType::Multiple(m) => {
                 write!(f, "(")?;
@@ -252,16 +250,16 @@ impl std::fmt::Display for ResolvedType {
                     write!(f, "{}{}", if i == m.len() - 1 { "" } else { "," }, t)?;
                 }
                 write!(f, ")")
-            }
+            },
             ResolvedType::Fun(x) => {
                 write!(f, "{}", x)
-            }
+            },
             ResolvedType::Vec(ty) => {
                 write!(f, "vector<<{}>>", ty.as_ref())
-            }
+            },
             ResolvedType::Range => {
                 write!(f, "range(n..m)")
-            }
+            },
             ResolvedType::Lambda { args, ret_ty } => {
                 write!(f, "|")?;
                 if !args.is_empty() {
@@ -280,7 +278,7 @@ impl std::fmt::Display for ResolvedType {
                 } else {
                     Ok(())
                 }
-            }
+            },
         }
     }
 }

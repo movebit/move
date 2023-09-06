@@ -8,14 +8,12 @@ use crossbeam::channel::{bounded, select, Sender};
 use log::{Level, Metadata, Record};
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
-    notification::Notification as _, request::Request as _, 
-    OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, TypeDefinitionProviderCapability
+    notification::Notification as _, request::Request as _, OneOf, SaveOptions,
+    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
+    TypeDefinitionProviderCapability,
 };
 use move_command_line_common::files::FileHash;
-use move_compiler::{
-    diagnostics::Diagnostics, 
-    PASS_TYPING};
+use move_compiler::{diagnostics::Diagnostics, PASS_TYPING};
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -23,10 +21,10 @@ use std::{
 };
 
 use aptos_move_analyzer::{
-    context::{Context, FileDiags},
-    multiproject::MultiProject,
-    goto_definition_move_model,
     analyzer_handler::ConvertLoc,
+    context::{Context, FileDiags},
+    goto_definition_move_model,
+    multiproject::MultiProject,
     utils::*,
 };
 use url::Url;
@@ -106,9 +104,7 @@ fn main() {
         )),
         selection_range_provider: None,
         definition_provider: Some(OneOf::Left(true)),
-        type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(
-            true,
-        )),
+        type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
@@ -165,7 +161,7 @@ fn on_request(context: &mut Context, request: &Request) {
     match request.method.as_str() {
         lsp_types::request::GotoDefinition::METHOD => {
             goto_definition_move_model::on_go_to_def_request(context, request);
-        }
+        },
         // lsp_types::request::GotoTypeDefinition::METHOD => {
         //     goto_definition_move_model::on_go_to_type_def_request(context, request);
         // }
@@ -191,7 +187,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             std::result::Result::Err(d) => {
                 log::error!("update file failed,err:{:?}", d);
                 return;
-            }
+            },
         };
         let (defs, _) = defs;
         context.projects.update_defs(fpath.clone(), defs);
@@ -223,11 +219,11 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 Err(err) => {
                     log::error!("read file failed,err:{:?}", err);
                     return;
-                }
+                },
             };
             update_defs_on_changed(context, fpath.clone(), content.as_str());
             make_diag(context, diag_sender, fpath);
-        }
+        },
         lsp_types::notification::DidChangeTextDocument::METHOD => {
             use lsp_types::DidChangeTextDocumentParams;
             let parameters =
@@ -240,7 +236,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 fpath,
                 parameters.content_changes.last().unwrap().text.as_str(),
             );
-        }
+        },
 
         lsp_types::notification::DidOpenTextDocument::METHOD => {
             use lsp_types::DidOpenTextDocumentParams;
@@ -255,7 +251,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                     log::error!("not move project.");
                     send_not_project_file_error(context, fpath, true);
                     return;
-                }
+                },
             };
             match context.projects.get_project(&fpath) {
                 Some(_) => {
@@ -263,21 +259,21 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                         update_defs_on_changed(context, fpath.clone(), x.as_str());
                     };
                     return;
-                }
+                },
                 None => {
                     eprintln!("project '{:?}' not found try load.", fpath.as_path());
-                }
+                },
             };
             let p = match context.projects.load_projects(&context.connection, &mani) {
                 anyhow::Result::Ok(x) => x,
                 anyhow::Result::Err(e) => {
                     log::error!("load project failed,err:{:?}", e);
                     return;
-                }
+                },
             };
             context.projects.insert_project(p);
             make_diag(context, diag_sender, fpath);
-        }
+        },
         lsp_types::notification::DidCloseTextDocument::METHOD => {
             use lsp_types::DidCloseTextDocumentParams;
             let parameters =
@@ -291,9 +287,9 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                     log::error!("not move project.");
                     send_not_project_file_error(context, fpath, false);
                     return;
-                }
+                },
             };
-        }
+        },
 
         _ => log::error!("handle notification '{}' from client", notification.method),
     }
@@ -319,17 +315,17 @@ fn get_package_compile_diagnostics(
     //         .map(|(name, addr)| format!("{}={}", name.as_str(), addr))
     //         .collect();
     // log::debug!("named_address_mapping = {:?}", named_address_mapping);
-    
+
     let build_plan = BuildPlan::create(resolution_graph)?;
     let mut diagnostics = None;
     build_plan.compile_with_driver(&mut std::io::sink(), None, |compiler| {
         let (_, compilation_result) = compiler.run::<PASS_TYPING>()?;
         match compilation_result {
-            std::result::Result::Ok(_) => {}
+            std::result::Result::Ok(_) => {},
             std::result::Result::Err(diags) => {
                 eprintln!("get_package_compile_diagnostics compilate failed");
                 diagnostics = Some(diags);
-            }
+            },
         };
         Ok(Default::default())
     })?;
@@ -345,14 +341,14 @@ fn make_diag(context: &Context, diag_sender: DiagSender, fpath: PathBuf) {
         None => {
             log::error!("manifest not found.");
             return;
-        }
+        },
     };
     match context.projects.get_project(&fpath) {
         Some(x) => {
             if !x.load_ok() {
                 return;
             }
-        }
+        },
         None => return,
     };
     std::thread::spawn(move || {
@@ -361,7 +357,7 @@ fn make_diag(context: &Context, diag_sender: DiagSender, fpath: PathBuf) {
             Err(err) => {
                 log::error!("get_package_compile_diagnostics failed,err:{:?}", err);
                 return;
-            }
+            },
         };
         diag_sender.lock().unwrap().send((mani, x)).unwrap();
     });
@@ -418,19 +414,19 @@ fn send_diag(context: &mut Context, mani: PathBuf, x: Diagnostics) {
                 severity: Some(match s {
                     codespan_reporting::diagnostic::Severity::Bug => {
                         lsp_types::DiagnosticSeverity::ERROR
-                    }
+                    },
                     codespan_reporting::diagnostic::Severity::Error => {
                         lsp_types::DiagnosticSeverity::ERROR
-                    }
+                    },
                     codespan_reporting::diagnostic::Severity::Warning => {
                         lsp_types::DiagnosticSeverity::WARNING
-                    }
+                    },
                     codespan_reporting::diagnostic::Severity::Note => {
                         lsp_types::DiagnosticSeverity::INFORMATION
-                    }
+                    },
                     codespan_reporting::diagnostic::Severity::Help => {
                         lsp_types::DiagnosticSeverity::HINT
-                    }
+                    },
                 }),
                 message: format!(
                     "{}\n{}{:?}",

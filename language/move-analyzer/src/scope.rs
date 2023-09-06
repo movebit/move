@@ -4,7 +4,7 @@
 use super::{item::*, types::*};
 use crate::analyzer_handler::ERR_ADDRESS;
 use move_command_line_common::files::FileHash;
-use move_compiler::parser::ast::{ModuleName, ConstantName};
+use move_compiler::parser::ast::{ConstantName, ModuleName};
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::{Loc, Spanned};
 use move_symbol_pool::Symbol;
@@ -61,16 +61,16 @@ impl Scope {
                             // inserted, just return.
                             x2.extend(items.clone());
                             return;
-                        }
+                        },
                         _ => {
                             unreachable!()
-                        }
+                        },
                     }
                 };
-            }
+            },
             _ => {
                 unreachable!()
-            }
+            },
         }
         self.uses.insert(s, item);
     }
@@ -80,11 +80,11 @@ impl Scope {
         match &item {
             Item::Var { .. } | Item::Parameter(_, _) if s.as_str() == "_" => {
                 return;
-            }
+            },
             Item::Use(_) => {
                 unreachable!()
-            }
-            _ => {}
+            },
+            _ => {},
         }
         self.items.insert(s, item);
     }
@@ -197,8 +197,8 @@ impl ModuleScope {
             match &x.1 {
                 Item::Fun(_) | Item::SpecSchema(_, _) => {
                     s.enter_item(*x.0, x.1.clone());
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
         s

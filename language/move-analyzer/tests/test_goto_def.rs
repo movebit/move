@@ -3,19 +3,16 @@
 
 #[cfg(test)]
 mod tests {
-    use lsp_server::{Connection, Request, Response};
     use aptos_move_analyzer::{
         context::{Context, FileDiags, MultiProject},
         goto_definition,
         utils::*,
     };
+    use lsp_server::{Connection, Request, Response};
     use move_command_line_common::files::FileHash;
     use move_compiler::shared::*;
     use serde_json::json;
-    use std::{
-        path::PathBuf,
-        time::Duration,
-    };
+    use std::{path::PathBuf, time::Duration};
     pub use url::Url;
 
     fn update_defs(context: &mut Context, fpath: PathBuf, content: &str) {
@@ -28,7 +25,7 @@ mod tests {
             std::result::Result::Err(d) => {
                 log::error!("update file failed,err:{:?}", d);
                 return;
-            }
+            },
         };
         let (defs, _) = defs;
         context.projects.update_defs(fpath.clone(), defs);
@@ -68,7 +65,7 @@ mod tests {
             None => {
                 log::error!("not move project.");
                 return;
-            }
+            },
         };
         match mock_ctx.projects.get_project(&fpath) {
             Some(_) => {
@@ -76,17 +73,17 @@ mod tests {
                     update_defs(&mut mock_ctx, fpath.clone(), x.as_str());
                 };
                 return;
-            }
+            },
             None => {
                 eprintln!("project '{:?}' not found try load.", fpath.as_path());
-            }
+            },
         };
         let p = match mock_ctx.projects.load_project(&mock_ctx.connection, &mani) {
             anyhow::Result::Ok(x) => x,
             anyhow::Result::Err(e) => {
                 log::error!("load project failed,err:{:?}", e);
                 return;
-            }
+            },
         };
         mock_ctx.projects.insert_project(p);
 
@@ -155,7 +152,7 @@ mod tests {
             None => {
                 log::error!("not move project.");
                 return;
-            }
+            },
         };
         match mock_ctx.projects.get_project(&fpath) {
             Some(_) => {
@@ -163,17 +160,17 @@ mod tests {
                     update_defs(&mut mock_ctx, fpath.clone(), x.as_str());
                 };
                 return;
-            }
+            },
             None => {
                 eprintln!("project '{:?}' not found try load.", fpath.as_path());
-            }
+            },
         };
         let p = match mock_ctx.projects.load_project(&mock_ctx.connection, &mani) {
             anyhow::Result::Ok(x) => x,
             anyhow::Result::Err(e) => {
                 log::error!("load project failed,err:{:?}", e);
                 return;
-            }
+            },
         };
         mock_ctx.projects.insert_project(p);
 

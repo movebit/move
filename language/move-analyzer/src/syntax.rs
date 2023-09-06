@@ -2,21 +2,18 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_compiler::{
-    diagnostics::Diagnostics,
-    parser::ast::*,
-    MatchedFileCommentMap,
-};
-use move_command_line_common::files::FileHash;
-use move_ir_types::location::*;
-use move_package::{source_package::layout::SourcePackageLayout, BuildConfig, ModelConfig};
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
-use move_model::{model::{GlobalEnv, ModuleEnv, ModuleId}, options::ModelBuilderOptions, run_model_builder_with_options};
-use std::{
-    path::Path,
-    path::PathBuf,
+use move_command_line_common::files::FileHash;
+use move_compiler::{diagnostics::Diagnostics, parser::ast::*, MatchedFileCommentMap};
+use move_ir_types::location::*;
+use move_model::{
+    model::{GlobalEnv, ModuleEnv, ModuleId},
+    options::ModelBuilderOptions,
+    run_model_builder_with_options,
 };
+use move_package::{source_package::layout::SourcePackageLayout, BuildConfig, ModelConfig};
 use move_symbol_pool::Symbol;
+use std::path::{Path, PathBuf};
 pub fn reroot_path(path: Option<PathBuf>) -> anyhow::Result<PathBuf> {
     let path: PathBuf = path.unwrap_or_else(|| PathBuf::from("."));
     // find the root dir where Move.toml is located.
@@ -59,20 +56,26 @@ pub fn parse_package(path: &Path) -> GlobalEnv {
 
 // step1: get parser::ast::Function
 pub fn get_ast_func(module_env: &ModuleEnv) -> Vec<Function> {
-    eprintln!("lll >> get_ast_func, env.get_function_count() = {:?}", module_env.get_function_count());
+    eprintln!(
+        "lll >> get_ast_func, env.get_function_count() = {:?}",
+        module_env.get_function_count()
+    );
     for fun in module_env.get_functions() {
         let id = fun.get_qualified_id();
         if let Some(exp) = fun.get_def() {
-            log::info!("lll >> get_definition_in_global_env_by_move_file, fn body = {}", exp.display_for_fun(fun.clone()));
+            log::info!(
+                "lll >> get_definition_in_global_env_by_move_file, fn body = {}",
+                exp.display_for_fun(fun.clone())
+            );
         }
         // fun.get_def()
 
         // fun.get_friend_env()
-        
+
         // fun.get_friend_name()
 
         // fun.get_full_name_str()
-      
+
         // fun.get_type_parameter_count()
 
         // fun.get_type_parameters()
@@ -89,7 +92,6 @@ pub fn get_ast_func(module_env: &ModuleEnv) -> Vec<Function> {
 
         // fun.visibility()
     }
-
 
     vec![Function {
         attributes: Vec::new(),
@@ -127,23 +129,18 @@ pub fn get_ast_struct() -> StructDefinition {
 }
 
 // step3: get parser::ast::UseDecl
-pub fn get_ast_usedecl() {
-    
-}
+pub fn get_ast_usedecl() {}
 
 // step4: get parser::ast::FriendDecl
-pub fn get_ast_frind() {
-    
-}
+pub fn get_ast_frind() {}
 
 // step5: get parser::ast::Constant
-pub fn get_ast_constant() {
-    
-}
+pub fn get_ast_constant() {}
 
-
-pub fn get_definition_in_global_env_by_move_file(env: &GlobalEnv, move_file_path: &Path)
- -> Result<(Vec<Definition>, MatchedFileCommentMap), Diagnostics> {
+pub fn get_definition_in_global_env_by_move_file(
+    env: &GlobalEnv,
+    move_file_path: &Path,
+) -> Result<(Vec<Definition>, MatchedFileCommentMap), Diagnostics> {
     let defs = vec![];
     let get_target_module_id = |env: &GlobalEnv, move_file_path: &Path| -> Option<ModuleId> {
         for module in env.get_target_modules() {
@@ -185,7 +182,8 @@ pub fn get_definition_in_global_env_by_move_file(env: &GlobalEnv, move_file_path
 /// Parse the `input` string as a file of Move source code and return the
 /// result as either a pair of FileDefinition and doc comments or some Diagnostics. The `file` name
 /// is used to identify source locations in error messages.
-pub fn parse_file_string(file_path: PathBuf) -> 
-Result<(Vec<Definition>, MatchedFileCommentMap), Diagnostics> {
+pub fn parse_file_string(
+    file_path: PathBuf,
+) -> Result<(Vec<Definition>, MatchedFileCommentMap), Diagnostics> {
     get_definition_in_global_env_by_move_file(&parse_package(&file_path), file_path.as_path())
 }

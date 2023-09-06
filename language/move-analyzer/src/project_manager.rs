@@ -3,26 +3,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{item::*, project_context::*, types::*, utils::*};
-use crate::{project::Project, multiproject::MultiProject, analyzer_handler::*};
+use crate::{analyzer_handler::*, multiproject::MultiProject, project::Project};
 use anyhow::{Ok, Result};
 use move_command_line_common::files::FileHash;
 use move_compiler::{
-    parser::ast::LeadingNameAccess,
-    parser::ast::ModuleDefinition,
-    parser::ast::Definition,
-    parser::ast::Exp,
-    parser::ast::FunctionSignature,
-    parser::ast::Ability,
-    parser::ast::StructTypeParameter,
-    parser::ast::Type,
-    parser::ast::NameAccessChain,
-    parser::ast::Exp_,
-    parser::ast::Value_,
-    parser::ast::NameAccessChain_,
-    parser::ast::LeadingNameAccess_,
-    parser::ast::BinOp_,
-    shared::Identifier,
-    shared::Name,
+    parser::ast::{
+        Ability, BinOp_, Definition, Exp, Exp_, FunctionSignature, LeadingNameAccess,
+        LeadingNameAccess_, ModuleDefinition, NameAccessChain, NameAccessChain_,
+        StructTypeParameter, Type, Value_,
+    },
+    shared::{Identifier, Name, NumericalAddress},
 };
 use move_core_types::account_address::*;
 use move_ir_types::location::*;
@@ -31,40 +21,48 @@ use move_symbol_pool::Symbol;
 use std::{
     cell::RefCell,
     cmp::Ordering,
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     fs,
-    path::Path,
+    path::{Path, PathBuf},
+    rc::Rc,
 };
-use std::{path::PathBuf, rc::Rc};
 use walkdir::WalkDir;
-use std::collections::BTreeMap;
-use move_compiler::shared::NumericalAddress;
 // use move_symbol_pool::Symbol;
 use move_compiler::shared::{NamedAddressMap, PackagePaths};
 use move_model::{model::GlobalEnv, options::ModelBuilderOptions, run_model_builder_with_options};
 
 use anyhow::*;
 use move_package::compilation::build_plan::BuildPlan;
-use tempfile::tempdir;
 use num_bigint::BigUint;
+use tempfile::tempdir;
 
 // Determines the base of the number literal, depending on the prefix
-pub(crate) fn determine_num_text_and_base22(s: &str) -> (&str, move_compiler::shared::NumberFormat) {
+pub(crate) fn determine_num_text_and_base22(
+    s: &str,
+) -> (&str, move_compiler::shared::NumberFormat) {
     for c in s.chars() {
         if c.is_alphabetic() {
-            return (s, move_compiler::shared::NumberFormat::Hex)
+            return (s, move_compiler::shared::NumberFormat::Hex);
         }
     }
     (s, move_compiler::shared::NumberFormat::Decimal)
 }
 
 // Parse an address from a decimal or hex encoding
-pub fn parse_address_number22(s: &str) -> Option<([u8; AccountAddress::LENGTH], move_compiler::shared::NumberFormat)> {
+pub fn parse_address_number22(
+    s: &str,
+) -> Option<(
+    [u8; AccountAddress::LENGTH],
+    move_compiler::shared::NumberFormat,
+)> {
     let (txt, base) = determine_num_text_and_base22(s);
-    let parsed = BigUint::parse_bytes(txt.as_bytes(), match base {
-        move_compiler::shared::NumberFormat::Hex => 16,
-        move_compiler::shared::NumberFormat::Decimal => 10,
-    })?;
+    let parsed = BigUint::parse_bytes(
+        txt.as_bytes(),
+        match base {
+            move_compiler::shared::NumberFormat::Hex => 16,
+            move_compiler::shared::NumberFormat::Decimal => 10,
+        },
+    )?;
     let bytes = parsed.to_bytes_be();
     if bytes.len() > AccountAddress::LENGTH {
         return None;
@@ -151,18 +149,19 @@ impl Project {
         )?;
         log::info!("targets_paths.len() = {:?}", targets_paths.len());
         log::info!("dependents_paths.len() = {:?}", dependents_paths.len());
-    
+
         let build_config = move_package::BuildConfig {
             test_mode: true,
             install_dir: Some(tempdir().unwrap().path().to_path_buf()),
             skip_fetch_latest_git_deps: true,
             ..Default::default()
         };
-        let resolution_graph = build_config.resolution_graph_for_package(&working_dir, &mut Vec::new())?;
+        let resolution_graph =
+            build_config.resolution_graph_for_package(&working_dir, &mut Vec::new())?;
         let named_address_mapping: Vec<_> = resolution_graph
-                .extract_named_address_mapping()
-                .map(|(name, addr)| format!("{}={}", name.as_str(), addr))
-                .collect();
+            .extract_named_address_mapping()
+            .map(|(name, addr)| format!("{}={}", name.as_str(), addr))
+            .collect();
         // log::info!("named_address_mapping = {:?}", named_address_mapping);
         let addrs = parse_addresses_from_options(named_address_mapping.clone())?;
 
@@ -171,7 +170,8 @@ impl Project {
             paths: targets_paths
                 .into_iter()
                 .map(|p| p.to_string_lossy().to_string())
-                .collect::<Vec<_>>().clone(),
+                .collect::<Vec<_>>()
+                .clone(),
             named_address_map: addrs.clone(),
         }];
         let dependents = vec![PackagePaths {
@@ -179,15 +179,19 @@ impl Project {
             paths: dependents_paths
                 .into_iter()
                 .map(|p| p.to_string_lossy().to_string())
-                .collect::<Vec<_>>().clone(),
+                .collect::<Vec<_>>()
+                .clone(),
             named_address_map: addrs,
         }];
         new_project.global_env = run_model_builder_with_options(
-            targets, dependents, ModelBuilderOptions {
-                    compile_via_model: true,
-                    ..Default::default()
-                }
-        ).expect("Failed to create GlobalEnv!");
+            targets,
+            dependents,
+            ModelBuilderOptions {
+                compile_via_model: true,
+                ..Default::default()
+            },
+        )
+        .expect("Failed to create GlobalEnv!");
 
         // new_project.get_project_def(&working_dir, SourcePackageLayout::Sources);
         // new_project.get_project_def(&working_dir, SourcePackageLayout::Tests);
@@ -248,9 +252,12 @@ impl Project {
             let d: Rc<RefCell<SourceDefs>> = Default::default();
             self.modules.insert(manifest_path.clone(), d.clone());
             multi.asts.insert(manifest_path.clone(), d);
-            let source_paths1 = self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Sources)?;
-            let source_paths2 = self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Tests)?;
-            let source_paths3 = self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Scripts)?;
+            let source_paths1 =
+                self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Sources)?;
+            let source_paths2 =
+                self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Tests)?;
+            let source_paths3 =
+                self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Scripts)?;
             if is_main_source {
                 targets_paths.extend(source_paths1);
                 targets_paths.extend(source_paths2);
@@ -284,7 +291,7 @@ impl Project {
                 log::error!("parse_move_manifest_from_file failed,err:{:?}", err);
                 self.manifest_load_failures.insert(manifest_path.clone());
                 return anyhow::Result::Ok(());
-            }
+            },
         };
         self.manifests.push(manifest.clone());
         // load depends.
@@ -301,8 +308,14 @@ impl Project {
                 &manifest_path,
                 dep_name
             );
-            self.load_project(&p, multi, report_err.clone(), 
-                false, targets_paths, dependents_paths)?;
+            self.load_project(
+                &p,
+                multi,
+                report_err.clone(),
+                false,
+                targets_paths,
+                dependents_paths,
+            )?;
             // log::info!("dependency = '{:?}'", de);
         }
         Ok(())
@@ -355,7 +368,7 @@ impl Project {
                         let s = String::from_utf8_lossy(buffer.as_slice());
                         log::error!("{}", s);
                         continue;
-                    }
+                    },
                 };
 
                 let defs = defs.0;
@@ -399,8 +412,11 @@ impl Project {
         }
     }
 
-    pub(crate) fn load_layout_files_v2(&mut self, manifest_path: &PathBuf, kind: SourcePackageLayout) 
-        -> Result<Vec<PathBuf>> {
+    pub(crate) fn load_layout_files_v2(
+        &mut self,
+        manifest_path: &PathBuf,
+        kind: SourcePackageLayout,
+    ) -> Result<Vec<PathBuf>> {
         let mut ret_paths = Vec::new();
         let mut p = manifest_path.clone();
         p.push(kind.location_str());
@@ -444,10 +460,7 @@ impl Project {
         Ok(ret_paths)
     }
 
-    pub(crate) fn get_project_def(
-        &mut self, 
-        manifest_path: &PathBuf, 
-        kind: SourcePackageLayout) {
+    pub(crate) fn get_project_def(&mut self, manifest_path: &PathBuf, kind: SourcePackageLayout) {
         use super::syntax::get_definition_in_global_env_by_move_file;
         let mut p = manifest_path.clone();
         p.push(kind.location_str());
@@ -492,23 +505,33 @@ impl Project {
                         let s = String::from_utf8_lossy(buffer.as_slice());
                         log::error!("{}", s);
                         continue;
-                    }
+                    },
                 };
 
                 let defs = defs.0;
                 if kind == SourcePackageLayout::Sources {
-                    self.modules.get_mut(manifest_path).unwrap()
-                        .as_ref().borrow_mut().sources
+                    self.modules
+                        .get_mut(manifest_path)
+                        .unwrap()
+                        .as_ref()
+                        .borrow_mut()
+                        .sources
                         .insert(file.path().to_path_buf().clone(), defs);
                 } else if kind == SourcePackageLayout::Tests {
                     self.modules
-                        .get_mut(manifest_path).unwrap()
-                        .as_ref().borrow_mut().tests
+                        .get_mut(manifest_path)
+                        .unwrap()
+                        .as_ref()
+                        .borrow_mut()
+                        .tests
                         .insert(file.path().to_path_buf().clone(), defs);
                 } else {
                     self.modules
-                        .get_mut(manifest_path).unwrap()
-                        .as_ref().borrow_mut().scripts
+                        .get_mut(manifest_path)
+                        .unwrap()
+                        .as_ref()
+                        .borrow_mut()
+                        .scripts
                         .insert(file.path().to_path_buf().clone(), defs);
                 }
             }
@@ -568,7 +591,7 @@ impl Project {
                 } else {
                     ResolvedType::UnKnown
                 }
-            }
+            },
             SpecBuildInFun::Len => ResolvedType::new_build_in(BuildInType::NumType),
             SpecBuildInFun::Update => {
                 if let Some(type_args) = type_args {
@@ -580,7 +603,7 @@ impl Project {
                 } else {
                     ResolvedType::new_vector(t_in_vector)
                 }
-            }
+            },
             SpecBuildInFun::Vec => {
                 if let Some(type_args) = type_args {
                     if let Some(ty) = type_args.get(0) {
@@ -592,7 +615,7 @@ impl Project {
                 } else {
                     ResolvedType::new_vector(first_t)
                 }
-            }
+            },
             SpecBuildInFun::Concat => {
                 if let Some(type_args) = type_args {
                     if let Some(ty) = type_args.get(0) {
@@ -603,7 +626,7 @@ impl Project {
                 } else {
                     ResolvedType::new_vector(t_in_vector)
                 }
-            }
+            },
             SpecBuildInFun::Contains => ResolvedType::new_build_in(BuildInType::Bool),
             SpecBuildInFun::IndexOf => ResolvedType::new_build_in(BuildInType::NumType),
             SpecBuildInFun::Range => ResolvedType::Range,
@@ -634,7 +657,7 @@ impl Project {
                 } else {
                     ResolvedType::UnKnown
                 }
-            }
+            },
             MoveBuildInFun::BorrowGlobalMut | MoveBuildInFun::BorrowGlobal => {
                 if let Some(type_args) = type_args {
                     if let Some(ty) = type_args.get(0) {
@@ -646,7 +669,7 @@ impl Project {
                 } else {
                     ResolvedType::UnKnown
                 }
-            }
+            },
             MoveBuildInFun::Exits => ResolvedType::new_build_in(BuildInType::Bool),
         }
     }
@@ -694,7 +717,7 @@ impl Project {
                 }
                 fun_type.bind_type_parameter(&types);
                 Some(fun_type)
-            }
+            },
             _ => None,
         }
     }
@@ -713,7 +736,7 @@ impl Project {
                         .into_iter()
                         .find(|b| x.as_str().ends_with(b.to_static_str()));
                     ResolvedType::new_build_in(b.unwrap_or(BuildInType::NumType))
-                }
+                },
                 Value_::Bool(_) => ResolvedType::new_build_in(BuildInType::Bool),
                 Value_::HexString(_) => ResolvedType::new_build_in(BuildInType::NumType),
                 Value_::ByteString(_) => ResolvedType::new_build_in(BuildInType::String),
@@ -722,7 +745,7 @@ impl Project {
             Exp_::Name(name, _ /*  TODO this is a error. */) => {
                 let (item, _) = project_context.find_name_chain_item(name, self);
                 item.unwrap_or_default().to_type().unwrap_or_default()
-            }
+            },
             Exp_::Call(name, is_macro, ref type_args, exprs) => {
                 if *is_macro {
                     let c = MacroCall::from_chain(name).unwrap_or_default();
@@ -748,7 +771,7 @@ impl Project {
                             type_args,
                             exprs,
                         )
-                    }
+                    },
                     Item::MoveBuildInFun(b) => {
                         return self.get_move_build_in_call_type(
                             project_context,
@@ -756,8 +779,8 @@ impl Project {
                             type_args,
                             exprs,
                         )
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
                 let ty = self.initialize_fun_call(project_context, name, type_args, exprs);
                 match ty.unwrap_or_default() {
@@ -765,7 +788,7 @@ impl Project {
                     ResolvedType::Lambda { ret_ty, .. } => ret_ty.as_ref().clone(),
                     _ => ResolvedType::UnKnown,
                 }
-            }
+            },
 
             Exp_::Pack(name, type_args, fields) => {
                 let (struct_item, _) = project_context.find_name_chain_item(name, self);
@@ -774,10 +797,10 @@ impl Project {
                         Item::Struct(x) => x,
                         Item::StructNameRef(_) => {
                             unreachable!()
-                        }
+                        },
                         _ => {
                             return ResolvedType::UnKnown;
-                        }
+                        },
                     },
                     None => return ResolvedType::UnKnown,
                 };
@@ -833,7 +856,7 @@ impl Project {
                         .map(|x| types.get(&x.name.value).cloned().unwrap_or_default())
                         .collect(),
                 )
-            }
+            },
             Exp_::Vector(_, ty, exprs) => {
                 let mut ty = if let Some(ty) = ty {
                     ty.get(0).map(|ty| project_context.resolve_type(ty, self))
@@ -850,7 +873,7 @@ impl Project {
                     }
                 }
                 ResolvedType::new_vector(ty.unwrap_or_default())
-            }
+            },
             Exp_::IfElse(_, then_, else_) => {
                 let mut ty = self.get_expr_type(then_.as_ref(), project_context);
                 if ty.is_err() {
@@ -859,7 +882,7 @@ impl Project {
                     }
                 }
                 ty
-            }
+            },
             Exp_::While(_, _) | Exp_::Loop(_) => ResolvedType::new_unit(),
             Exp_::Block(b) => {
                 if let Some(expr) = b.3.as_ref() {
@@ -872,11 +895,11 @@ impl Project {
                 } else {
                     ResolvedType::new_unit()
                 }
-            }
+            },
             Exp_::Lambda(_, _) => {
                 // TODO.
                 ResolvedType::UnKnown
-            }
+            },
             Exp_::Quant(_, _, _, _, _) => ResolvedType::UnKnown,
             Exp_::ExpList(e) => {
                 let tys: Vec<_> = e
@@ -884,7 +907,7 @@ impl Project {
                     .map(|x| self.get_expr_type(x, project_context))
                     .collect();
                 ResolvedType::Multiple(tys)
-            }
+            },
 
             Exp_::Unit => ResolvedType::new_unit(),
             Exp_::Assign(_, _) => ResolvedType::new_unit(),
@@ -898,7 +921,7 @@ impl Project {
                     ResolvedType::Ref(_, t) => t.as_ref().clone(),
                     _ => ty,
                 }
-            }
+            },
             Exp_::UnaryExp(_, e) => self.get_expr_type(e, project_context),
             Exp_::BinopExp(left, op, right) => {
                 let left_ty = self.get_expr_type(left, project_context);
@@ -935,11 +958,11 @@ impl Project {
                     | BinOp_::Le
                     | BinOp_::Ge => ResolvedType::new_build_in(BuildInType::Bool),
                 }
-            }
+            },
             Exp_::Borrow(is_mut, e) => {
                 let ty = self.get_expr_type(e, project_context);
                 ResolvedType::new_ref(*is_mut, ty)
-            }
+            },
             Exp_::Dot(e, name) => {
                 let ty = self.get_expr_type(e, project_context);
                 let ty = match &ty {
@@ -954,10 +977,10 @@ impl Project {
                         } else {
                             ResolvedType::UnKnown
                         }
-                    }
+                    },
                     _ => ResolvedType::UnKnown,
                 }
-            }
+            },
 
             Exp_::Index(e, _index) => {
                 let ty = self.get_expr_type(e, project_context);
@@ -969,7 +992,7 @@ impl Project {
                     ResolvedType::Vec(x) => x.as_ref().clone(),
                     _ => ty,
                 }
-            }
+            },
 
             Exp_::Cast(_, ty) => project_context.resolve_type(ty, self),
             Exp_::Annotate(_, ty) => project_context.resolve_type(ty, self),
@@ -977,7 +1000,7 @@ impl Project {
             Exp_::UnresolvedError => {
                 // Nothings. didn't know what to do.
                 ResolvedType::UnKnown
-            }
+            },
         }
     }
 
@@ -1005,7 +1028,7 @@ impl Project {
         // Enter this.
         project_context.enter_types(self, name.value, item);
     }
-    
+
     pub(crate) fn visit_signature(
         &self,
         signature: &FunctionSignature,
@@ -1062,7 +1085,7 @@ impl Project {
                     "manifest not found for '{:?}'",
                     filepath.as_path()
                 ))
-            }
+            },
         };
         let d = Default::default();
         let d2 = Default::default();

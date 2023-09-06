@@ -214,10 +214,10 @@ pub fn normal_path_components(x: &Vec<Component<'_>>) -> PathBuf {
         match v {
             Component::Prefix(x) => ret.push(x.as_os_str()),
             Component::RootDir => ret.push("/"),
-            Component::CurDir => {}
+            Component::CurDir => {},
             Component::ParentDir => {
                 let _ = ret.pop();
-            }
+            },
             Component::Normal(x) => ret.push(*x),
         }
     }
@@ -362,10 +362,10 @@ pub fn cpu_pprof(_seconds: u64) {
                 let file = File::create(tmp.clone()).unwrap();
                 report.flamegraph(file).unwrap();
                 eprintln!("pprof file at {:?}", tmp.as_path());
-            }
+            },
             Result::Err(e) => {
                 log::error!("build report failed,err:{}", e);
-            }
+            },
         };
     });
 }

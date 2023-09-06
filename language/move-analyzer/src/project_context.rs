@@ -1,15 +1,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{item::*, analyzer_handler::*, scope::*, types::*, utils::*};
+use super::{analyzer_handler::*, item::*, scope::*, types::*, utils::*};
 use move_command_line_common::files::FileHash;
-use move_compiler::{
-    parser::ast::Type,
-    parser::ast::NameAccessChain,
-    parser::ast::ModuleName,
-    parser::ast::Type_,
-    parser::ast::NameAccessChain_,
-    parser::ast::LeadingNameAccess_,
+use move_compiler::parser::ast::{
+    LeadingNameAccess_, ModuleName, NameAccessChain, NameAccessChain_, Type, Type_,
 };
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::*;
@@ -116,8 +111,8 @@ impl ProjectContext {
                                     *ty = tye.clone();
                                     fixed = true;
                                 }
-                            }
-                            _ => {}
+                            },
+                            _ => {},
                         }
                     }
                 }
@@ -502,8 +497,8 @@ impl ProjectContext {
                     Item::Parameter(_, ty) | Item::Var { ty, .. } => {
                         ret = Some(ty.clone());
                         return true;
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
             };
             false
@@ -559,23 +554,23 @@ impl ProjectContext {
                             Item::Use(x) => {
                                 for x in x.iter() {
                                     match x {
-                                        ItemUse::Module(_) => {}
+                                        ItemUse::Module(_) => {},
                                         ItemUse::Item(_) => {
                                             item_ret = Some(v.clone());
                                             return true;
-                                        }
+                                        },
                                     }
                                 }
-                            }
+                            },
                             _ => {
                                 item_ret = Some(v.clone());
                                 return true;
-                            }
+                            },
                         }
                     }
                     false
                 });
-            }
+            },
             NameAccessChain_::Two(name, member) => {
                 match name.value {
                     LeadingNameAccess_::Name(name) => {
@@ -612,14 +607,14 @@ impl ProjectContext {
                                                 // make inner_first_visit stop.
                                                 return true;
                                             }
-                                        }
-                                        ItemUse::Item(_) => {}
+                                        },
+                                        ItemUse::Item(_) => {},
                                     }
                                 }
                             }
                             false
                         });
-                    }
+                    },
                     LeadingNameAccess_::AnonymousAddress(addr) => {
                         let x = self.visit_address(|x| -> Option<AddrAndModuleName> {
                             Some(
@@ -634,9 +629,9 @@ impl ProjectContext {
                             )
                         });
                         module_scope = x;
-                    }
+                    },
                 }
-            }
+            },
             NameAccessChain_::Three(chain_two, member) => self.visit_address(|top| {
                 let modules = top.address.get(&match &chain_two.value.0.value {
                     LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
@@ -696,7 +691,7 @@ impl ProjectContext {
                     }
                     false
                 });
-            }
+            },
             NameAccessChain_::Two(name, member) => match name.value {
                 LeadingNameAccess_::Name(name) => {
                     self.inner_first_visit(|s| {
@@ -719,14 +714,14 @@ impl ProjectContext {
                                                 return true;
                                             }
                                         }
-                                    }
-                                    ItemUse::Item(_) => {}
+                                    },
+                                    ItemUse::Item(_) => {},
                                 }
                             }
                         }
                         false
                     });
-                }
+                },
                 LeadingNameAccess_::AnonymousAddress(addr) => {
                     let x = self.visit_address(|x| -> Option<AddrAndModuleName> {
                         Some(
@@ -741,7 +736,7 @@ impl ProjectContext {
                         )
                     });
                     module_scope = x;
-                }
+                },
             },
             NameAccessChain_::Three(chain_two, member) => self.visit_address(|top| {
                 let modules = top.address.get(&match &chain_two.value.0.value {
@@ -780,8 +775,8 @@ impl ProjectContext {
                     Item::Var { .. } | Item::Parameter(_, _) => {
                         r = Some(item.clone());
                         return true;
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
             }
             false
@@ -824,14 +819,14 @@ impl ProjectContext {
                     ) => {
                         let _ = std::mem::replace(m, types);
                         chain_ty
-                    }
+                    },
                     _ => chain_ty,
                 };
                 return chain_ty;
-            }
+            },
             Type_::Ref(m, ref b) => {
                 ResolvedType::Ref(*m, Box::new(self.resolve_type(b.as_ref(), name_to_addr)))
-            }
+            },
             Type_::Fun(args, ret_ty) => {
                 let args: Vec<_> = args
                     .iter()
@@ -842,7 +837,7 @@ impl ProjectContext {
                     args,
                     ret_ty: Box::new(ret_ty),
                 }
-            }
+            },
 
             Type_::Unit => ResolvedType::Unit,
             Type_::Multiple(ref types) => {
@@ -851,7 +846,7 @@ impl ProjectContext {
                     .map(|v| self.resolve_type(v, name_to_addr))
                     .collect();
                 ResolvedType::Multiple(types)
-            }
+            },
         };
         r
     }

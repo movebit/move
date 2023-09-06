@@ -6,39 +6,25 @@ use super::{item::*, project_context::*, types::*, utils::*};
 use crate::project::Project;
 use move_command_line_common::files::FileHash;
 use move_compiler::{
-    parser::ast::Ability,
-    parser::ast::SpecConditionKind,
-    parser::ast::Definition,
-    parser::ast::SpecBlock,
-    parser::ast::LeadingNameAccess,
-    parser::ast::ModuleDefinition,
-    parser::ast::UseDecl,
-    parser::ast::StructDefinition,
-    parser::ast::ModuleMember,
-    parser::ast::Attributes,
-    parser::ast::Exp,
-    parser::ast::Value,
-    parser::ast::FriendDecl,
-    parser::ast::Constant,
-    parser::ast::Function,
-    parser::ast::Value_,
-    parser::ast::LeadingNameAccess_,
-    parser::ast::SpecConditionKind_,
-    parser::ast::Attribute_,
-    parser::ast::SpecBlockTarget_,
+    parser::ast::{
+        Ability, Attribute_, Attributes, Constant, Definition, Exp, FriendDecl, Function,
+        LeadingNameAccess, LeadingNameAccess_, ModuleDefinition, ModuleMember, SpecBlock,
+        SpecBlockTarget_, SpecConditionKind, SpecConditionKind_, StructDefinition, UseDecl, Value,
+        Value_,
+    },
     shared::Name,
 };
 use move_core_types::account_address::*;
 use move_ir_types::location::*;
+use move_model::model::GlobalEnv;
 use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;
 use std::{
     collections::{HashMap, HashSet},
-    path::Path,
+    hash::Hash,
+    path::{Path, PathBuf},
     time::SystemTime,
 };
-use std::{hash::Hash, path::PathBuf};
-use move_model::model::GlobalEnv;
 // ======================================================================================
 // static and const var
 pub static ERR_ADDRESS: once_cell::sync::Lazy<AccountAddress> =
@@ -99,20 +85,22 @@ pub(crate) fn attributes_has_test(x: &[Attributes]) -> AttrTest {
             Attribute_::Name(name) => match name.value.as_str() {
                 "test" => is = Test,
                 "test_only" => is = TestOnly,
-                _ => {}
+                _ => {},
             },
-            Attribute_::Assigned(_, _) => {}
+            Attribute_::Assigned(_, _) => {},
             Attribute_::Parameterized(name, _) => match name.value.as_str() {
                 "test" => is = Test,
                 "test_only" => is = TestOnly,
-                _ => {}
+                _ => {},
             },
         })
     });
     is
 }
 
-pub fn get_spec_condition_type_parameters(x: &SpecConditionKind) -> Option<&Vec<(Name, Vec<Ability>)>> {
+pub fn get_spec_condition_type_parameters(
+    x: &SpecConditionKind,
+) -> Option<&Vec<(Name, Vec<Ability>)>> {
     match &x.value {
         SpecConditionKind_::Invariant(x)
         | SpecConditionKind_::InvariantUpdate(x)
@@ -166,17 +154,17 @@ pub(crate) fn infer_type_parameter_on_expression(
         expr_type: &ResolvedType,
     ) {
         match &parameter_type {
-            ResolvedType::UnKnown => {}
-            ResolvedType::BuildInType(_) => {}
+            ResolvedType::UnKnown => {},
+            ResolvedType::BuildInType(_) => {},
             ResolvedType::TParam(name, _) => {
                 ret.insert(name.value, expr_type.clone());
-            }
+            },
             ResolvedType::Ref(_, l) => {
                 if let ResolvedType::Ref(_, r) = expr_type {
                     bind(ret, l.as_ref(), r.as_ref())
                 }
-            }
-            ResolvedType::Unit => {}
+            },
+            ResolvedType::Unit => {},
             ResolvedType::Multiple(x) => {
                 if let ResolvedType::Multiple(y) = expr_type {
                     for (index, l) in x.iter().enumerate() {
@@ -187,22 +175,22 @@ pub(crate) fn infer_type_parameter_on_expression(
                         }
                     }
                 }
-            }
+            },
             //  function is not expression
-            ResolvedType::Fun(_) => {}
+            ResolvedType::Fun(_) => {},
             ResolvedType::Vec(x) => {
                 if let ResolvedType::Vec(y) = expr_type {
                     bind(ret, x.as_ref(), y.as_ref());
                 }
-            }
+            },
             ResolvedType::Struct(_, ptys) => {
                 if let ResolvedType::Struct(_, etypes) = expr_type {
                     for (p, e) in ptys.iter().zip(etypes.iter()) {
                         bind(ret, p, e);
                     }
                 }
-            }
-            ResolvedType::Range => {}
+            },
+            ResolvedType::Range => {},
             ResolvedType::Lambda { args, ret_ty } => {
                 if let ResolvedType::Lambda {
                     args: args2,
@@ -214,7 +202,7 @@ pub(crate) fn infer_type_parameter_on_expression(
                     }
                     bind(ret, ret_ty.as_ref(), ret_ty2.as_ref());
                 }
-            }
+            },
         }
     }
 }
@@ -262,8 +250,12 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
     fn handle_para_arg_pair(&mut self, _services: &dyn HandleItemService, _para: Name, _exp: &Exp) {
     }
 
-    fn handle_project_env(&mut self, _services: &dyn HandleItemService, env: &GlobalEnv, move_file_path: &Path) {
-
+    fn handle_project_env(
+        &mut self,
+        _services: &dyn HandleItemService,
+        env: &GlobalEnv,
+        move_file_path: &Path,
+    ) {
     }
 }
 
@@ -378,13 +370,13 @@ pub trait AstProvider: Clone {
         self.with_definition(|x| match x {
             Definition::Module(module) => {
                 call_back(self.get_module_addr(module.address, module), module);
-            }
+            },
             Definition::Address(a) => {
                 for module in a.modules.iter() {
                     call_back(self.get_module_addr(Some(a.addr), module), module);
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         })
     }
 
@@ -415,7 +407,7 @@ pub trait AstProvider: Clone {
                         module.is_spec_module,
                     );
                 }
-            }
+            },
             Definition::Address(a) => {
                 for module in a.modules.iter() {
                     for m in module.members.iter() {
@@ -427,8 +419,8 @@ pub trait AstProvider: Clone {
                         );
                     }
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         });
     }
 

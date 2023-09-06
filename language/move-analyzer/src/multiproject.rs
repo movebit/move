@@ -2,8 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{utils::*, analyzer_handler::*};
-use crate::project::*;
+use crate::{analyzer_handler::*, project::*, utils::*};
 use im::HashSet;
 use lsp_server::Connection;
 use lsp_types::{notification::Notification, MessageType};
@@ -61,10 +60,10 @@ impl MultiProject {
             match child.wait_timeout(Duration::new(30, 0)) {
                 Ok(_) => {
                     fetch_ok = true;
-                }
+                },
                 Err(err) => {
                     log::error!("exec cmd fetch deps failed,err:{:?}", err);
-                }
+                },
             }
             let _ = child.kill();
             if !fetch_ok {
@@ -117,7 +116,7 @@ impl MultiProject {
             None => {
                 log::error!("file_path {:?} not found", file_path.as_path());
                 return;
-            }
+            },
         };
         let mut b = self.asts.get_mut(&manifest).unwrap().borrow_mut();
         let old_defs = if layout == SourcePackageLayout::Sources {
@@ -180,7 +179,7 @@ impl MultiProject {
                 Err(_) => {
                     log::error!("reload project failed");
                     return;
-                }
+                },
             };
             all.push((k, x));
         }
@@ -201,7 +200,7 @@ impl MultiProject {
                         format!("reload project failed,err:{:?}", err),
                     );
                     continue;
-                }
+                },
             };
             all.push((k, x));
         }
