@@ -71,6 +71,7 @@ pub(crate) struct Handler {
     pub(crate) col: u32,
     pub(crate) result: Option<FileRange>,
 
+    pub(crate) mouse_span: codespan::Span,
     pub(crate) capture_items_span: Vec<codespan::Span>,
     pub(crate) result_candidates: Vec<FileRange>,
 }
@@ -82,6 +83,7 @@ impl Handler {
             line,
             col,
             result: None,
+            mouse_span: Default::default(),
             capture_items_span: vec![],
             result_candidates: vec![],
         }
@@ -103,7 +105,62 @@ impl Handler {
         ret
     }
 
-    fn process_func(&mut self, env: &GlobalEnv, move_file_path: &Path, line: u32, col: u32) {
+    fn get_mouse_loc(&mut self, env: &GlobalEnv, target_fn_or_struct_loc: &move_model::model::Loc) {
+        let mut mouse_line_first_col = move_model::model::Loc::new(
+            target_fn_or_struct_loc.file_id(),
+            codespan::Span::new(
+                target_fn_or_struct_loc.span().start() + codespan::ByteOffset(1),
+                target_fn_or_struct_loc.span().start() + codespan::ByteOffset(2),
+            ),
+        );
+        let mut mouse_loc = env.get_location(&mouse_line_first_col).unwrap();
+        // locate to self.line first column
+        while mouse_loc.line.0 < self.line {
+            mouse_line_first_col = move_model::model::Loc::new(
+                target_fn_or_struct_loc.file_id(),
+                codespan::Span::new(
+                    mouse_line_first_col.span().start() + codespan::ByteOffset(1),
+                    target_fn_or_struct_loc.span().end(),
+                ),
+            );
+            mouse_loc = env.get_location(&mouse_line_first_col).unwrap();
+        }
+        // locate to self.line last column
+        let mut mouse_line_last_col = move_model::model::Loc::new(
+            target_fn_or_struct_loc.file_id(),
+            codespan::Span::new(
+                mouse_line_first_col.span().start() + codespan::ByteOffset(1),
+                mouse_line_first_col.span().start() + codespan::ByteOffset(2),
+            ),
+        );
+    
+        mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
+        // locate to self.line first column
+        while mouse_loc.column.0 < self.col {
+            mouse_line_last_col = move_model::model::Loc::new(
+                target_fn_or_struct_loc.file_id(),
+                codespan::Span::new(
+                    mouse_line_last_col.span().start() + codespan::ByteOffset(1),
+                    target_fn_or_struct_loc.span().end(),
+                ),
+            );
+            mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
+            // log::info!("lll >> loop: mouse_loc = {:?}", mouse_loc);
+        }
+    
+        let mouse_source = env.get_source(&move_model::model::Loc::new(
+            target_fn_or_struct_loc.file_id(),
+            codespan::Span::new(
+                mouse_line_first_col.span().start(),
+                mouse_line_last_col.span().start(),
+            ),
+        ));
+        log::info!("lll >> mouse_source = {:?}", mouse_source);
+    
+        self.mouse_span = codespan::Span::new(mouse_line_first_col.span().start(), mouse_line_last_col.span().start());
+    }
+    
+    fn process_func(&mut self, env: &GlobalEnv, move_file_path: &Path) {
         log::info!("lll >> process_func =======================================\n\n");
         let mut found_target_module = false;
         let mut found_target_fun = false;
@@ -136,7 +193,7 @@ impl Handler {
                         codespan::Span::new(this_fun_loc.span().end(), this_fun_loc.span().end()),
                     ))
                     .unwrap();
-                if func_start_pos.line.0 < line && line < func_end_pos.line.0 {
+                if func_start_pos.line.0 < self.line && self.line < func_end_pos.line.0 {
                     target_fun_id = fun.get_id();
                     found_target_fun = true;
                     break;
@@ -151,73 +208,21 @@ impl Handler {
 
         let target_module = env.get_module(target_module_id);
         let target_fun = target_module.get_function(target_fun_id);
-        let this_fun_loc = target_fun.get_loc();
-        // let func_start_pos = env.get_location(&this_fun_loc).unwrap();
-        // log::info!("lll >> func_start_pos = {:?}", func_start_pos);
-
-        let mut mouse_line_first_col = move_model::model::Loc::new(
-            this_fun_loc.file_id(),
-            codespan::Span::new(
-                this_fun_loc.span().start() + codespan::ByteOffset(1),
-                this_fun_loc.span().start() + codespan::ByteOffset(2),
-            ),
-        );
-        let mut mouse_loc = env.get_location(&mouse_line_first_col).unwrap();
-        // locate to line first column
-        while mouse_loc.line.0 < line {
-            mouse_line_first_col = move_model::model::Loc::new(
-                this_fun_loc.file_id(),
-                codespan::Span::new(
-                    mouse_line_first_col.span().start() + codespan::ByteOffset(1),
-                    this_fun_loc.span().end(),
-                ),
-            );
-            mouse_loc = env.get_location(&mouse_line_first_col).unwrap();
-        }
-        // locate to line last column
-        let mut mouse_line_last_col = move_model::model::Loc::new(
-            this_fun_loc.file_id(),
-            codespan::Span::new(
-                mouse_line_first_col.span().start() + codespan::ByteOffset(1),
-                mouse_line_first_col.span().start() + codespan::ByteOffset(2),
-            ),
-        );
-
-        mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
-        // locate to line first column
-        while mouse_loc.column.0 < col {
-            mouse_line_last_col = move_model::model::Loc::new(
-                this_fun_loc.file_id(),
-                codespan::Span::new(
-                    mouse_line_last_col.span().start() + codespan::ByteOffset(1),
-                    this_fun_loc.span().end(),
-                ),
-            );
-            mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
-            // log::info!("lll >> loop: mouse_loc = {:?}", mouse_loc);
-        }
-
-        let mouse_source = env.get_source(&move_model::model::Loc::new(
-            this_fun_loc.file_id(),
-            codespan::Span::new(
-                mouse_line_first_col.span().start(),
-                mouse_line_last_col.span().start(),
-            ),
-        ));
-        log::info!("lll >> mouse_source = {:?}", mouse_source);
+        let target_fun_loc = target_fun.get_loc();
+        self.get_mouse_loc(env, &target_fun_loc);
 
         if let Some(exp) = target_fun.get_def() {
-            self.process_expr(env, &mouse_line_last_col, exp);
+            self.process_expr(env, exp);
         }
     }
 
-    fn process_struct(&mut self, env: &GlobalEnv, move_file_path: &Path, line: u32, col: u32) {
+    fn process_struct(&mut self, env: &GlobalEnv, move_file_path: &Path) {
         log::info!("lll >> process_struct =======================================\n\n");
         let mut found_target_module = false;
         let mut found_target_struct = false;
         let mut target_module_id = ModuleId::new(0);
         let mut target_struct_id = StructId::new(env.symbol_pool().make("name"));
-
+    
         let mut move_file_str: &str = "null_move_file";
         if let Some(file_stem) = move_file_path.file_stem() {
             if let Some(file_stem_str) = file_stem.to_str() {
@@ -232,7 +237,7 @@ impl Handler {
                 break;
             }
         }
-
+    
         if found_target_module {
             let target_module = env.get_module(target_module_id);
             for struct_env in target_module.get_structs() {
@@ -244,7 +249,7 @@ impl Handler {
                         codespan::Span::new(struct_loc.span().end(), struct_loc.span().end()),
                     ))
                     .unwrap();
-                if struct_start_pos.line.0 < line && line < struct_end_pos.line.0 {
+                if struct_start_pos.line.0 < self.line && self.line < struct_end_pos.line.0 {
                     target_struct_id = struct_env.get_id();
                     found_target_struct = true;
                     break;
@@ -252,114 +257,63 @@ impl Handler {
                 // log::info!("lll >> struct_start_pos = {:?}, struct_end_pos = {:?}", struct_start_pos, struct_end_pos);
             }
         }
-
+    
         if !found_target_struct {
             return;
         }
-
+    
         let target_module = env.get_module(target_module_id);
         let target_struct = target_module.get_struct(target_struct_id);
-        let struct_loc = target_struct.get_loc();
-
-        let mut mouse_line_first_col = move_model::model::Loc::new(
-            struct_loc.file_id(),
-            codespan::Span::new(
-                struct_loc.span().start() + codespan::ByteOffset(1),
-                struct_loc.span().start() + codespan::ByteOffset(2),
-            ),
-        );
-        let mut mouse_loc = env.get_location(&mouse_line_first_col).unwrap();
-        // locate to line first column
-        while mouse_loc.line.0 < line {
-            mouse_line_first_col = move_model::model::Loc::new(
-                struct_loc.file_id(),
-                codespan::Span::new(
-                    mouse_line_first_col.span().start() + codespan::ByteOffset(1),
-                    struct_loc.span().end(),
-                ),
-            );
-            mouse_loc = env.get_location(&mouse_line_first_col).unwrap();
-        }
-        // locate to line last column
-        let mut mouse_line_last_col = move_model::model::Loc::new(
-            struct_loc.file_id(),
-            codespan::Span::new(
-                mouse_line_first_col.span().start() + codespan::ByteOffset(1),
-                mouse_line_first_col.span().start() + codespan::ByteOffset(2),
-            ),
-        );
-
-        mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
-        // locate to line first column
-        while mouse_loc.column.0 < col {
-            mouse_line_last_col = move_model::model::Loc::new(
-                struct_loc.file_id(),
-                codespan::Span::new(
-                    mouse_line_last_col.span().start() + codespan::ByteOffset(1),
-                    struct_loc.span().end(),
-                ),
-            );
-            mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
-            // log::info!("lll >> loop: mouse_loc = {:?}", mouse_loc);
-        }
-
-        let mouse_source = env.get_source(&move_model::model::Loc::new(
-            struct_loc.file_id(),
-            codespan::Span::new(
-                mouse_line_first_col.span().start(),
-                mouse_line_last_col.span().start(),
-            ),
-        ));
-        log::info!("lll >> mouse_source = {:?}", mouse_source);
-
+        let target_struct_loc = target_struct.get_loc();
+        self.get_mouse_loc(env, &target_struct_loc);
+    
         for field_env in target_struct.get_fields() {
             let field_name = field_env.get_name();
             let field_name_str = field_name.display(env.symbol_pool());
             log::info!("lll >> field_name = {}", field_name_str);
-            let struct_source = env.get_source(&struct_loc);
+            let struct_source = env.get_source(&target_struct_loc);
             if let Ok(struct_str) = struct_source {
                 if let Some(index) = struct_str.find(field_name_str.to_string().as_str()) {
                     let field_len = field_name_str.to_string().len();
-                    let field_start = struct_loc.span().start()
+                    let field_start = target_struct_loc.span().start()
                         + codespan::ByteOffset((index + field_len).try_into().unwrap());
                     // Assuming a relatively large distance
                     let field_end = field_start + codespan::ByteOffset((128).try_into().unwrap());
                     let field_loc = move_model::model::Loc::new(
-                        struct_loc.file_id(),
+                        target_struct_loc.file_id(),
                         codespan::Span::new(field_start, field_end),
                     );
                     let field_source = env.get_source(&field_loc);
-                    log::info!("lll >> field_source = {:?}", field_source);
+                    // log::info!("lll >> field_source = {:?}", field_source);
                     if let Ok(atomic_field_str) = field_source {
-                        if let Some(index) = atomic_field_str.find(",".to_string().as_str()) {
+                        if let Some(index) = atomic_field_str.find("\n".to_string().as_str()) {
                             let atomic_field_end =
                                 field_start + codespan::ByteOffset(index.try_into().unwrap());
                             let atomic_field_loc = move_model::model::Loc::new(
-                                struct_loc.file_id(),
+                                target_struct_loc.file_id(),
                                 codespan::Span::new(field_start, atomic_field_end),
                             );
                             let atomic_field_source = env.get_source(&atomic_field_loc);
-                            log::info!("lll >> atomic_field_source = {:?}", atomic_field_source);
                             // todo: should check mouse_last_col between in scope by atomic_field_loc
-                            if atomic_field_loc.span().end() < mouse_line_last_col.span().start()
+                            if atomic_field_loc.span().end() < self.mouse_span.end()
                                 || atomic_field_loc.span().start()
-                                    > mouse_line_last_col.span().end()
+                                    > self.mouse_span.end()
                             {
                                 continue;
                             }
+                            log::info!("lll >> atomic_field_source = {:?}", atomic_field_source);
                             let field_type = field_env.get_type();
-                            self.process_type(env, &atomic_field_loc.span().clone(), &field_type);
+                            self.process_type(env, &atomic_field_loc, &field_type);
                         }
                     }
                 }
             }
         }
     }
-
+    
     fn process_expr(
         &mut self,
         env: &GlobalEnv,
-        mouse_line_last_col: &move_model::model::Loc,
         exp: &move_model::ast::Exp,
     ) {
         log::info!("\n\nlll >> process_expr -------------------------\n");
@@ -393,14 +347,14 @@ impl Handler {
                     );
                     let local_source = env.get_source(&localvar_loc);
                     log::info!("lll >> local_source = {:?}", local_source);
-                    if localvar_loc.span().start() > mouse_line_last_col.span().start()
-                        || mouse_line_last_col.span().start() > localvar_loc.span().end()
+                    if localvar_loc.span().start() > self.mouse_span.end()
+                        || self.mouse_span.end() > localvar_loc.span().end()
                     {
                         // log::info!("??? localvar return");
                         return;
                     }
                     if let Some(node_type) = env.get_node_type_opt(*node_id) {
-                        self.process_type(env, &localvar_loc.span().clone(), &node_type);
+                        self.process_type(env, &localvar_loc, &node_type);
                     }
                 },
                 Temporary(node_id, _) => {
@@ -409,102 +363,18 @@ impl Handler {
                         "lll >> exp.visit tmpvar_loc = {:?}",
                         env.get_location(&tmpvar_loc)
                     );
-                    if tmpvar_loc.span().start() > mouse_line_last_col.span().start()
-                        || mouse_line_last_col.span().start() > tmpvar_loc.span().end()
+                    if tmpvar_loc.span().start() > self.mouse_span.end()
+                        || self.mouse_span.end() > tmpvar_loc.span().end()
                     {
                         return;
                     }
 
                     if let Some(node_type) = env.get_node_type_opt(*node_id) {
-                        self.process_type(env, &tmpvar_loc.span().clone(), &node_type);
+                        self.process_type(env, &tmpvar_loc, &node_type);
                     }
                 },
-                Call(node_id, MoveFunction(mid, fid), _) => {
-                    let this_call_loc = env.get_node_loc(*node_id);
-                    log::info!(
-                        "lll >> exp.visit this_call_loc = {:?}",
-                        env.get_location(&this_call_loc)
-                    );
-                    if this_call_loc.span().start() < mouse_line_last_col.span().start()
-                        && mouse_line_last_col.span().start() < this_call_loc.span().end()
-                    {
-                        let called_module = env.get_module(*mid);
-                        let called_fun = called_module.get_function(*fid);
-                        log::info!(
-                            "lll >> get_called_functions = {:?}",
-                            called_fun.get_full_name_str()
-                        );
-                        let called_fun_loc = called_fun.get_loc();
-                        let (called_fun_file, called_fun_line) =
-                            env.get_file_and_location(&called_fun_loc).unwrap();
-                        let path_buf = PathBuf::from(called_fun_file);
-                        let result = FileRange {
-                            path: path_buf,
-                            line_start: called_fun_line.line.0,
-                            col_start: called_fun_line.column.0,
-                            line_end: called_fun_line.line.0,
-                            col_end: called_fun_line.column.0
-                                + called_fun.get_full_name_str().len() as u32,
-                        };
-                        self.result_candidates.push(result);
-                        self.capture_items_span.push(this_call_loc.span());
-                    }
-                },
-                Call(node_id, Select(mid, sid, fid), _) => {
-                    let this_call_loc = env.get_node_loc(*node_id);
-                    log::info!(
-                        "lll >> exp.visit this_call_loc = {:?}",
-                        env.get_location(&this_call_loc)
-                    );
-                    if this_call_loc.span().start() > mouse_line_last_col.span().start()
-                        || mouse_line_last_col.span().start() > this_call_loc.span().end()
-                    {
-                        return;
-                    }
-                    let called_module = env.get_module(*mid);
-                    let called_struct = called_module.get_struct(*sid);
-                    log::info!(
-                        "lll >> called_struct = {:?}",
-                        called_struct.get_full_name_str()
-                    );
-                    let called_field = called_struct.get_field(*fid);
-                    let field_name = called_field.get_name();
-                    let field_name_str = field_name.display(env.symbol_pool());
-                    log::info!("lll >> field_name = {}", field_name_str);
-
-                    let called_struct_loc = called_struct.get_loc();
-                    // let (called_struct_file, called_struct_line) = env.get_file_and_location(&called_struct_loc).unwrap();
-                    let call_struct_source = env.get_source(&called_struct_loc);
-                    // log::info!("lll >> call_struct_source = {:?}", call_struct_source);
-                    if let Ok(call_struct_str) = call_struct_source {
-                        if let Some(index) =
-                            call_struct_str.find(field_name_str.to_string().as_str())
-                        {
-                            let field_start = called_struct_loc.span().start()
-                                + codespan::ByteOffset(index.try_into().unwrap());
-                            let field_len = field_name_str.to_string().len();
-                            let field_end =
-                                field_start + codespan::ByteOffset(field_len.try_into().unwrap());
-                            let field_loc = move_model::model::Loc::new(
-                                called_struct_loc.file_id(),
-                                codespan::Span::new(field_start, field_end),
-                            );
-                            let call_field_source = env.get_source(&field_loc);
-                            log::info!("lll >> call_field_source = {:?}", call_field_source);
-                            let (called_field_file, called_field_line) =
-                                env.get_file_and_location(&field_loc).unwrap();
-                            let path_buf = PathBuf::from(called_field_file);
-                            let result = FileRange {
-                                path: path_buf,
-                                line_start: called_field_line.line.0,
-                                col_start: called_field_line.column.0,
-                                line_end: called_field_line.line.0,
-                                col_end: called_field_line.column.0,
-                            };
-                            self.result_candidates.push(result);
-                            self.capture_items_span.push(this_call_loc.span());
-                        }
-                    }
+                Call(..) => {
+                    self.process_call(env, e);
                 },
                 Invoke(node_id, ..) => {
                     log::info!("lll >> expdata is Invoke");
@@ -530,7 +400,7 @@ impl Handler {
                         env.get_location(&quant_loc)
                     );
                 },
-                Block(node_id, pattern, Some(option_exp), exp) => {
+                Block(node_id,..) => {
                     // Statement block in '{' and '}' which contains let
                     log::info!("lll >> expdata is Block");
                     let block_loc = env.get_node_loc(*node_id);
@@ -580,7 +450,7 @@ impl Handler {
                         env.get_location(&assign_loc)
                     );
                 },
-                Mutate(node_id, exp1, exp2) => {
+                Mutate(node_id, ..) => {
                     log::info!("lll >> expdata is Mutate");
                     let mutate_loc = env.get_node_loc(*node_id);
                     log::info!(
@@ -596,10 +466,128 @@ impl Handler {
         log::info!("\nlll << process_expr ^^^^^^^^^^^^^^^^^^^^^^^^^\n");
     }
 
+    fn process_call(
+        &mut self,
+        env: &GlobalEnv,
+        expdata: &move_model::ast::ExpData,
+    )
+    {
+        if let Call(node_id, MoveFunction(mid, fid), _) = expdata {
+            let this_call_loc = env.get_node_loc(*node_id);
+            log::info!(
+                "lll >> exp.visit this_call_loc = {:?}",
+                env.get_location(&this_call_loc)
+            );
+            if this_call_loc.span().start() < self.mouse_span.end()
+                && self.mouse_span.end() < this_call_loc.span().end()
+            {
+                let called_module = env.get_module(*mid);
+                let called_fun = called_module.get_function(*fid);
+                log::info!(
+                    "lll >> get_called_functions = {:?}",
+                    called_fun.get_full_name_str()
+                );
+                let called_fun_loc = called_fun.get_loc();
+                let (called_fun_file, called_fun_line) =
+                    env.get_file_and_location(&called_fun_loc).unwrap();
+                let path_buf = PathBuf::from(called_fun_file);
+                let result = FileRange {
+                    path: path_buf,
+                    line_start: called_fun_line.line.0,
+                    col_start: called_fun_line.column.0,
+                    line_end: called_fun_line.line.0,
+                    col_end: called_fun_line.column.0
+                        + called_fun.get_full_name_str().len() as u32,
+                };
+                self.result_candidates.push(result);
+                self.capture_items_span.push(this_call_loc.span());
+
+                let inst_vec = &env.get_node_instantiation(*node_id);
+                for inst in inst_vec {
+                    self.process_type(env, &this_call_loc, inst);
+                }
+            }
+        }
+
+        if let Call(node_id, BorrowGlobal(..), _) = expdata {
+            let this_call_loc = env.get_node_loc(*node_id);
+            log::info!(
+                "lll >> exp.visit this_call_loc = {:?}",
+                env.get_location(&this_call_loc)
+            );
+            if this_call_loc.span().start() < self.mouse_span.end()
+                && self.mouse_span.end() < this_call_loc.span().end()
+            {
+                let inst_vec = &env.get_node_instantiation(*node_id);
+                for inst in inst_vec {
+                    log::info!("lll >> inst = {:?}", inst);    
+                    self.process_type(env, &this_call_loc, inst);
+                }
+            }
+        }
+
+        if let Call(node_id, Select(mid, sid, fid), _) = expdata {
+            let this_call_loc = env.get_node_loc(*node_id);
+            log::info!(
+                "lll >> exp.visit this_call_loc = {:?}",
+                env.get_location(&this_call_loc)
+            );
+            if this_call_loc.span().start() > self.mouse_span.end()
+                || self.mouse_span.end() > this_call_loc.span().end()
+            {
+                return;
+            }
+            let called_module = env.get_module(*mid);
+            let called_struct = called_module.get_struct(*sid);
+            log::info!(
+                "lll >> called_struct = {:?}",
+                called_struct.get_full_name_str()
+            );
+            let called_field = called_struct.get_field(*fid);
+            let field_name = called_field.get_name();
+            let field_name_str = field_name.display(env.symbol_pool());
+            log::info!("lll >> field_name = {}", field_name_str);
+
+            let called_struct_loc = called_struct.get_loc();
+            // let (called_struct_file, called_struct_line) = env.get_file_and_location(&called_struct_loc).unwrap();
+            let call_struct_source = env.get_source(&called_struct_loc);
+            // log::info!("lll >> call_struct_source = {:?}", call_struct_source);
+            if let Ok(call_struct_str) = call_struct_source {
+                if let Some(index) =
+                    call_struct_str.find(field_name_str.to_string().as_str())
+                {
+                    let field_start = called_struct_loc.span().start()
+                        + codespan::ByteOffset(index.try_into().unwrap());
+                    let field_len = field_name_str.to_string().len();
+                    let field_end =
+                        field_start + codespan::ByteOffset(field_len.try_into().unwrap());
+                    let field_loc = move_model::model::Loc::new(
+                        called_struct_loc.file_id(),
+                        codespan::Span::new(field_start, field_end),
+                    );
+                    let call_field_source = env.get_source(&field_loc);
+                    log::info!("lll >> call_field_source = {:?}", call_field_source);
+                    let (called_field_file, called_field_line) =
+                        env.get_file_and_location(&field_loc).unwrap();
+                    let path_buf = PathBuf::from(called_field_file);
+                    let result = FileRange {
+                        path: path_buf,
+                        line_start: called_field_line.line.0,
+                        col_start: called_field_line.column.0,
+                        line_end: called_field_line.line.0,
+                        col_end: called_field_line.column.0,
+                    };
+                    self.result_candidates.push(result);
+                    self.capture_items_span.push(this_call_loc.span());
+                }
+            }
+        }  
+    }
+
     fn process_type(
         &mut self,
         env: &GlobalEnv,
-        capture_items_span: &codespan::Span,
+        capture_items_loc: &move_model::model::Loc,
         ty: &move_model::ty::Type,
     ) {
         use move_model::ty::Type::*;
@@ -610,7 +598,7 @@ impl Handler {
             Vector(..) => {
                 log::info!("lll >> type_var is Vector");
             },
-            Struct(mid, stid, _) => {
+            Struct(mid, stid, ty_vec) => {
                 let struct_from_module = env.get_module(*mid);
                 let type_struct = struct_from_module.get_struct(*stid);
                 log::info!("lll >> type_struct = {:?}", type_struct.get_full_name_str());
@@ -621,17 +609,56 @@ impl Handler {
                 );
                 let (type_struct_file, type_struct_pos) =
                     env.get_file_and_location(&type_struct_loc).unwrap();
-                let path_buf = PathBuf::from(type_struct_file);
                 let result = FileRange {
-                    path: path_buf,
+                    path: PathBuf::from(type_struct_file).clone(),
                     line_start: type_struct_pos.line.0,
                     col_start: type_struct_pos.column.0,
                     line_end: type_struct_pos.line.0,
                     col_end: type_struct_pos.column.0
                         + type_struct.get_full_name_str().len() as u32,
                 };
-                self.capture_items_span.push(*capture_items_span);
+                self.capture_items_span.push((*capture_items_loc).span());
                 self.result_candidates.push(result);
+
+                // 20230907: add generic type parameter parse
+                for ty in ty_vec {
+                    if let Some(generic_struct_ty) = ty.get_struct(env) {
+                        let generic_struct_ty_symbol = generic_struct_ty.0.get_name();
+                        let capture_generic_ty_source = env.get_source(&capture_items_loc);
+                        if let Ok(capture_generic_ty_str) = capture_generic_ty_source {
+                            let generic_struct_ty_symbol_display = generic_struct_ty_symbol.display(env.symbol_pool());
+                            if let Some(index) = capture_generic_ty_str.find(generic_struct_ty_symbol_display.to_string().as_str()) {
+                                let capture_generic_ty_str_len = generic_struct_ty_symbol_display.to_string().len();
+                                let capture_generic_ty_start =
+                                    (*capture_items_loc).span().start() + codespan::ByteOffset(index.try_into().unwrap());
+                                let capture_generic_ty_end =
+                                    capture_generic_ty_start + codespan::ByteOffset(capture_generic_ty_str_len.try_into().unwrap());
+                                let capture_generic_ty_loc = move_model::model::Loc::new(
+                                    (*capture_items_loc).file_id(),
+                                    codespan::Span::new(capture_generic_ty_start, capture_generic_ty_end),
+                                );
+                                log::info!("capture_generic_ty_str = {:?}", env.get_source(&capture_generic_ty_loc));
+                                let capture_line = env.get_location(&capture_generic_ty_loc).unwrap();
+                                let (generic_struct_belong_file, generic_struct_belong_pos) = env.get_file_and_location(&generic_struct_ty.0.get_loc()).unwrap();
+                                if self.line.eq(&capture_line.line.0) && 
+                                   capture_generic_ty_loc.span().start() <= self.mouse_span.end() &&
+                                   self.mouse_span.end() <= capture_generic_ty_loc.span().end() {
+                                    let result = FileRange {
+                                        path: PathBuf::from(generic_struct_belong_file).clone(),
+                                        line_start: generic_struct_belong_pos.line.0,
+                                        col_start: generic_struct_belong_pos.column.0,
+                                        line_end: generic_struct_belong_pos.line.0,
+                                        col_end: generic_struct_belong_pos.column.0
+                                            + capture_generic_ty_str_len as u32,
+                                    };
+                                    log::info!("capture_generic_ty result = {:?}", result.clone());
+                                    self.capture_items_span.push(capture_generic_ty_loc.span());
+                                    self.result_candidates.push(result);
+                                }
+                            }
+                        }
+                    }
+                }
             },
             TypeParameter(..) => {
                 log::info!("lll >> type_var is TypeParameter");
@@ -659,7 +686,7 @@ impl Handler {
                         col_end: local_struct_pos.column.0
                             + local_struct.get_full_name_str().len() as u32,
                     };
-                    self.capture_items_span.push(*capture_items_span);
+                    self.capture_items_span.push((*capture_items_loc).span());
                     self.result_candidates.push(result);
                 }
             },
@@ -684,12 +711,10 @@ impl Handler {
     fn run_move_model_visitor_internal(
         &mut self,
         env: &GlobalEnv,
-        move_file_path: &Path,
-        line: u32,
-        col: u32,
+        move_file_path: &Path
     ) {
-        self.process_func(env, move_file_path, line, col);
-        self.process_struct(env, move_file_path, line, col);
+        self.process_func(env, move_file_path);
+        self.process_struct(env, move_file_path);
     }
 }
 
@@ -704,10 +729,6 @@ impl ItemOrAccessHandler for Handler {
     ) {
     }
 
-    fn function_or_spec_body_should_visit(&self, range: &FileRange) -> bool {
-        false
-    }
-
     fn finished(&self) -> bool {
         false
     }
@@ -718,7 +739,7 @@ impl ItemOrAccessHandler for Handler {
         env: &GlobalEnv,
         move_file_path: &Path,
     ) {
-        self.run_move_model_visitor_internal(env, move_file_path, self.line, self.col);
+        self.run_move_model_visitor_internal(env, move_file_path);
     }
 }
 

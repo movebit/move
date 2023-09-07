@@ -66,10 +66,6 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
     /// Handle this item.
     fn handle_item_or_access(&mut self, _services: &dyn HandleItemService, _item: &ItemOrAccess) {}
 
-    /// Need visit function or spec body or not.
-    /// Sometimes you want visit function body But not all the function Body.
-    fn function_or_spec_body_should_visit(&self, range: &FileRange) -> bool;
-
     fn visit_fun_or_spec_body(&self) -> bool;
 
     /// Visitor should finished.
@@ -106,9 +102,6 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
 
 impl ItemOrAccessHandler for DummyHandler {
     fn handle_item_or_access(&mut self, _services: &dyn HandleItemService, _item: &ItemOrAccess) {}
-    fn function_or_spec_body_should_visit(&self, _range: &FileRange) -> bool {
-        false
-    }
     fn finished(&self) -> bool {
         false
     }
