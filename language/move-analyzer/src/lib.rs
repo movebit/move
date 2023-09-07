@@ -41,3 +41,4 @@ pub mod project_manager;
 pub mod project_visitor_by_move_model;
 pub mod syntax;
 pub mod utils;
+pub mod references;

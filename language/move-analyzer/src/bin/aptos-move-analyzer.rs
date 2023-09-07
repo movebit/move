@@ -25,6 +25,7 @@ use aptos_move_analyzer::{
     context::{Context, FileDiags},
     goto_definition_move_model,
     multiproject::MultiProject,
+    references,
     utils::*,
     syntax::parse_file_string,
 };
@@ -163,8 +164,21 @@ fn on_request(context: &mut Context, request: &Request) {
         lsp_types::request::GotoDefinition::METHOD => {
             goto_definition_move_model::on_go_to_def_request(context, request);
         },
-        // lsp_types::request::GotoTypeDefinition::METHOD => {
-        //     goto_definition_move_model::on_go_to_type_def_request(context, request);
+        lsp_types::request::References::METHOD => {
+            references::on_references_request(context, request);
+        }
+        // lsp_types::request::HoverRequest::METHOD => {
+        //     hover::on_hover_request(context, request);
+        // }
+        // lsp_types::request::Completion::METHOD => on_completion_request(context, request),
+        // lsp_types::request::InlayHintRequest::METHOD => {
+        //     inlay_hints::on_inlay_hints(context, request, *inlay_hints_config);
+        // }
+        // "move/lsp/client/inlay_hints/config" => {
+        //     let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
+        //         .expect("could not deserialize inlay hints request");
+        //     eprintln!("call inlay_hints config {:?}", parameters);
+        //     *inlay_hints_config = parameters;
         // }
         _ => {
             // eprintln!("handle request '{}' from client", request.method)
