@@ -43,3 +43,4 @@ pub mod syntax;
 pub mod utils;
 pub mod references;
 pub mod references_move_model;
+pub mod hover_move_model;

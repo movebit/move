@@ -26,6 +26,7 @@ use aptos_move_analyzer::{
     goto_definition_move_model,
     multiproject::MultiProject,
     references_move_model,
+    hover_move_model,
     utils::*,
     syntax::parse_file_string,
 };
@@ -188,9 +189,9 @@ fn on_request(context: &mut Context, request: &Request) {
         lsp_types::request::References::METHOD => {
             references_move_model::on_references_request(context, request);
         }
-        // lsp_types::request::HoverRequest::METHOD => {
-        //     hover::on_hover_request(context, request);
-        // }
+        lsp_types::request::HoverRequest::METHOD => {
+            hover_move_model::on_hover_request(context, request);
+        }
         // lsp_types::request::Completion::METHOD => on_completion_request(context, request),
         // lsp_types::request::InlayHintRequest::METHOD => {
         //     inlay_hints::on_inlay_hints(context, request, *inlay_hints_config);
