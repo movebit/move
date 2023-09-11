@@ -8,9 +8,9 @@ use crossbeam::channel::{bounded, select, Sender};
 use log::{Level, Metadata, Record};
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
-    notification::Notification as _, request::Request as _, OneOf, SaveOptions,
-    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
-    TypeDefinitionProviderCapability,
+    notification::Notification as _, request::Request as _, CompletionOptions,
+    HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
+    TextDocumentSyncOptions, WorkDoneProgressOptions,
 };
 use move_command_line_common::files::FileHash;
 use move_compiler::{diagnostics::Diagnostics, PASS_TYPING};
@@ -25,7 +25,7 @@ use aptos_move_analyzer::{
     context::{Context, FileDiags},
     goto_definition_move_model,
     multiproject::MultiProject,
-    references,
+    references_move_model,
     utils::*,
     syntax::parse_file_string,
 };
@@ -105,8 +105,29 @@ fn main() {
             },
         )),
         selection_range_provider: None,
+        hover_provider: Some(HoverProviderCapability::Simple(true)),
+        // The server provides completions as a user is typing.
+        completion_provider: Some(CompletionOptions {
+            resolve_provider: None,
+            // In Move, `foo::` and `foo.` should trigger completion suggestions for after
+            // the `:` or `.`
+            // (Trigger characters are just that: characters, such as `:`, and not sequences of
+            // characters, such as `::`. So when the language server encounters a completion
+            // request, it checks whether completions are being requested for `foo:`, and returns no
+            // completions in that case.)
+            trigger_characters: Some(vec![":".to_string(), ".".to_string()]),
+            all_commit_characters: None,
+            work_done_progress_options: WorkDoneProgressOptions {
+                work_done_progress: None,
+            },
+            completion_item: None,
+        }),
         definition_provider: Some(OneOf::Left(true)),
-        type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
+        // type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(
+        //     true,
+        // )),
+        references_provider: Some(OneOf::Left(true)),
+        document_symbol_provider: Some(OneOf::Left(true)),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
@@ -165,7 +186,7 @@ fn on_request(context: &mut Context, request: &Request) {
             goto_definition_move_model::on_go_to_def_request(context, request);
         },
         lsp_types::request::References::METHOD => {
-            references::on_references_request(context, request);
+            references_move_model::on_references_request(context, request);
         }
         // lsp_types::request::HoverRequest::METHOD => {
         //     hover::on_hover_request(context, request);

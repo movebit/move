@@ -83,10 +83,8 @@ Move source file (a file with a `.move` file extension) and:
   found in one of its parent directories), the following advanced features will also be available:
   - compiler diagnostics
   - go to definition
-  - go to type definition
   - go to references
   - type on hover
-  - outline view showing symbol tree for Move source files
   - autocomplete
 
 ## The changelogs:
