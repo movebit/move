@@ -4,10 +4,8 @@
 use crate::{
     analyzer_handler::*,
     context::*,
-    item::*,
-    utils::{path_concat, FileRange},
+    utils::path_concat,
 };
-use codespan::ByteIndex;
 use lsp_server::*;
 use lsp_types::*;
 use move_model::{
@@ -437,19 +435,6 @@ impl Handler {
         let type_display = ty.display(&display_context);
         self.capture_items_span.push((*capture_items_loc).span());
         self.result_candidates.push(type_display.to_string());
-        // return;
-        // use move_model::ty::Type::*;
-        // match ty {
-        //     Struct(mid, stid, _) => {
-        //         let stc_def_module = env.get_module(*mid);
-        //         let type_struct = stc_def_module.get_struct(*stid);
-        //         self.capture_items_span.push((*capture_items_loc).span());
-        //         self.result_candidates.push(type_struct.get_full_name_str());
-        //     },
-        //     _ => {
-        //         log::info!("lll >> type_var is default");
-        //     },
-        // }
     }
 
     fn run_move_model_visitor_internal(
@@ -465,12 +450,6 @@ impl Handler {
 impl ItemOrAccessHandler for Handler {
     fn visit_fun_or_spec_body(&self) -> bool {
         true
-    }
-    fn handle_item_or_access(
-        &mut self,
-        services: &dyn HandleItemService,
-        item_or_access: &ItemOrAccess,
-    ) {
     }
 
     fn finished(&self) -> bool {

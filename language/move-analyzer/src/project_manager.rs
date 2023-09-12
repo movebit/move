@@ -7,12 +7,11 @@ use crate::{analyzer_handler::*, multiproject::MultiProject, project::Project};
 use anyhow::{Ok, Result};
 use move_command_line_common::files::FileHash;
 use move_compiler::{
-    parser::ast::{Definition, LeadingNameAccess, LeadingNameAccess_, ModuleDefinition},
+    parser::ast::Definition,
     shared::{NumericalAddress, PackagePaths},
 };
 use move_core_types::account_address::*;
 use move_package::source_package::{layout::SourcePackageLayout, manifest_parser::*};
-use move_symbol_pool::Symbol;
 use std::{
     cell::RefCell,
     cmp::Ordering,
@@ -208,6 +207,7 @@ impl Project {
         );
         // delete old items.
         if let Some(defs) = old_defs.as_ref() {
+            log::info!("defs.len = {:?}", defs.len());
             // let x = VecDefAstProvider::new(defs, self, layout);
             // x.with_module(|addr, d| {
             //     // self.project_context
@@ -438,22 +438,6 @@ impl Project {
     //     // log::info!("lll << get_project_def");
     // }
 
-    pub(crate) fn name_to_addr_impl(&self, name: Symbol) -> AccountAddress {
-        for x in self.manifests.iter() {
-            if let Some(ref x) = x.dev_address_assignments {
-                if let Some(x) = x.get(&name) {
-                    return *x;
-                }
-            }
-            if let Some(ref x) = x.addresses {
-                if let Some(Some(x)) = x.get(&name) {
-                    return *x;
-                }
-            }
-        }
-        *ERR_ADDRESS
-    }
-
     pub(crate) fn manifest_beed_modified(&self) -> bool {
         self.manifest_mod_time.iter().any(|(k, v)| {
             if file_modify_time(k.as_path()).cmp(v) != Ordering::Equal {
@@ -468,25 +452,5 @@ impl Project {
                 false
             }
         })
-    }
-
-    pub(crate) fn get_module_addr(
-        &self,
-        addr: Option<LeadingNameAccess>,
-        m: &ModuleDefinition,
-    ) -> AccountAddress {
-        match addr {
-            Some(x) => match x.value {
-                LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
-                LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
-            },
-            None => match m.address {
-                Some(x) => match x.value {
-                    LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
-                    LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
-                },
-                None => *ERR_ADDRESS,
-            },
-        }
     }
 }

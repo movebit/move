@@ -1,38 +1,9 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 use enum_iterator::Sequence;
-use move_core_types::account_address::AccountAddress;
-
-use move_command_line_common::files::FileHash;
-use move_ir_types::location::Loc;
-use move_symbol_pool::Symbol;
-// use std::str::FromStr;
 
 #[derive(Clone)]
 pub struct ItemStruct {
-    // pub(crate) name: StructName,
-    // pub(crate) type_parameters: Vec<StructTypeParameter>,
-    // pub(crate) type_parameters_ins: Vec<ResolvedType>,
-    // pub(crate) fields: Vec<(Field, ResolvedType)>, /* TODO If this length is zero,maybe a native. */
-    pub(crate) is_test: bool,
-    pub(crate) addr: AccountAddress,
-    pub(crate) module_name: Symbol,
-}
-
-impl ItemStruct {
-    pub(crate) fn to_struct_ref(&self) -> ItemStructNameRef {
-        ItemStructNameRef {
-            addr: self.addr,
-            module_name: self.module_name,
-            // name: self.name,
-            // type_parameters: self.type_parameters.clone(),
-            is_test: self.is_test,
-        }
-    }
-}
-
-impl ItemStruct {
-    pub(crate) fn bind_type_parameter() {}
 }
 
 impl std::fmt::Display for ItemStruct {
@@ -102,30 +73,15 @@ pub struct ItemUseItem {
 
 #[derive(Clone)]
 pub struct ItemModuleName {
-    // pub(crate) name: ModuleName,
-    pub(crate) is_test: bool,
 }
 
 #[derive(Clone)]
 pub struct ItemStructNameRef {
-    pub(crate) addr: AccountAddress,
-    pub(crate) module_name: Symbol,
-    // pub(crate) name: StructName,
-    // pub(crate) type_parameters: Vec<StructTypeParameter>,
-    pub(crate) is_test: bool,
+   
 }
 
 #[derive(Clone)]
 pub struct ItemFun {
-    // pub(crate) name: FunctionName,
-    // pub(crate) type_parameters: Vec<(Name, Vec<Ability>)>,
-    // pub(crate) parameters: Vec<(Var, ResolvedType)>,
-    // pub(crate) ret_type: Box<ResolvedType>,
-    // pub(crate) ret_type_unresolved: Type,
-    pub(crate) is_spec: bool,
-    // pub(crate) vis: Visibility,
-    // pub(crate) addr_and_name: AddrAndModuleName,
-    pub(crate) is_test: AttrTest,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -141,28 +97,28 @@ pub enum AttrTest {
 //     }
 // }
 
-impl Item {
-    pub(crate) fn def_loc(&self) -> Loc {
-        match self {
-            Item::Use(x) => Loc::new(FileHash::empty(), 0, 0),
-            // Item::Struct(x) => x.name.loc(),
-            // Item::TParam(name, _) => name.loc,
-            // Item::Const(ItemConst { name, .. }) => name.loc(),
-            // Item::StructNameRef(ItemStructNameRef { name, .. }) => name.0.loc,
-            // Item::Fun(f) => f.name.0.loc,
-            Item::Dummy => Loc::new(FileHash::empty(), 0, 0),
-            // Item::ModuleName(ItemModuleName { name, .. }) => name.loc(),
-            Item::MoveBuildInFun(_) => Loc::new(FileHash::empty(), 0, 0),
-            Item::SpecBuildInFun(_) => Loc::new(FileHash::empty(), 0, 0),
-            Item::SpecConst(_) => Loc::new(FileHash::empty(), 0, 0),
-            _ => Loc::new(FileHash::empty(), 0, 0),
-        }
-    }
+// impl Item {
+//     pub(crate) fn def_loc(&self) -> Loc {
+//         match self {
+//             Item::Use(x) => Loc::new(FileHash::empty(), 0, 0),
+//             // Item::Struct(x) => x.name.loc(),
+//             // Item::TParam(name, _) => name.loc,
+//             // Item::Const(ItemConst { name, .. }) => name.loc(),
+//             // Item::StructNameRef(ItemStructNameRef { name, .. }) => name.0.loc,
+//             // Item::Fun(f) => f.name.0.loc,
+//             Item::Dummy => Loc::new(FileHash::empty(), 0, 0),
+//             // Item::ModuleName(ItemModuleName { name, .. }) => name.loc(),
+//             Item::MoveBuildInFun(_) => Loc::new(FileHash::empty(), 0, 0),
+//             Item::SpecBuildInFun(_) => Loc::new(FileHash::empty(), 0, 0),
+//             Item::SpecConst(_) => Loc::new(FileHash::empty(), 0, 0),
+//             _ => Loc::new(FileHash::empty(), 0, 0),
+//         }
+//     }
 
-    pub(crate) fn is_build_in(&self) -> bool {
-        matches!(self, Item::SpecBuildInFun(_) | Item::MoveBuildInFun(_))
-    }
-}
+//     pub(crate) fn is_build_in(&self) -> bool {
+//         matches!(self, Item::SpecBuildInFun(_) | Item::MoveBuildInFun(_))
+//     }
+// }
 
 impl Default for Item {
     fn default() -> Self {
@@ -172,10 +128,6 @@ impl Default for Item {
 
 #[derive(Clone)]
 pub struct ItemConst {
-    // pub(crate) name: ConstantName,
-    // pub(crate) ty: ResolvedType,
-    /// only Const have this field,SpecConst ignore this field.
-    pub(crate) is_test: bool,
 }
 
 // #[derive(Clone, Copy, Debug)]
@@ -323,21 +275,7 @@ pub enum Access {
 
 #[derive(Clone)]
 pub struct AccessFiled {
-    // pub(crate) from: Field,
-    // pub(crate) to: Field,
-    // #[allow(dead_code)]
-    // pub(crate) ty: ResolvedType,
-    // pub(crate) all_fields: HashMap<Symbol, (Name, ResolvedType)>,
-    /// When dealing with below syntax can have this.
-    /// ```move
-    /// let x = XXX {x}
-    ///```
-    /// x is alas a field and a expr.
-    /// and a expr can link to a item.
-    pub(crate) item: Option<Item>,
-    /// Does this field access contains a ref
-    /// like &xxx.yyy
-    pub(crate) has_ref: Option<bool>,
+
 }
 
 // impl Access {

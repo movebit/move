@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{item::*, project::Project, utils::*};
+use crate::{project::Project, utils::*};
 use move_command_line_common::files::FileHash;
 use move_core_types::account_address::*;
 use move_ir_types::location::*;
@@ -63,9 +63,6 @@ pub(crate) fn file_modify_time(x: &Path) -> Option<SystemTime> {
 // ======================================================================================
 // Handler a `ItemOrAccess` producced By `Project`.
 pub trait ItemOrAccessHandler: std::fmt::Display {
-    /// Handle this item.
-    fn handle_item_or_access(&mut self, _services: &dyn HandleItemService, _item: &ItemOrAccess) {}
-
     fn visit_fun_or_spec_body(&self) -> bool;
 
     /// Visitor should finished.
@@ -94,14 +91,13 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
     fn handle_project_env(
         &mut self,
         _services: &dyn HandleItemService,
-        env: &GlobalEnv,
-        move_file_path: &Path,
+        _: &GlobalEnv,
+        _: &Path,
     ) {
     }
 }
 
 impl ItemOrAccessHandler for DummyHandler {
-    fn handle_item_or_access(&mut self, _services: &dyn HandleItemService, _item: &ItemOrAccess) {}
     fn finished(&self) -> bool {
         false
     }

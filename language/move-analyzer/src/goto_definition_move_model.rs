@@ -4,7 +4,6 @@
 use crate::{
     analyzer_handler::*,
     context::*,
-    item::*,
     utils::{path_concat, FileRange},
 };
 use lsp_server::*;
@@ -721,12 +720,6 @@ impl Handler {
 impl ItemOrAccessHandler for Handler {
     fn visit_fun_or_spec_body(&self) -> bool {
         true
-    }
-    fn handle_item_or_access(
-        &mut self,
-        services: &dyn HandleItemService,
-        item_or_access: &ItemOrAccess,
-    ) {
     }
 
     fn finished(&self) -> bool {

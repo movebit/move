@@ -48,14 +48,14 @@ pub fn parse_package(path: &Path) -> GlobalEnv {
     env
 }
 
-pub fn get_definition_in_global_env_by_move_file(
-    env: &GlobalEnv,
-    move_file_path: &Path,
-) -> Result<(Vec<Definition>, MatchedFileCommentMap), Diagnostics> {
-    let defs = vec![];
-    // log::info!("lll << get_definition_in_global_env_by_move_file");
-    Ok((defs, MatchedFileCommentMap::new()))
-}
+// pub fn get_definition_in_global_env_by_move_file(
+//     env: &GlobalEnv,
+//     move_file_path: &Path,
+// ) -> Result<(Vec<Definition>, MatchedFileCommentMap), Diagnostics> {
+//     let defs = vec![];
+//     // log::info!("lll << get_definition_in_global_env_by_move_file");
+//     Ok((defs, MatchedFileCommentMap::new()))
+// }
 
 /// Parse the `input` string as a file of Move source code and return the
 /// result as either a pair of FileDefinition and doc comments or some Diagnostics. The `file` name
@@ -63,5 +63,8 @@ pub fn get_definition_in_global_env_by_move_file(
 pub fn parse_file_string(
     file_path: PathBuf,
 ) -> Result<(Vec<Definition>, MatchedFileCommentMap), Diagnostics> {
-    get_definition_in_global_env_by_move_file(&parse_package(&file_path), file_path.as_path())
+    // get_definition_in_global_env_by_move_file(&parse_package(&file_path), file_path.as_path())
+    log::info!("parse_file_string >> file_path = {:?}", file_path);
+    let defs = vec![];
+    Ok((defs, MatchedFileCommentMap::new()))
 }

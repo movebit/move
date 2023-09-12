@@ -4,10 +4,8 @@
 use crate::{
     analyzer_handler::*,
     context::*,
-    item::*,
     utils::{path_concat, FileRange},
 };
-use codespan::ByteIndex;
 use lsp_server::*;
 use lsp_types::*;
 use move_model::{
@@ -187,6 +185,7 @@ impl Handler {
             .collect()
     }
 
+    /*
     fn get_global_env_all_ty_mapping(&mut self, env: &GlobalEnv) {
         log::info!("lll >> <on_references>get_global_env_all_ty_mapping =======================================\n\n");
         for module_env in env.get_modules() {
@@ -197,6 +196,7 @@ impl Handler {
             }
         }
     }
+    */
 
     fn process_func(&mut self, env: &GlobalEnv, move_file_path: &Path) {
         log::info!("lll >> <on_references>process_func =======================================\n\n");
@@ -495,7 +495,7 @@ impl Handler {
         env: &GlobalEnv,
         move_file_path: &Path
     ) {
-        self.get_global_env_all_ty_mapping(env);
+        // self.get_global_env_all_ty_mapping(env);
         self.process_func(env, move_file_path);
         self.process_struct(env, move_file_path);
     }
@@ -504,12 +504,6 @@ impl Handler {
 impl ItemOrAccessHandler for Handler {
     fn visit_fun_or_spec_body(&self) -> bool {
         true
-    }
-    fn handle_item_or_access(
-        &mut self,
-        services: &dyn HandleItemService,
-        item_or_access: &ItemOrAccess,
-    ) {
     }
 
     fn finished(&self) -> bool {
