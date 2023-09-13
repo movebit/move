@@ -64,7 +64,7 @@ pub fn parse_file_string(
     file_path: PathBuf,
 ) -> Result<(Vec<Definition>, MatchedFileCommentMap), Diagnostics> {
     // get_definition_in_global_env_by_move_file(&parse_package(&file_path), file_path.as_path())
-    log::info!("parse_file_string >> file_path = {:?}", file_path);
+    // log::info!("parse_file_string >> file_path = {:?}", file_path);
     let defs = vec![];
     Ok((defs, MatchedFileCommentMap::new()))
 }

@@ -135,7 +135,7 @@ impl Handler {
     
         mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
         // locate to self.line first column
-        while mouse_loc.column.0 < self.col {
+        while mouse_loc.column.0 < self.col && mouse_loc.line.0 == self.line {
             mouse_line_last_col = move_model::model::Loc::new(
                 target_fn_or_struct_loc.file_id(),
                 codespan::Span::new(

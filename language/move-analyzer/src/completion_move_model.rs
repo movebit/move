@@ -13,16 +13,11 @@ use move_model::{
     ast::{ExpData::*, Operation::*},
     model::{FunId, GlobalEnv, ModuleId, StructId},
 };
-use move_compiler::{
-    parser::{
-        ast::{LeadingNameAccess_, ModuleName},
-        keywords::{CONTEXTUAL_KEYWORDS, KEYWORDS, PRIMITIVE_TYPES},
-    },
-    shared::{Identifier, Name},
+use move_compiler::parser::{
+    ast::ModuleName,
+    keywords::{CONTEXTUAL_KEYWORDS, KEYWORDS, PRIMITIVE_TYPES},
 };
-use move_symbol_pool::Symbol;
 use std::{
-    collections::{HashMap, HashSet},
     path::*,
     vec,
 };
@@ -66,12 +61,13 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     let ret = Some(CompletionResponse::Array(handler.get_result()));
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(ret).unwrap());
     let ret_response = r.clone();
-    log::info!("\n\n------------------------------------ret_response = {:?}", ret_response);
+    log::info!("on complete------------------------------------> \n{:?}", ret_response);
     context
         .connection
         .sender
         .send(Message::Response(r))
         .unwrap();
+    log::info!("<------------------------------------ \n");
     ret_response
 }
 
@@ -114,7 +110,7 @@ impl Handler {
         }
         self.capture_items_span.clear();
         self.result_candidates.clear();
-        vec![]
+        keywords()
     }
 
     fn get_mouse_loc(&mut self, env: &GlobalEnv, target_fn_or_struct_loc: &move_model::model::Loc) {
@@ -148,7 +144,7 @@ impl Handler {
     
         mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
         // locate to self.line first column
-        while mouse_loc.column.0 < self.col {
+        while mouse_loc.column.0 < self.col && mouse_loc.line.0 == self.line {
             mouse_line_last_col = move_model::model::Loc::new(
                 target_fn_or_struct_loc.file_id(),
                 codespan::Span::new(
@@ -173,7 +169,7 @@ impl Handler {
     }
 
     fn process_func(&mut self, env: &GlobalEnv, move_file_path: &Path) {
-        log::info!("lll >> <on_hover>process_func =======================================\n\n");
+        log::info!("lll >> <on_complete>process_func =======================================\n\n");
         let mut found_target_module = false;
         let mut found_target_fun = false;
         let mut target_module_id = ModuleId::new(0);
@@ -229,7 +225,7 @@ impl Handler {
     }
 
     fn process_struct(&mut self, env: &GlobalEnv, move_file_path: &Path) {
-        log::info!("lll >> <on_hover>process_struct =======================================\n\n");
+        log::info!("lll >> <on_complete>process_struct =======================================\n\n");
         let mut found_target_module = false;
         let mut found_target_struct = false;
         let mut target_module_id = ModuleId::new(0);

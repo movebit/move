@@ -124,6 +124,8 @@ impl Project {
             manifest_load_failures: Default::default(),
             manifest_mod_time: Default::default(),
             global_env: Default::default(),
+            targets: vec![],
+            dependents: vec![],
         };
 
         let mut targets_paths: Vec<PathBuf> = Vec::new();
@@ -172,6 +174,9 @@ impl Project {
                 .clone(),
             named_address_map: addrs,
         }];
+
+        new_project.targets = targets.clone();
+        new_project.dependents = dependents.clone();
         new_project.global_env = run_model_builder_with_options(
             targets,
             dependents,
@@ -181,14 +186,6 @@ impl Project {
             },
         )
         .expect("Failed to create GlobalEnv!");
-
-        // new_project.get_project_def(&working_dir, SourcePackageLayout::Sources);
-        // new_project.get_project_def(&working_dir, SourcePackageLayout::Tests);
-        // new_project.get_project_def(&working_dir, SourcePackageLayout::Scripts);
-
-        let mut dummy = DummyHandler;
-        // new_project.run_full_visitor(&mut dummy);
-        new_project.run_full_visitor_by_move_model(&mut dummy);
         Ok(new_project)
     }
 
@@ -214,9 +211,18 @@ impl Project {
             //     //     .delete_module_items(addr, d.name.value(), d.is_spec_module);
             // });
         };
-        // Update defs.
-        let mut dummy = DummyHandler;
-        let _ = self.run_visitor_for_file(&mut dummy, file_path);
+
+        let targets = self.targets.clone();
+        let dependents = self.dependents.clone();
+        self.global_env = run_model_builder_with_options(
+            targets,
+            dependents,
+            ModelBuilderOptions {
+                compile_via_model: true,
+                ..Default::default()
+            },
+        )
+        .expect("Failed to create GlobalEnv!");
     }
 
     /// Load a Move.toml project.
