@@ -26,6 +26,5 @@ pub struct Project {
     pub(crate) manifest_load_failures: HashSet<PathBuf>,
     pub(crate) manifest_mod_time: HashMap<PathBuf, Option<SystemTime>>,
     pub(crate) global_env: move_model::model::GlobalEnv,
-    pub(crate) targets: Vec<PackagePaths<std::string::String, std::string::String>>,
-    pub(crate) dependents: Vec<PackagePaths<std::string::String, std::string::String>>,
+    pub(crate) current_modifing_file_content: String,
 }

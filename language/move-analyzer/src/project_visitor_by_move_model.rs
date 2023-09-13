@@ -10,8 +10,9 @@ impl Project {
         &self,
         visitor: &mut dyn ItemOrAccessHandler,
         filepath: &PathBuf,
+        source_str: String
     ) {
         log::info!("run visitor part for {} ", visitor);
-        visitor.handle_project_env(self, &self.global_env, &filepath);
+        visitor.handle_project_env(self, &self.global_env, &filepath, source_str);
     }
 }

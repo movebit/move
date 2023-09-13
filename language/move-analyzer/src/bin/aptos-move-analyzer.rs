@@ -218,18 +218,10 @@ fn on_response(_context: &Context, _response: &Response) {
 type DiagSender = Arc<Mutex<Sender<(PathBuf, Diagnostics)>>>;
 
 fn on_notification(context: &mut Context, notification: &Notification, diag_sender: DiagSender) {
-    fn update_defs_on_changed(context: &mut Context, fpath: PathBuf, content: &str) {
-        let file_hash = FileHash::new(content);
-        let defs = parse_file_string(fpath.clone());
-        let defs = match defs {
-            std::result::Result::Ok(x) => x,
-            std::result::Result::Err(d) => {
-                log::error!("update file failed,err:{:?}", d);
-                return;
-            },
-        };
-        let (defs, _) = defs;
-        context.projects.update_defs(fpath.clone(), defs);
+    fn update_defs_on_changed(context: &mut Context, fpath: PathBuf, content: String) {
+        // log::info!("update_defs_on_changed content ------------->\n{:?}", content);
+        let file_hash = FileHash::new(content.as_str());
+        context.projects.update_defs(fpath.clone(), content.clone());
         context
             .projects
             .hash_file
@@ -241,7 +233,8 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             .file_line_mapping
             .as_ref()
             .borrow_mut()
-            .update(fpath, content);
+            .update(fpath, content.clone());
+        // log::info!("update_defs_on_changed content <-------------");
     }
 
     match notification.method.as_str() {
@@ -260,7 +253,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                     return;
                 },
             };
-            update_defs_on_changed(context, fpath.clone(), content.as_str());
+            update_defs_on_changed(context, fpath.clone(), content);
             make_diag(context, diag_sender, fpath);
         },
         lsp_types::notification::DidChangeTextDocument::METHOD => {
@@ -273,7 +266,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             update_defs_on_changed(
                 context,
                 fpath,
-                parameters.content_changes.last().unwrap().text.as_str(),
+                parameters.content_changes.last().unwrap().text.clone(),
             );
         },
 
@@ -295,7 +288,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             match context.projects.get_project(&fpath) {
                 Some(_) => {
                     if let Ok(x) = std::fs::read_to_string(fpath.as_path()) {
-                        update_defs_on_changed(context, fpath.clone(), x.as_str());
+                        update_defs_on_changed(context, fpath.clone(), x);
                     };
                     return;
                 },

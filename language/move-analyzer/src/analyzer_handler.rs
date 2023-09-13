@@ -93,6 +93,7 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
         _services: &dyn HandleItemService,
         _: &GlobalEnv,
         _: &Path,
+        _: String
     ) {
     }
 }

@@ -124,8 +124,7 @@ impl Project {
             manifest_load_failures: Default::default(),
             manifest_mod_time: Default::default(),
             global_env: Default::default(),
-            targets: vec![],
-            dependents: vec![],
+            current_modifing_file_content: Default::default(),
         };
 
         let mut targets_paths: Vec<PathBuf> = Vec::new();
@@ -175,8 +174,6 @@ impl Project {
             named_address_map: addrs,
         }];
 
-        new_project.targets = targets.clone();
-        new_project.dependents = dependents.clone();
         new_project.global_env = run_model_builder_with_options(
             targets,
             dependents,
@@ -189,7 +186,7 @@ impl Project {
         Ok(new_project)
     }
 
-    pub fn update_defs(&mut self, file_path: &PathBuf, old_defs: Option<&Vec<Definition>>) {
+    pub fn update_defs(&mut self, file_path: &PathBuf, content: String) {
         let manifest = super::utils::discover_manifest_and_kind(file_path.as_path());
         if manifest.is_none() {
             log::error!("path can't find manifest file:{:?}", file_path);
@@ -202,27 +199,7 @@ impl Project {
             manifest.as_path(),
             layout
         );
-        // delete old items.
-        if let Some(defs) = old_defs.as_ref() {
-            log::info!("defs.len = {:?}", defs.len());
-            // let x = VecDefAstProvider::new(defs, self, layout);
-            // x.with_module(|addr, d| {
-            //     // self.project_context
-            //     //     .delete_module_items(addr, d.name.value(), d.is_spec_module);
-            // });
-        };
-
-        let targets = self.targets.clone();
-        let dependents = self.dependents.clone();
-        self.global_env = run_model_builder_with_options(
-            targets,
-            dependents,
-            ModelBuilderOptions {
-                compile_via_model: true,
-                ..Default::default()
-            },
-        )
-        .expect("Failed to create GlobalEnv!");
+        self.current_modifing_file_content = content;
     }
 
     /// Load a Move.toml project.
@@ -358,7 +335,7 @@ impl Project {
                 self.file_line_mapping
                     .as_ref()
                     .borrow_mut()
-                    .update(file.path().to_path_buf(), file_content.as_str());
+                    .update(file.path().to_path_buf(), file_content);
             }
         }
         // log::info!("lll << load_layout_files_v2");

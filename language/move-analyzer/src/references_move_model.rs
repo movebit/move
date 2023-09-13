@@ -48,7 +48,7 @@ pub fn on_references_request(context: &Context, request: &Request) -> lsp_server
             };
         },
     }
-    .run_visitor_for_file(&mut handler, &fpath);
+    .run_visitor_for_file(&mut handler, &fpath, String::default());
     let locations = handler.to_locations();
     let r = Response::new_ok(
         request.id.clone(),
@@ -515,6 +515,7 @@ impl ItemOrAccessHandler for Handler {
         _services: &dyn HandleItemService,
         env: &GlobalEnv,
         move_file_path: &Path,
+        _: String
     ) {
         self.run_move_model_visitor_internal(env, move_file_path);
     }

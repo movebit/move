@@ -57,7 +57,7 @@ pub struct FileLineMapping {
 }
 
 impl FileLineMapping {
-    pub fn update(&mut self, filepath: PathBuf, content: &str) {
+    pub fn update(&mut self, filepath: PathBuf, content: String) {
         let mut v = vec![0];
         for (index, s) in content.as_bytes().iter().enumerate() {
             // TODO how to support windows \r\n

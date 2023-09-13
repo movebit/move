@@ -48,7 +48,7 @@ pub fn on_hover_request(context: &Context, request: &Request) -> lsp_server::Res
             };
         },
     }
-    .run_visitor_for_file(&mut handler, &fpath);
+    .run_visitor_for_file(&mut handler, &fpath, String::default());
 
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(handler.get_result()).unwrap());
     let ret_response = r.clone();
@@ -461,6 +461,7 @@ impl ItemOrAccessHandler for Handler {
         _services: &dyn HandleItemService,
         env: &GlobalEnv,
         move_file_path: &Path,
+        _: String
     ) {
         self.run_move_model_visitor_internal(env, move_file_path);
     }

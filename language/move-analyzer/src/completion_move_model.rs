@@ -45,7 +45,7 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     );
 
     let mut handler = Handler::new(fpath.clone(), line, col);
-    let _ = match context.projects.get_project(&fpath) {
+    let current_project = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
             log::error!("project not found:{:?}", fpath.as_path());
@@ -55,8 +55,11 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
                 error: None,
             };
         },
-    }
-    .run_visitor_for_file(&mut handler, &fpath);
+    };
+    current_project.run_visitor_for_file(
+        &mut handler, 
+        &fpath, 
+        current_project.current_modifing_file_content.clone());
 
     let ret = Some(CompletionResponse::Array(handler.get_result()));
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(ret).unwrap());
@@ -76,7 +79,6 @@ pub(crate) struct Handler {
     pub(crate) filepath: PathBuf,
     pub(crate) line: u32,
     pub(crate) col: u32,
-    // pub(crate) result: Option<FileRange>,
 
     pub(crate) mouse_span: codespan::Span,
     pub(crate) capture_items_span: Vec<codespan::Span>,
@@ -461,7 +463,12 @@ impl ItemOrAccessHandler for Handler {
         _services: &dyn HandleItemService,
         env: &GlobalEnv,
         move_file_path: &Path,
+        source_str: String,
     ) {
+        use move_compiler::parser::lexer::*;
+        use move_command_line_common::files::FileHash;
+        let file_hash = FileHash::new(source_str.as_str());
+        let _ = Lexer::new(&source_str, file_hash);
         self.run_move_model_visitor_internal(env, move_file_path);
     }
 }

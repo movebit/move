@@ -109,8 +109,8 @@ impl MultiProject {
         ret
     }
 
-    pub fn update_defs(&mut self, file_path: PathBuf, defs: Vec<Definition>) {
-        let (manifest, layout) = match super::utils::discover_manifest_and_kind(file_path.as_path())
+    pub fn update_defs(&mut self, file_path: PathBuf, content: String) {
+        let (manifest, _) = match super::utils::discover_manifest_and_kind(file_path.as_path())
         {
             Some(x) => x,
             None => {
@@ -118,20 +118,10 @@ impl MultiProject {
                 return;
             },
         };
-        let mut b = self.asts.get_mut(&manifest).unwrap().borrow_mut();
-        let old_defs = if layout == SourcePackageLayout::Sources {
-            b.sources.insert(file_path.clone(), defs)
-        } else if layout == SourcePackageLayout::Tests {
-            b.tests.insert(file_path.clone(), defs)
-        } else if layout == SourcePackageLayout::Scripts {
-            b.scripts.insert(file_path.clone(), defs)
-        } else {
-            unreachable!()
-        };
-        drop(b);
+        drop(self.asts.get_mut(&manifest).unwrap().borrow_mut());
         self.get_projects_mut(&file_path)
             .into_iter()
-            .for_each(|x| x.update_defs(&file_path, old_defs.as_ref()));
+            .for_each(|x| x.update_defs(&file_path, content.clone()));
     }
 
     pub fn try_reload_projects(&mut self, connection: &Connection) {
