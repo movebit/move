@@ -23,11 +23,12 @@ use std::{
 use aptos_move_analyzer::{
     analyzer_handler::ConvertLoc,
     context::{Context, FileDiags},
-    goto_definition,
     multiproject::MultiProject,
+    goto_definition,
     references,
     hover,
     completion,
+    inlay_hints, inlay_hints::*,
     utils::*,
 };
 use url::Url;
@@ -144,6 +145,7 @@ fn main() {
         .expect("could not finish connection initialization");
     let (diag_sender, diag_receiver) = bounded::<(PathBuf, Diagnostics)>(1);
     let diag_sender = Arc::new(Mutex::new(diag_sender));
+    let mut inlay_hints_config = InlayHintsConfig::default();
     loop {
         select! {
             recv(diag_receiver) -> message => {
@@ -157,7 +159,7 @@ fn main() {
             recv(context.connection.receiver) -> message => {
                 context.projects.try_reload_projects(&context.connection);
                 match message {
-                    Ok(Message::Request(request)) => on_request(&mut context, &request),
+                    Ok(Message::Request(request)) => on_request(&mut context, &request , &mut inlay_hints_config),
                     Ok(Message::Response(response)) => on_response(&context, &response),
                     Ok(Message::Notification(notification)) => {
                         match notification.method.as_str() {
@@ -180,7 +182,7 @@ fn main() {
     eprintln!("Shut down language server '{}'.", exe);
 }
 
-fn on_request(context: &mut Context, request: &Request) {
+fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut InlayHintsConfig) {
     // log::info!("aptos receive method:{}", request.method.as_str());
     match request.method.as_str() {
         lsp_types::request::GotoDefinition::METHOD => {
@@ -195,15 +197,15 @@ fn on_request(context: &mut Context, request: &Request) {
         lsp_types::request::Completion::METHOD => {
             completion::on_completion_request(context, request);
         }
-        // lsp_types::request::InlayHintRequest::METHOD => {
-        //     inlay_hints::on_inlay_hints(context, request, *inlay_hints_config);
-        // }
-        // "move/lsp/client/inlay_hints/config" => {
-        //     let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
-        //         .expect("could not deserialize inlay hints request");
-        //     eprintln!("call inlay_hints config {:?}", parameters);
-        //     *inlay_hints_config = parameters;
-        // }
+        lsp_types::request::InlayHintRequest::METHOD => {
+            inlay_hints::on_inlay_hints(context, request, *inlay_hints_config);
+        }
+        "move/lsp/client/inlay_hints/config" => {
+            let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
+                .expect("could not deserialize inlay hints request");
+            eprintln!("call inlay_hints config {:?}", parameters);
+            *inlay_hints_config = parameters;
+        }
         _ => {
             // eprintln!("handle request '{}' from client", request.method)
         },

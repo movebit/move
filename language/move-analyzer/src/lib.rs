@@ -43,3 +43,4 @@ pub mod utils;
 pub mod references;
 pub mod hover;
 pub mod completion;
+pub mod inlay_hints;

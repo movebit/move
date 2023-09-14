@@ -7,9 +7,7 @@ use im::HashSet;
 use lsp_server::Connection;
 use lsp_types::{notification::Notification, MessageType};
 use move_command_line_common::files::FileHash;
-use move_compiler::parser::ast::Definition;
 use move_ir_types::location::Loc;
-use move_package::source_package::layout::SourcePackageLayout;
 use std::{
     cell::RefCell,
     collections::HashMap,

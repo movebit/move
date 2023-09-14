@@ -6,10 +6,7 @@ use super::utils::*;
 use crate::{analyzer_handler::*, multiproject::MultiProject, project::Project};
 use anyhow::{Ok, Result};
 use move_command_line_common::files::FileHash;
-use move_compiler::{
-    parser::ast::Definition,
-    shared::{NumericalAddress, PackagePaths},
-};
+use move_compiler::shared::{NumericalAddress, PackagePaths};
 use move_core_types::account_address::*;
 use move_package::source_package::{layout::SourcePackageLayout, manifest_parser::*};
 use std::{
