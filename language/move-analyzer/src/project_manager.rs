@@ -125,6 +125,8 @@ impl Project {
             manifest_mod_time: Default::default(),
             global_env: Default::default(),
             current_modifing_file_content: Default::default(),
+            targets: vec![],
+            dependents: vec![],
         };
 
         let mut targets_paths: Vec<PathBuf> = Vec::new();
@@ -174,6 +176,8 @@ impl Project {
             named_address_map: addrs,
         }];
 
+        new_project.targets = targets.clone();
+        new_project.dependents = dependents.clone();
         new_project.global_env = run_model_builder_with_options(
             targets,
             dependents,
@@ -187,19 +191,20 @@ impl Project {
     }
 
     pub fn update_defs(&mut self, file_path: &PathBuf, content: String) {
-        let manifest = super::utils::discover_manifest_and_kind(file_path.as_path());
-        if manifest.is_none() {
-            log::error!("path can't find manifest file:{:?}", file_path);
-            return;
-        }
-        let (manifest, layout) = manifest.unwrap();
-        log::info!(
-            "update defs for {:?} manifest:{:?} layout:{:?}",
-            file_path.as_path(),
-            manifest.as_path(),
-            layout
-        );
+        log::info!("lll >> update_defs for file:{:?}", file_path);
         self.current_modifing_file_content = content;
+
+        let targets = self.targets.clone();
+        let dependents = self.dependents.clone();
+        self.global_env = run_model_builder_with_options(
+            targets,
+            dependents,
+            ModelBuilderOptions {
+                compile_via_model: true,
+                ..Default::default()
+            },
+        )
+        .expect("Failed to create GlobalEnv!");
     }
 
     /// Load a Move.toml project.

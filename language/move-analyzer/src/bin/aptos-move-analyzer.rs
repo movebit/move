@@ -23,13 +23,12 @@ use std::{
 use aptos_move_analyzer::{
     analyzer_handler::ConvertLoc,
     context::{Context, FileDiags},
-    goto_definition_move_model,
+    goto_definition,
     multiproject::MultiProject,
-    references_move_model,
-    hover_move_model,
-    completion_move_model,
+    references,
+    hover,
+    completion,
     utils::*,
-    syntax::parse_file_string,
 };
 use url::Url;
 
@@ -185,16 +184,16 @@ fn on_request(context: &mut Context, request: &Request) {
     // log::info!("aptos receive method:{}", request.method.as_str());
     match request.method.as_str() {
         lsp_types::request::GotoDefinition::METHOD => {
-            goto_definition_move_model::on_go_to_def_request(context, request);
+            goto_definition::on_go_to_def_request(context, request);
         },
         lsp_types::request::References::METHOD => {
-            references_move_model::on_references_request(context, request);
+            references::on_references_request(context, request);
         }
         lsp_types::request::HoverRequest::METHOD => {
-            hover_move_model::on_hover_request(context, request);
+            hover::on_hover_request(context, request);
         }
         lsp_types::request::Completion::METHOD => {
-            completion_move_model::on_completion_request(context, request);
+            completion::on_completion_request(context, request);
         }
         // lsp_types::request::InlayHintRequest::METHOD => {
         //     inlay_hints::on_inlay_hints(context, request, *inlay_hints_config);
