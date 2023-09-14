@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use codespan_reporting::files::{Files, SimpleFiles};
-use lsp_types::{Location, Position};
+use lsp_types::{Command, Location, Position};
 use move_command_line_common::files::FileHash;
 use move_ir_types::location::*;
 use move_package::source_package::layout::SourcePackageLayout;
@@ -305,6 +305,18 @@ pub fn is_sub_dir(p: PathBuf, mut sub: PathBuf) -> bool {
 /// There command should implemented in `LSP` client.
 pub enum MoveAnalyzerClientCommands {
     GotoDefinition(Location),
+}
+
+impl MoveAnalyzerClientCommands {
+    pub(crate) fn to_lsp_command(&self) -> Command {
+        match self {
+            MoveAnalyzerClientCommands::GotoDefinition(x) => Command::new(
+                "Goto Definition".to_string(),
+                "aptos-move-analyzer.goto_definition".to_string(),
+                Some(vec![serde_json::to_value(PathAndRange::from(x)).unwrap()]),
+            ),
+        }
+    }
 }
 
 use lsp_types::Range;
