@@ -9,7 +9,6 @@ use move_ir_types::location::*;
 use move_model::model::GlobalEnv;
 use move_symbol_pool::Symbol;
 use std::{
-    collections::HashMap,
     hash::Hash,
     path::{Path, PathBuf},
     time::SystemTime,

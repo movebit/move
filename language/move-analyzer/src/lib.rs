@@ -38,7 +38,6 @@ pub mod item;
 pub mod multiproject;
 pub mod project;
 pub mod project_manager;
-pub mod project_visitor;
 pub mod utils;
 pub mod references;
 pub mod hover;

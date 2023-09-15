@@ -176,7 +176,7 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     let col = loc.character;
     let fpath = path_concat(std::env::current_dir().unwrap().as_path(), fpath.as_path());
     eprintln!(
-        "request is goto definition,fpath:{:?}  line:{} col:{}",
+        "on_completion_request, fpath:{:?} line:{} col:{}",
         fpath.as_path(),
         line,
         col,

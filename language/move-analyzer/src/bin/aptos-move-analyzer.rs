@@ -28,7 +28,8 @@ use aptos_move_analyzer::{
     references,
     hover,
     completion,
-    inlay_hints, inlay_hints::*,
+    // inlay_hints,
+    inlay_hints::*,
     utils::*,
 };
 use url::Url;
@@ -197,15 +198,15 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
         lsp_types::request::Completion::METHOD => {
             completion::on_completion_request(context, request);
         }
-        lsp_types::request::InlayHintRequest::METHOD => {
-            inlay_hints::on_inlay_hints(context, request, *inlay_hints_config);
-        }
-        "move/lsp/client/inlay_hints/config" => {
-            let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
-                .expect("could not deserialize inlay hints request");
-            eprintln!("call inlay_hints config {:?}", parameters);
-            *inlay_hints_config = parameters;
-        }
+        // lsp_types::request::InlayHintRequest::METHOD => {
+        //     inlay_hints::on_inlay_hints(context, request, *inlay_hints_config);
+        // }
+        // "move/lsp/client/inlay_hints/config" => {
+        //     let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
+        //         .expect("could not deserialize inlay hints request");
+        //     eprintln!("call inlay_hints config {:?}", parameters);
+        //     *inlay_hints_config = parameters;
+        // }
         _ => {
             // eprintln!("handle request '{}' from client", request.method)
         },

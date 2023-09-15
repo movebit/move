@@ -73,6 +73,7 @@ pub(crate) struct Handler {
     pub(crate) mouse_span: codespan::Span,
     pub(crate) capture_items_span: Vec<codespan::Span>,
     pub(crate) result_candidates: Vec<FileRange>,
+    pub(crate) target_module_id: ModuleId,
 }
 
 impl Handler {
@@ -85,6 +86,7 @@ impl Handler {
             mouse_span: Default::default(),
             capture_items_span: vec![],
             result_candidates: vec![],
+            target_module_id: ModuleId::new(0),
         }
     }
 
@@ -102,6 +104,20 @@ impl Handler {
         self.capture_items_span.clear();
         self.result_candidates.clear();
         ret
+    }
+
+    fn get_target_module(&mut self, env: &GlobalEnv, move_file_path: &Path) {
+        let mut move_file_str: &str = "null_move_file";
+        if let Some(file_stem) = move_file_path.file_stem() {
+            if let Some(file_stem_str) = file_stem.to_str() {
+                move_file_str = file_stem_str;
+            }
+        }
+        for module in env.get_target_modules() {
+            if module.matches_name(move_file_str) {
+                self.target_module_id = module.get_id();
+            }
+        }
     }
 
     fn get_mouse_loc(&mut self, env: &GlobalEnv, target_fn_or_struct_loc: &move_model::model::Loc) {
@@ -159,53 +175,34 @@ impl Handler {
         self.mouse_span = codespan::Span::new(mouse_line_first_col.span().start(), mouse_line_last_col.span().start());
     }
     
-    fn process_func(&mut self, env: &GlobalEnv, move_file_path: &Path) {
+    fn process_func(&mut self, env: &GlobalEnv) {
         log::info!("lll >> process_func =======================================\n\n");
-        let mut found_target_module = false;
         let mut found_target_fun = false;
-        let mut target_module_id = ModuleId::new(0);
         let mut target_fun_id = FunId::new(env.symbol_pool().make("name"));
 
-        let mut move_file_str: &str = "null_move_file";
-        if let Some(file_stem) = move_file_path.file_stem() {
-            if let Some(file_stem_str) = file_stem.to_str() {
-                move_file_str = file_stem_str;
-            }
-        }
-        for module in env.get_target_modules() {
-            if module.matches_name(move_file_str) {
-                target_module_id = module.get_id();
-                found_target_module = true;
-                // log::info!("lll >> module_file_name = {:?}", module.get_full_name_str());
+        let target_module = env.get_module(self.target_module_id);
+        for fun in target_module.get_functions() {
+            let this_fun_loc = fun.get_loc();
+            let (_, func_start_pos) = env.get_file_and_location(&this_fun_loc).unwrap();
+            let (_, func_end_pos) = env
+                .get_file_and_location(&move_model::model::Loc::new(
+                    this_fun_loc.file_id(),
+                    codespan::Span::new(this_fun_loc.span().end(), this_fun_loc.span().end()),
+                ))
+                .unwrap();
+            if func_start_pos.line.0 < self.line && self.line < func_end_pos.line.0 {
+                target_fun_id = fun.get_id();
+                found_target_fun = true;
                 break;
             }
-        }
-
-        if found_target_module {
-            let target_module = env.get_module(target_module_id);
-            for fun in target_module.get_functions() {
-                let this_fun_loc = fun.get_loc();
-                let (_, func_start_pos) = env.get_file_and_location(&this_fun_loc).unwrap();
-                let (_, func_end_pos) = env
-                    .get_file_and_location(&move_model::model::Loc::new(
-                        this_fun_loc.file_id(),
-                        codespan::Span::new(this_fun_loc.span().end(), this_fun_loc.span().end()),
-                    ))
-                    .unwrap();
-                if func_start_pos.line.0 < self.line && self.line < func_end_pos.line.0 {
-                    target_fun_id = fun.get_id();
-                    found_target_fun = true;
-                    break;
-                }
-                // log::info!("lll >> func_start_pos = {:?}, func_end_pos = {:?}", func_start_pos, func_end_pos);
-            }
+            // log::info!("lll >> func_start_pos = {:?}, func_end_pos = {:?}", func_start_pos, func_end_pos);
         }
 
         if !found_target_fun {
             return;
         }
 
-        let target_module = env.get_module(target_module_id);
+        let target_module = env.get_module(self.target_module_id);
         let target_fun = target_module.get_function(target_fun_id);
         let target_fun_loc = target_fun.get_loc();
         self.get_mouse_loc(env, &target_fun_loc);
@@ -215,53 +212,32 @@ impl Handler {
         }
     }
 
-    fn process_struct(&mut self, env: &GlobalEnv, move_file_path: &Path) {
+    fn process_struct(&mut self, env: &GlobalEnv) {
         log::info!("lll >> process_struct =======================================\n\n");
-        let mut found_target_module = false;
         let mut found_target_struct = false;
-        let mut target_module_id = ModuleId::new(0);
         let mut target_struct_id = StructId::new(env.symbol_pool().make("name"));
-    
-        let mut move_file_str: &str = "null_move_file";
-        if let Some(file_stem) = move_file_path.file_stem() {
-            if let Some(file_stem_str) = file_stem.to_str() {
-                move_file_str = file_stem_str;
-            }
-        }
-        for module in env.get_target_modules() {
-            if module.matches_name(move_file_str) {
-                target_module_id = module.get_id();
-                found_target_module = true;
-                // log::info!("lll >> module_file_name = {:?}", module.get_full_name_str());
+        let target_module = env.get_module(self.target_module_id);
+        for struct_env in target_module.get_structs() {
+            let struct_loc = struct_env.get_loc();
+            let (_, struct_start_pos) = env.get_file_and_location(&struct_loc).unwrap();
+            let (_, struct_end_pos) = env
+                .get_file_and_location(&move_model::model::Loc::new(
+                    struct_loc.file_id(),
+                    codespan::Span::new(struct_loc.span().end(), struct_loc.span().end()),
+                ))
+                .unwrap();
+            if struct_start_pos.line.0 < self.line && self.line < struct_end_pos.line.0 {
+                target_struct_id = struct_env.get_id();
+                found_target_struct = true;
                 break;
             }
+            // log::info!("lll >> struct_start_pos = {:?}, struct_end_pos = {:?}", struct_start_pos, struct_end_pos);
         }
-    
-        if found_target_module {
-            let target_module = env.get_module(target_module_id);
-            for struct_env in target_module.get_structs() {
-                let struct_loc = struct_env.get_loc();
-                let (_, struct_start_pos) = env.get_file_and_location(&struct_loc).unwrap();
-                let (_, struct_end_pos) = env
-                    .get_file_and_location(&move_model::model::Loc::new(
-                        struct_loc.file_id(),
-                        codespan::Span::new(struct_loc.span().end(), struct_loc.span().end()),
-                    ))
-                    .unwrap();
-                if struct_start_pos.line.0 < self.line && self.line < struct_end_pos.line.0 {
-                    target_struct_id = struct_env.get_id();
-                    found_target_struct = true;
-                    break;
-                }
-                // log::info!("lll >> struct_start_pos = {:?}, struct_end_pos = {:?}", struct_start_pos, struct_end_pos);
-            }
-        }
-    
         if !found_target_struct {
             return;
         }
     
-        let target_module = env.get_module(target_module_id);
+        let target_module = env.get_module(self.target_module_id);
         let target_struct = target_module.get_struct(target_struct_id);
         let target_struct_loc = target_struct.get_loc();
         self.get_mouse_loc(env, &target_struct_loc);
@@ -712,8 +688,9 @@ impl Handler {
         env: &GlobalEnv,
         move_file_path: &Path
     ) {
-        self.process_func(env, move_file_path);
-        self.process_struct(env, move_file_path);
+        self.get_target_module(env, move_file_path);
+        self.process_func(env);
+        self.process_struct(env);
     }
 }
 

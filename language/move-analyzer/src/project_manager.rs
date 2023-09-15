@@ -344,85 +344,6 @@ impl Project {
         Ok(ret_paths)
     }
 
-    // pub(crate) fn get_project_def(&mut self, manifest_path: &PathBuf, kind: SourcePackageLayout) {
-    //     use super::syntax::get_definition_in_global_env_by_move_file;
-    //     let mut p = manifest_path.clone();
-    //     p.push(kind.location_str());
-    //     for item in WalkDir::new(&p) {
-    //         let file = match item {
-    //             std::result::Result::Err(_e) => continue,
-    //             std::result::Result::Ok(x) => x,
-    //         };
-    //         if file.file_type().is_file()
-    //             && match file.file_name().to_str() {
-    //                 Some(s) => s.ends_with(".move"),
-    //                 None => continue,
-    //             }
-    //         {
-    //             if file
-    //                 .file_name()
-    //                 .to_str()
-    //                 .map(|x| x.starts_with('.'))
-    //                 .unwrap_or(false)
-    //             {
-    //                 continue;
-    //             }
-    //             let file_content = fs::read_to_string(file.path())
-    //                 .unwrap_or_else(|_| panic!("'{:?}' can't read_to_string", file.path()));
-    //             log::info!("parse source file {:?}", file.path());
-    //             let file_hash = FileHash::new(file_content.as_str());
-
-    //             let defs = get_definition_in_global_env_by_move_file(&self.global_env, file.path());
-    //             let defs = match defs {
-    //                 std::result::Result::Ok(x) => x,
-    //                 std::result::Result::Err(diags) => {
-    //                     let mut m = HashMap::new();
-    //                     m.insert(
-    //                         file_hash,
-    //                         (
-    //                             Symbol::from(file.path().to_str().unwrap()),
-    //                             file_content.clone(),
-    //                         ),
-    //                     );
-    //                     let buffer =
-    //                         move_compiler::diagnostics::report_diagnostics_to_buffer(&m, diags);
-    //                     let s = String::from_utf8_lossy(buffer.as_slice());
-    //                     log::error!("{}", s);
-    //                     continue;
-    //                 },
-    //             };
-
-    //             let defs = defs.0;
-    //             if kind == SourcePackageLayout::Sources {
-    //                 self.modules
-    //                     .get_mut(manifest_path)
-    //                     .unwrap()
-    //                     .as_ref()
-    //                     .borrow_mut()
-    //                     .sources
-    //                     .insert(file.path().to_path_buf().clone(), defs);
-    //             } else if kind == SourcePackageLayout::Tests {
-    //                 self.modules
-    //                     .get_mut(manifest_path)
-    //                     .unwrap()
-    //                     .as_ref()
-    //                     .borrow_mut()
-    //                     .tests
-    //                     .insert(file.path().to_path_buf().clone(), defs);
-    //             } else {
-    //                 self.modules
-    //                     .get_mut(manifest_path)
-    //                     .unwrap()
-    //                     .as_ref()
-    //                     .borrow_mut()
-    //                     .scripts
-    //                     .insert(file.path().to_path_buf().clone(), defs);
-    //             }
-    //         }
-    //     }
-    //     // log::info!("lll << get_project_def");
-    // }
-
     pub(crate) fn manifest_beed_modified(&self) -> bool {
         self.manifest_mod_time.iter().any(|(k, v)| {
             if file_modify_time(k.as_path()).cmp(v) != Ordering::Equal {
@@ -437,5 +358,15 @@ impl Project {
                 false
             }
         })
+    }
+
+    pub fn run_visitor_for_file(
+        &self,
+        visitor: &mut dyn ItemOrAccessHandler,
+        filepath: &PathBuf,
+        source_str: String
+    ) {
+        log::info!("run visitor part for {} ", visitor);
+        visitor.handle_project_env(self, &self.global_env, &filepath, source_str);
     }
 }

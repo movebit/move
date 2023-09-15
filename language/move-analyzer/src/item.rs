@@ -14,36 +14,17 @@ impl std::fmt::Display for ItemStruct {
 
 #[derive(Clone)]
 pub enum Item {
-    // Parameter(Var, ResolvedType),
     Const(ItemConst),
-    // Var {
-    //     var: Var,
-    //     ty: ResolvedType,
-    //     lambda: Option<LambdaExp>,
-    //     has_decl_ty: bool,
-    // },
-    // Field(Field, ResolvedType),
     Struct(ItemStruct),
     StructNameRef(ItemStructNameRef),
     Fun(ItemFun),
     MoveBuildInFun(MoveBuildInFun),
     SpecBuildInFun(SpecBuildInFun),
     SpecConst(ItemConst),
-    /// build in types.
-    // BuildInType(BuildInType),
-    // TParam(Name, Vec<Ability>),
-    // SpecSchema(Name, HashMap<Symbol, (Name, ResolvedType)>),
-    /// a module name in 0x1111::module_name
     ModuleName(ItemModuleName),
     Use(Vec<ItemUse>),
     Dummy,
 }
-
-// #[derive(Clone)]
-// pub struct LambdaExp {
-//     pub(crate) bind_list: BindList,
-//     pub(crate) exp: Exp,
-// }
 
 #[derive(Clone)]
 pub enum ItemUse {
@@ -53,20 +34,12 @@ pub enum ItemUse {
 
 #[derive(Clone)]
 pub struct ItemUseModule {
-    // pub(crate) module_ident: ModuleIdent, // 0x111::xxxx
-    // pub(crate) alias: Option<ModuleName>, // alias
-    // pub(crate) members: Rc<RefCell<ModuleScope>>, // module scope.
-    // pub(crate) s: Option<Name>, // Option Self
     #[allow(dead_code)]
     pub(crate) is_test: bool,
 }
 
 #[derive(Clone)]
 pub struct ItemUseItem {
-    // pub(crate) module_ident: ModuleIdent, /* access name */
-    // pub(crate) name: Name,
-    // pub(crate) alias: Option<Name>, /* alias  */
-    // pub(crate) members: Rc<RefCell<ModuleScope>>,
     #[allow(dead_code)]
     pub(crate) is_test: bool,
 }
@@ -91,35 +64,6 @@ pub enum AttrTest {
     TestOnly,
 }
 
-// impl AttrTest {
-//     pub(crate) fn is_test(self) -> bool {
-//         self == Self::Test || self == Self::TestOnly
-//     }
-// }
-
-// impl Item {
-//     pub(crate) fn def_loc(&self) -> Loc {
-//         match self {
-//             Item::Use(x) => Loc::new(FileHash::empty(), 0, 0),
-//             // Item::Struct(x) => x.name.loc(),
-//             // Item::TParam(name, _) => name.loc,
-//             // Item::Const(ItemConst { name, .. }) => name.loc(),
-//             // Item::StructNameRef(ItemStructNameRef { name, .. }) => name.0.loc,
-//             // Item::Fun(f) => f.name.0.loc,
-//             Item::Dummy => Loc::new(FileHash::empty(), 0, 0),
-//             // Item::ModuleName(ItemModuleName { name, .. }) => name.loc(),
-//             Item::MoveBuildInFun(_) => Loc::new(FileHash::empty(), 0, 0),
-//             Item::SpecBuildInFun(_) => Loc::new(FileHash::empty(), 0, 0),
-//             Item::SpecConst(_) => Loc::new(FileHash::empty(), 0, 0),
-//             _ => Loc::new(FileHash::empty(), 0, 0),
-//         }
-//     }
-
-//     pub(crate) fn is_build_in(&self) -> bool {
-//         matches!(self, Item::SpecBuildInFun(_) | Item::MoveBuildInFun(_))
-//     }
-// }
-
 impl Default for Item {
     fn default() -> Self {
         Self::Dummy
@@ -130,182 +74,16 @@ impl Default for Item {
 pub struct ItemConst {
 }
 
-// #[derive(Clone, Copy, Debug)]
-// pub enum MacroCall {
-//     Assert,
-// }
-
-// impl MacroCall {
-//     pub(crate) fn from_chain(chain: &NameAccessChain) -> Option<Self> {
-//         match &chain.value {
-//             NameAccessChain_::One(name) => Self::from_symbol(name.value),
-//             NameAccessChain_::Two(_, _) => None,
-//             NameAccessChain_::Three(_, _) => None,
-//         }
-//     }
-//     pub(crate) fn from_symbol(s: Symbol) -> Option<Self> {
-//         match s.as_str() {
-//             "assert" => Some(Self::Assert),
-//             _ => None,
-//         }
-//     }
-//     pub(crate) fn to_static_str(self) -> &'static str {
-//         match self {
-//             MacroCall::Assert => "assert",
-//         }
-//     }
-// }
-
-// impl Default for MacroCall {
-//     fn default() -> Self {
-//         Self::Assert
-//     }
-// }
-
-/// Get the last name of a access chain.
-// pub(crate) fn get_name_chain_last_name(x: &NameAccessChain) -> &Name {
-//     match &x.value {
-//         move_compiler::parser::ast::NameAccessChain_::One(name)
-//         | move_compiler::parser::ast::NameAccessChain_::Two(_, name)
-//         | move_compiler::parser::ast::NameAccessChain_::Three(_, name) => name,
-//     }
-// }
-
-// impl std::fmt::Display for Item {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         match self {
-//             // Item::Parameter(var, t) => {
-//             //     write!(f, "{}:{}", var.0.value.as_str(), t)
-//             // },
-//             Item::ModuleName(ItemModuleName { name, .. }) => {
-//                 write!(f, "{}", name.value().as_str())
-//             },
-//             Item::Use(x) => Ok(for x in x.iter() {
-//                 match x {
-//                     ItemUse::Module(ItemUseModule { module_ident, .. }) => {
-//                         write!(f, "use {:?} _", module_ident)?;
-//                     },
-//                     ItemUse::Item(ItemUseItem {
-//                         module_ident,
-//                         name,
-//                         alias,
-//                         ..
-//                     }) => {
-//                         write!(
-//                             f,
-//                             "use {:?}::{:?} {}",
-//                             module_ident,
-//                             name,
-//                             if let Some(alias) = alias {
-//                                 format!(" as {}", alias.value.as_str())
-//                             } else {
-//                                 String::from_str("").unwrap()
-//                             },
-//                         )?;
-//                     },
-//                 }
-//             }),
-
-//             // Item::Const(ItemConst { name, ty, .. }) => {
-//             //     write!(f, "{}:{}", name.0.value.as_str(), ty)
-//             // },
-//             // Item::SpecConst(ItemConst { name, ty, .. }) => {
-//             //     write!(f, "{}:{}", name.0.value.as_str(), ty)
-//             // },
-//             Item::Struct(s) => {
-//                 write!(f, "{}", s)
-//             },
-//             // Item::StructNameRef(ItemStructNameRef { name, .. }) => {
-//             //     write!(f, "{}", name.value().as_str())
-//             // },
-//             // Item::Fun(x) => write!(f, "{}", x),
-//             // Item::BuildInType(x) => {
-//             //     write!(f, "{}", x.to_static_str())
-//             // },
-//             Item::TParam(tname, abilities) => {
-//                 write!(f, "{}:", tname.value.as_str())?;
-//                 for i in 0..abilities.len() {
-//                     let x = abilities.get(i).unwrap();
-//                     write!(f, "{:?},", x.value)?;
-//                 }
-//                 std::result::Result::Ok(())
-//             },
-//             // Item::Var { var, ty, .. } => {
-//             //     write!(f, "{}:{}", var.0.value.as_str(), ty)
-//             // },
-//             // Item::Field(x, ty) => {
-//             //     write!(f, "{}:{}", x.0.value.as_str(), ty)
-//             // },
-//             Item::Dummy => {
-//                 write!(f, "dummy")
-//             },
-//             // Item::SpecSchema(name, _) => {
-//             //     write!(f, "{}", name.value.as_str())
-//             // },
-//             Item::MoveBuildInFun(x) => write!(f, "move_build_in_fun {}", x.to_static_str()),
-//             Item::SpecBuildInFun(x) => write!(f, "spec_build_in_fun {}", x.to_static_str()),
-//             _ => write!(f, ""),
-//         }
-//     }
-// }
-
 #[derive(Clone)]
 pub enum Access {
-    // ApplyType(NameAccessChain, Option<ModuleName>, Box<ResolvedType>),
-    // ExprVar(Var, Box<Item>),
-    // ExprAccessChain(NameAccessChain, Option<AddrAndModuleName>, Box<Item>),
-    // Maybe the same as ExprName.
-    // ExprAddressName(Name),
     AccessFiled(AccessFiled),
-    ///////////////
-    /// key words
     KeyWords(&'static str),
-    /////////////////
-    // MacroCall(MacroCall, NameAccessChain),
-    // Friend(NameAccessChain, ModuleName),
-
-    // ApplySchemaTo(
-    //     NameAccessChain, // Apply a schema to a item.
-    //     Box<Item>,
-    // ),
-    // IncludeSchema(NameAccessChain, Box<Item>),
-    // PragmaProperty(PragmaProperty),
-    // SpecFor(Name, Box<Item>),
 }
 
 #[derive(Clone)]
 pub struct AccessFiled {
 
 }
-
-// impl Access {
-//     pub(crate) fn access_def_loc(&self) -> (Loc /* access loc */, Loc /* def loc */) {
-//         match self {
-//             // Access::ApplyType(name, _, x) => {
-//             //     (get_name_chain_last_name(name).loc, x.as_ref().def_loc())
-//             // },
-//             Access::ExprVar(var, x) => (var.loc(), x.def_loc()),
-//             // Access::ExprAccessChain(name, _, item) => {
-//             //     (get_name_chain_last_name(name).loc, item.as_ref().def_loc())
-//             // },
-//             Access::ExprAddressName(_) => (
-//                 Loc::new(FileHash::empty(), 0, 0),
-//                 Loc::new(FileHash::empty(), 0, 0),
-//             ),
-//             Access::AccessFiled(AccessFiled { from, to, .. }) => (from.loc(), to.loc()),
-//             Access::KeyWords(_) => (
-//                 Loc::new(FileHash::empty(), 0, 0),
-//                 Loc::new(FileHash::empty(), 0, 0),
-//             ),
-//             Access::MacroCall(_, chain) => (chain.loc, chain.loc),
-//             Access::Friend(name, item) => (get_name_chain_last_name(name).loc, item.loc()),
-//             Access::ApplySchemaTo(chain, x) => (get_name_chain_last_name(chain).loc, x.def_loc()),
-//             Access::PragmaProperty(x) => (x.loc, x.loc),
-//             Access::SpecFor(name, item) => (name.loc, item.as_ref().def_loc()),
-//             Access::IncludeSchema(a, d) => (get_name_chain_last_name(a).loc, d.def_loc()),
-//         }
-//     }
-// }
 
 #[derive(Clone)]
 pub enum ItemOrAccess {
@@ -330,15 +108,6 @@ impl From<ItemOrAccess> for Access {
         }
     }
 }
-
-// impl std::fmt::Display for ItemOrAccess {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         match self {
-//             Self::Access(a) => a.fmt(f),
-//             Self::Item(x) => x.fmt(f),
-//         }
-//     }
-// }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Sequence)]
 pub enum MoveBuildInFun {

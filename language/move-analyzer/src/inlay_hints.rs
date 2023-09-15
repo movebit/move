@@ -12,10 +12,9 @@ use lsp_server::*;
 use lsp_types::*;
 use move_model::{
     ast::{ExpData::*, Operation::*},
-    model::{FunId, GlobalEnv, ModuleId, FunctionEnv},
+    model::{GlobalEnv, ModuleId, FunctionEnv},
 };
-use std::{path::{Path, PathBuf}, borrow::BorrowMut};
-use move_command_line_common::files::FileHash;
+use std::path::{Path, PathBuf};
 
 /// Handles inlay_hints request of the language server.
 pub fn on_inlay_hints(context: &Context, request: &Request, config: InlayHintsConfig) -> lsp_server::Response {
@@ -429,7 +428,7 @@ fn ty_inlay_hints_label_parts_(
     use move_model::ty::Type::*;
     match ty {
         Error => {},
-        Struct(x, strc_id, tys) => {
+        Struct(_, _, tys) => {
             ret.push(InlayHintLabelPart {
                 value: "struct".to_string(),
                 tooltip: None,
