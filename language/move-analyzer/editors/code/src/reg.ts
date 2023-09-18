@@ -168,9 +168,13 @@ const Reg = {
         name = "my_first_package"
         version = "0.0.3"
 
+        [dependencies.AptosFramework]
+        git = 'https://github.com/aptos-labs/aptos-core.git'
+        rev = 'main'
+        subdir = 'aptos-move/framework/aptos-framework'
+
         [addresses]
         my_first_package =  "0x0"
-        aptos =  "0x2"
         `;
         const aptos_module_file_template = `
         // Copyright (c) Mysten Labs, Inc.
@@ -240,10 +244,10 @@ const Reg = {
         // Register handlers for VS Code commands that the user explicitly issues.
         context.registerCommand('serverVersion', serverVersion);
         // Register test button
-        context.registerCommand('aptos.test_ui', (_, ...args) => {
+        context.registerCommand('test_ui', (_, ...args) => {
             const cwd = args[0] as string;
             const name = args[1] as string;
-            const aptos_test = terminalManager.alloc(cwd + 'aptos.test_ui', () => {
+            const aptos_test = terminalManager.alloc(cwd + 'test_ui', () => {
                 return vscode.window.createTerminal({
                     cwd: cwd,
                     name: 'aptos test',
@@ -254,7 +258,7 @@ const Reg = {
             aptos_test.show(false);
         });
 
-        context.registerCommand('aptos.create_project', async () => {
+        context.registerCommand('create_project', async () => {
 
             const dir = await vscode.window.showSaveDialog({
                 // There is a long term issue about parse()
@@ -276,47 +280,26 @@ const Reg = {
             fs.writeFileSync(dir2 + '/sources/my_module.move',
                 aptos_module_file_template.replaceAll(replace_name, project_name));
         });
-        context.registerCommand('aptos.move.new', async () => {
+        context.registerCommand('move.compile', async () => {
             const working_dir = await aptos_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
             }
-            const name = await vscode.window.showInputBox({
-                title: 'New a project',
-                placeHolder: 'Type you project name.',
-            });
-            if (name === undefined) {
-                return;
-            }
-            const t = terminalManager.alloc('aptos.move.new', (): vscode.Terminal => {
+            const t = terminalManager.alloc('move.compile', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
-                    name: 'aptos move new',
+                    name: 'aptos move compile',
                 });
             });
             t.show(true);
             t.sendText('cd ' + working_dir, true);
-            t.sendText('aptos move new ' + name, true);
+            t.sendText('aptos move compile', true);
         });
-        context.registerCommand('aptos.move.build', async () => {
+        context.registerCommand('move.coverage', async () => {
             const working_dir = await aptos_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('aptos.move.build', (): vscode.Terminal => {
-                return vscode.window.createTerminal({
-                    name: 'aptos move build',
-                });
-            });
-            t.show(true);
-            t.sendText('cd ' + working_dir, true);
-            t.sendText('aptos move build', true);
-        });
-        context.registerCommand('aptos.move.coverage', async () => {
-            const working_dir = await aptos_working_dir.get_working_dir();
-            if (working_dir === undefined) {
-                return;
-            }
-            const t = terminalManager.alloc('aptos.move.coverage', (): vscode.Terminal => {
+            const t = terminalManager.alloc('move.coverage', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'aptos move coverage',
                 });
@@ -326,12 +309,12 @@ const Reg = {
             t.sendText('aptos move test --coverage', true);
             t.sendText('aptos move coverage summary', true);
         });
-        context.registerCommand('aptos.move.test', async () => {
+        context.registerCommand('move.test', async () => {
             const working_dir = await aptos_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('aptos.move.test', (): vscode.Terminal => {
+            const t = terminalManager.alloc('move.test', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'aptos move test',
                 });
@@ -340,12 +323,12 @@ const Reg = {
             t.sendText('cd ' + working_dir, true); t.sendText('cd ' + working_dir, true);
             t.sendText('aptos move test', true);
         });
-        context.registerCommand('aptos.move.prove', async () => {
+        context.registerCommand('move.prove', async () => {
             const working_dir = await aptos_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('aptos.move.prove', (): vscode.Terminal => {
+            const t = terminalManager.alloc('move.prove', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'aptos move prove',
                 });
@@ -354,131 +337,7 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('aptos move prove', true);
         });
-        context.registerCommand('aptos.client.active.address', async () => {
-            const working_dir = await aptos_working_dir.get_working_dir();
-            if (working_dir === undefined) {
-                return;
-            }
-            const t = terminalManager.alloc('aptos.client.active.address', (): vscode.Terminal => {
-                return vscode.window.createTerminal({
-                    name: 'aptos client active address',
-                });
-            });
-            t.show(true);
-            t.sendText('cd ' + working_dir, true);
-            t.sendText('aptos client active-address', true);
-        });
-        context.registerCommand('aptos.client.active.env', async () => {
-            const working_dir = await aptos_working_dir.get_working_dir();
-            if (working_dir === undefined) {
-                return;
-            }
-            const t = terminalManager.alloc('aptos.client.active.env', (): vscode.Terminal => {
-                return vscode.window.createTerminal({
-                    name: 'aptos client active env',
-                });
-            });
-            t.show(true);
-            t.sendText('cd ' + working_dir, true);
-            t.sendText('aptos client active-env', true);
-        });
-        context.registerCommand('aptos.client.addresses', async () => {
-            const working_dir = await aptos_working_dir.get_working_dir();
-            if (working_dir === undefined) {
-                return;
-            }
-            const t = terminalManager.alloc('aptos.client.addresses', (): vscode.Terminal => {
-                return vscode.window.createTerminal({
-                    name: 'aptos client addresses',
-                });
-            });
-            t.show(true);
-            t.sendText('cd ' + working_dir, true);
-            t.sendText('aptos client addresses', true);
-        });
-        context.registerCommand('aptos.client.envs', async () => {
-            const working_dir = await aptos_working_dir.get_working_dir();
-            if (working_dir === undefined) {
-                return;
-            }
-            const t = terminalManager.alloc('aptos.client.envs', (): vscode.Terminal => {
-                return vscode.window.createTerminal({
-                    name: 'aptos client envs',
-                });
-            });
-            t.show(true);
-            t.sendText('cd ' + working_dir, true);
-            t.sendText('aptos client envs', true);
-        });
-        context.registerCommand('aptos.client.gas', async () => {
-            const working_dir = await aptos_working_dir.get_working_dir();
-            if (working_dir === undefined) {
-                return;
-            }
-            const t = terminalManager.alloc('aptos.client.gas', (): vscode.Terminal => {
-                return vscode.window.createTerminal({
-                    name: 'aptos client gas',
-                });
-            });
-            t.show(true);
-            t.sendText('cd ' + working_dir, true);
-            t.sendText('aptos client gas', true);
-        });
-        context.registerCommand('aptos.client.object', async () => {
-            const working_dir = await aptos_working_dir.get_working_dir();
-            if (working_dir === undefined) {
-                return;
-            }
-            const objectID = await vscode.window.showInputBox({
-                placeHolder: 'Type you object ID.',
-            });
-            if (objectID === undefined) {
-                return;
-            }
-            const t = terminalManager.alloc('aptos.client.object', (): vscode.Terminal => {
-                return vscode.window.createTerminal({
-                    name: 'aptos client object',
-                });
-            });
-            t.show(true);
-            t.sendText('cd ' + working_dir, true);
-            t.sendText('aptos client object ' + objectID, true);
-        });
-        context.registerCommand('aptos.client.objects', async () => {
-            const working_dir = await aptos_working_dir.get_working_dir();
-            if (working_dir === undefined) {
-                return;
-            }
-            const t = terminalManager.alloc('aptos.client.objects', (): vscode.Terminal => {
-                return vscode.window.createTerminal({
-                    name: 'aptos client objects',
-                });
-            });
-            t.show(true);
-            t.sendText('cd ' + working_dir, true);
-            t.sendText('aptos client objects', true);
-        });
-        context.registerCommand('aptos.client.publish', async () => {
-            const working_dir = await aptos_working_dir.get_working_dir();
-            if (working_dir === undefined) {
-                return;
-            }
-            const budget = await vscode.window.showInputBox({
-                placeHolder: 'Type you Gas Budget.',
-            });
-            if (budget === undefined) {
-                return;
-            }
-            const t = terminalManager.alloc('aptos.client.publish', (): vscode.Terminal => {
-                return vscode.window.createTerminal({
-                    name: 'aptos client publish',
-                });
-            });
-            t.show(true);
-            t.sendText('cd ' + working_dir, true);
-            t.sendText('aptos client publish --gas-budget ' + budget, true);
-        });
-        context.registerCommand('aptos.client.new.address', async () => {
+        context.registerCommand('key.generate', async () => {
             const working_dir = await aptos_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
@@ -489,36 +348,16 @@ const Reg = {
             if (schema === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('aptos.client.new.address', (): vscode.Terminal => {
+            const t = terminalManager.alloc('client.key.generate', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
-                    name: 'aptos client new address',
+                    name: 'aptos key generate',
                 });
             });
             t.show(true);
             t.sendText('cd ' + working_dir, true);
-            t.sendText('aptos client new-address ' + schema, true);
+            t.sendText('aptos key generate ' + schema, true);
         });
-        context.registerCommand('aptos.keytool.generate', async () => {
-            const working_dir = await aptos_working_dir.get_working_dir();
-            if (working_dir === undefined) {
-                return;
-            }
-            const schema = await vscode.window.showQuickPick(schemaTypes, {
-                canPickMany: false, placeHolder: 'Select you schema.',
-            });
-            if (schema === undefined) {
-                return;
-            }
-            const t = terminalManager.alloc('aptos.client.keytool.generate', (): vscode.Terminal => {
-                return vscode.window.createTerminal({
-                    name: 'aptos keytool generate',
-                });
-            });
-            t.show(true);
-            t.sendText('cd ' + working_dir, true);
-            t.sendText('aptos keytool generate ' + schema, true);
-        });
-        context.registerCommand('aptos.keytool.import', async () => {
+        context.registerCommand('key.extract-peer', async () => {
             const working_dir = await aptos_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
@@ -535,100 +374,16 @@ const Reg = {
             if (schema === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('aptos.client.keytool.import', (): vscode.Terminal => {
+            const t = terminalManager.alloc('client.key.extract-peer', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
-                    name: 'aptos keytool import',
+                    name: 'aptos key extract-peer',
                 });
             });
             t.show(true);
             t.sendText('cd ' + working_dir, true);
-            t.sendText('aptos keytool import ' + m + ' ' + schema, true);
+            t.sendText('aptos key extract-peer ' + m + ' ' + schema, true);
         });
-        context.registerCommand('aptos.keytool.list', async () => {
-            const working_dir = await aptos_working_dir.get_working_dir();
-            if (working_dir === undefined) {
-                return;
-            }
-            const t = terminalManager.alloc('aptos.client.keytool.list', (): vscode.Terminal => {
-                return vscode.window.createTerminal({
-                    name: 'aptos keytool list',
-                });
-            });
-            t.show(true);
-            t.sendText('cd ' + working_dir, true);
-            t.sendText('aptos keytool list ', true);
-        });
-        context.registerCommand('aptos.keytool.load.keypair', async () => {
-            const working_dir = await aptos_working_dir.get_working_dir();
-            if (working_dir === undefined) {
-                return;
-            }
-            const file = await vscode.window.showOpenDialog({
-                canSelectFiles: false,
-            });
-            if (file === undefined) {
-                return;
-            }
-            if (file.length === 0) {
-                return;
-            }
-            if (file[0] !== undefined) {
-                const t = terminalManager.alloc('aptos.client.keytool.load.keypair', (): vscode.Terminal => {
-                    return vscode.window.createTerminal({
-                        name: 'aptos keytool load keypair',
-                    });
-                });
-                t.show(true);
-                t.sendText('cd ' + working_dir, true);
-                t.sendText('aptos keytool load-keypair ' + file[0].fsPath, true);
-            }
-        });
-        context.registerCommand('aptos.keytool.show', async () => {
-            const working_dir = await aptos_working_dir.get_working_dir();
-            if (working_dir === undefined) {
-                return;
-            }
-            const file = await vscode.window.showOpenDialog({
-                canSelectFiles: false,
-            });
-            if (file === undefined) {
-                return;
-            }
-            if (file.length === 0) {
-                return;
-            }
-            if (file[0] !== undefined) {
-                const t = terminalManager.alloc('aptos.client.keytool.show', (): vscode.Terminal => {
-                    return vscode.window.createTerminal({
-                        name: 'aptos keytool show',
-                    });
-                });
-                t.show(true);
-                t.sendText('cd ' + working_dir, true);
-                t.sendText('aptos keytool show ' + file[0].fsPath, true);
-            }
-        });
-        context.registerCommand('aptos.keytool.unpack', async () => {
-            const working_dir = await aptos_working_dir.get_working_dir();
-            if (working_dir === undefined) {
-                return;
-            }
-            const str = await vscode.window.showInputBox({
-                placeHolder: 'Type your ????',
-            });
-            if (str === undefined) {
-                return;
-            }
-            const t = terminalManager.alloc('aptos.client.keytool.unpack', (): vscode.Terminal => {
-                return vscode.window.createTerminal({
-                    name: 'aptos keytool unpack',
-                });
-            });
-            t.show(true);
-            t.sendText('cd ' + working_dir, true);
-            t.sendText('aptos keytool unpack \'' + str + '\'', true);
-        });
-        context.registerCommand('aptos.reset.working.space', async () => {
+        context.registerCommand('reset.working.space', async () => {
             const new_ = await aptos_working_dir.get_use_input_working_dir();
             if (new_ === undefined) {
                 return;

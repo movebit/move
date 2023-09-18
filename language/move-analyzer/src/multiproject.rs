@@ -69,7 +69,7 @@ impl MultiProject {
                 send_show_message(
                     sender,
                     lsp_types::MessageType::ERROR,
-                    format!("project at {:?} can't fetch deps.\nMaybe you need execute 'aptos move build --fetch-deps-only --skip-fetch-latest-git-deps' yourself.", mani.as_path()),
+                    format!("project at {:?} can't fetch deps.\nMaybe you need execute 'aptos move compile --fetch-deps-only --skip-fetch-latest-git-deps' yourself.", mani.as_path()),
                 );
                 return anyhow::Result::Err(anyhow::anyhow!("fetch deps failed"));
             }
