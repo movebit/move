@@ -344,33 +344,21 @@ impl From<&Location> for PathAndRange {
 
 pub const PROJECT_FILE_NAME: &str = "Move.toml";
 
-#[cfg(not(target_os = "windows"))]
-pub fn cpu_pprof(_seconds: u64) {
-    use std::{fs::File, str::FromStr, time::Duration};
-    let guard = pprof::ProfilerGuardBuilder::default()
-        .frequency(1000)
-        .blocklist(&["libc", "libgcc", "pthread", "vdso"])
-        .build()
-        .unwrap();
-    std::thread::spawn(move || loop {
-        std::thread::sleep(Duration::new(_seconds, 0));
-        match guard.report().build() {
-            Result::Ok(report) => {
-                // let mut tmp = std::env::temp_dir();
-                let mut tmp = PathBuf::from_str("~/.aptos-move-analyzer").unwrap();
-
-                tmp.push("aptos-move-analyzer-flamegraph.svg");
-                let file = File::create(tmp.clone()).unwrap();
-                report.flamegraph(file).unwrap();
-                eprintln!("pprof file at {:?}", tmp.as_path());
-            },
-            Result::Err(e) => {
-                log::error!("build report failed,err:{}", e);
-            },
-        };
-    });
-}
-#[cfg(target_os = "windows")]
-pub fn cpu_pprof(_seconds: u64) {
-    log::error!("Can't run pprof in Windows");
+use move_model::model::{GlobalEnv, ModuleId};
+pub fn get_target_module(env: &GlobalEnv, move_file_path: &Path, target_module_id: &mut ModuleId) -> bool {
+    let mut move_file_str: &str = "null_move_file";
+    if let Some(file_stem) = move_file_path.file_stem() {
+        if let Some(file_stem_str) = file_stem.to_str() {
+            move_file_str = file_stem_str;
+        }
+    }
+    for module in env.get_target_modules() {
+        log::info!("lll >> <on_hover>get_target_module move_file_str = {:?}, module.name = {:?}",
+            move_file_str, module.get_full_name_str());
+        if module.matches_name(move_file_str) {
+            *target_module_id = module.get_id();
+            return true;
+        }
+    }
+    false
 }

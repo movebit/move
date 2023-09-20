@@ -181,12 +181,12 @@ impl Handler {
                                         localvar_loc.span().start() + 
                                             codespan::ByteOffset((index + localvar_symbol.display(env.symbol_pool()).to_string().len()).try_into().unwrap()),
                                         localvar_loc.span().end()));
-                                log::info!("local_var_str00 = {:?}", local_var_str);
-                                log::info!("local_var_str01 = {:?}", local_var_str.chars().nth(index + localvar_symbol.display(env.symbol_pool()).to_string().len() + 1));
-                                match local_var_str.chars().nth(index + localvar_symbol.display(env.symbol_pool()).to_string().len()) {
+                                let next_char = local_var_str.chars().nth(index + localvar_symbol.display(env.symbol_pool()).to_string().len());
+                                match next_char {
                                     Some('.') => return,
                                     Some(':') => return,
                                     _ => {
+                                        log::info!("local_var_str[{:?}] inlay_hint_pos = {:?}", local_var_str, inlay_hint_pos);
                                         self.process_type(env, &inlay_hint_pos, &node_type);
                                     }
                                 }
@@ -220,12 +220,12 @@ impl Handler {
                                         tmpvar_loc.span().start() + 
                                             codespan::ByteOffset((index + tmp_var_name_str.len()).try_into().unwrap()),
                                         tmpvar_loc.span().end()));
-                                log::info!("tmp_var_str00 = {:?}", tmp_var_str);
-                                log::info!("tmp_var_str01 = {:?}", tmp_var_str.chars().nth(index + tmp_var_name_str.len() + 1));
-                                match tmp_var_str.chars().nth(index + tmp_var_name_str.len()) {
+                                let next_char = tmp_var_str.chars().nth(index + tmp_var_name_str.len());
+                                match next_char {
                                     Some('.') => return,
                                     Some(':') => return,
                                     _ => {
+                                        log::info!("tmp_var_str[{:?}] inlay_hint_pos = {:?}", tmp_var_str, inlay_hint_pos);
                                         self.process_type(env, &inlay_hint_pos, &node_type);
                                     }
                                 }
@@ -247,28 +247,29 @@ impl Handler {
     {
         if let Call(node_id, Select(mid, sid, fid), _) = expdata {
             let this_call_loc = env.get_node_loc(*node_id);
-            log::info!(
-                "lll >> exp.visit this_call_loc = {:?}",
-                env.get_location(&this_call_loc)
-            );
-
             let called_module = env.get_module(*mid);
             let called_struct = called_module.get_struct(*sid);
-            log::info!(
-                "lll >> called_struct = {:?}",
-                called_struct.get_full_name_str()
-            );
             let called_field = called_struct.get_field(*fid);
             let field_type = called_field.get_type();
 
             if let Ok(link_access_source) = env.get_source(&this_call_loc) {
-                if let Some(index) = link_access_source.find(called_field.get_name().display(env.symbol_pool()).to_string().as_str()) {
+                let called_field_name = ".".to_string() + called_field.get_name().display(env.symbol_pool()).to_string().as_str();
+                log::info!(
+                    "lll >> called_struct = {:?}, link_access_source = {:?}, called_field_name = {:?}",
+                    called_struct.get_full_name_str(), link_access_source, called_field_name
+                );
+
+                if let Some(index) = link_access_source.find(called_field_name.as_str()) {
+                    let dis = index + called_field_name.len();
+                    log::info!("lll >> index = {:?}, dis = {:?}", index, dis);  
                     let inlay_hint_pos = move_model::model::Loc::new(
                         this_call_loc.file_id(),
                         codespan::Span::new(
-                            this_call_loc.span().start() + 
-                                codespan::ByteOffset((index + called_field.get_name().display(env.symbol_pool()).to_string().len()).try_into().unwrap()),
-                            this_call_loc.span().end()));
+                            this_call_loc.span().start() + codespan::ByteOffset((dis).try_into().unwrap()),
+                            this_call_loc.span().end()
+                        ));
+                    log::info!("lll >> exp.visit this_call_loc = {:?}", this_call_loc);
+                    log::info!("lll >> called_struct inlay_hint_pos = {:?}", inlay_hint_pos);
                     self.process_type(env, &inlay_hint_pos, &field_type);        
                 }
             }

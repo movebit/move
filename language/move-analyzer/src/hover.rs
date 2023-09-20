@@ -115,20 +115,6 @@ impl Handler {
         hover
     }
 
-    fn get_target_module(&mut self, env: &GlobalEnv, move_file_path: &Path) {
-        let mut move_file_str: &str = "null_move_file";
-        if let Some(file_stem) = move_file_path.file_stem() {
-            if let Some(file_stem_str) = file_stem.to_str() {
-                move_file_str = file_stem_str;
-            }
-        }
-        for module in env.get_target_modules() {
-            if module.matches_name(move_file_str) {
-                self.target_module_id = module.get_id();
-            }
-        }
-    }
-
     fn get_mouse_loc(&mut self, env: &GlobalEnv, target_fn_or_struct_loc: &move_model::model::Loc) {
         let mut mouse_line_first_col = move_model::model::Loc::new(
             target_fn_or_struct_loc.file_id(),
@@ -213,7 +199,6 @@ impl Handler {
         let target_fun = target_module.get_function(target_fun_id);
         let target_fun_loc = target_fun.get_loc();
         self.get_mouse_loc(env, &target_fun_loc);
-
         if let Some(exp) = target_fun.get_def() {
             self.process_expr(env, exp);
         }
@@ -417,7 +402,9 @@ impl Handler {
         env: &GlobalEnv,
         move_file_path: &Path
     ) {
-        self.get_target_module(env, move_file_path);
+        if !crate::utils::get_target_module(env, move_file_path, &mut self.target_module_id) {
+            return;
+        }
         self.process_func(env);
         self.process_struct(env);
     }

@@ -22,6 +22,8 @@ use move_model::{options::ModelBuilderOptions, run_model_builder_with_options};
 
 use num_bigint::BigUint;
 use tempfile::tempdir;
+use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
+use codespan_reporting::diagnostic::Severity;
 
 // Determines the base of the number literal, depending on the prefix
 pub(crate) fn determine_num_text_and_base22(
@@ -184,6 +186,11 @@ impl Project {
             },
         )
         .expect("Failed to create GlobalEnv!");
+
+        eprintln!("env.get_module_count() = {:?}", &new_project.global_env.get_module_count());
+        eprintln!("env.diag_count() = {:?}", &new_project.global_env.diag_count(Severity::Error));
+        let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
+        new_project.global_env.report_diag(&mut error_writer, Severity::Error);
         Ok(new_project)
     }
 
@@ -202,6 +209,10 @@ impl Project {
             },
         )
         .expect("Failed to create GlobalEnv!");
+        eprintln!("env.get_module_count() = {:?}", &self.global_env.get_module_count());
+        eprintln!("env.diag_count() = {:?}", &self.global_env.diag_count(Severity::Error));
+        let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
+        self.global_env.report_diag(&mut error_writer, Severity::Error);
     }
 
     /// Load a Move.toml project.
@@ -227,22 +238,23 @@ impl Project {
             let d: Rc<RefCell<SourceDefs>> = Default::default();
             self.modules.insert(manifest_path.clone(), d.clone());
             multi.asts.insert(manifest_path.clone(), d);
-            let source_paths1 =
-                self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Sources)?;
-            let source_paths2 =
-                self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Tests)?;
-            let source_paths3 =
-                self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Scripts)?;
-            if is_main_source {
-                targets_paths.extend(source_paths1);
-                targets_paths.extend(source_paths2);
-                targets_paths.extend(source_paths3);
-            } else {
-                dependents_paths.extend(source_paths1);
-                dependents_paths.extend(source_paths2);
-                dependents_paths.extend(source_paths3);
-            }
         }
+        let source_paths1 =
+            self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Sources)?;
+        let source_paths2 =
+            self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Tests)?;
+        let source_paths3 =
+            self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Scripts)?;
+        if is_main_source {
+            targets_paths.extend(source_paths1);
+            targets_paths.extend(source_paths2);
+            targets_paths.extend(source_paths3);
+        } else {
+            dependents_paths.extend(source_paths1);
+            dependents_paths.extend(source_paths2);
+            dependents_paths.extend(source_paths3);
+        }
+
         if !manifest_path.exists() {
             self.manifest_not_exists.insert(manifest_path);
             return anyhow::Result::Ok(());

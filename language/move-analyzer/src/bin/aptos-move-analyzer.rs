@@ -59,9 +59,6 @@ pub fn init_log() {
 struct Options {}
 
 fn main() {
-    #[cfg(feature = "pprof")]
-    cpu_pprof(20);
-
     // For now, aptos-move-analyzer only responds to options built-in to clap,
     // such as `--help` or `--version`.
     Options::parse();

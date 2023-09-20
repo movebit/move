@@ -46,7 +46,7 @@ export async function activate(
     return;
   }
 
-  context.registerCommand('textDocumentDocumentSymbol', commands.textDocumentDocumentSymbol);
+  // context.registerCommand('textDocumentDocumentSymbol', commands.textDocumentDocumentSymbol);
   context.registerCommand('textDocumentHover', commands.textDocumentHover);
   context.registerCommand('textDocumentCompletion', commands.textDocumentCompletion);
   context.registerCommand('textDocumentDefinition', commands.textDocumentDefinition);
