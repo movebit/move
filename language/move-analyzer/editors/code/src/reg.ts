@@ -164,78 +164,57 @@ const Reg = {
         const aptos_working_dir = new WorkingDir();
         const terminalManager = new TerminalManager();
         const schemaTypes = ['ed25519', 'secp256k1', 'secp256r1'];
-        const aptos_move_toml_template = `[package]
-        name = "my_first_package"
-        version = "0.0.3"
+        const aptos_move_toml_template = 
+`[package]
+name = "aptos-counter"
+version = "1.0.0"
+authors = []
 
-        [dependencies.AptosFramework]
-        git = 'https://github.com/aptos-labs/aptos-core.git'
-        rev = 'main'
-        subdir = 'aptos-move/framework/aptos-framework'
+[addresses]
+publisher = "17fca4b7f0d4635e539f94cbec8f84214456305766b00fdf865660bdf5c2fa1b"
 
-        [addresses]
-        my_first_package =  "0x0"
-        `;
-        const aptos_module_file_template = `
-        // Copyright (c) Mysten Labs, Inc.
-        // SPDX-License-Identifier: Apache-2.0
+[dev-addresses]
 
-        module my_first_package::my_module {
-            // Part 1: imports
-            use aptos::object::{Self, UID};
-            use aptos::transfer;
-            use aptos::tx_context::{Self, TxContext};
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-core.git"
+rev = "mainnet"
+subdir = "aptos-move/framework/aptos-framework"
 
-            // Part 2: struct definitions
-            struct Sword has key, store {
-                id: UID,
-                magic: u64,
-                strength: u64,
-            }
+[dev-dependencies]`;
 
-            struct Forge has key {
-                id: UID,
-                swords_created: u64,
-            }
+        const aptos_module_file_template = 
+`// Copyright (c) Mysten Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
 
-            // Part 3: module initializer to be executed when this module is published
-            fun init(ctx: &mut TxContext) {
-                let admin = Forge {
-                    id: object::new(ctx),
-                    swords_created: 0,
-                };
-                // transfer the forge object to the module/package publisher
-                transfer::transfer(admin, tx_context::sender(ctx));
-            }
+module publisher::my_module {
+    // Part 1: imports
+    use std::signer;
 
-            // Part 4: accessors required to read the struct attributes
-            public fun magic(self: &Sword): u64 {
-                self.magic
-            }
+    // Part 2: struct definitions
+    struct CountHolder has key {
+        count: u64
+    }
 
-            public fun strength(self: &Sword): u64 {
-                self.strength
-            }
+    public fun get_count(addr: address): u64 acquires CountHolder {
+        assert!(exists<CountHolder>(addr),0);
+        *&borrow_global<CountHolder>(addr).count
+    }
 
-            public fun swords_created(self: &Forge): u64 {
-                self.swords_created
-            }
-
-            // Part 5: entry functions to create and transfer swords
-            public entry fun sword_create(forge: &mut Forge, magic: u64, strength: u64, recipient: address,
-                                          ctx: &mut TxContext) {
-                // create a sword
-                let sword = Sword {
-                    id: object::new(ctx),
-                    magic: magic,
-                    strength: strength,
-                };
-                // transfer the sword
-                transfer::transfer(sword, recipient);
-                forge.swords_created = forge.swords_created + 1;
-            }
+    // Part 3: entry functions
+    public entry fun bump(account: signer)
+    acquires CountHolder 
+    {
+        let addr = signer::address_of(&account);
+        if(!exists<CountHolder>(addr)) {
+            move_to(&account, CountHolder {
+                count: 0
+            })
+        } else {
+            let old_count = borrow_global_mut<CountHolder>(addr);
+            old_count.count = old_count.count + 1;
         }
-        `;
+    }
+}`;
 
         if (aptos_working_dir.get_dir() !== '') {
             void vscode.window.showInformationMessage('aptos working directory set to ' + aptos_working_dir.get_dir());
@@ -259,11 +238,11 @@ const Reg = {
         });
 
         context.registerCommand('create_project', async () => {
-
+            const working_dir = await aptos_working_dir.get_working_dir();
             const dir = await vscode.window.showSaveDialog({
                 // There is a long term issue about parse()
                 // use "." instead of working dir, detail in https://github.com/microsoft/vscode/issues/173687
-                defaultUri: vscode.Uri.parse('.'),
+                defaultUri: vscode.Uri.parse(working_dir!),
             });
 
             if (dir === undefined) {
