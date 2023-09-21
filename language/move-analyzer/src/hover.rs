@@ -356,7 +356,7 @@ impl Handler {
                     called_fun.get_full_name_str()
                 );
                 self.capture_items_span.push(this_call_loc.span());
-                self.result_candidates.push(called_fun.get_header());
+                self.result_candidates.push(called_fun.get_header_string());
             }
         }
 

@@ -328,7 +328,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
 
 fn get_package_compile_diagnostics(
     pkg_path: &Path,
-) -> Result<move_compiler::diagnostics::Diagnostics> {
+) -> Result<Diagnostics> {
     use anyhow::*;
     use move_package::compilation::build_plan::BuildPlan;
     use tempfile::tempdir;
@@ -341,25 +341,35 @@ fn get_package_compile_diagnostics(
     // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
     // vector as the writer
     let resolution_graph = build_config.resolution_graph_for_package(pkg_path, &mut Vec::new())?;
-    // let named_address_mapping: Vec<_> = resolution_graph
-    //         .extract_named_address_mapping()
-    //         .map(|(name, addr)| format!("{}={}", name.as_str(), addr))
-    //         .collect();
-    // log::debug!("named_address_mapping = {:?}", named_address_mapping);
-
     let build_plan = BuildPlan::create(resolution_graph)?;
     let mut diagnostics = None;
-    build_plan.compile_with_driver(&mut std::io::sink(), None, |compiler| {
-        let (_, compilation_result) = compiler.run::<PASS_TYPING>()?;
-        match compilation_result {
-            std::result::Result::Ok(_) => {},
-            std::result::Result::Err(diags) => {
-                eprintln!("get_package_compile_diagnostics compilate failed");
-                diagnostics = Some(diags);
-            },
-        };
-        Ok(Default::default())
-    })?;
+    let compile_cfg: move_package::CompilerConfig = Default::default();
+    build_plan.compile_with_driver(&mut std::io::sink(), &compile_cfg,
+        |compiler| { 
+            let (_, compilation_result) = compiler.run::<PASS_TYPING>()?;
+            match compilation_result {
+                std::result::Result::Ok(_) => {},
+                std::result::Result::Err(diags) => {
+                    eprintln!("get_package_compile_diagnostics compilate failed");
+                    diagnostics = Some(diags);
+                },
+            };
+            Ok(Default::default())
+        },
+        |compiler| {
+            // if let Some(compiler) = compiler {
+            //     let (_, compilation_result) = compiler.run::<PASS_TYPING>()?;
+            //     match compilation_result {
+            //         std::result::Result::Ok(_) => {},
+            //         std::result::Result::Err(diags) => {
+            //             eprintln!("get_package_compile_diagnostics compilate failed");
+            //             diagnostics = Some(diags);
+            //         },
+            //     };
+            // }
+            Ok(Default::default())
+        }
+    )?;
     match diagnostics {
         Some(x) => Ok(x),
         None => Ok(Default::default()),

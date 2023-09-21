@@ -30,14 +30,15 @@ tempfile = "3.2.0"
 url = "2.2.2"
 clap = { version = "3.1.8", features = ["derive"] }
 crossbeam = "0.8"
-move-command-line-common = { path = "../move-command-line-common" }
-move-compiler = { path = "../move-compiler" }
-move-model = { path = "../move-model" }
-move-ir-types = { path = "../move-ir/types" }
-move-package = { path = "../tools/move-package" }
-move-symbol-pool = { path = "../move-symbol-pool" }
-move-core-types = { path = "../move-core/types" }
-move-cli = { path = "../tools/move-cli" }
+move-model = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-model" }
+move-command-line-common = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-command-line-common" }
+move-compiler = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-compiler" }
+move-ir-types = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-ir-types" }
+move-package = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-package" }
+move-symbol-pool = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-symbol-pool" }
+move-core-types = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-core-types" }
+move-cli = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-cli" }
+
 walkdir = "2"
 log = "0.4.14"
 stderrlog = "0.5.4"

@@ -12,7 +12,7 @@ use move_package::source_package::{layout::SourcePackageLayout, manifest_parser:
 use std::{
     cell::RefCell,
     cmp::Ordering,
-    collections::BTreeMap,
+    collections::{ BTreeSet, BTreeMap },
     fs,
     path::{Path, PathBuf},
     rc::Rc,
@@ -79,8 +79,15 @@ pub fn parse_named_address22(s: &str) -> anyhow::Result<(String, NumericalAddres
         );
     }
     let name = before_after[0].parse()?;
-    let addr = parse_str22(before_after[1]).unwrap();
-    Ok((name, addr))
+    if let Some(addr) = parse_str22(before_after[1]) {
+        Ok((name, addr))
+    } else {
+        Ok((name, NumericalAddress::new(AccountAddress::from_hex_literal("0x0")
+            .unwrap()
+            .into_bytes(), 
+            move_compiler::shared::NumberFormat::Hex))
+        )
+    }
 }
 
 pub fn parse_addresses_from_options(
@@ -175,6 +182,7 @@ impl Project {
             named_address_map: addrs,
         }];
 
+        let attributes: BTreeSet<String> = Default::default();
         new_project.targets = targets.clone();
         new_project.dependents = dependents.clone();
         new_project.global_env = run_model_builder_with_options(
@@ -184,6 +192,8 @@ impl Project {
                 compile_via_model: true,
                 ..Default::default()
             },
+            false,
+            &attributes,
         )
         .expect("Failed to create GlobalEnv!");
 
@@ -200,6 +210,7 @@ impl Project {
 
         let targets = self.targets.clone();
         let dependents = self.dependents.clone();
+        let attributes: BTreeSet<String> = Default::default();
         self.global_env = run_model_builder_with_options(
             targets,
             dependents,
@@ -207,6 +218,8 @@ impl Project {
                 compile_via_model: true,
                 ..Default::default()
             },
+            false,
+            &attributes,
         )
         .expect("Failed to create GlobalEnv!");
         eprintln!("env.get_module_count() = {:?}", &self.global_env.get_module_count());
