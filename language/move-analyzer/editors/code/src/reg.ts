@@ -171,7 +171,7 @@ version = "1.0.0"
 authors = []
 
 [addresses]
-publisher = "17fca4b7f0d4635e539f94cbec8f84214456305766b00fdf865660bdf5c2fa1b"
+publisher = "0x123321"
 
 [dev-addresses]
 
