@@ -158,6 +158,7 @@ dependencies = [
  "dunce",
  "enum-iterator",
  "im",
+ "itertools",
  "log",
  "lsp-server",
  "lsp-types",

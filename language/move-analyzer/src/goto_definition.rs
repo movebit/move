@@ -13,6 +13,7 @@ use move_model::{
     model::{FunId, GlobalEnv, ModuleId, StructId},
 };
 use std::path::{Path, PathBuf};
+use itertools::Itertools;
 
 /// Handles go-to-def request of the language server.
 pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server::Response {
@@ -160,7 +161,56 @@ impl Handler {
     
         self.mouse_span = codespan::Span::new(mouse_line_first_col.span().start(), mouse_line_last_col.span().start());
     }
-    
+
+    fn process_use_decl(&mut self, env: &GlobalEnv) {
+        log::info!("lll >> process_use_decl =======================================\n\n");
+        let target_module = env.get_module(self.target_module_id);
+        for use_decl in target_module.get_use_decls() {
+            let spool = env.symbol_pool();
+            let writer = move_model::code_writer::CodeWriter::new(env.internal_loc());
+            let add_alias = |s: String, a_opt: Option<move_model::symbol::Symbol>| {
+                format!(
+                    "{}{}",
+                    s,
+                    if let Some(a) = a_opt {
+                        format!(" as {}", a.display(spool))
+                    } else {
+                        "".to_owned()
+                    }
+                )
+            };
+            move_model::emitln!(
+                writer,
+                "use {}{};{}",
+                add_alias(
+                    use_decl.module_name.display_full(env).to_string(),
+                    use_decl.alias
+                ),
+                if !use_decl.members.is_empty() {
+                    format!(
+                        "::{{{}}}",
+                        use_decl
+                            .members
+                            .iter()
+                            .map(|(_, n, a)| add_alias(n.display(spool).to_string(), *a))
+                            .join(", ")
+                    )
+                } else {
+                    "".to_owned()
+                },
+                if let Some(mid) = use_decl.module_id {
+                    format!(
+                        " // resolved as: {}",
+                        env.get_module(mid).get_full_name_str()
+                    )
+                } else {
+                    "".to_owned()
+                },
+            );
+            log::info!("writer.extract_result() = {:?}", writer.extract_result());
+        }
+    }
+
     fn process_func(&mut self, env: &GlobalEnv) {
         log::info!("lll >> process_func =======================================\n\n");
         let mut found_target_fun = false;
@@ -677,6 +727,7 @@ impl Handler {
         if !crate::utils::get_target_module(env, move_file_path, &mut self.target_module_id) {
             return;
         }
+        self.process_use_decl(env);
         self.process_func(env);
         self.process_struct(env);
     }

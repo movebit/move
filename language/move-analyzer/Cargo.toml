@@ -38,7 +38,7 @@ move-package = { git = "https://github.com/aptos-labs/aptos-core.git", branch = 
 move-symbol-pool = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-symbol-pool" }
 move-core-types = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-core-types" }
 move-cli = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-cli" }
-
+itertools = "0.10.0"
 walkdir = "2"
 log = "0.4.14"
 stderrlog = "0.5.4"
