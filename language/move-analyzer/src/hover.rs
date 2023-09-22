@@ -88,6 +88,35 @@ impl Handler {
         }
     }
 
+    fn check_move_model_loc_contains_mouse_pos(&self, env: &GlobalEnv, loc: &move_model::model::Loc) -> bool {
+        if let Some(obj_first_col) = env.get_location(&
+            move_model::model::Loc::new(
+                loc.file_id(),
+                codespan::Span::new(
+                    loc.span().start(),
+                    loc.span().start() + codespan::ByteOffset(1),
+                )
+            )
+        ) {
+            if let Some(obj_last_col) = env.get_location(&
+                move_model::model::Loc::new(
+                    loc.file_id(),
+                    codespan::Span::new(
+                        loc.span().end(),
+                        loc.span().end() + codespan::ByteOffset(1),
+                    )
+                )
+            ) {
+                if u32::from(obj_first_col.line) == self.line && 
+                   u32::from(obj_first_col.column) < self.col && 
+                   self.col < u32::from(obj_last_col.column) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     fn get_result(&mut self) -> Hover {
         let mut most_clost_item_idx: usize = 0;
         if let Some(item_idx) = find_smallest_length_index(&self.capture_items_span) {
@@ -168,6 +197,91 @@ impl Handler {
         log::info!("lll >> mouse_source = {:?}", mouse_source);
     
         self.mouse_span = codespan::Span::new(mouse_line_first_col.span().start(), mouse_line_last_col.span().start());
+    }
+
+    fn process_use_decl(&mut self, env: &GlobalEnv) {
+        log::info!("lll >> process_use_decl =======================================\n\n");
+        let mut target_module = env.get_module(self.target_module_id);
+        let spool = env.symbol_pool();
+        let mut ref_module = String::default();
+        let mut target_stct_or_fn = String::default();
+        let mut found_target_stct_or_fn = false;
+        let mut capture_items_loc = move_model::model::Loc::default();
+        for use_decl in target_module.get_use_decls() {
+            if let Some(use_pos) = env.get_location(&use_decl.loc) {
+                if u32::from(use_pos.line) != self.line {
+                    continue;
+                }
+            }
+            log::info!("use_decl.loc = {:?}, use_decl.loc.len = {:?}", 
+                use_decl.loc, use_decl.loc.span().end() - use_decl.loc.span().start());
+
+            let mut mouse_line_first_col = move_model::model::Loc::new(
+                use_decl.loc.file_id(),
+                codespan::Span::new(
+                    use_decl.loc.span().start(),
+                    use_decl.loc.span().start() + codespan::ByteOffset(1),
+                ),
+            );
+            let mut mouse_line_last_col = move_model::model::Loc::new(
+                use_decl.loc.file_id(),
+                codespan::Span::new(
+                    use_decl.loc.span().end(),
+                    use_decl.loc.span().end() + codespan::ByteOffset(1),
+                )
+            );
+
+            if let Some(use_first_col) = env.get_location(&mouse_line_first_col) {
+                log::info!("use_first_col = {:?}", use_first_col);
+            }
+
+            if let Some(use_last_col) = env.get_location(&mouse_line_last_col) {
+                log::info!("use_last_col = {:?}", use_last_col);
+            }
+            if !use_decl.members.is_empty() {
+                for (member_loc, name, alias_name) in use_decl.members.clone().into_iter() {
+                    log::info!("member_loc = {:?} ---", env.get_location(&member_loc));
+                    if self.check_move_model_loc_contains_mouse_pos(env, &member_loc) {
+                        log::info!("find use symbol = {}", name.display(spool));
+                        target_stct_or_fn = name.display(spool).to_string();
+                        found_target_stct_or_fn = true;
+                        ref_module = use_decl.module_name.display_full(env).to_string();
+                        capture_items_loc = member_loc;
+                        break;
+                    }
+                }
+            }
+            if found_target_stct_or_fn {
+                break;
+            }
+        }
+
+        if !found_target_stct_or_fn {
+            return;
+        }
+
+        for module in env.get_modules() {
+            let module_name = module.get_name().display(env).to_string();
+            if ref_module.contains(&module_name) {
+                target_module = module;
+                break;
+            }
+        }
+        for stct in target_module.get_structs() {
+            if stct.get_full_name_str().contains(&target_stct_or_fn) {
+                self.capture_items_span.push(capture_items_loc.span());
+                self.result_candidates.push(stct.get_full_name_str());
+                return;
+            }
+        }
+        for func in target_module.get_functions() {
+            if func.get_name_str().contains(&target_stct_or_fn) {
+                log::info!("func.get_name_str() = {:?}", func.get_name_str());
+                self.capture_items_span.push(capture_items_loc.span());
+                self.result_candidates.push(func.get_header_string());
+                return;
+            }
+        }
     }
 
     fn process_func(&mut self, env: &GlobalEnv) {
@@ -287,6 +401,30 @@ impl Handler {
         log::info!("\n\nlll >> process_expr -------------------------\n");
         exp.visit(&mut |e| {
             match e {
+                Value(node_id, v) => {
+                    // Const variable
+                    let value_loc = env.get_node_loc(*node_id);
+                    if self.check_move_model_loc_contains_mouse_pos(env, &value_loc) {
+                        let mut value_str = String::default();
+                        if let Ok(capture_value_str) = env.get_source(&value_loc) {
+                            value_str = capture_value_str.to_string();
+                        }
+                        for named_const in env.get_module(self.target_module_id).get_named_constants() {
+                            let spool = env.symbol_pool();
+                            log::info!("named_const.get_name() = {}", named_const.get_name().display(spool));
+                            let named_const_str = named_const.get_name().display(spool).to_string();
+                            if value_str.contains(&named_const_str) {
+                                // format!("{}", EnvDisplay::new(&env, &named_const.get_value())); 
+                                // use move_model::ty::TypeDisplayContext;
+                                // let display_context = TypeDisplayContext::new(env);
+                                // let type_display = ty.display(&display_context);
+                                self.capture_items_span.push(value_loc.span());
+                                self.result_candidates.push(env.display(&named_const.get_value()).to_string());
+                                // self.result_candidates.push(format!("{}", move_model::model::EnvDisplay::new(&env, &named_const.get_value())));
+                            }
+                        }
+                    }
+                },
                 Call(..) => {
                     self.process_call(env, e);
                 },
@@ -405,6 +543,7 @@ impl Handler {
         if !crate::utils::get_target_module(env, move_file_path, &mut self.target_module_id) {
             return;
         }
+        self.process_use_decl(env);
         self.process_func(env);
         self.process_struct(env);
     }
