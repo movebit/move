@@ -91,6 +91,35 @@ impl Handler {
         }
     }
 
+    fn check_move_model_loc_contains_mouse_pos(&self, env: &GlobalEnv, loc: &move_model::model::Loc) -> bool {
+        if let Some(obj_first_col) = env.get_location(&
+            move_model::model::Loc::new(
+                loc.file_id(),
+                codespan::Span::new(
+                    loc.span().start(),
+                    loc.span().start() + codespan::ByteOffset(1),
+                )
+            )
+        ) {
+            if let Some(obj_last_col) = env.get_location(&
+                move_model::model::Loc::new(
+                    loc.file_id(),
+                    codespan::Span::new(
+                        loc.span().end(),
+                        loc.span().end() + codespan::ByteOffset(1),
+                    )
+                )
+            ) {
+                if u32::from(obj_first_col.line) == self.line && 
+                   u32::from(obj_first_col.column) < self.col && 
+                   self.col < u32::from(obj_last_col.column) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     fn to_locations(&mut self) -> Vec<Location> {
         if let Some(most_clost_item_idx) = find_smallest_length_index(&self.capture_items_span) {
             if most_clost_item_idx < self.result_candidates.len() {
@@ -204,91 +233,19 @@ impl Handler {
             if !use_decl.members.is_empty() {
                 for (member_loc, name, alias_name) in use_decl.members.clone().into_iter() {
                     log::info!("member_loc = {:?} ---", env.get_location(&member_loc));
-                    if let Some(mem_first_col) = env.get_location(&
-                        move_model::model::Loc::new(
-                            member_loc.file_id(),
-                            codespan::Span::new(
-                                member_loc.span().start(),
-                                member_loc.span().start() + codespan::ByteOffset(1),
-                            )
-                        )
-                    ) {
-                        if let Some(mem_last_col) = env.get_location(&
-                            move_model::model::Loc::new(
-                                member_loc.file_id(),
-                                codespan::Span::new(
-                                    member_loc.span().end(),
-                                    member_loc.span().end() + codespan::ByteOffset(1),
-                                )
-                            )
-                        ) {
-                            if u32::from(mem_first_col.column) < self.col && self.col < u32::from(mem_last_col.column) {
-                                log::info!("find use symbol = {}", name.display(spool));
-                                target_stct_or_fn = name.display(spool).to_string();
-                                found_target_stct_or_fn = true;
-                                ref_module = use_decl.module_name.display_full(env).to_string();
-                                capture_items_loc = member_loc;
-                                break;
-                            }
-                        }
+                    if self.check_move_model_loc_contains_mouse_pos(env, &member_loc) {
+                        log::info!("find use symbol = {}", name.display(spool));
+                        target_stct_or_fn = name.display(spool).to_string();
+                        found_target_stct_or_fn = true;
+                        ref_module = use_decl.module_name.display_full(env).to_string();
+                        capture_items_loc = member_loc;
+                        break;
                     }
                 }
             }
             if found_target_stct_or_fn {
                 break;
             }
-
-            // let writer = move_model::code_writer::CodeWriter::new(env.internal_loc());
-            // let add_alias = |s: String, a_opt: Option<move_model::symbol::Symbol>| {
-            //     format!(
-            //         "{}{}",
-            //         s,
-            //         if let Some(a) = a_opt {
-            //             format!(" as {}", a.display(spool))
-            //         } else {
-            //             "".to_owned()
-            //         }
-            //     )
-            // };
-            // move_model::emitln!(
-            //     writer,
-            //     "use {}{};{}",
-            //     add_alias(
-            //         use_decl.module_name.display_full(env).to_string(),
-            //         use_decl.alias
-            //     ),
-            //     if !use_decl.members.is_empty() {
-            //         use_decl
-            //             .members
-            //             .iter()
-            //             .for_each(|(member_loc, n, a)|
-            //                 // log::info!("member_loc = {:?} ---", member_loc);
-            //                 log::info!("member_loc = {:?} ---", env.get_location(member_loc))
-            //             );
-
-            //         format!(
-            //             "::{{{}}}",
-            //             use_decl
-            //                 .members
-            //                 .iter()
-            //                 .map(|(_, n, a)| add_alias(n.display(spool).to_string(), *a))
-            //                 .join(", ")
-            //         )
-            //     } else {
-            //         "".to_owned()
-            //     },
-            //     if let Some(mid) = use_decl.module_id {
-            //         log::info!("resolved as: {:?}", env.get_module(mid).get_full_name_str());
-            //         format!(
-            //             " // resolved as: {}",
-            //             env.get_module(mid).get_full_name_str()
-            //         )
-            //     } else {
-            //         log::info!("resolved null mid");
-            //         "".to_owned()
-            //     },
-            // );
-            // log::info!("writer.extract_result() = {:?}", writer.extract_result());
         }
 
         if !found_target_stct_or_fn {
@@ -461,17 +418,29 @@ impl Handler {
                 Value(node_id, v) => {
                     // Const variable
                     let value_loc = env.get_node_loc(*node_id);
-                    log::info!(
-                        "lll >> exp.visit value_loc = {:?}",
-                        env.get_location(&value_loc)
-                    );
-                    match v {
-                        Address(address) => log::info!("address = {}", env.display(address)),
-                        Number(int) => log::info!("int = {}", int),
-                        Bool(b) => log::info!("b = {}", b),
-                        ByteArray(bytes) => log::info!("bytes = {:?}", bytes),
-                        AddressArray(array) => log::info!("array = {:?}", array),
-                        Value::Vector(array) => log::info!("array = {:?}", array),
+                    if self.check_move_model_loc_contains_mouse_pos(env, &value_loc) {
+                        let mut value_str = String::default();
+                        if let Ok(capture_value_str) = env.get_source(&value_loc) {
+                            value_str = capture_value_str.to_string();
+                        }
+                        for named_const in env.get_module(self.target_module_id).get_named_constants() {
+                            let spool = env.symbol_pool();
+                            log::info!("named_const.get_name() = {}", named_const.get_name().display(spool));
+                            let named_const_str = named_const.get_name().display(spool).to_string();
+                            if value_str.contains(&named_const_str) {
+                                let (def_file, def_line) =
+                                    env.get_file_and_location(&named_const.get_loc()).unwrap();
+                                let result = FileRange {
+                                    path: PathBuf::from(def_file),
+                                    line_start: def_line.line.0,
+                                    col_start: def_line.column.0,
+                                    line_end: def_line.line.0,
+                                    col_end: def_line.column.0,
+                                };
+                                self.capture_items_span.push(value_loc.span());
+                                self.result_candidates.push(result); 
+                            }
+                        }
                     }
                 },
                 LocalVar(node_id, localvar_symbol) => {
@@ -539,23 +508,6 @@ impl Handler {
                         env.get_location(&quant_loc)
                     );
                 },
-                Block(node_id,..) => {
-                    // Statement block in '{' and '}' which contains let
-                    log::info!("lll >> expdata is Block");
-                    let block_loc = env.get_node_loc(*node_id);
-                    log::info!(
-                        "lll >> exp.visit block_loc = {:?}",
-                        env.get_location(&block_loc)
-                    );
-                },
-                IfElse(node_id, ..) => {
-                    log::info!("lll >> expdata is IfElse");
-                    let ifelse_loc = env.get_node_loc(*node_id);
-                    log::info!(
-                        "lll >> exp.visit ifelse_loc = {:?}",
-                        env.get_location(&ifelse_loc)
-                    );
-                },
                 Return(node_id, ..) => {
                     log::info!("lll >> expdata is Return");
                     let return_loc = env.get_node_loc(*node_id);
@@ -574,12 +526,6 @@ impl Handler {
                     );
                     // let sequence_source = env.get_source(&sequence_loc);
                     // log::info!("lll >> sequence_source = {:?}", sequence_source);
-                },
-                Loop(..) => {
-                    log::info!("lll >> expdata is Loop");
-                },
-                LoopCont(..) => {
-                    log::info!("lll >> expdata is LoopCont");
                 },
                 Assign(node_id, ..) => {
                     log::info!("lll >> expdata is Assign");
