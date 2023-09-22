@@ -10,7 +10,7 @@ use lsp_server::*;
 use lsp_types::*;
 use move_model::{
     ast::{ExpData::*, Operation::*, Value, Value::*},
-    model::{FunId, GlobalEnv, ModuleId, StructId},
+    model::{FunId, SpecFunId, GlobalEnv, ModuleId, StructId},
 };
 use std::path::{Path, PathBuf};
 use itertools::Itertools;
@@ -330,6 +330,39 @@ impl Handler {
 
         if let Some(exp) = target_fun.get_def() {
             self.process_expr(env, exp);
+        }
+    }
+
+    fn process_spec_func(&mut self, env: &GlobalEnv) {
+        log::info!("lll >> process_func =======================================\n\n");
+        let mut found_target_fun = false;
+        let mut target_fun_id = SpecFunId::new(0);
+
+        let target_module = env.get_module(self.target_module_id);
+        for (fun_id, fun) in target_module.get_spec_funs() {
+            let (_, func_start_pos) = env.get_file_and_location(&fun.loc).unwrap();
+            let (_, func_end_pos) = env
+                .get_file_and_location(&move_model::model::Loc::new(
+                    fun.loc.file_id(),
+                    codespan::Span::new(fun.loc.span().end(), fun.loc.span().end()),
+                ))
+                .unwrap();
+            if func_start_pos.line.0 < self.line && self.line < func_end_pos.line.0 {
+                target_fun_id = *fun_id;
+                found_target_fun = true;
+                break;
+            }
+        }
+
+        if !found_target_fun {
+            return;
+        }
+
+        let target_module = env.get_module(self.target_module_id);
+        let target_fun = target_module.get_spec_fun(target_fun_id);
+        self.get_mouse_loc(env, &target_fun.loc);
+        if let Some(exp) = &target_fun.body {
+            self.process_expr(env, &exp);
         }
     }
 
@@ -803,6 +836,7 @@ impl Handler {
         }
         self.process_use_decl(env);
         self.process_func(env);
+        self.process_spec_func(env);
         self.process_struct(env);
     }
 }
