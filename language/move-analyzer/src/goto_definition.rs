@@ -164,50 +164,178 @@ impl Handler {
 
     fn process_use_decl(&mut self, env: &GlobalEnv) {
         log::info!("lll >> process_use_decl =======================================\n\n");
-        let target_module = env.get_module(self.target_module_id);
+        let mut target_module = env.get_module(self.target_module_id);
+        let spool = env.symbol_pool();
+        let mut ref_module = String::default();
+        let mut target_stct_or_fn = String::default();
+        let mut found_target_stct_or_fn = false;
+        let mut capture_items_loc = move_model::model::Loc::default();
         for use_decl in target_module.get_use_decls() {
-            let spool = env.symbol_pool();
-            let writer = move_model::code_writer::CodeWriter::new(env.internal_loc());
-            let add_alias = |s: String, a_opt: Option<move_model::symbol::Symbol>| {
-                format!(
-                    "{}{}",
-                    s,
-                    if let Some(a) = a_opt {
-                        format!(" as {}", a.display(spool))
-                    } else {
-                        "".to_owned()
-                    }
-                )
-            };
-            move_model::emitln!(
-                writer,
-                "use {}{};{}",
-                add_alias(
-                    use_decl.module_name.display_full(env).to_string(),
-                    use_decl.alias
+            if let Some(use_pos) = env.get_location(&use_decl.loc) {
+                if u32::from(use_pos.line) != self.line {
+                    continue;
+                }
+            }
+            log::info!("use_decl.loc = {:?}, use_decl.loc.len = {:?}", 
+                use_decl.loc, use_decl.loc.span().end() - use_decl.loc.span().start());
+
+            let mut mouse_line_first_col = move_model::model::Loc::new(
+                use_decl.loc.file_id(),
+                codespan::Span::new(
+                    use_decl.loc.span().start(),
+                    use_decl.loc.span().start() + codespan::ByteOffset(1),
                 ),
-                if !use_decl.members.is_empty() {
-                    format!(
-                        "::{{{}}}",
-                        use_decl
-                            .members
-                            .iter()
-                            .map(|(_, n, a)| add_alias(n.display(spool).to_string(), *a))
-                            .join(", ")
-                    )
-                } else {
-                    "".to_owned()
-                },
-                if let Some(mid) = use_decl.module_id {
-                    format!(
-                        " // resolved as: {}",
-                        env.get_module(mid).get_full_name_str()
-                    )
-                } else {
-                    "".to_owned()
-                },
             );
-            log::info!("writer.extract_result() = {:?}", writer.extract_result());
+            let mut mouse_line_last_col = move_model::model::Loc::new(
+                use_decl.loc.file_id(),
+                codespan::Span::new(
+                    use_decl.loc.span().end(),
+                    use_decl.loc.span().end() + codespan::ByteOffset(1),
+                )
+            );
+
+            if let Some(use_first_col) = env.get_location(&mouse_line_first_col) {
+                log::info!("use_first_col = {:?}", use_first_col);
+            }
+
+            if let Some(use_last_col) = env.get_location(&mouse_line_last_col) {
+                log::info!("use_last_col = {:?}", use_last_col);
+            }
+            if !use_decl.members.is_empty() {
+                for (member_loc, name, alias_name) in use_decl.members.clone().into_iter() {
+                    log::info!("member_loc = {:?} ---", env.get_location(&member_loc));
+                    if let Some(mem_first_col) = env.get_location(&
+                        move_model::model::Loc::new(
+                            member_loc.file_id(),
+                            codespan::Span::new(
+                                member_loc.span().start(),
+                                member_loc.span().start() + codespan::ByteOffset(1),
+                            )
+                        )
+                    ) {
+                        if let Some(mem_last_col) = env.get_location(&
+                            move_model::model::Loc::new(
+                                member_loc.file_id(),
+                                codespan::Span::new(
+                                    member_loc.span().end(),
+                                    member_loc.span().end() + codespan::ByteOffset(1),
+                                )
+                            )
+                        ) {
+                            if u32::from(mem_first_col.column) < self.col && self.col < u32::from(mem_last_col.column) {
+                                log::info!("find use symbol = {}", name.display(spool));
+                                target_stct_or_fn = name.display(spool).to_string();
+                                found_target_stct_or_fn = true;
+                                ref_module = use_decl.module_name.display_full(env).to_string();
+                                capture_items_loc = member_loc;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if found_target_stct_or_fn {
+                break;
+            }
+
+            // let writer = move_model::code_writer::CodeWriter::new(env.internal_loc());
+            // let add_alias = |s: String, a_opt: Option<move_model::symbol::Symbol>| {
+            //     format!(
+            //         "{}{}",
+            //         s,
+            //         if let Some(a) = a_opt {
+            //             format!(" as {}", a.display(spool))
+            //         } else {
+            //             "".to_owned()
+            //         }
+            //     )
+            // };
+            // move_model::emitln!(
+            //     writer,
+            //     "use {}{};{}",
+            //     add_alias(
+            //         use_decl.module_name.display_full(env).to_string(),
+            //         use_decl.alias
+            //     ),
+            //     if !use_decl.members.is_empty() {
+            //         use_decl
+            //             .members
+            //             .iter()
+            //             .for_each(|(member_loc, n, a)|
+            //                 // log::info!("member_loc = {:?} ---", member_loc);
+            //                 log::info!("member_loc = {:?} ---", env.get_location(member_loc))
+            //             );
+
+            //         format!(
+            //             "::{{{}}}",
+            //             use_decl
+            //                 .members
+            //                 .iter()
+            //                 .map(|(_, n, a)| add_alias(n.display(spool).to_string(), *a))
+            //                 .join(", ")
+            //         )
+            //     } else {
+            //         "".to_owned()
+            //     },
+            //     if let Some(mid) = use_decl.module_id {
+            //         log::info!("resolved as: {:?}", env.get_module(mid).get_full_name_str());
+            //         format!(
+            //             " // resolved as: {}",
+            //             env.get_module(mid).get_full_name_str()
+            //         )
+            //     } else {
+            //         log::info!("resolved null mid");
+            //         "".to_owned()
+            //     },
+            // );
+            // log::info!("writer.extract_result() = {:?}", writer.extract_result());
+        }
+
+        if !found_target_stct_or_fn {
+            return;
+        }
+
+        for module in env.get_modules() {
+            let module_name = module.get_name().display(env).to_string();
+            if ref_module.contains(&module_name) {
+                target_module = module;
+                break;
+            }
+        }
+        for stct in target_module.get_structs() {
+            if stct.get_full_name_str().contains(&target_stct_or_fn) {
+                log::info!("stct.get_full_name_str() = {:?}", stct.get_full_name_str());
+                let (type_struct_file, type_struct_pos) =
+                    env.get_file_and_location(&stct.get_loc()).unwrap();
+                let result = FileRange {
+                    path: PathBuf::from(type_struct_file).clone(),
+                    line_start: type_struct_pos.line.0,
+                    col_start: type_struct_pos.column.0,
+                    line_end: type_struct_pos.line.0,
+                    col_end: type_struct_pos.column.0,
+                };
+                self.capture_items_span.push(capture_items_loc.span());
+                self.result_candidates.push(result);
+                return;
+            }
+        }
+        for func in target_module.get_functions() {
+            if func.get_name_str().contains(&target_stct_or_fn) {
+                log::info!("func.get_name_str() = {:?}", func.get_name_str());
+                let (use_fun_file, use_fun_line) =
+                    env.get_file_and_location(&func.get_loc()).unwrap();
+                let path_buf = PathBuf::from(use_fun_file);
+                let result = FileRange {
+                    path: path_buf,
+                    line_start: use_fun_line.line.0,
+                    col_start: use_fun_line.column.0,
+                    line_end: use_fun_line.line.0,
+                    col_end: use_fun_line.column.0,
+                };
+                self.capture_items_span.push(capture_items_loc.span());
+                self.result_candidates.push(result);
+                return;
+            }
         }
     }
 
