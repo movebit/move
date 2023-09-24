@@ -9,7 +9,7 @@ use crate::{
 use lsp_server::*;
 use lsp_types::*;
 use move_model::{
-    ast::{ExpData::*, Operation::*, Value, Value::*},
+    ast::{ExpData::*, Operation::*, Value, Value::*, Spec, SpecBlockInfo, SpecBlockTarget},
     model::{FunId, SpecFunId, GlobalEnv, ModuleId, StructId},
 };
 use std::path::{Path, PathBuf};
@@ -333,8 +333,8 @@ impl Handler {
         }
     }
 
-    fn process_spec_func(&mut self, env: &GlobalEnv) {
-        log::info!("lll >> process_func =======================================\n\n");
+    fn process_spec_file(&mut self, env: &GlobalEnv) {
+        log::info!("lll >> process_spec_file =======================================\n\n");
         let mut found_target_fun = false;
         let mut target_fun_id = SpecFunId::new(0);
 
@@ -702,6 +702,65 @@ impl Handler {
         }  
     }
 
+    fn print_spec_block_info(&mut self, info: &SpecBlockInfo) {
+        log::info!("Spec block location: {:?}", info.loc);
+        log::info!("Spec block target:");
+        match &info.target {
+            SpecBlockTarget::Module => log::info!("  - Module"),
+            SpecBlockTarget::Struct(module_id, struct_id) => {
+                log::info!("  - Struct: {:?}, {:?}", module_id, struct_id)
+            }
+            SpecBlockTarget::Function(module_id, fun_id) => {
+                log::info!("  - Function: {:?}, {:?}", module_id, fun_id)
+            }
+            SpecBlockTarget::FunctionCode(module_id, fun_id, code_offset) => {
+                log::info!(
+                    "  - Function code: {:?}, {:?}, code offset: {}",
+                    module_id, fun_id, code_offset
+                )
+            }
+            SpecBlockTarget::Schema(module_id, schema_id, type_params) => {
+                log::info!("  - Schema: {:?}, {:?}", module_id, schema_id);
+                log::info!("    type parameters:");
+                for param in type_params {
+                    log::info!("    - {:?}", param);
+                }
+            }
+        }
+        log::info!("Spec block member locations:");
+        for loc in &info.member_locs {
+            log::info!("{:?}", loc);
+        }
+    }
+    
+    fn process_spec_block(
+        &mut self,
+        env: &GlobalEnv,
+        capture_items_loc: &move_model::model::Loc,
+        speck_block: &Spec,
+    ) {
+        log::info!("\n\n");
+        let target_module = env.get_module(self.target_module_id);
+        // for spec_block_info in target_module.get_spec_block_infos() {
+            // log::info!("lll >> process_spec_block loc = {:?}", env.get_location(capture_items_loc));
+            // log::info!("lll >> spec_block_info.loc = {:?}", env.get_location(&spec_block_info.loc));
+            // if spec_block_info.loc == *capture_items_loc {
+            //     self.print_spec_block_info(spec_block_info);
+            // }
+            // if let SpecBlockTarget::Function(..) = spec_block_info.target {
+            //     let mut spec_source = env.get_source(capture_items_loc);
+            //     log::info!("lll >> capture_items_loc spec_source = {:?}", spec_source);
+
+            //     spec_source = env.get_source(&spec_block_info.loc);
+            //     log::info!("lll >> spec_block_info spec_source = {:?}", spec_source);
+            //     // self.print_spec_block_info(spec_block_info);
+            // }
+        //     log::info!("lll >> spec_block_info    loc = {:?}", env.get_file_and_location(&spec_block_info.loc));
+        // }
+        log::info!("lll >> process_spec_block loc = {:?}", env.get_file_and_location(capture_items_loc));
+        log::info!("lll << process_spec_block loc");
+    }
+
     fn process_type(
         &mut self,
         env: &GlobalEnv,
@@ -832,12 +891,18 @@ impl Handler {
         move_file_path: &Path
     ) {
         if !crate::utils::get_target_module(env, move_file_path, &mut self.target_module_id) {
+            log::info!("<goto def>cannot get target module\n");
             return;
         }
-        self.process_use_decl(env);
-        self.process_func(env);
-        self.process_spec_func(env);
-        self.process_struct(env);
+        if let Some(s) = move_file_path.to_str() {
+            if s.contains(".spec") {
+                self.process_spec_file(env);
+            } else {
+                self.process_use_decl(env);
+                self.process_func(env);
+                self.process_struct(env);    
+            }
+        }
     }
 }
 

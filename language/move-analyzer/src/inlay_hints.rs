@@ -300,7 +300,11 @@ impl Handler {
         if !crate::utils::get_target_module(env, move_file_path, &mut self.target_module_id) {
             return;
         }
-        self.process_func(env, move_file_path);
+        if let Some(s) = move_file_path.to_str() {
+            if !s.contains(".spec") {
+                self.process_func(env, move_file_path);
+            } 
+        }
     }
 }
 

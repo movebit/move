@@ -349,13 +349,19 @@ pub fn get_target_module(env: &GlobalEnv, move_file_path: &Path, target_module_i
     let mut move_file_str: &str = "null_move_file";
     if let Some(file_stem) = move_file_path.file_stem() {
         if let Some(file_stem_str) = file_stem.to_str() {
-            move_file_str = file_stem_str;
+            if file_stem_str.contains(".spec") {
+                if let Some(first_part) = file_stem_str.split('.').next() {
+                    move_file_str = first_part;
+                }
+            } else {
+                move_file_str = file_stem_str;
+            }
         }
     }
     for module in env.get_target_modules() {
-        log::info!("lll >> <on_hover>get_target_module move_file_str = {:?}, module.name = {:?}",
-            move_file_str, module.get_full_name_str());
         if module.matches_name(move_file_str) {
+            log::info!("lll >> get_target_module move_file_str = {:?}, module.name = {:?}",
+                move_file_str, module.get_full_name_str());
             *target_module_id = module.get_id();
             return true;
         }
