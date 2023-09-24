@@ -89,6 +89,7 @@ struct Handler {
     range: FileRange,
     reuslts: Vec<InlayHint>,
     config: InlayHintsConfig,
+    target_module_id: ModuleId,
 }
 
 impl Handler {
@@ -103,29 +104,13 @@ impl Handler {
             },
             reuslts: Default::default(),
             config,
+            target_module_id: ModuleId::new(0),
         }
-    }
-
-    fn get_target_module(&mut self, env: &GlobalEnv, move_file_path: &Path) -> ModuleId {
-        let mut move_file_str: &str = "null_move_file";
-        if let Some(file_stem) = move_file_path.file_stem() {
-            if let Some(file_stem_str) = file_stem.to_str() {
-                move_file_str = file_stem_str;
-            }
-        }
-        for module in env.get_target_modules() {
-            if module.matches_name(move_file_str) {
-                return  module.get_id();
-            }
-        }
-        ModuleId::new(0)
     }
 
     fn process_func(&mut self, env: &GlobalEnv, move_file_path: &Path) {
         log::info!("lll >> <on_inlay_hints>process_func =======================================\n\n");
-        let target_module_id = self.get_target_module(env, move_file_path);
-
-        let target_module = env.get_module(target_module_id);
+        let target_module = env.get_module(self.target_module_id);
         for fun in target_module.get_functions() {
             let this_fun_loc = fun.get_loc();
             let (_, func_start_pos) = env.get_file_and_location(&this_fun_loc).unwrap();
@@ -312,6 +297,9 @@ impl Handler {
         env: &GlobalEnv,
         move_file_path: &Path
     ) {
+        if !crate::utils::get_target_module(env, move_file_path, &mut self.target_module_id) {
+            return;
+        }
         self.process_func(env, move_file_path);
     }
 }
