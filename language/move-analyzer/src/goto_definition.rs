@@ -11,7 +11,7 @@ use lsp_types::*;
 use move_ir_types::location::sp;
 use move_model::{
     ast::{ExpData::*, Operation::*, Value, Value::*, Spec, SpecBlockInfo, SpecBlockTarget},
-    model::{FunId, SpecFunId, GlobalEnv, ModuleId, FunctionEnv, StructId},
+    model::{FunId, SpecFunId, GlobalEnv, ModuleEnv, ModuleId, FunctionEnv, StructId},
 };
 use std::path::{Path, PathBuf};
 use itertools::Itertools;

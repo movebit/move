@@ -9,8 +9,8 @@ use crate::{
 use lsp_server::*;
 use lsp_types::*;
 use move_model::{
-    ast::{ExpData::*, Operation::*},
-    model::{FunId, GlobalEnv, ModuleEnv, ModuleId, StructId},
+    ast::{ExpData::*, Operation::*, Value, Value::*, Spec, SpecBlockInfo, SpecBlockTarget},
+    model::{FunId, SpecFunId, GlobalEnv, ModuleEnv, ModuleId, FunctionEnv, StructId},
 };
 use std::{path::{Path, PathBuf}, collections::BTreeSet};
 
@@ -235,6 +235,61 @@ impl Handler {
             self.process_expr(env, exp);
         }
     }
+    
+    fn process_spec_file(&mut self, env: &GlobalEnv) {
+        log::info!("lll >> process_spec_file =======================================");
+        let mut found_target_fun = false;
+        let mut target_fun_id = FunId::new(env.symbol_pool().make("name"));
+        let target_module = env.get_module(self.target_module_id);
+        let mut spec_fn_span_loc = target_module.get_loc();
+
+        for spec_block_info in target_module.get_spec_block_infos() {
+            if let SpecBlockTarget::Function(_, fun_id) = spec_block_info.target {
+                // log::info!("lll >> spec_block_info spec_source = {:?}", env.get_source(&spec_block_info.loc));
+                let mut span_first_col = move_model::model::Loc::new(
+                    spec_block_info.loc.file_id(),
+                    codespan::Span::new(
+                        spec_block_info.loc.span().start(),
+                        spec_block_info.loc.span().start() + codespan::ByteOffset(1),
+                    ),
+                );
+                let mut span_last_col = move_model::model::Loc::new(
+                    spec_block_info.loc.file_id(),
+                    codespan::Span::new(
+                        spec_block_info.loc.span().end(),
+                        spec_block_info.loc.span().end() + codespan::ByteOffset(1),
+                    )
+                );
+    
+                if let Some(s_loc) = env.get_location(&span_first_col) {
+                    if let Some(e_loc) = env.get_location(&span_last_col) {
+                        if u32::from(s_loc.line) <= self.line && self.line <= u32::from(e_loc.line) {
+                            target_fun_id = fun_id;
+                            found_target_fun = true;
+                            spec_fn_span_loc = spec_block_info.loc.clone();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if !found_target_fun {
+            log::info!("<< not found_target_spec_fun");
+            return;
+        }
+
+        let target_fn = target_module.get_function(target_fun_id);
+        let target_fn_spec = target_fn.get_spec();
+        log::info!("target_fun's spec = {}",
+            env.display(&*target_fn_spec));
+        self.get_mouse_loc(env, &spec_fn_span_loc);
+        for cond in target_fn_spec.conditions.clone() {
+            for exp in cond.all_exps() {
+                self.process_expr(env, &exp);
+            }
+        }
+    }
 
     fn process_struct(&mut self, env: &GlobalEnv) {
         log::info!("lll >> <on_references>process_struct =======================================\n\n");
@@ -388,6 +443,42 @@ impl Handler {
                 }
             }
         }
+        if let Call(node_id, SpecFunction(mid, fid, _), _) = expdata {
+            let this_call_loc = env.get_node_loc(*node_id);
+            log::info!(
+                "lll >> exp.visit this_call_loc = {:?}",
+                env.get_file_and_location(&this_call_loc)
+            );
+            if this_call_loc.span().start() < self.mouse_span.end()
+                && self.mouse_span.end() < this_call_loc.span().end()
+            {
+                let called_module = env.get_module(*mid);
+                let spec_fun = called_module.get_spec_fun(*fid);
+                log::info!(
+                    "lll >> get_spec_functions = {}",
+                    spec_fun.name.display(env.symbol_pool())
+                );
+                let spec_fun_loc = spec_fun.loc.clone();
+                let mut result_candidates: Vec<FileRange> = Vec::new();
+                for callee in spec_fun.callees.clone() {
+                    let module = env.get_module(callee.module_id);
+                    let decl = module.get_spec_fun(callee.id);
+
+                    let (caller_fun_file, caller_fun_line) =
+                        env.get_file_and_location(&decl.loc).unwrap();
+                    let result = FileRange {
+                        path: PathBuf::from(caller_fun_file),
+                        line_start: caller_fun_line.line.0,
+                        col_start: caller_fun_line.column.0,
+                        line_end: caller_fun_line.line.0,
+                        col_end: caller_fun_line.column.0,
+                    };
+                    result_candidates.push(result);
+                }
+                self.result_ref_candidates.push(result_candidates);
+                self.capture_items_span.push(this_call_loc.span());
+            }
+        }
     }
 
     fn process_type(
@@ -463,7 +554,7 @@ impl Handler {
         }
         if let Some(s) = move_file_path.to_str() {
             if s.contains(".spec") {
-                // self.process_spec_file(env);
+                self.process_spec_file(env);
             } else {
                 self.process_func(env);
                 self.process_struct(env);    
