@@ -541,11 +541,18 @@ impl Handler {
         move_file_path: &Path
     ) {
         if !crate::utils::get_target_module(env, move_file_path, &mut self.target_module_id) {
+            log::info!("<hover>cannot get target module\n");
             return;
         }
-        self.process_use_decl(env);
-        self.process_func(env);
-        self.process_struct(env);
+        if let Some(s) = move_file_path.to_str() {
+            if s.contains(".spec") {
+                // self.process_spec_file(env);
+            } else {
+                self.process_use_decl(env);
+                self.process_func(env);
+                self.process_struct(env);    
+            }
+        }
     }
 }
 
