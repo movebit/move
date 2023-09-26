@@ -9,8 +9,8 @@ use crate::{
 use lsp_server::*;
 use lsp_types::*;
 use move_model::{
-    ast::{ExpData::*, Operation::*},
-    model::{FunId, GlobalEnv, ModuleId, StructId},
+    ast::{ExpData::*, Operation::*, Value, Value::*, Spec, SpecBlockInfo, SpecBlockTarget},
+    model::{FunId, SpecFunId, GlobalEnv, ModuleEnv, ModuleId, FunctionEnv, StructId},
 };
 use std::path::{Path, PathBuf};
 
@@ -318,6 +318,61 @@ impl Handler {
         }
     }
 
+    fn process_spec_file(&mut self, env: &GlobalEnv) {
+        log::info!("lll >> process_spec_file =======================================");
+        let mut found_target_fun = false;
+        let mut target_fun_id = FunId::new(env.symbol_pool().make("name"));
+        let target_module = env.get_module(self.target_module_id);
+        let mut spec_fn_span_loc = target_module.get_loc();
+
+        for spec_block_info in target_module.get_spec_block_infos() {
+            if let SpecBlockTarget::Function(_, fun_id) = spec_block_info.target {
+                // log::info!("lll >> spec_block_info spec_source = {:?}", env.get_source(&spec_block_info.loc));
+                let mut span_first_col = move_model::model::Loc::new(
+                    spec_block_info.loc.file_id(),
+                    codespan::Span::new(
+                        spec_block_info.loc.span().start(),
+                        spec_block_info.loc.span().start() + codespan::ByteOffset(1),
+                    ),
+                );
+                let mut span_last_col = move_model::model::Loc::new(
+                    spec_block_info.loc.file_id(),
+                    codespan::Span::new(
+                        spec_block_info.loc.span().end(),
+                        spec_block_info.loc.span().end() + codespan::ByteOffset(1),
+                    )
+                );
+    
+                if let Some(s_loc) = env.get_location(&span_first_col) {
+                    if let Some(e_loc) = env.get_location(&span_last_col) {
+                        if u32::from(s_loc.line) <= self.line && self.line <= u32::from(e_loc.line) {
+                            target_fun_id = fun_id;
+                            found_target_fun = true;
+                            spec_fn_span_loc = spec_block_info.loc.clone();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if !found_target_fun {
+            log::info!("<< not found_target_spec_fun");
+            return;
+        }
+
+        let target_fn = target_module.get_function(target_fun_id);
+        let target_fn_spec = target_fn.get_spec();
+        log::info!("target_fun's spec = {}",
+            env.display(&*target_fn_spec));
+        self.get_mouse_loc(env, &spec_fn_span_loc);
+        for cond in target_fn_spec.conditions.clone() {
+            for exp in cond.all_exps() {
+                self.process_expr(env, &exp);
+            }
+        }
+    }
+
     fn process_struct(&mut self, env: &GlobalEnv) {
         log::info!("lll >> <on_hover>process_struct =======================================\n\n");
         let mut found_target_struct = false;
@@ -519,7 +574,45 @@ impl Handler {
             let called_field = called_struct.get_field(*fid);
             let field_type = called_field.get_type();
             self.process_type(env, &this_call_loc, &field_type);
-        }  
+        }
+
+        if let Call(node_id, SpecFunction(mid, fid, _), _) = expdata {
+            let this_call_loc = env.get_node_loc(*node_id);
+            log::info!(
+                "lll >> exp.visit this_call_loc = {:?}",
+                env.get_file_and_location(&this_call_loc)
+            );
+            if this_call_loc.span().start() < self.mouse_span.end()
+                && self.mouse_span.end() < this_call_loc.span().end()
+            {
+                let called_module = env.get_module(*mid);
+                let spec_fun = called_module.get_spec_fun(*fid);
+                log::info!(
+                    "lll >> get_spec_functions = {}",
+                    spec_fun.name.display(env.symbol_pool())
+                );
+                self.capture_items_span.push(this_call_loc.span());
+                self.result_candidates.push(spec_fun.name.display(env.symbol_pool()).to_string());
+
+                let inst_vec = &env.get_node_instantiation(*node_id);
+                for inst in inst_vec {
+                    let mut generic_ty_loc = this_call_loc.clone();
+                    let capture_call_source = env.get_source(&this_call_loc);
+                    if let Ok(capture_call_source_str) = capture_call_source {
+                        if let Some(index) = capture_call_source_str.find("<".to_string().as_str()) {
+                            generic_ty_loc = move_model::model::Loc::new(
+                                this_call_loc.file_id(),
+                                codespan::Span::new(
+                                    this_call_loc.span().start()  + codespan::ByteOffset(index.try_into().unwrap()),
+                                    this_call_loc.span().end(),
+                                ),
+                            );
+                        }
+                    }
+                    self.process_type(env, &generic_ty_loc, inst);
+                }
+            }
+        }
     }
 
     fn process_type(
@@ -546,7 +639,7 @@ impl Handler {
         }
         if let Some(s) = move_file_path.to_str() {
             if s.contains(".spec") {
-                // self.process_spec_file(env);
+                self.process_spec_file(env);
             } else {
                 self.process_use_decl(env);
                 self.process_func(env);

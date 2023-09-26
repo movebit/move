@@ -11,8 +11,8 @@ use crate::{
 use lsp_server::*;
 use lsp_types::*;
 use move_model::{
-    ast::{ExpData::*, Operation::*},
-    model::{GlobalEnv, ModuleId, FunctionEnv},
+    ast::{ExpData::*, Operation::*, Value, Value::*, Spec, SpecBlockInfo, SpecBlockTarget},
+    model::{FunId, SpecFunId, GlobalEnv, ModuleEnv, ModuleId, FunctionEnv, StructId},
 };
 use std::path::{Path, PathBuf};
 
@@ -67,24 +67,6 @@ impl Default for InlayHintsConfig {
     }
 }
 
-// pub(crate) struct Handler {
-//     /// The file we are looking for.
-//     pub(crate) filepath: PathBuf,
-//     pub(crate) line: u32,
-//     pub(crate) col: u32,
-//     pub(crate) reuslts: Vec<InlayHint>,
-//     pub(crate) config: InlayHintsConfig,
-
-//     pub(crate) mouse_span: codespan::Span,
-//     pub(crate) capture_items_span: Vec<codespan::Span>,
-//     pub(crate) result_candidates: Vec<String>,
-// }
-
-// impl Handler {
-//     pub(crate) fn new(filepath: impl Into<PathBuf>, line: u32, col: u32) -> Self {
- 
-//     }
-// }
 struct Handler {
     range: FileRange,
     reuslts: Vec<InlayHint>,
@@ -128,7 +110,36 @@ impl Handler {
             }
         }
     }
-    
+
+    fn process_spec_file(&mut self, env: &GlobalEnv) {
+        log::info!("lll >> process_spec_file =======================================");
+        let target_module = env.get_module(self.target_module_id);
+        for spec_block_info in target_module.get_spec_block_infos() {
+            if let SpecBlockTarget::Function(_, fun_id) = spec_block_info.target {
+                let (_, func_start_pos) = env.get_file_and_location(&spec_block_info.loc).unwrap();
+                let (_, func_end_pos) = env
+                    .get_file_and_location(&move_model::model::Loc::new(
+                        spec_block_info.loc.file_id(),
+                        codespan::Span::new(spec_block_info.loc.span().end(), spec_block_info.loc.span().end()),
+                    ))
+                    .unwrap();
+                if self.range.line_start <= func_start_pos.line.0 && func_end_pos.line.0 <= self.range.line_end {
+                    let target_fn = target_module.get_function(fun_id);
+                    let target_fn_spec = target_fn.get_spec();
+                    log::info!("target_fun's spec = {}",
+                        env.display(&*target_fn_spec));
+                    for cond in target_fn_spec.conditions.clone() {
+                        for exp in cond.all_exps() {
+                            self.process_expr(env, &target_fn, &exp);
+                        }
+                    }
+                }
+            }
+        }
+
+       
+    }
+
     fn process_expr(
         &mut self,
         env: &GlobalEnv,
@@ -303,7 +314,9 @@ impl Handler {
         if let Some(s) = move_file_path.to_str() {
             if !s.contains(".spec") {
                 self.process_func(env, move_file_path);
-            } 
+            } else {
+                self.process_spec_file(env);
+            }
         }
     }
 }
