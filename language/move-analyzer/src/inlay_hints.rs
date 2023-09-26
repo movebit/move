@@ -116,14 +116,14 @@ impl Handler {
         let target_module = env.get_module(self.target_module_id);
         for spec_block_info in target_module.get_spec_block_infos() {
             if let SpecBlockTarget::Function(_, fun_id) = spec_block_info.target {
-                let (_, func_start_pos) = env.get_file_and_location(&spec_block_info.loc).unwrap();
-                let (_, func_end_pos) = env
+                let (_, block_start_pos) = env.get_file_and_location(&spec_block_info.loc).unwrap();
+                let (_, block_end_pos) = env
                     .get_file_and_location(&move_model::model::Loc::new(
                         spec_block_info.loc.file_id(),
                         codespan::Span::new(spec_block_info.loc.span().end(), spec_block_info.loc.span().end()),
                     ))
                     .unwrap();
-                if self.range.line_start <= func_start_pos.line.0 && func_end_pos.line.0 <= self.range.line_end {
+                if self.range.line_start <= block_start_pos.line.0 && block_end_pos.line.0 <= self.range.line_end {
                     let target_fn = target_module.get_function(fun_id);
                     let target_fn_spec = target_fn.get_spec();
                     log::info!("target_fun's spec = {}",
@@ -135,11 +135,48 @@ impl Handler {
                     }
                 }
             }
+    
+            if let SpecBlockTarget::FunctionCode(_, fun_id, _) = spec_block_info.target {
+                let (_, block_start_pos) = env.get_file_and_location(&spec_block_info.loc).unwrap();
+                let (_, block_end_pos) = env
+                    .get_file_and_location(&move_model::model::Loc::new(
+                        spec_block_info.loc.file_id(),
+                        codespan::Span::new(spec_block_info.loc.span().end(), spec_block_info.loc.span().end()),
+                    ))
+                    .unwrap();
+                if self.range.line_start <= block_start_pos.line.0 && block_end_pos.line.0 <= self.range.line_end {
+                    let target_fn = target_module.get_function(fun_id);
+                    let target_fn_spec = target_fn.get_spec();
+                    log::info!("target_fun_code's spec = {}",
+                        env.display(&*target_fn_spec));
+                    for cond in target_fn_spec.conditions.clone() {
+                        for exp in cond.all_exps() {
+                            self.process_expr(env, &target_fn, &exp);
+                        }
+                    }
+                }
+            }
+    
+            if let SpecBlockTarget::Schema(_, schema_id, _) = spec_block_info.target {
+                let (_, block_start_pos) = env.get_file_and_location(&spec_block_info.loc).unwrap();
+                let (_, block_end_pos) = env
+                    .get_file_and_location(&move_model::model::Loc::new(
+                        spec_block_info.loc.file_id(),
+                        codespan::Span::new(spec_block_info.loc.span().end(), spec_block_info.loc.span().end()),
+                    ))
+                    .unwrap();
+                if self.range.line_start <= block_start_pos.line.0 && block_end_pos.line.0 <= self.range.line_end {
+                    log::info!("SpecBlockTarget::Schema, spec_block_info.loc = {:?}", env
+                        .get_file_and_location(&spec_block_info.loc.clone()));
+                    // let target_stct = target_module.get_struct(stct_id);
+                    // let target_stct_spec = target_stct.get_spec();
+                    // log::info!("target_stct_spec's spec = {}",
+                    //     env.display(&*target_stct_spec));
+                }
+            }
         }
-
-       
     }
-
+    
     fn process_expr(
         &mut self,
         env: &GlobalEnv,
