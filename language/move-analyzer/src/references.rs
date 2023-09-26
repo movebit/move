@@ -366,6 +366,61 @@ impl Handler {
         }
     }
     
+    fn process_spec_struct(&mut self, env: &GlobalEnv) {
+        log::info!("lll >> process_spec_struct =======================================\n\n");
+        let mut found_target_spec_stct = false;
+        let mut target_stct_id = StructId::new(env.symbol_pool().make("name"));
+        let target_module = env.get_module(self.target_module_id);
+        let mut spec_stct_span_loc = target_module.get_loc();
+
+        for spec_block_info in target_module.get_spec_block_infos() {
+            if let SpecBlockTarget::Struct(_, stct_id) = spec_block_info.target {
+                // log::info!("lll >> spec_block_info spec_source = {:?}", env.get_source(&spec_block_info.loc));
+                let mut span_first_col = move_model::model::Loc::new(
+                    spec_block_info.loc.file_id(),
+                    codespan::Span::new(
+                        spec_block_info.loc.span().start(),
+                        spec_block_info.loc.span().start() + codespan::ByteOffset(1),
+                    ),
+                );
+                let mut span_last_col = move_model::model::Loc::new(
+                    spec_block_info.loc.file_id(),
+                    codespan::Span::new(
+                        spec_block_info.loc.span().end(),
+                        spec_block_info.loc.span().end() + codespan::ByteOffset(1),
+                    )
+                );
+    
+                if let Some(s_loc) = env.get_location(&span_first_col) {
+                    if let Some(e_loc) = env.get_location(&span_last_col) {
+                        if u32::from(s_loc.line) <= self.line && self.line <= u32::from(e_loc.line) {
+                            target_stct_id = stct_id;
+                            found_target_spec_stct = true;
+                            spec_stct_span_loc = spec_block_info.loc.clone();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if !found_target_spec_stct {
+            log::info!("<< not found_target_spec_stct");
+            return;
+        }
+
+        let target_stct = target_module.get_struct(target_stct_id);
+        let target_stct_spec = target_stct.get_spec();
+        log::info!("target_stct's spec = {}",
+            env.display(&*target_stct_spec));
+        self.get_mouse_loc(env, &spec_stct_span_loc);
+        for cond in target_stct_spec.conditions.clone() {
+            for exp in cond.all_exps() {
+                self.process_expr(env, &exp);
+            }
+        }
+    }
+  
     fn process_expr(
         &mut self,
         env: &GlobalEnv,
@@ -555,6 +610,7 @@ impl Handler {
         if let Some(s) = move_file_path.to_str() {
             if s.contains(".spec") {
                 self.process_spec_func(env);
+                self.process_spec_struct(env);
             } else {
                 self.process_func(env);
                 self.process_struct(env);    
