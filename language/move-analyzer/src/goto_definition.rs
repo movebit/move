@@ -575,72 +575,19 @@ impl Handler {
                     self.process_call_spec_func(env, e);
                     self.process_call(env, e);
                 },
-                Invoke(node_id, ..) => {
-                    log::info!("lll >> expdata is Invoke");
-                    let invoke_loc = env.get_node_loc(*node_id);
-                    log::info!(
-                        "lll >> exp.visit invoke_loc = {:?}",
-                        env.get_location(&invoke_loc)
-                    );
+                Return(node_id, ret_exp) => {
+                    self.process_expr(env, ret_exp);
                 },
-                Lambda(node_id, ..) => {
-                    log::info!("lll >> expdata is Lambda");
-                    let lambda_loc = env.get_node_loc(*node_id);
-                    log::info!(
-                        "lll >> exp.visit lambda_loc = {:?}",
-                        env.get_location(&lambda_loc)
-                    );
-                },
-                Quant(node_id, ..) => {
-                    log::info!("lll >> expdata is Quant");
-                    let quant_loc = env.get_node_loc(*node_id);
-                    log::info!(
-                        "lll >> exp.visit quant_loc = {:?}",
-                        env.get_location(&quant_loc)
-                    );
-                },
-                Return(node_id, ..) => {
-                    log::info!("lll >> expdata is Return");
-                    let return_loc = env.get_node_loc(*node_id);
-                    log::info!(
-                        "lll >> exp.visit return_loc = {:?}",
-                        env.get_location(&return_loc)
-                    );
-                },
-                Sequence(node_id, ..) => {
-                    // Statement block in '{' and '}'
-                    log::info!("lll >> expdata is Sequence");
-                    let sequence_loc = env.get_node_loc(*node_id);
-                    log::info!(
-                        "lll >> exp.visit sequence_loc = {:?}",
-                        env.get_location(&sequence_loc)
-                    );
-                    // let sequence_source = env.get_source(&sequence_loc);
-                    // log::info!("lll >> sequence_source = {:?}", sequence_source);
-                },
-                Assign(node_id, ..) => {
-                    log::info!("lll >> expdata is Assign");
-                    let assign_loc = env.get_node_loc(*node_id);
-                    log::info!(
-                        "lll >> exp.visit assign_loc = {:?}",
-                        env.get_location(&assign_loc)
-                    );
-                },
-                Mutate(node_id, ..) => {
-                    log::info!("lll >> expdata is Mutate");
-                    let mutate_loc = env.get_node_loc(*node_id);
-                    log::info!(
-                        "lll >> exp.visit mutate_loc = {:?}",
-                        env.get_location(&mutate_loc)
-                    );
-                    let mutate_source = env.get_source(&mutate_loc);
-                    log::info!("lll >> mutate_source = {:?}", mutate_source);
+                Sequence(node_id, exp_vec) => {
+                    for seq_exp in exp_vec {
+                        self.process_expr(env, seq_exp);
+                    }
                 },
                 SpecBlock(node_id, spec) => {
                     self.process_spec_block(env, &env.get_node_loc(*node_id), spec);
                 },
                 _ => {
-                    log::info!("0000000________");
+                    log::info!("________________");
                 },
             }
         });
@@ -652,7 +599,6 @@ impl Handler {
         env: &GlobalEnv,
         expdata: &move_model::ast::ExpData,
     ) {
-        log::info!("lll >> process_call_spec_func, expdata = {:?}", expdata);
         if let Call(node_id, SpecFunction(mid, fid, _), _) = expdata {
             let this_call_loc = env.get_node_loc(*node_id);
             log::info!(
@@ -701,7 +647,21 @@ impl Handler {
                 }
             }
         }
-        log::info!("lll << process_call_spec_func");
+        if let Call(node_id, Exists(..), exp_vec) = expdata {
+            let this_call_loc = env.get_node_loc(*node_id);
+            log::info!(
+                "lll >> exp.visit Exists this_call_loc = {:?}",
+                env.get_file_and_location(&this_call_loc)
+            );
+            if this_call_loc.span().start() < self.mouse_span.end()
+                && self.mouse_span.end() < this_call_loc.span().end()
+            {
+                log::info!("lll >> exp.visit Exists exist_exp = {:?}", exp_vec);  
+                for exist_exp in exp_vec {
+                    self.process_expr(env, exist_exp);
+                }
+            }
+        }
     }
 
     fn process_call(
