@@ -318,8 +318,8 @@ impl Handler {
         }
     }
 
-    fn process_spec_file(&mut self, env: &GlobalEnv) {
-        log::info!("lll >> process_spec_file =======================================");
+    fn process_spec_func(&mut self, env: &GlobalEnv) {
+        log::info!("lll >> process_spec_func =======================================");
         let mut found_target_fun = false;
         let mut target_fun_id = FunId::new(env.symbol_pool().make("name"));
         let target_module = env.get_module(self.target_module_id);
@@ -639,7 +639,7 @@ impl Handler {
         }
         if let Some(s) = move_file_path.to_str() {
             if s.contains(".spec") {
-                self.process_spec_file(env);
+                self.process_spec_func(env);
             } else {
                 self.process_use_decl(env);
                 self.process_func(env);

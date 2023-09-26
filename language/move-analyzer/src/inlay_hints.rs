@@ -111,8 +111,8 @@ impl Handler {
         }
     }
 
-    fn process_spec_file(&mut self, env: &GlobalEnv) {
-        log::info!("lll >> process_spec_file =======================================");
+    fn process_spec_func(&mut self, env: &GlobalEnv) {
+        log::info!("lll >> process_spec_func =======================================");
         let target_module = env.get_module(self.target_module_id);
         for spec_block_info in target_module.get_spec_block_infos() {
             if let SpecBlockTarget::Function(_, fun_id) = spec_block_info.target {
@@ -315,7 +315,7 @@ impl Handler {
             if !s.contains(".spec") {
                 self.process_func(env, move_file_path);
             } else {
-                self.process_spec_file(env);
+                self.process_spec_func(env);
             }
         }
     }

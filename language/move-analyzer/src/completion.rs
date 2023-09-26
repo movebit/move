@@ -96,24 +96,9 @@ fn identifiers(buffer: &str, env: &GlobalEnv, move_file_path: &PathBuf) -> Vec<C
             break;
         }
     }
-    let mut found_target_module = false;
-    let mut target_module_id = ModuleId::new(0);
-    let mut move_file_str: &str = "null_move_file";
-    if let Some(file_stem) = move_file_path.file_stem() {
-        if let Some(file_stem_str) = file_stem.to_str() {
-            move_file_str = file_stem_str;
-        }
-    }
-    for module in env.get_target_modules() {
-        if module.matches_name(move_file_str) {
-            target_module_id = module.get_id();
-            found_target_module = true;
-            // log::info!("lll >> module_file_name = {:?}", module.get_full_name_str());
-            break;
-        }
-    }
 
-    if found_target_module {
+    let mut target_module_id = ModuleId::new(0);
+    if crate::utils::get_target_module(env, move_file_path, &mut target_module_id) {
         let target_module = env.get_module(target_module_id);
         // The completion item kind "text" indicates that the item is based on simple textual matching,
         // not any deeper semantic analysis.
