@@ -49,13 +49,13 @@
 use crate::{
     context::Context,
     diagnostics::{lsp_diagnostics, lsp_empty_diagnostics},
-    utils::get_loc,
+    // utils::get_loc,
 };
 use anyhow::{anyhow, Result};
 use codespan_reporting::files::SimpleFiles;
 use crossbeam::channel::Sender;
 use derivative::*;
-use im::ordmap::OrdMap;
+// use im::ordmap::OrdMap;
 use lsp_server::{Request, RequestId};
 use lsp_types::{
     request::GotoTypeDefinitionParams, Diagnostic, DocumentSymbol, DocumentSymbolParams,
@@ -76,17 +76,12 @@ use url::Url;
 
 use move_command_line_common::files::FileHash;
 use move_compiler::{
-    expansion::ast::{Address, Fields, ModuleIdent, ModuleIdent_},
-    naming::ast::{StructDefinition, StructFields, TParam, Type, TypeName_, Type_},
-    parser::ast::StructName,
+    expansion::ast::{Address, ModuleIdent_},
+    naming::ast::{Type, TypeName_, Type_},
     shared::Identifier,
-    typing::ast::{
-        BuiltinFunction_, Exp, ExpListItem, Function, FunctionBody_, LValue, LValueList, LValue_,
-        ModuleCall, ModuleDefinition, SequenceItem, SequenceItem_, UnannotatedExp_,
-    },
     PASS_TYPING,
 };
-use move_ir_types::location::*;
+// use move_ir_types::location::*;
 use move_package::compilation::build_plan::BuildPlan;
 use move_symbol_pool::Symbol;
 
@@ -197,18 +192,18 @@ pub struct ModuleDefs {
 
 /// Data used during symbolication
 pub struct Symbolicator {
-    /// Outermost definitions in a module (structs, consts, functions)
-    mod_outer_defs: BTreeMap<ModuleIdent_, ModuleDefs>,
-    /// A mapping from file names to file content (used to obtain source file locations)
-    files: SimpleFiles<Symbol, String>,
-    /// A mapping from file hashes to file IDs (used to obtain source file locations)
-    file_id_mapping: HashMap<FileHash, usize>,
-    // A mapping from file IDs to a split vector of the lines in each file (used to build docstrings)
-    file_id_to_lines: HashMap<usize, Vec<String>>,
-    /// Contains type params where relevant (e.g. when processing function definition)
-    type_params: BTreeMap<Symbol, DefLoc>,
-    /// Current processed module (always set before module processing starts)
-    current_mod: Option<ModuleIdent>,
+    // /// Outermost definitions in a module (structs, consts, functions)
+    // mod_outer_defs: BTreeMap<ModuleIdent_, ModuleDefs>,
+    // /// A mapping from file names to file content (used to obtain source file locations)
+    // files: SimpleFiles<Symbol, String>,
+    // /// A mapping from file hashes to file IDs (used to obtain source file locations)
+    // file_id_mapping: HashMap<FileHash, usize>,
+    // // A mapping from file IDs to a split vector of the lines in each file (used to build docstrings)
+    // file_id_to_lines: HashMap<usize, Vec<String>>,
+    // /// Contains type params where relevant (e.g. when processing function definition)
+    // type_params: BTreeMap<Symbol, DefLoc>,
+    // /// Current processed module (always set before module processing starts)
+    // current_mod: Option<ModuleIdent>,
 }
 
 /// Maps a line number to a list of use-def pairs on a given line (use-def set is sorted by
@@ -524,43 +519,43 @@ impl SymbolicatorRunner {
     }
 }
 
-impl UseDef {
-    fn new(
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_fhash: FileHash,
-        use_start: Position,
-        def_fhash: FileHash,
-        def_start: Position,
-        use_name: &Symbol,
-        use_type: IdentType,
-        type_def_loc: Option<DefLoc>,
-        doc_string: String,
-    ) -> Self {
-        let def_loc = DefLoc {
-            fhash: def_fhash,
-            start: def_start,
-        };
-        let col_end = use_start.character + use_name.len() as u32;
-        let use_loc = UseLoc {
-            fhash: use_fhash,
-            start: use_start,
-            col_end,
-        };
+// impl UseDef {
+//     fn new(
+//         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
+//         use_fhash: FileHash,
+//         use_start: Position,
+//         def_fhash: FileHash,
+//         def_start: Position,
+//         use_name: &Symbol,
+//         use_type: IdentType,
+//         type_def_loc: Option<DefLoc>,
+//         doc_string: String,
+//     ) -> Self {
+//         let def_loc = DefLoc {
+//             fhash: def_fhash,
+//             start: def_start,
+//         };
+//         let col_end = use_start.character + use_name.len() as u32;
+//         let use_loc = UseLoc {
+//             fhash: use_fhash,
+//             start: use_start,
+//             col_end,
+//         };
 
-        references
-            .entry(def_loc)
-            .or_insert_with(BTreeSet::new)
-            .insert(use_loc);
-        Self {
-            col_start: use_start.character,
-            col_end,
-            use_type,
-            def_loc,
-            type_def_loc,
-            doc_string,
-        }
-    }
-}
+//         references
+//             .entry(def_loc)
+//             .or_insert_with(BTreeSet::new)
+//             .insert(use_loc);
+//         Self {
+//             col_start: use_start.character,
+//             col_end,
+//             use_type,
+//             def_loc,
+//             type_def_loc,
+//             doc_string,
+//         }
+//     }
+// }
 
 impl UseDef {
     pub fn get_col_start(&self) -> u32 {
@@ -615,35 +610,31 @@ impl PartialEq for UseDef {
 }
 
 impl UseDefMap {
-    fn new() -> Self {
-        Self(BTreeMap::new())
-    }
+    // fn new() -> Self {
+    //     Self(BTreeMap::new())
+    // }
 
-    fn insert(&mut self, key: u32, val: UseDef) {
-        self.0.entry(key).or_insert_with(BTreeSet::new).insert(val);
-    }
+    // fn insert(&mut self, key: u32, val: UseDef) {
+    //     self.0.entry(key).or_insert_with(BTreeSet::new).insert(val);
+    // }
 
     fn get(&self, key: u32) -> Option<BTreeSet<UseDef>> {
         self.0.get(&key).cloned()
     }
 
-    fn elements(self) -> BTreeMap<u32, BTreeSet<UseDef>> {
-        self.0
-    }
+    // fn elements(self) -> BTreeMap<u32, BTreeSet<UseDef>> {
+    //     self.0
+    // }
 
-    fn extend(&mut self, use_defs: BTreeMap<u32, BTreeSet<UseDef>>) {
-        self.0.extend(use_defs);
-    }
+    // fn extend(&mut self, use_defs: BTreeMap<u32, BTreeSet<UseDef>>) {
+    //     self.0.extend(use_defs);
+    // }
 }
 
 impl FunctionIdentTypeMap {
-    fn new() -> Self {
-        Self(BTreeMap::new())
-    }
-
-    fn insert(&mut self, key: String, val: IdentType) {
-        self.0.entry(key).or_insert_with(|| val);
-    }
+    // fn new() -> Self {
+    //     Self(BTreeMap::new())
+    // }
 
     pub fn contains_key(self, key: &String) -> bool {
         self.0.contains_key(key)
@@ -783,7 +774,7 @@ impl Symbolicator {
 
         // let mut mod_outer_defs = BTreeMap::new();
         // let mut mod_use_defs = BTreeMap::new();
-        let mut file_mods = BTreeMap::new();
+        let file_mods = BTreeMap::new();
 
         // for (pos, module_ident, module_def) in modules {
         //     let (defs, symbols) = Self::get_mod_outer_defs(
@@ -819,9 +810,9 @@ impl Symbolicator {
         //     current_mod: None,
         // };
 
-        let mut references = BTreeMap::new();
-        let mut file_use_defs = BTreeMap::new();
-        let mut function_ident_type = FunctionIdentTypeMap::new();
+        let references = BTreeMap::new();
+        let file_use_defs = BTreeMap::new();
+        // let function_ident_type = FunctionIdentTypeMap::new();
 
         // for (pos, module_ident, module_def) in modules {
         //     let mut use_defs = mod_use_defs.remove(module_ident).unwrap();
@@ -869,1247 +860,6 @@ impl Symbolicator {
         }
     }
 
-    /// Main AST traversal functions
-
-    /// Get symbols for outer definitions in the module (functions, structs, and consts)
-    fn get_mod_outer_defs(
-        loc: &Loc,
-        mod_ident: &ModuleIdent,
-        mod_def: &ModuleDefinition,
-        files: &SimpleFiles<Symbol, String>,
-        file_id_mapping: &HashMap<FileHash, usize>,
-    ) -> (ModuleDefs, UseDefMap) {
-        let mut structs = BTreeMap::new();
-        let mut constants = BTreeMap::new();
-        let mut functions = BTreeMap::new();
-
-        for (pos, name, def) in &mod_def.structs {
-            // process field structs first
-            let mut field_defs = vec![];
-            if let StructFields::Defined(fields) = &def.fields {
-                for (fpos, fname, (_, _)) in fields {
-                    let start = match Self::get_start_loc(&fpos, files, file_id_mapping) {
-                        Some(s) => s,
-                        None => {
-                            debug_assert!(false);
-                            continue;
-                        }
-                    };
-                    field_defs.push(FieldDef {
-                        name: *fname,
-                        start,
-                    });
-                }
-            };
-
-            // process the struct itself
-            let name_start = match Self::get_start_loc(&pos, files, file_id_mapping) {
-                Some(s) => s,
-                None => {
-                    debug_assert!(false);
-                    continue;
-                }
-            };
-
-            structs.insert(
-                *name,
-                StructDef {
-                    name_start,
-                    field_defs,
-                },
-            );
-        }
-
-        for (pos, name, _) in &mod_def.constants {
-            let name_start = match Self::get_start_loc(&pos, files, file_id_mapping) {
-                Some(s) => s,
-                None => {
-                    debug_assert!(false);
-                    continue;
-                }
-            };
-            constants.insert(*name, name_start);
-        }
-
-        for (pos, name, fun) in &mod_def.functions {
-            let name_start = match Self::get_start_loc(&pos, files, file_id_mapping) {
-                Some(s) => s,
-                None => {
-                    debug_assert!(false);
-                    continue;
-                }
-            };
-            let ident_type = IdentType::FunctionType(
-                mod_ident.value,
-                *name,
-                fun.signature
-                    .type_parameters
-                    .iter()
-                    .map(|t| sp(t.user_specified_name.loc, Type_::Param(t.clone())))
-                    .collect(),
-                fun.signature
-                    .parameters
-                    .iter()
-                    .map(|(n, _)| n.value.name)
-                    .collect(),
-                fun.signature
-                    .parameters
-                    .iter()
-                    .map(|(_, t)| t.clone())
-                    .collect(),
-                fun.signature.return_type.clone(),
-                fun.acquires
-                    .iter()
-                    .map(|(k, v)| Self::create_struct_type(*mod_ident, *k, *v, vec![]))
-                    .collect(),
-            );
-            functions.insert(
-                *name,
-                FunctionDef {
-                    name: *name,
-                    start: name_start,
-                    attrs: fun
-                        .attributes
-                        .clone()
-                        .iter()
-                        .map(|(_loc, name, _attr)| name.to_string())
-                        .collect(),
-                    ident_type,
-                },
-            );
-        }
-
-        let use_def_map = UseDefMap::new();
-
-        let name = mod_ident.value;
-        let fhash = loc.file_hash();
-        let start = match Self::get_start_loc(loc, files, file_id_mapping) {
-            Some(s) => s,
-            None => {
-                debug_assert!(false);
-                return (
-                    ModuleDefs {
-                        fhash,
-                        start: Position {
-                            line: 0,
-                            character: 0,
-                        },
-                        name,
-                        structs,
-                        constants,
-                        functions,
-                    },
-                    use_def_map,
-                );
-            }
-        };
-
-        let module_defs = ModuleDefs {
-            name,
-            start,
-            fhash,
-            structs,
-            constants,
-            functions,
-        };
-
-        (module_defs, use_def_map)
-    }
-
-    /// Get symbols for the whole module
-    fn mod_symbols(
-        &mut self,
-        mod_def: &ModuleDefinition,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-        function_ident_type: &mut FunctionIdentTypeMap,
-    ) {
-        for (pos, name, fun) in &mod_def.functions {
-            // enter self-definition for function name (unwrap safe - done when inserting def)
-            let name_start = Self::get_start_loc(&pos, &self.files, &self.file_id_mapping).unwrap();
-            let doc_string = self.extract_doc_string(&name_start, &pos.file_hash());
-
-            let mod_ident = self.current_mod.unwrap();
-
-            let mod_def = self.mod_outer_defs.get(&mod_ident.value).unwrap();
-            let fun_def = mod_def.functions.get(name).unwrap();
-            let use_type = fun_def.ident_type.clone();
-
-            let fun_type_def = self.ident_type_def_loc(&use_type);
-            let use_def = UseDef::new(
-                references,
-                pos.file_hash(),
-                name_start,
-                pos.file_hash(),
-                name_start,
-                name,
-                use_type.clone(),
-                fun_type_def,
-                doc_string,
-            );
-
-            use_defs.insert(name_start.line, use_def);
-            self.fun_symbols(fun, references, use_defs);
-            function_ident_type.insert(name.to_string(), use_type);
-        }
-
-        for (pos, name, c) in &mod_def.constants {
-            // enter self-definition for const name (unwrap safe - done when inserting def)
-            let name_start = Self::get_start_loc(&pos, &self.files, &self.file_id_mapping).unwrap();
-            let doc_string = self.extract_doc_string(&name_start, &pos.file_hash());
-            let ident_type = IdentType::RegularType(c.signature.clone());
-            let ident_type_def = self.ident_type_def_loc(&ident_type);
-            use_defs.insert(
-                name_start.line,
-                UseDef::new(
-                    references,
-                    pos.file_hash(),
-                    name_start,
-                    pos.file_hash(),
-                    name_start,
-                    name,
-                    ident_type,
-                    ident_type_def,
-                    doc_string,
-                ),
-            );
-        }
-
-        for (pos, name, struct_def) in &mod_def.structs {
-            // enter self-definition for struct name (unwrap safe - done when inserting def)
-            let name_start = Self::get_start_loc(&pos, &self.files, &self.file_id_mapping).unwrap();
-            let doc_string = self.extract_doc_string(&name_start, &pos.file_hash());
-            let ident_type = IdentType::RegularType(Self::create_struct_type(
-                self.current_mod.unwrap(),
-                StructName(sp(pos, *name)),
-                pos,
-                vec![],
-            ));
-            let ident_type_def = self.ident_type_def_loc(&ident_type);
-            use_defs.insert(
-                name_start.line,
-                UseDef::new(
-                    references,
-                    pos.file_hash(),
-                    name_start,
-                    pos.file_hash(),
-                    name_start,
-                    name,
-                    ident_type,
-                    ident_type_def,
-                    doc_string,
-                ),
-            );
-
-            self.struct_symbols(struct_def, references, use_defs);
-        }
-    }
-
-    /// Get symbols for function a definition
-    fn struct_symbols(
-        &mut self,
-        struct_def: &StructDefinition,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-    ) {
-        // create scope designated to contain type parameters (if any)
-        let mut tp_scope = BTreeMap::new();
-        for stp in &struct_def.type_parameters {
-            self.add_type_param(&stp.param, &mut tp_scope, references, use_defs);
-        }
-        self.type_params = tp_scope;
-        if let StructFields::Defined(fields) = &struct_def.fields {
-            for (fpos, fname, (_, t)) in fields {
-                self.add_type_id_use_def(t, references, use_defs);
-                // enter self-definition for field name (unwrap safe - done when inserting def)
-                let start = Self::get_start_loc(&fpos, &self.files, &self.file_id_mapping).unwrap();
-                let ident_type = IdentType::RegularType(t.clone());
-                let ident_type_def = self.ident_type_def_loc(&ident_type);
-                let doc_string = self.extract_doc_string(&start, &fpos.file_hash());
-                use_defs.insert(
-                    start.line,
-                    UseDef::new(
-                        references,
-                        fpos.file_hash(),
-                        start,
-                        fpos.file_hash(),
-                        start,
-                        fname,
-                        ident_type,
-                        ident_type_def,
-                        doc_string,
-                    ),
-                );
-            }
-        }
-    }
-
-    /// Get symbols for function a definition
-    fn fun_symbols(
-        &mut self,
-        fun: &Function,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-    ) {
-        // create scope designated to contain type parameters (if any)
-        let mut tp_scope = BTreeMap::new();
-        for tp in &fun.signature.type_parameters {
-            self.add_type_param(tp, &mut tp_scope, references, use_defs);
-        }
-        self.type_params = tp_scope;
-
-        // scope for the main function scope (for parameters and
-        // function body)
-        let mut scope = OrdMap::new();
-
-        for (pname, ptype) in &fun.signature.parameters {
-            self.add_type_id_use_def(ptype, references, use_defs);
-
-            // add definition of the parameter
-            self.add_def(
-                &pname.loc,
-                &pname.value.name,
-                &mut scope,
-                references,
-                use_defs,
-                ptype.clone(),
-            );
-        }
-
-        match &fun.body.value {
-            FunctionBody_::Defined(sequence) => {
-                for seq_item in sequence {
-                    self.seq_item_symbols(&mut scope, seq_item, references, use_defs);
-                }
-            }
-            FunctionBody_::Native => (),
-        }
-
-        // process return types
-        self.add_type_id_use_def(&fun.signature.return_type, references, use_defs);
-        // process optional "acquires" clause
-        for (name, loc) in fun.acquires.clone() {
-            let typ = Self::create_struct_type(self.current_mod.unwrap(), name, loc, vec![]);
-            self.add_struct_use_def(
-                &self.current_mod.unwrap(),
-                &name.value(),
-                &name.loc(),
-                references,
-                use_defs,
-                &typ,
-            );
-        }
-
-        // clear type params from the scope
-        self.type_params.clear();
-    }
-
-    fn get_start_loc(
-        pos: &Loc,
-        files: &SimpleFiles<Symbol, String>,
-        file_id_mapping: &HashMap<FileHash, usize>,
-    ) -> Option<Position> {
-        get_loc(&pos.file_hash(), pos.start(), files, file_id_mapping)
-    }
-
-    /// Extracts the docstring (/// or /** ... */) for a given definition by traversing up from the line definition
-    fn extract_doc_string(&self, name_start: &Position, file_hash: &FileHash) -> String {
-        let mut doc_string = String::new();
-        let file_id = match self.file_id_mapping.get(file_hash) {
-            None => return doc_string,
-            Some(v) => v,
-        };
-
-        let file_lines = match self.file_id_to_lines.get(file_id) {
-            None => return doc_string,
-            Some(v) => v,
-        };
-
-        if name_start.line == 0 {
-            return doc_string;
-        }
-
-        let mut iter = (name_start.line - 1) as usize;
-        let mut line_before = file_lines[iter].trim();
-
-        // Detect the two different types of docstrings
-        if line_before.starts_with("///") {
-            while let Some(stripped_line) = line_before.strip_prefix("///") {
-                doc_string = format!("{}\n{}", stripped_line.trim(), doc_string);
-                if iter == 0 {
-                    break;
-                }
-                iter -= 1;
-                line_before = file_lines[iter].trim();
-            }
-        } else if line_before.ends_with("*/") {
-            let mut doc_string_found = false;
-            line_before = file_lines[iter].strip_suffix("*/").unwrap_or("").trim();
-
-            // Loop condition is a safe guard.
-            while !doc_string_found {
-                // We found the start of the multi-line comment/docstring
-                if line_before.starts_with("/*") {
-                    let is_doc = line_before.starts_with("/**") && !line_before.starts_with("/***");
-
-                    // Invalid doc_string start prefix so return empty doc string.
-                    if !is_doc {
-                        return String::new();
-                    }
-
-                    line_before = line_before.strip_prefix("/**").unwrap_or("").trim();
-                    doc_string_found = true;
-                }
-
-                doc_string = format!("{}\n{}", line_before, doc_string);
-
-                if iter == 0 {
-                    break;
-                }
-
-                iter -= 1;
-                line_before = file_lines[iter].trim();
-            }
-
-            // No doc_string found - return String::new();
-            if !doc_string_found {
-                return String::new();
-            }
-        }
-
-        doc_string
-    }
-
-    /// Get symbols for a sequence representing function body
-    fn seq_item_symbols(
-        &self,
-        scope: &mut OrdMap<Symbol, DefLoc>,
-        seq_item: &SequenceItem,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-    ) {
-        use SequenceItem_ as I;
-        match &seq_item.value {
-            I::Seq(e) => self.exp_symbols(e, scope, references, use_defs),
-            I::Declare(lvalues) => {
-                self.lvalue_list_symbols(true, lvalues, scope, references, use_defs)
-            }
-            I::Bind(lvalues, opt_types, e) => {
-                // process RHS first to avoid accidentally binding its identifiers to LHS (which now
-                // will be put into the current scope only after RHS is processed)
-                self.exp_symbols(e, scope, references, use_defs);
-                for opt_t in opt_types {
-                    match opt_t {
-                        Some(t) => self.add_type_id_use_def(t, references, use_defs),
-                        None => (),
-                    }
-                }
-                self.lvalue_list_symbols(true, lvalues, scope, references, use_defs);
-            }
-        }
-    }
-
-    /// Get symbols for a list of lvalues
-    fn lvalue_list_symbols(
-        &self,
-        define: bool,
-        lvalues: &LValueList,
-        scope: &mut OrdMap<Symbol, DefLoc>,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-    ) {
-        for lval in &lvalues.value {
-            self.lvalue_symbols(define, lval, scope, references, use_defs);
-        }
-    }
-
-    /// Get symbols for a single lvalue
-    fn lvalue_symbols(
-        &self,
-        define: bool,
-        lval: &LValue,
-        scope: &mut OrdMap<Symbol, DefLoc>,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-    ) {
-        match &lval.value {
-            LValue_::Var { var, ty: t, .. } => {
-                if define {
-                    self.add_def(
-                        &var.loc,
-                        &var.value.name,
-                        scope,
-                        references,
-                        use_defs,
-                        *t.clone(),
-                    );
-                } else {
-                    self.add_local_use_def(
-                        &var.value.name,
-                        &var.loc,
-                        references,
-                        scope,
-                        use_defs,
-                        *t.clone(),
-                    )
-                }
-            }
-            LValue_::Unpack(ident, name, tparams, fields) => {
-                self.unpack_symbols(
-                    define, ident, name, tparams, fields, scope, references, use_defs,
-                );
-            }
-            LValue_::BorrowUnpack(_, ident, name, tparams, fields) => {
-                self.unpack_symbols(
-                    define, ident, name, tparams, fields, scope, references, use_defs,
-                );
-            }
-            LValue_::Ignore => (),
-        }
-    }
-
-    /// Get symbols for the unpack statement
-    fn unpack_symbols(
-        &self,
-        define: bool,
-        ident: &ModuleIdent,
-        name: &StructName,
-        tparams: &Vec<Type>,
-        fields: &Fields<(Type, LValue)>,
-        scope: &mut OrdMap<Symbol, DefLoc>,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-    ) {
-        // add use of the struct name
-        let typ = Self::create_struct_type(*ident, *name, name.loc(), tparams.clone());
-        self.add_struct_use_def(
-            ident,
-            &name.value(),
-            &name.loc(),
-            references,
-            use_defs,
-            &typ,
-        );
-        for (fpos, fname, (_, (t, lvalue))) in fields {
-            // add use of the field name
-            self.add_field_use_def(
-                &ident.value,
-                &name.value(),
-                fname,
-                &fpos,
-                references,
-                use_defs,
-                t,
-            );
-            // add definition or use of a variable used for struct field unpacking
-            self.lvalue_symbols(define, lvalue, scope, references, use_defs);
-        }
-        // add type params
-        for t in tparams {
-            self.add_type_id_use_def(t, references, use_defs);
-        }
-    }
-
-    /// Get symbols for an expression
-    fn exp_symbols(
-        &self,
-        exp: &Exp,
-        scope: &mut OrdMap<Symbol, DefLoc>,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-    ) {
-        use UnannotatedExp_ as E;
-        match &exp.exp.value {
-            E::Move {
-                from_user: _,
-                var: v,
-            } => self.add_local_use_def(
-                &v.value.name,
-                &v.loc,
-                references,
-                scope,
-                use_defs,
-                exp.ty.clone(),
-            ),
-            E::Copy {
-                from_user: _,
-                var: v,
-            } => self.add_local_use_def(
-                &v.value.name,
-                &v.loc,
-                references,
-                scope,
-                use_defs,
-                exp.ty.clone(),
-            ),
-            E::Use(v) => self.add_local_use_def(
-                &v.value.name,
-                &v.loc,
-                references,
-                scope,
-                use_defs,
-                exp.ty.clone(),
-            ),
-            E::Constant(mod_ident_opt, name) => self.add_const_use_def(
-                mod_ident_opt,
-                &name.value(),
-                &name.loc(),
-                references,
-                use_defs,
-                exp.ty.clone(),
-            ),
-            E::ModuleCall(mod_call) => self.mod_call_symbols(mod_call, scope, references, use_defs),
-            E::Builtin(builtin_fun, exp) => {
-                use BuiltinFunction_ as BF;
-                match &builtin_fun.value {
-                    BF::MoveTo(t) => self.add_type_id_use_def(t, references, use_defs),
-                    BF::MoveFrom(t) => self.add_type_id_use_def(t, references, use_defs),
-                    BF::BorrowGlobal(_, t) => self.add_type_id_use_def(t, references, use_defs),
-                    BF::Exists(t) => self.add_type_id_use_def(t, references, use_defs),
-                    BF::Freeze(t) => self.add_type_id_use_def(t, references, use_defs),
-                    _ => (),
-                }
-                self.exp_symbols(exp, scope, references, use_defs);
-            }
-            E::Vector(_, _, t, exp) => {
-                self.add_type_id_use_def(t, references, use_defs);
-                self.exp_symbols(exp, scope, references, use_defs);
-            }
-            E::IfElse(cond, t, f) => {
-                self.exp_symbols(cond, scope, references, use_defs);
-                self.exp_symbols(t, scope, references, use_defs);
-                self.exp_symbols(f, scope, references, use_defs);
-            }
-            E::While(cond, body) => {
-                self.exp_symbols(cond, scope, references, use_defs);
-                self.exp_symbols(body, scope, references, use_defs);
-            }
-            E::Loop { has_break: _, body } => {
-                self.exp_symbols(body, scope, references, use_defs);
-            }
-            E::Block(sequence) => {
-                // a block is a new var scope
-                let mut new_scope = scope.clone();
-                for seq_item in sequence {
-                    self.seq_item_symbols(&mut new_scope, seq_item, references, use_defs);
-                }
-            }
-            E::Assign(lvalues, opt_types, e) => {
-                self.lvalue_list_symbols(false, lvalues, scope, references, use_defs);
-                for opt_t in opt_types {
-                    match opt_t {
-                        Some(t) => self.add_type_id_use_def(t, references, use_defs),
-                        None => (),
-                    }
-                }
-                self.exp_symbols(e, scope, references, use_defs);
-            }
-            E::Mutate(lhs, rhs) => {
-                self.exp_symbols(lhs, scope, references, use_defs);
-                self.exp_symbols(rhs, scope, references, use_defs);
-            }
-            E::Return(exp) => {
-                self.exp_symbols(exp, scope, references, use_defs);
-            }
-            E::Abort(exp) => {
-                self.exp_symbols(exp, scope, references, use_defs);
-            }
-            E::Dereference(exp) => {
-                self.exp_symbols(exp, scope, references, use_defs);
-            }
-            E::UnaryExp(_, exp) => {
-                self.exp_symbols(exp, scope, references, use_defs);
-            }
-            E::BinopExp(lhs, _, _, rhs) => {
-                self.exp_symbols(lhs, scope, references, use_defs);
-                self.exp_symbols(rhs, scope, references, use_defs);
-            }
-            E::Pack(ident, name, tparams, fields) => {
-                self.pack_symbols(ident, name, tparams, fields, scope, references, use_defs);
-            }
-            E::ExpList(list_items) => {
-                for item in list_items {
-                    let exp = match item {
-                        // TODO: are types important for symbolication here (and, more generally,
-                        // what's a splat?)
-                        ExpListItem::Single(e, _) => e,
-                        ExpListItem::Splat(_, e, _) => e,
-                    };
-                    self.exp_symbols(exp, scope, references, use_defs);
-                }
-            }
-            E::Borrow(_, exp, field) => {
-                self.exp_symbols(exp, scope, references, use_defs);
-                // get expression type to match fname to a struct def
-                self.add_field_type_use_def(
-                    &exp.ty,
-                    &field.value(),
-                    &field.loc(),
-                    references,
-                    use_defs,
-                );
-            }
-            E::TempBorrow(_, exp) => {
-                self.exp_symbols(exp, scope, references, use_defs);
-            }
-            E::BorrowLocal(_, var) => self.add_local_use_def(
-                &var.value.name,
-                &var.loc,
-                references,
-                scope,
-                use_defs,
-                exp.ty.clone(),
-            ),
-            E::Cast(exp, t) => {
-                self.exp_symbols(exp, scope, references, use_defs);
-                self.add_type_id_use_def(t, references, use_defs);
-            }
-            E::Annotate(exp, t) => {
-                self.exp_symbols(exp, scope, references, use_defs);
-                self.add_type_id_use_def(t, references, use_defs);
-            }
-
-            _ => (),
-        }
-    }
-
-    /// Add a type for a struct field given its type
-    fn add_field_type_use_def(
-        &self,
-        field_type: &Type,
-        use_name: &Symbol,
-        use_pos: &Loc,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-    ) {
-        let sp!(_, typ) = field_type;
-        match typ {
-            Type_::Ref(_, t) => {
-                self.add_field_type_use_def(t, use_name, use_pos, references, use_defs)
-            }
-            Type_::Apply(_, sp!(_, TypeName_::ModuleType(sp!(_, mod_ident), struct_name)), _) => {
-                self.add_field_use_def(
-                    mod_ident,
-                    &struct_name.value(),
-                    use_name,
-                    use_pos,
-                    references,
-                    use_defs,
-                    field_type,
-                );
-            }
-            _ => (),
-        }
-    }
-
-    fn mod_call_symbols(
-        &self,
-        mod_call: &ModuleCall,
-        scope: &mut OrdMap<Symbol, DefLoc>,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-    ) {
-        let mod_ident = mod_call.module;
-        let mod_def = self.mod_outer_defs.get(&mod_ident.value).unwrap();
-
-        let fun_def = match mod_def.functions.get(&mod_call.name.value()) {
-            Some(v) => v,
-            None => return,
-        };
-        let use_type = fun_def.ident_type.clone();
-
-        self.add_fun_use_def(
-            &mod_call.module,
-            &mod_call.name.value(),
-            &mod_call.name.loc(),
-            references,
-            use_defs,
-            use_type,
-        );
-
-        // handle type parameters
-        for t in &mod_call.type_arguments {
-            self.add_type_id_use_def(t, references, use_defs);
-        }
-
-        // handle arguments
-        self.exp_symbols(&mod_call.arguments, scope, references, use_defs);
-    }
-
-    /// Get symbols for the pack expression
-    fn pack_symbols(
-        &self,
-        ident: &ModuleIdent,
-        name: &StructName,
-        tparams: &Vec<Type>,
-        fields: &Fields<(Type, Exp)>,
-        scope: &mut OrdMap<Symbol, DefLoc>,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-    ) {
-        // add use of the struct name
-        let typ = Self::create_struct_type(*ident, *name, name.loc(), tparams.clone());
-        self.add_struct_use_def(
-            ident,
-            &name.value(),
-            &name.loc(),
-            references,
-            use_defs,
-            &typ,
-        );
-        for (fpos, fname, (_, (t, init_exp))) in fields {
-            // add use of the field name
-            self.add_field_use_def(
-                &ident.value,
-                &name.value(),
-                fname,
-                &fpos,
-                references,
-                use_defs,
-                t,
-            );
-            // add field initialization expression
-            self.exp_symbols(init_exp, scope, references, use_defs);
-        }
-        // add type params
-        for t in tparams {
-            self.add_type_id_use_def(t, references, use_defs);
-        }
-    }
-
-    /// Helper functions
-
-    /// Add type parameter to a scope holding type params
-    fn add_type_param(
-        &mut self,
-        tp: &TParam,
-        tp_scope: &mut BTreeMap<Symbol, DefLoc>,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-    ) {
-        match Self::get_start_loc(
-            &tp.user_specified_name.loc,
-            &self.files,
-            &self.file_id_mapping,
-        ) {
-            Some(start) => {
-                let tname = tp.user_specified_name.value;
-                let fhash = tp.user_specified_name.loc.file_hash();
-                // enter self-definition for type param
-                let ident_type = IdentType::RegularType(sp(
-                    tp.user_specified_name.loc,
-                    Type_::Param(tp.clone()),
-                ));
-                let ident_type_def = self.ident_type_def_loc(&ident_type);
-
-                let doc_string = self.extract_doc_string(&start, &fhash);
-                use_defs.insert(
-                    start.line,
-                    UseDef::new(
-                        references,
-                        fhash,
-                        start,
-                        fhash,
-                        start,
-                        &tname,
-                        ident_type,
-                        ident_type_def,
-                        doc_string,
-                    ),
-                );
-                let exists = tp_scope.insert(tname, DefLoc { fhash, start });
-                debug_assert!(exists.is_none());
-            }
-            None => {
-                debug_assert!(false);
-            }
-        };
-    }
-
-    /// Add use of one of identifiers defined at the module level
-    fn add_outer_use_def(
-        &self,
-        module_ident: &ModuleIdent_,
-        use_name: &Symbol,
-        use_pos: &Loc,
-        mut add_fn: impl FnMut(&Symbol, Position, &ModuleDefs),
-    ) {
-        let name_start = match Self::get_start_loc(use_pos, &self.files, &self.file_id_mapping) {
-            Some(v) => v,
-            None => {
-                debug_assert!(false);
-                return;
-            }
-        };
-
-        let mod_defs = match self.mod_outer_defs.get(module_ident) {
-            Some(v) => v,
-            None => {
-                debug_assert!(false);
-                return;
-            }
-        };
-        add_fn(use_name, name_start, mod_defs);
-    }
-
-    /// Add use of a const identifier
-    fn add_const_use_def(
-        &self,
-        module_ident_opt: &Option<ModuleIdent>,
-        use_name: &Symbol,
-        use_pos: &Loc,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-        use_type: Type,
-    ) {
-        let module_ident = match module_ident_opt {
-            Some(v) => v.value,
-            None => self.current_mod.unwrap().value,
-        };
-
-        self.add_outer_use_def(
-            &module_ident,
-            use_name,
-            use_pos,
-            |use_name, name_start, mod_defs| match mod_defs.constants.get(use_name) {
-                Some(def_start) => {
-                    let ident_type = IdentType::RegularType(use_type.clone());
-                    let def_fhash = self.mod_outer_defs.get(&module_ident).unwrap().fhash;
-                    let doc_string = self.extract_doc_string(def_start, &def_fhash);
-                    let ident_type_def = self.ident_type_def_loc(&ident_type);
-
-                    use_defs.insert(
-                        name_start.line,
-                        UseDef::new(
-                            references,
-                            use_pos.file_hash(),
-                            name_start,
-                            def_fhash,
-                            *def_start,
-                            use_name,
-                            ident_type,
-                            ident_type_def,
-                            doc_string,
-                        ),
-                    );
-                }
-                None => debug_assert!(false),
-            },
-        );
-    }
-
-    /// Add use of a function identifier
-    fn add_fun_use_def(
-        &self,
-        module_ident: &ModuleIdent,
-        use_name: &Symbol,
-        use_pos: &Loc,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-        use_type: IdentType,
-    ) {
-        self.add_outer_use_def(
-            &module_ident.value,
-            use_name,
-            use_pos,
-            |use_name, name_start, mod_defs| match mod_defs.functions.get(use_name) {
-                Some(func_def) => {
-                    let def_fhash = self.mod_outer_defs.get(&module_ident.value).unwrap().fhash;
-                    let doc_string = self.extract_doc_string(&func_def.start, &def_fhash);
-                    use_defs.insert(
-                        name_start.line,
-                        UseDef::new(
-                            references,
-                            use_pos.file_hash(),
-                            name_start,
-                            def_fhash,
-                            func_def.start,
-                            use_name,
-                            use_type.clone(),
-                            self.ident_type_def_loc(&use_type),
-                            doc_string,
-                        ),
-                    );
-                }
-                None => debug_assert!(false),
-            },
-        );
-    }
-
-    /// Add use of a struct identifier
-    fn add_struct_use_def(
-        &self,
-        sp!(_, module_ident): &ModuleIdent,
-        use_name: &Symbol,
-        use_pos: &Loc,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-        use_type: &Type,
-    ) {
-        self.add_outer_use_def(
-            module_ident,
-            use_name,
-            use_pos,
-            |use_name, name_start, mod_defs| match mod_defs.structs.get(use_name) {
-                Some(def) => {
-                    let ident_type = IdentType::RegularType(use_type.clone());
-
-                    let ident_type_def = self.ident_type_def_loc(&ident_type);
-                    let def_fhash = self.mod_outer_defs.get(module_ident).unwrap().fhash;
-                    let doc_string = self.extract_doc_string(&def.name_start, &def_fhash);
-                    use_defs.insert(
-                        name_start.line,
-                        UseDef::new(
-                            references,
-                            use_pos.file_hash(),
-                            name_start,
-                            def_fhash,
-                            def.name_start,
-                            use_name,
-                            ident_type,
-                            ident_type_def,
-                            doc_string,
-                        ),
-                    );
-                }
-                None => debug_assert!(false),
-            },
-        );
-    }
-
-    /// Add use of a struct field identifier
-    fn add_field_use_def(
-        &self,
-        module_ident: &ModuleIdent_,
-        struct_name: &Symbol,
-        use_name: &Symbol,
-        use_pos: &Loc,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-        use_type: &Type,
-    ) {
-        self.add_outer_use_def(
-            module_ident,
-            use_name,
-            use_pos,
-            |use_name, name_start, mod_defs| match mod_defs.structs.get(struct_name) {
-                Some(def) => {
-                    for fdef in &def.field_defs {
-                        if fdef.name == *use_name {
-                            let ident_type = IdentType::RegularType(use_type.clone());
-                            let ident_type_def = self.ident_type_def_loc(&ident_type);
-
-                            let def_fhash = self.mod_outer_defs.get(module_ident).unwrap().fhash;
-                            let doc_string = self.extract_doc_string(&fdef.start, &def_fhash);
-                            use_defs.insert(
-                                name_start.line,
-                                UseDef::new(
-                                    references,
-                                    use_pos.file_hash(),
-                                    name_start,
-                                    def_fhash,
-                                    fdef.start,
-                                    use_name,
-                                    ident_type,
-                                    ident_type_def,
-                                    doc_string,
-                                ),
-                            );
-                        }
-                    }
-                }
-                None => debug_assert!(false),
-            },
-        );
-    }
-
-    /// Add use of a type identifier
-    fn add_type_id_use_def(
-        &self,
-        id_type: &Type,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-    ) {
-        let sp!(pos, typ) = id_type;
-        match typ {
-            Type_::Ref(_, t) => self.add_type_id_use_def(t, references, use_defs),
-            Type_::Param(tparam) => {
-                let sp!(use_pos, use_name) = tparam.user_specified_name;
-                match Self::get_start_loc(pos, &self.files, &self.file_id_mapping) {
-                    Some(name_start) => match self.type_params.get(&use_name) {
-                        Some(def_loc) => {
-                            let ident_type = IdentType::RegularType(id_type.clone());
-                            let ident_type_def = self.ident_type_def_loc(&ident_type);
-                            let doc_string =
-                                self.extract_doc_string(&def_loc.start, &def_loc.fhash);
-                            use_defs.insert(
-                                name_start.line,
-                                UseDef::new(
-                                    references,
-                                    use_pos.file_hash(),
-                                    name_start,
-                                    def_loc.fhash,
-                                    def_loc.start,
-                                    &use_name,
-                                    ident_type,
-                                    ident_type_def,
-                                    doc_string,
-                                ),
-                            );
-                        }
-                        None => debug_assert!(false),
-                    },
-                    None => debug_assert!(false), // a type param should not be missing
-                }
-            }
-            Type_::Apply(_, sp!(_, type_name), tparams) => {
-                if let TypeName_::ModuleType(mod_ident, struct_name) = type_name {
-                    self.add_struct_use_def(
-                        mod_ident,
-                        &struct_name.value(),
-                        &struct_name.loc(),
-                        references,
-                        use_defs,
-                        id_type,
-                    );
-                } // otherwise nothing to be done for other type names
-                for t in tparams {
-                    self.add_type_id_use_def(t, references, use_defs);
-                }
-            }
-            _ => (), // nothing to be done for the other types
-        }
-    }
-
-    /// Add a "generic" definition
-    fn add_def(
-        &self,
-        pos: &Loc,
-        name: &Symbol,
-        scope: &mut OrdMap<Symbol, DefLoc>,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        use_defs: &mut UseDefMap,
-        use_type: Type,
-    ) {
-        match Self::get_start_loc(pos, &self.files, &self.file_id_mapping) {
-            Some(name_start) => {
-                let def_loc = DefLoc {
-                    fhash: pos.file_hash(),
-                    start: name_start,
-                };
-                scope.insert(*name, def_loc);
-                // in other languages only one definition is allowed per scope but in move an (and
-                // in rust) a variable can be re-defined in the same scope replacing the previous
-                // definition
-
-                let doc_string = self.extract_doc_string(&name_start, &pos.file_hash());
-
-                // enter self-definition for def name
-                let ident_type = IdentType::RegularType(use_type);
-                let ident_type_def = self.ident_type_def_loc(&ident_type);
-                use_defs.insert(
-                    name_start.line,
-                    UseDef::new(
-                        references,
-                        pos.file_hash(),
-                        name_start,
-                        pos.file_hash(),
-                        name_start,
-                        name,
-                        ident_type,
-                        ident_type_def,
-                        doc_string,
-                    ),
-                );
-            }
-            None => {
-                debug_assert!(false);
-            }
-        }
-    }
-
-    /// Add a use for and identifier whose definition is expected to be local to a function, and
-    /// pair it with an appropriate definition
-    fn add_local_use_def(
-        &self,
-        use_name: &Symbol,
-        use_pos: &Loc,
-        references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-        scope: &OrdMap<Symbol, DefLoc>,
-        use_defs: &mut UseDefMap,
-        use_type: Type,
-    ) {
-        let name_start = match Self::get_start_loc(use_pos, &self.files, &self.file_id_mapping) {
-            Some(v) => v,
-            None => {
-                debug_assert!(false);
-                return;
-            }
-        };
-
-        if let Some(def_loc) = scope.get(use_name) {
-            let doc_string = self.extract_doc_string(&def_loc.start, &def_loc.fhash);
-            let ident_type = IdentType::RegularType(use_type);
-            let ident_type_def = self.ident_type_def_loc(&ident_type);
-            use_defs.insert(
-                name_start.line,
-                UseDef::new(
-                    references,
-                    use_pos.file_hash(),
-                    name_start,
-                    def_loc.fhash,
-                    def_loc.start,
-                    use_name,
-                    ident_type,
-                    ident_type_def,
-                    doc_string,
-                ),
-            );
-        } else {
-            debug_assert!(false);
-        }
-    }
-
-    fn create_struct_type(
-        module_ident: ModuleIdent,
-        struct_name: StructName,
-        loc: Loc,
-        types: Vec<Type>,
-    ) -> Type {
-        let type_name = sp(
-            module_ident.loc,
-            TypeName_::ModuleType(module_ident, struct_name),
-        );
-        sp(loc, Type_::Apply(None, type_name, types))
-    }
-
-    fn ident_type_def_loc(&self, ident_type: &IdentType) -> Option<DefLoc> {
-        match ident_type {
-            IdentType::RegularType(t) => self.type_def_loc(t),
-            IdentType::FunctionType(_, _, _, _, _, ret, _) => self.type_def_loc(ret),
-        }
-    }
-
-    fn type_def_loc(&self, sp!(_, t): &Type) -> Option<DefLoc> {
-        match t {
-            Type_::Ref(_, r) => self.type_def_loc(r),
-            Type_::Apply(_, sp!(_, TypeName_::ModuleType(sp!(_, mod_ident), struct_name)), _) => {
-                let mod_defs = match self.mod_outer_defs.get(mod_ident) {
-                    Some(v) => v,
-                    None => return None,
-                };
-                mod_defs
-                    .structs
-                    .get(&struct_name.value())
-                    .map(|struct_def| {
-                        let fhash = mod_defs.fhash;
-                        let start = struct_def.name_start;
-                        DefLoc { fhash, start }
-                    })
-            }
-            _ => None,
-        }
-    }
 }
 
 /// Handles go-to-def request of the language server

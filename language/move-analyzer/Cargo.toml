@@ -31,13 +31,6 @@ tempfile = "3.2.0"
 url = "2.2.2"
 clap = { version = "3.1.8", features = ["derive"] }
 crossbeam = "0.8"
-#move-command-line-common = { path = "../move-command-line-common" }
-#move-ir-types = { path = "../move-ir/types" }
-#move-compiler = { path = "../move-compiler" }
-#move-package = { path = "../tools/move-package" }
-#move-symbol-pool = { path = "../move-symbol-pool" }
-#move-core-types = { path = "../move-core/types" , features = ["address32"] }
-#move-cli = { path = "../tools/move-cli" }
 
 move-command-line-common = { git = "https://github.com/MystenLabs/sui.git", branch = "main", package = "move-command-line-common" }
 move-ir-types = { git = "https://github.com/MystenLabs/sui.git", branch = "main", package = "move-ir-types" }

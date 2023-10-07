@@ -629,35 +629,37 @@ impl Project {
                     infer_ty.clone().struct_ref_to_struct(project_context)
                 };
 
-                // for (field, bind) in field_binds.iter() {
-                //     let field_and_ty = struct_item.find_filed_by_name(field.0.value);
-                //     let field_ty = if let Some(x) = field_and_ty {
-                //         if infer_ty.is_ref() {
-                //             ResolvedType::new_ref(false, x.1.clone())
-                //         } else {
-                //             x.1.clone()
-                //         }
-                //     } else {
-                //         ResolvedType::UnKnown
-                //     };
-                //     {
-                //         let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
-                //             from: field.clone(),
-                //             to: if let Some(x) = field_and_ty {
-                //                 x.0.clone()
-                //             } else {
-                //                 field.clone()
-                //             },
-                //             ty: field_ty.clone(),
-                //             item: None,
-                //         }));
-                //         visitor.handle_item_or_access(self, project_context, &item);
-                //         if visitor.finished() {
-                //             return;
-                //         }
-                //     }
-                //     self.visit_bind(bind, &field_ty, project_context, visitor, None, true);
-                // }
+                if let FieldBindings::Named(named_bindings) = field_binds {
+                    for (field, bind) in named_bindings.iter() {
+                        let field_and_ty = struct_item.find_filed_by_name(field.0.value);
+                        let field_ty = if let Some(x) = field_and_ty {
+                            if infer_ty.is_ref() {
+                                ResolvedType::new_ref(false, x.1.clone())
+                            } else {
+                                x.1.clone()
+                            }
+                        } else {
+                            ResolvedType::UnKnown
+                        };
+                        {
+                            let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
+                                from: field.clone(),
+                                to: if let Some(x) = field_and_ty {
+                                    x.0.clone()
+                                } else {
+                                    field.clone()
+                                },
+                                ty: field_ty.clone(),
+                                item: None,
+                            }));
+                            visitor.handle_item_or_access(self, project_context, &item);
+                            if visitor.finished() {
+                                return;
+                            }
+                        }
+                        self.visit_bind(bind, &field_ty, project_context, visitor, None, true);
+                    }
+                }
             }
         }
     }
