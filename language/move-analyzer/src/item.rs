@@ -230,7 +230,7 @@ impl ItemFun {
                     return false;
                 }
             }
-            Visibility::Script(_) => return true, // TODO script.
+            _ => return true, // TODO script.
         }
         true
     }

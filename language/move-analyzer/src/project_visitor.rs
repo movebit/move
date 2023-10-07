@@ -317,7 +317,7 @@ impl Project {
                         }
                         fields
                     }
-                    StructFields::Native(_) => vec![],
+                    _ => vec![],
                 };
                 let item = ItemOrAccess::Item(Item::Struct(ItemStruct {
                     name: s.name,
@@ -619,36 +619,38 @@ impl Project {
                     infer_ty.clone().struct_ref_to_struct(project_context)
                 };
 
-                for (field, bind) in field_binds.iter() {
-                    let field_and_ty = struct_item.find_filed_by_name(field.0.value);
-                    let field_ty = if let Some(x) = field_and_ty {
-                        if infer_ty.is_ref() {
-                            ResolvedType::new_ref(false, x.1.clone())
-                        } else {
-                            x.1.clone()
-                        }
-                    } else {
-                        ResolvedType::UnKnown
-                    };
-                    {
-                        let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
-                            from: *field,
-                            to: if let Some(x) = field_and_ty {
-                                x.0
+                if let FieldBindings::Named(named_bindings) = field_binds {
+                    for (field, bind) in named_bindings.iter() {
+                        let field_and_ty = struct_item.find_filed_by_name(field.0.value);
+                        let field_ty = if let Some(x) = field_and_ty {
+                            if infer_ty.is_ref() {
+                                ResolvedType::new_ref(false, x.1.clone())
                             } else {
-                                *field
-                            },
-                            ty: field_ty.clone(),
-                            all_fields: struct_item.all_fields(),
-                            item: None,
-                            has_ref: None,
-                        }));
-                        visitor.handle_item_or_access(self, project_context, &item);
-                        if visitor.finished() {
-                            return;
+                                x.1.clone()
+                            }
+                        } else {
+                            ResolvedType::UnKnown
+                        };
+                        {
+                            let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
+                                from: *field,
+                                to: if let Some(x) = field_and_ty {
+                                    x.0
+                                } else {
+                                    *field
+                                },
+                                ty: field_ty.clone(),
+                                all_fields: struct_item.all_fields(),
+                                item: None,
+                                has_ref: None,
+                            }));
+                            visitor.handle_item_or_access(self, project_context, &item);
+                            if visitor.finished() {
+                                return;
+                            }
                         }
+                        self.visit_bind(bind, &field_ty, project_context, visitor, None, true);
                     }
-                    self.visit_bind(bind, &field_ty, project_context, visitor, None, true);
                 }
             }
         }
@@ -1194,7 +1196,7 @@ impl Project {
                 self.visit_spec(spec, project_context, visitor);
                 project_context.set_access_env(old);
             }
-            Exp_::UnresolvedError => {
+            _ => {
                 //
             }
         }
@@ -1239,6 +1241,8 @@ impl Project {
             NameAccessChain_::Three(_, _) => {
                 log::error!("access friend three")
             }
+
+            _ => {}
         }
     }
 
@@ -1996,6 +2000,8 @@ impl Project {
                     }
                 }
             }
+
+            _ => {}
         }
     }
 }
