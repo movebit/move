@@ -347,13 +347,39 @@ fn type_to_ide_string(sp!(_, t): &Type) -> String {
         Type_::UnresolvedError => "invalid type (unresolved)".to_string(),
     }
 }
-
+// pub enum Address {
+//     Numerical {
+//         name: Option<Name>,
+//         value: Spanned<NumericalAddress>,
+//         // set to true when the same name is used across multiple packages
+//         name_conflict: bool,
+//     },
+//     NamedUnassigned(Name),
+// }
 fn addr_to_ide_string(addr: &Address) -> String {
+    // match addr {
+    //     Address::Numerical(None, sp!(_, bytes), false) => format!("{}", bytes),
+    //     Address::Numerical(Some(name), ..) => format!("{}", name),
+    //     Address::NamedUnassigned(name) => format!("{}", name),
+    // }
     match addr {
-        Address::Numerical(None, sp!(_, bytes)) => format!("{}", bytes),
-        Address::Numerical(Some(name), _) => format!("{}", name),
+        Address::Numerical {
+            name: None,
+            value: sp!(_, bytes),
+            name_conflict: true,
+        } => format!("{}", bytes),
+        Address::Numerical {
+            name: None,
+            value: sp!(_, bytes),
+            name_conflict: false,
+        } => format!("{}", bytes),
+        Address::Numerical {
+            name: Some(name),
+            ..
+        } => format!("{}", name),
         Address::NamedUnassigned(name) => format!("{}", name),
     }
+    
 }
 
 fn type_list_to_ide_string(types: &[Type]) -> String {
@@ -753,73 +779,73 @@ impl Symbolicator {
             }
         }
 
-        let modules = &typed_ast.unwrap().modules;
+        // let modules = &typed_ast.unwrap().modules;
 
-        let mut mod_outer_defs = BTreeMap::new();
-        let mut mod_use_defs = BTreeMap::new();
+        // let mut mod_outer_defs = BTreeMap::new();
+        // let mut mod_use_defs = BTreeMap::new();
         let mut file_mods = BTreeMap::new();
 
-        for (pos, module_ident, module_def) in modules {
-            let (defs, symbols) = Self::get_mod_outer_defs(
-                &pos,
-                &sp(pos, *module_ident),
-                module_def,
-                &files,
-                &file_id_mapping,
-            );
+        // for (pos, module_ident, module_def) in modules {
+        //     let (defs, symbols) = Self::get_mod_outer_defs(
+        //         &pos,
+        //         &sp(pos, *module_ident),
+        //         module_def,
+        //         &files,
+        //         &file_id_mapping,
+        //     );
 
-            let cloned_defs = defs.clone();
-            let path = file_name_mapping.get(&cloned_defs.fhash.clone()).unwrap();
-            file_mods
-                .entry(
-                    dunce::canonicalize(path.as_str())
-                        .unwrap_or_else(|_| PathBuf::from(path.as_str())),
-                )
-                .or_insert_with(BTreeSet::new)
-                .insert(cloned_defs);
+        //     let cloned_defs = defs.clone();
+        //     let path = file_name_mapping.get(&cloned_defs.fhash.clone()).unwrap();
+        //     file_mods
+        //         .entry(
+        //             dunce::canonicalize(path.as_str())
+        //                 .unwrap_or_else(|_| PathBuf::from(path.as_str())),
+        //         )
+        //         .or_insert_with(BTreeSet::new)
+        //         .insert(cloned_defs);
 
-            mod_outer_defs.insert(*module_ident, defs);
-            mod_use_defs.insert(*module_ident, symbols);
-        }
+        //     mod_outer_defs.insert(*module_ident, defs);
+        //     mod_use_defs.insert(*module_ident, symbols);
+        // }
 
-        eprintln!("get_symbols loaded file_mods length: {}", file_mods.len());
+        // eprintln!("get_symbols loaded file_mods length: {}", file_mods.len());
 
-        let mut symbolicator = Symbolicator {
-            mod_outer_defs,
-            files,
-            file_id_mapping,
-            file_id_to_lines,
-            type_params: BTreeMap::new(),
-            current_mod: None,
-        };
+        // let mut symbolicator = Symbolicator {
+        //     mod_outer_defs,
+        //     files,
+        //     file_id_mapping,
+        //     file_id_to_lines,
+        //     type_params: BTreeMap::new(),
+        //     current_mod: None,
+        // };
 
         let mut references = BTreeMap::new();
         let mut file_use_defs = BTreeMap::new();
         let mut function_ident_type = FunctionIdentTypeMap::new();
 
-        for (pos, module_ident, module_def) in modules {
-            let mut use_defs = mod_use_defs.remove(module_ident).unwrap();
-            symbolicator.current_mod = Some(sp(pos, *module_ident));
-            symbolicator.mod_symbols(
-                module_def,
-                &mut references,
-                &mut use_defs,
-                &mut function_ident_type,
-            );
+        // for (pos, module_ident, module_def) in modules {
+        //     let mut use_defs = mod_use_defs.remove(module_ident).unwrap();
+        //     symbolicator.current_mod = Some(sp(pos, *module_ident));
+        //     symbolicator.mod_symbols(
+        //         module_def,
+        //         &mut references,
+        //         &mut use_defs,
+        //         &mut function_ident_type,
+        //     );
 
-            let fpath = match source_files.get(&pos.file_hash()) {
-                Some((p, _)) => p,
-                None => continue,
-            };
+        //     let fpath = match source_files.get(&pos.file_hash()) {
+        //         Some((p, _)) => p,
+        //         None => continue,
+        //     };
 
-            let fpath_buffer = dunce::canonicalize(fpath.as_str())
-                .unwrap_or_else(|_| PathBuf::from(fpath.as_str()));
+        //     let fpath_buffer = dunce::canonicalize(fpath.as_str())
+        //         .unwrap_or_else(|_| PathBuf::from(fpath.as_str()));
 
-            file_use_defs
-                .entry(fpath_buffer)
-                .or_insert_with(UseDefMap::new)
-                .extend(use_defs.elements());
-        }
+        //     file_use_defs
+        //         .entry(fpath_buffer)
+        //         .or_insert_with(UseDefMap::new)
+        //         .extend(use_defs.elements());
+        // }
 
         let symbols = Symbols {
             references,

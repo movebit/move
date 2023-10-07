@@ -12,10 +12,12 @@ use move_symbol_pool::Symbol;
 
 use move_compiler::{
     diag,
+    editions::SyntaxEdition,
     diagnostics::{Diagnostic, Diagnostics},
     parser::{ast::*, lexer::*},
     shared::*,
     MatchedFileCommentMap,
+    parser::ast::FieldBindings,
 };
 
 /// Macro used to create a tuple-like pattern match for Spanned
@@ -797,8 +799,14 @@ fn parse_bind(context: &mut Context) -> Result<Bind, Box<Diagnostic>> {
         parse_bind_field,
         "a field binding",
     )?;
+
+    let field_bindings: FieldBindings = FieldBindings::Named(
+        Vec::from_iter(args.into_iter().map(|(field, spanned_bind)| {
+            (field, spanned_bind)
+        }))
+    );
     let end_loc = context.tokens.previous_end_loc();
-    let unpack = Bind_::Unpack(Box::new(ty), ty_args, args);
+    let unpack = Bind_::Unpack(Box::new(ty), ty_args, field_bindings);
     Ok(spanned(
         context.tokens.file_hash(),
         start_loc,
@@ -2630,7 +2638,7 @@ fn parse_use_decl(
         Result::Ok(_) => {}
     };
 
-    Ok(UseDecl { attributes, use_ })
+    Ok(UseDecl { loc: Loc::new(FileHash::empty(), 0, 0), attributes, use_ })
 }
 
 // Parse an alias for a module member:
@@ -3741,7 +3749,7 @@ pub fn parse_file_string(
     file_hash: FileHash,
     input: &str,
 ) -> Result<(Vec<Definition>, MatchedFileCommentMap), Diagnostics> {
-    let mut tokens = Lexer::new(input, file_hash);
+    let mut tokens = Lexer::new(input, file_hash, SyntaxEdition::Legacy);
     match tokens.advance() {
         Err(err) => Err(Diagnostics::from(vec![*err])),
         Ok(..) => Ok(()),

@@ -100,6 +100,7 @@ default-members = [
 # Dependencies that should be kept in sync through the whole workspace
 [workspace.dependencies]
 bcs = "0.1.4"
+datatest-stable = { git = "https://github.com/nextest-rs/datatest-stable.git", rev = "72db7f6d1bbe36a5407e96b9488a581f763e106f" }
 
 [profile.bench]
 debug = true

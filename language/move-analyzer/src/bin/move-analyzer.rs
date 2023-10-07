@@ -327,7 +327,8 @@ fn on_notification_v2(context: &mut Context, notification: &Notification, diag_s
     fn update_defs(context: &mut Context, fpath: PathBuf, content: &str) {
         use move_analyzer::syntax::parse_file_string;
         let file_hash = FileHash::new(content);
-        let mut env = CompilationEnv::new(Flags::testing());
+        let mut env = CompilationEnv::new(Flags::testing(), Default::default(), 
+        Default::default(), Default::default());
         let defs = parse_file_string(&mut env, file_hash, content);
         let defs = match defs {
             std::result::Result::Ok(x) => x,

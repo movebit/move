@@ -260,7 +260,8 @@ impl Project {
     /// Load move files locate in sources and tests ...
     pub(crate) fn load_layout_files(&mut self, manifest_path: &PathBuf, kind: SourcePackageLayout) {
         use super::syntax::parse_file_string;
-        let mut env = CompilationEnv::new(Flags::testing());
+        let mut env = CompilationEnv::new(Flags::testing(), Default::default(), 
+            Default::default(), Default::default());
         let mut p = manifest_path.clone();
         p.push(kind.location_str());
         for item in WalkDir::new(&p) {
@@ -828,6 +829,9 @@ impl Project {
             Exp_::Spec(_) => ResolvedType::new_unit(),
             Exp_::UnresolvedError => {
                 // Nothings. didn't know what to do.
+                ResolvedType::UnKnown
+            }
+            _ => {
                 ResolvedType::UnKnown
             }
         }
