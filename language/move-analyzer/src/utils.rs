@@ -323,7 +323,7 @@ impl MoveAnalyzerClientCommands {
         match self {
             MoveAnalyzerClientCommands::GotoDefinition(x) => Command::new(
                 "Goto Definition".to_string(),
-                "move-analyzer.goto_definition".to_string(),
+                "sui-move-analyzer.goto_definition".to_string(),
                 Some(vec![serde_json::to_value(PathAndRange::from(x)).unwrap()]),
             ),
         }

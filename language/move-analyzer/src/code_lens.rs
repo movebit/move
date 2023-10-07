@@ -70,7 +70,7 @@ impl super::project::ItemOrAccessHandler for TestHandler {
                 range: range.mk_location().range,
                 command: Some(Command::new(
                     "▶︎ Run Test".to_string(),
-                    "move-analyzer.sui.test_ui".to_string(),
+                    "sui-move-analyzer.sui.test_ui".to_string(),
                     Some({
                         let mut x = vec![serde_json::Value::String(
                             manifest_dir.to_str().unwrap().to_string(),

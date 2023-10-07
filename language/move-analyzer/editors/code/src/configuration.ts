@@ -34,7 +34,7 @@ class Configuration {
     private readonly configuration: vscode.WorkspaceConfiguration;
 
     constructor() {
-        this.configuration = vscode.workspace.getConfiguration('move-analyzer');
+        this.configuration = vscode.workspace.getConfiguration('sui-move-analyzer');
     }
 
     /** A string representation of the configured values, for logging purposes. */
@@ -42,12 +42,12 @@ class Configuration {
         return JSON.stringify(this.configuration);
     }
 
-    /** The path to the move-analyzer executable. */
+    /** The path to the sui-move-analyzer executable. */
     get serverPath(): string {
-        const defaultName = 'move-analyzer';
+        const defaultName = 'sui-move-analyzer';
         let serverPath = this.configuration.get<string>('server.path', defaultName);
         if (serverPath.length === 0) {
-            // The default value of the `server.path` setting is 'move-analyzer'.
+            // The default value of the `server.path` setting is 'sui-move-analyzer'.
             // A user may have over-written this default with an empty string value, ''.
             // An empty string cannot be an executable name, so instead use the default.
             return defaultName;

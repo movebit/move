@@ -1,9 +1,3 @@
-## The design of move-analyzer2
-
-move-analyzer2 is a novel move-lanugage IDE support.
-move-analyzer2 include semantic analyzer of move and MSL.
-Here we demonstrate serval core concepts in move-analyzer2 to help you understand how it works.
-
 ## Basic
 
 ### `Item`
@@ -285,7 +279,7 @@ especialy doing `auto completion` , The user's code is always incomplete.
 
 ### Multi Project support.
 
-move-analyzer2 supprt multi project development concurrently.
+supprt multi project development concurrently.
 It is convenient for user.
 How is multi project support.
 Well first We need load it the memory.
@@ -317,5 +311,5 @@ Share AST definition reduce memory consumption and save us time for loading proj
 
 
 ### Build in semantic analyzer
-move-analyzer has build in semantic analyzer.It's can infer variable's type.
+sui-ove-analyzer has build in semantic analyzer.It's can infer variable's type.
 Know about variables in current scope,etc.

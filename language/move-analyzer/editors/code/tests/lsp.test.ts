@@ -23,7 +23,7 @@ const PRIMITIVE_TYPES = ['u8', 'u16', 'u32', 'u64', 'u128', 'u256', 'bool', 'vec
 
 Mocha.suite('LSP', () => {
     Mocha.test('textDocument/documentSymbol', async () => {
-        const ext = vscode.extensions.getExtension('move.move-analyzer');
+        const ext = vscode.extensions.getExtension('MoveBit.sui-move-analyzer');
         assert.ok(ext);
 
         await ext.activate(); // Synchronous waiting for activation to complete
@@ -44,7 +44,7 @@ Mocha.suite('LSP', () => {
 
         const syms: Array<lc.DocumentSymbol> | undefined = await
             vscode.commands.executeCommand(
-                'move-analyzer.textDocumentDocumentSymbol', params,
+                'sui-move-analyzer.textDocumentDocumentSymbol', params,
             );
 
         assert.ok(syms);
@@ -54,7 +54,7 @@ Mocha.suite('LSP', () => {
     });
 
     Mocha.test('textDocument/hover for definition in the same module', async () => {
-        const ext = vscode.extensions.getExtension('move.move-analyzer');
+        const ext = vscode.extensions.getExtension('MoveBit.sui-move-analyzer');
         assert.ok(ext);
 
         await ext.activate(); // Synchronous waiting for activation to complete
@@ -81,7 +81,7 @@ Mocha.suite('LSP', () => {
 
         const hoverResult: lc.Hover | undefined =
             await vscode.commands.executeCommand(
-                'move-analyzer.textDocumentHover',
+                'sui-move-analyzer.textDocumentHover',
                 params,
             );
 
@@ -95,7 +95,7 @@ Mocha.suite('LSP', () => {
     });
 
     Mocha.test('textDocument/hover for definition in an external module', async () => {
-        const ext = vscode.extensions.getExtension('move.move-analyzer');
+        const ext = vscode.extensions.getExtension('MoveBit.sui-move-analyzer');
         assert.ok(ext);
 
         await ext.activate(); // Synchronous waiting for activation to complete
@@ -122,7 +122,7 @@ Mocha.suite('LSP', () => {
 
         const hoverResult: lc.Hover | undefined =
             await vscode.commands.executeCommand(
-                'move-analyzer.textDocumentHover',
+                'sui-move-analyzer.textDocumentHover',
                 params,
             );
 
@@ -137,7 +137,7 @@ Mocha.suite('LSP', () => {
     });
 
     Mocha.test('textDocument/completion', async () => {
-        const ext = vscode.extensions.getExtension('move.move-analyzer');
+        const ext = vscode.extensions.getExtension('MoveBit.sui-move-analyzer');
         assert.ok(ext);
 
         await ext.activate(); // Synchronous waiting for activation to complete
@@ -163,7 +163,7 @@ Mocha.suite('LSP', () => {
         };
 
         const items = await vscode.commands.executeCommand<Array<vscode.CompletionItem>>(
-            'move-analyzer.textDocumentCompletion',
+            'sui-move-analyzer.textDocumentCompletion',
             params,
         );
 
@@ -193,7 +193,7 @@ Mocha.suite('LSP', () => {
         };
 
         const itemsOnColon = await vscode.commands.executeCommand<Array<vscode.CompletionItem>>(
-            'move-analyzer.textDocumentCompletion',
+            'sui-move-analyzer.textDocumentCompletion',
             colonParams,
         );
 
@@ -211,7 +211,7 @@ Mocha.suite('LSP', () => {
     });
 
     Mocha.test('GoToDefinition', async () => {
-        const ext = vscode.extensions.getExtension('move.move-analyzer');
+        const ext = vscode.extensions.getExtension('MoveBit.sui-move-analyzer');
         assert.ok(ext);
 
         await ext.activate(); // Synchronous waiting for activation to complete
@@ -238,7 +238,7 @@ Mocha.suite('LSP', () => {
 
         const goToDefinitionResult: lc.Location | lc.Location[] | lc.LocationLink[] | undefined =
             await vscode.commands.executeCommand(
-                'move-analyzer.textDocumentDefinition',
+                'sui-move-analyzer.textDocumentDefinition',
                 params,
             );
         console.log('----------------------------------');

@@ -50,7 +50,7 @@ async function serverVersion(context: Readonly<Context>): Promise<void> {
         await vscode.window.showInformationMessage(version.stdout);
     } else if (version.error) {
         await vscode.window.showErrorMessage(
-            `Could not execute move-analyzer: ${version.error.message}.`,
+            `Could not execute sui-move-analyzer: ${version.error.message}.`,
         );
     } else {
         await vscode.window.showErrorMessage(

@@ -1,11 +1,11 @@
 {
-	"name": "move-analyzer",
-	"displayName": "move-analyzer",
+	"name": "sui-move-analyzer",
+	"displayName": "sui-move-analyzer",
 	"description": "A language server and basic grammar for the Move programming language.",
-	"publisher": "move",
+	"publisher": "MoveBit",
 	"icon": "images/move.png",
 	"license": "Apache-2.0",
-	"version": "0.0.11",
+	"version": "0.0.19",
 	"preview": true,
 	"homepage": "https://github.com/move-language/move",
 	"repository": {
@@ -32,117 +32,117 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "move-analyzer.serverVersion",
+				"command": "sui-move-analyzer.serverVersion",
 				"title": "Show Server Version",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.create_project",
+				"command": "sui-move-analyzer.create_project",
 				"title": "Create SUI project",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.move.new",
+				"command": "sui-move-analyzer.move.new",
 				"title": "Create a new move project.",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.move.build",
+				"command": "sui-move-analyzer.move.build",
 				"title": "Sui move build",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.move.coverage",
+				"command": "sui-move-analyzer.move.coverage",
 				"title": "Sui move coverage",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.move.test",
+				"command": "sui-move-analyzer.move.test",
 				"title": "Sui move test",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.move.prove",
+				"command": "sui-move-analyzer.move.prove",
 				"title": "Sui move prove",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.client.active.address",
+				"command": "sui-move-analyzer.client.active.address",
 				"title": "Sui client active-address",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.client.active.env",
+				"command": "sui-move-analyzer.client.active.env",
 				"title": "Sui client active-env",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.client.addresses",
+				"command": "sui-move-analyzer.client.addresses",
 				"title": "Sui client addresses",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.client.envs",
+				"command": "sui-move-analyzer.client.envs",
 				"title": "Sui client envs",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.client.gas",
+				"command": "sui-move-analyzer.client.gas",
 				"title": "Sui client gas",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.client.object",
+				"command": "sui-move-analyzer.client.object",
 				"title": "Sui client object",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.client.objects",
+				"command": "sui-move-analyzer.client.objects",
 				"title": "Sui client objects",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.client.publish",
+				"command": "sui-move-analyzer.client.publish",
 				"title": "Sui client publish",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.client.new.address",
+				"command": "sui-move-analyzer.client.new.address",
 				"title": "Sui client new address",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.keytool.generate",
+				"command": "sui-move-analyzer.keytool.generate",
 				"title": "Sui keytool generate",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.keytool.import",
+				"command": "sui-move-analyzer.keytool.import",
 				"title": "Sui keytool import",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.keytool.list",
+				"command": "sui-move-analyzer.keytool.list",
 				"title": "Sui keytool list",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.keytool.load.keypair",
+				"command": "sui-move-analyzer.keytool.load.keypair",
 				"title": "Sui keytool load keypair",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.keytool.show",
+				"command": "sui-move-analyzer.keytool.show",
 				"title": "Sui keytool show",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.keytool.unpack",
+				"command": "sui-move-analyzer.keytool.unpack",
 				"title": "Sui keytool unpack",
 				"category": "Move Analyzer"
 			},
 			{
-				"command": "move-analyzer.sui.reset.working.space",
+				"command": "sui-move-analyzer.reset.working.space",
 				"title": "Sui reset working space",
 				"category": "Move Analyzer"
 			}
@@ -151,27 +151,27 @@
 			"type": "object",
 			"title": "Move Analyzer",
 			"properties": {
-				"move-analyzer.server.path": {
+				"sui-move-analyzer.server.path": {
 					"type": "string",
-					"default": "move-analyzer",
-					"markdownDescription": "Path and filename of the move-analyzer executable, e.g. `/usr/bin/move-analyzer`."
+					"default": "sui-move-analyzer",
+					"markdownDescription": "Path and filename of the sui-move-analyzer executable, e.g. `/usr/bin/sui-move-analyzer`."
 				},
-				"move-analyzer.inlay.hints.parameter" : {
+				"sui-move-analyzer.inlay.hints.parameter" : {
 					"type": "boolean",
 					"default" : true,
 					"markdownDescription": "inlay hints on parameter."
 				},
-				"move-analyzer.inlay.hints.field.type" : {
+				"sui-move-analyzer.inlay.hints.field.type" : {
 					"type": "boolean",
 					"default" : true,
 					"markdownDescription": "inlay hints on field type."
 				},
-				"move-analyzer.inlay.hints.declare.var" : {
+				"sui-move-analyzer.inlay.hints.declare.var" : {
 					"type": "boolean",
 					"default" : true,
 					"markdownDescription": "inlay hints on declare var."
 				},
-				"move-analyzer.trace.server": {
+				"sui-move-analyzer.trace.server": {
 					"type": "string",
 					"scope": "window",
 					"enum": [
@@ -185,7 +185,7 @@
 						"Log each message and its contents."
 					],
 					"default": "off",
-					"description": "Traces the communication between the move-analyzer language server and Visual Studio Code. Note that this log can be very verbose, and so not recommended for anyone besides people working on or debugging move-analyzer itself."
+					"description": "Traces the communication between the sui-move-analyzer language server and Visual Studio Code. Note that this log can be very verbose, and so not recommended for anyone besides people working on or debugging sui-move-analyzer itself."
 				}
 			}
 		},
@@ -205,13 +205,13 @@
 		"menus": {
 			"commandPalette": [
 				{
-					"command": "move-analyzer.serverVersion"
+					"command": "sui-move-analyzer.serverVersion"
 				}
 			]
 		}
 	},
 	"scripts": {
-		"compile": "tsc -p ./ && cd ../../ && cargo build --bin move-analyzer",
+		"compile": "tsc -p ./ && cd ../../ && cargo build --bin sui-move-analyzer",
 		"watch": "tsc -watch -p ./",
 		"lint": "eslint . --ext ts --max-warnings 0",
 		"fix": "eslint . --ext ts --fix",
@@ -220,7 +220,7 @@
 		"test": "node ./out/tests/runTests.js",
 		"dev": "npm run pretest && cross-env mode=dev node ./out/tests/runTests.js",
 		"vscode:prepublish": "npm run pretest",
-		"package": "npm run pretest && vsce package -o move-analyzer.vsix",
+		"package": "npm run pretest && vsce package -o sui-move-analyzer.vsix",
 		"publish": "npm run pretest && npm run test && vsce publish"
 	},
 	"extensionDependencies": [

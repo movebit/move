@@ -21,7 +21,7 @@ use std::{
     thread,
 };
 
-use move_analyzer::{
+use sui_move_analyzer::{
     code_lens,
     completion::on_completion_request,
     context::{Context, FileDiags, MultiProject},
@@ -62,7 +62,7 @@ fn main() {
     #[cfg(feature = "pprof")]
     cpu_pprof(20);
 
-    // For now, move-analyzer only responds to options built-in to clap,
+    // For now, sui-move-analyzer only responds to options built-in to clap,
     // such as `--help` or `--version`.
     Options::parse();
     init_log();
@@ -105,7 +105,7 @@ fn main() {
                 // have clients only send us what has changed and where, thereby requiring far less
                 // data be sent "over the wire." However, to do so, our language server would need
                 // to be capable of applying deltas to its view of the client's open files. See the
-                // 'move_analyzer::vfs' module for details.
+                // 'sui_move_analyzer::vfs' module for details.
                 change: Some(TextDocumentSyncKind::FULL),
                 will_save: None,
                 will_save_wait_until: None,
@@ -314,7 +314,7 @@ type DiagSender = Arc<Mutex<Sender<(PathBuf, Diagnostics)>>>;
 
 fn on_notification(context: &mut Context, notification: &Notification, diag_sender: DiagSender) {
     fn update_defs(context: &mut Context, fpath: PathBuf, content: &str) {
-        use move_analyzer::syntax::parse_file_string;
+        use sui_move_analyzer::syntax::parse_file_string;
         let file_hash = FileHash::new(content);
         let mut env = CompilationEnv::new(Flags::testing(), Default::default(), 
             Default::default(), Default::default());
@@ -468,7 +468,7 @@ fn get_package_compile_diagnostics(
 }
 
 fn make_diag(context: &Context, diag_sender: DiagSender, fpath: PathBuf) {
-    let (mani, _) = match move_analyzer::utils::discover_manifest_and_kind(fpath.as_path()) {
+    let (mani, _) = match sui_move_analyzer::utils::discover_manifest_and_kind(fpath.as_path()) {
         Some(x) => x,
         None => {
             log::error!("manifest not found.");

@@ -25,8 +25,8 @@ use sui_move_build::linters::{
     LINT_WARNING_PREFIX,
 };
 
-const SUI_FRAMEWORK_PATH: &str = "../sui-framework/packages/sui-framework";
-const MOVE_STDLIB_PATH: &str = "../sui-framework/packages/move-stdlib";
+const SUI_FRAMEWORK_PATH: &str = "/data/lzw/rust_projects/sui/crates/sui-framework/packages/sui-framework";
+const MOVE_STDLIB_PATH: &str = "/data/lzw/rust_projects/sui/crates/sui-framework/packages/move-stdlib";
 
 fn default_testing_addresses() -> BTreeMap<String, NumericalAddress> {
     let mapping = [("std", "0x1"), ("sui", "0x2")];

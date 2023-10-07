@@ -1,4 +1,4 @@
-# How to contribute to the move-analyzer Visual Studio Code extension
+# How to contribute to the sui-move-analyzer Visual Studio Code extension
 
 ## Installing dependencies
 
@@ -29,7 +29,7 @@ Running the extension's tests from the command-line is cumbersome because the te
 
 1. Open this repository in VS Code.
 2. Open the "Run and Debug" view: open the command palette (keyboard shortcut `⇧⌘P` on macOS) and type in "View: Show Run and Debug".
-3. From the pull-down menu in the Run and Debug view, select "Launch with Extension" and click the green arrow button. This will launch a new VS Code window that has the `move-analyzer` extension installed. If you open a `.move` file, it will be highlighted according to the any changes you've made in your local checkout of this repository.
+3. From the pull-down menu in the Run and Debug view, select "Launch with Extension" and click the green arrow button. This will launch a new VS Code window that has the `sui-move-analyzer` extension installed. If you open a `.move` file, it will be highlighted according to the any changes you've made in your local checkout of this repository.
 4. Once you've launched the extension, in the original VS Code window you'll see a small box with pause, refresh, and stop buttons. Clicking these allows you to quickly refresh the extension window with your latest changes, or quit the window.
 
 To test the Move TextMate grammar, open a file with a `.move` file extension and use the command palette to run the "Developer: Inspect Editor Tokens and Scopes" command. This displays a large window that shows what token is detected below the typing cursor in the VS Code window.
@@ -45,7 +45,7 @@ You can run the extensions tests from within the "Run and Debug" view:
 
 ## Releasing new versions of the extension
 
-To add new versions of the move-analyzer Visual Studio Code extension, you will need to:
+To add new versions of the sui-move-analyzer Visual Studio Code extension, you will need to:
 
 1. Request to be added to the `move` publisher team.
 2. Package and upload a new extension version.
@@ -56,7 +56,7 @@ As [Visual Studio Code's documentation](https://code.visualstudio.com/api/workin
 
 > **NOTE:** If you work for a company that uses Microsoft Outlook to serve your corporate email, then you already have a Microsoft account associated with that email address.
 
-To be added to the group of maintainers allowed to release new versions of the move-analyzer Visual Studio Code extension:
+To be added to the group of maintainers allowed to release new versions of the sui-move-analyzer Visual Studio Code extension:
 
 1. Open https://marketplace.visualstudio.com/vscode in your browser and click on "Sign in" on the upper-right of the page.
 2. Sign in with your Microsoft account's email address. If using a corporate email address, you'll go through an authentication flow specific to your organization (two-factor authentication, for example).
