@@ -43,6 +43,7 @@ pub struct Project {
     pub(crate) manifest_not_exists: HashSet<PathBuf>,
     pub(crate) manifest_load_failures: HashSet<PathBuf>,
     pub(crate) manifest_mod_time: HashMap<PathBuf, Option<SystemTime>>,
+    pub(crate) dependents: Vec<std::string::String>,
 }
 impl Project {
     pub(crate) fn mk_multi_project_key(&self) -> im::HashSet<PathBuf> {
@@ -76,8 +77,15 @@ impl Project {
             manifest_not_exists: Default::default(),
             manifest_load_failures: Default::default(),
             manifest_mod_time: Default::default(),
+            dependents: vec![],
         };
-        modules.load_project(&working_dir, multi, report_err)?;
+        let mut dependents_paths: Vec<PathBuf> = Vec::new();
+        modules.load_project(&working_dir, multi, report_err, true, &mut dependents_paths)?;
+        modules.dependents = dependents_paths
+            .into_iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect::<Vec<_>>()
+            .clone();
         let mut dummy = DummyHandler;
         modules.run_full_visitor(&mut dummy);
         Ok(modules)
@@ -115,6 +123,8 @@ impl Project {
         manifest_path: &Path,
         multi: &mut MultiProject,
         mut report_err: impl FnMut(String) + Clone,
+        is_main_source: bool,
+        dependents_paths: &mut Vec<PathBuf>,
     ) -> Result<()> {
         let manifest_path = normal_path(manifest_path);
         if self.modules.get(&manifest_path).is_some() {
@@ -129,10 +139,16 @@ impl Project {
             let d: Rc<RefCell<SourceDefs>> = Default::default();
             self.modules.insert(manifest_path.clone(), d.clone());
             multi.asts.insert(manifest_path.clone(), d);
-            self.load_layout_files(&manifest_path, SourcePackageLayout::Sources);
+
+            let source_paths = self.load_layout_files(&manifest_path, SourcePackageLayout::Sources)?;
+            if !is_main_source {
+                dependents_paths.extend(source_paths);
+            }
+    
             self.load_layout_files(&manifest_path, SourcePackageLayout::Tests);
             self.load_layout_files(&manifest_path, SourcePackageLayout::Scripts);
         }
+
         if !manifest_path.exists() {
             self.manifest_not_exists.insert(manifest_path);
             return anyhow::Result::Ok(());
@@ -247,14 +263,15 @@ impl Project {
                 &manifest_path,
                 dep_name
             );
-            self.load_project(&p, multi, report_err.clone())?;
+            self.load_project(&p, multi, report_err.clone(), false, dependents_paths)?;
         }
         Ok(())
     }
 
     /// Load move files locate in sources and tests ...
-    pub(crate) fn load_layout_files(&mut self, manifest_path: &PathBuf, kind: SourcePackageLayout) {
+    pub(crate) fn load_layout_files(&mut self, manifest_path: &PathBuf, kind: SourcePackageLayout) -> Result<Vec<PathBuf>> {
         use super::syntax::parse_file_string;
+        let mut ret_paths = Vec::new();
         let mut env = CompilationEnv::new(Flags::testing(), Default::default(), 
             Default::default(), Default::default());
         let mut p = manifest_path.clone();
@@ -331,6 +348,7 @@ impl Project {
                         .scripts
                         .insert(file.path().to_path_buf().clone(), defs);
                 }
+                ret_paths.push(file.path().to_path_buf());
                 // update hash
                 self.hash_file
                     .as_ref()
@@ -343,6 +361,7 @@ impl Project {
                     .update(file.path().to_path_buf(), file_content.as_str());
             }
         }
+        Ok(ret_paths)
     }
 
     pub(crate) fn name_to_addr_impl(&self, name: Symbol) -> AccountAddress {

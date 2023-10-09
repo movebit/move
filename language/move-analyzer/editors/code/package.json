@@ -146,6 +146,12 @@
 				"title": "Sui reset working space",
 				"category": "Move Analyzer"
 			}
+			,
+			{
+				"command": "sui-move-analyzer.runLinter",
+				"title": "run linter",
+				"category": "Move Analyzer"
+			}
 		],
 		"configuration": {
 			"type": "object",
@@ -206,6 +212,13 @@
 			"commandPalette": [
 				{
 					"command": "sui-move-analyzer.serverVersion"
+				}
+			],
+			"editor/context" : [
+				{
+					"when": "resourceLangId == move",
+					"command": "sui-move-analyzer.runLinter",
+					"group": "5_cutcopypaste"
 				}
 			]
 		}

@@ -30,6 +30,7 @@ use sui_move_analyzer::{
     references, symbols,
     utils::*,
     vfs::VirtualFileSystem,
+    linter,
 };
 use move_symbol_pool::Symbol;
 use url::Url;
@@ -301,6 +302,9 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
                 .expect("could not deserialize inlay hints request");
             eprintln!("call inlay_hints config {:?}", parameters);
             *inlay_hints_config = parameters;
+        }
+        "runLinter" => {
+            linter::on_run_linter(context, request);
         }
         _ => eprintln!("handle request '{}' from client", request.method),
     }

@@ -49,3 +49,4 @@ pub mod syntax;
 pub mod types;
 pub mod utils;
 pub mod vfs;
+pub mod linter;

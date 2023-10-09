@@ -243,10 +243,10 @@ const Reg = {
         // Register handlers for VS Code commands that the user explicitly issues.
         context.registerCommand('serverVersion', serverVersion);
         // Register test button
-        context.registerCommand('sui.test_ui', (_, ...args) => {
+        context.registerCommand('test_ui', (_, ...args) => {
             const cwd = args[0] as string;
             const name = args[1] as string;
-            const sui_test = terminalManager.alloc(cwd + 'sui.test_ui', () => {
+            const sui_test = terminalManager.alloc(cwd + 'test_ui', () => {
                 return vscode.window.createTerminal({
                     cwd: cwd,
                     name: 'sui test',
@@ -257,7 +257,7 @@ const Reg = {
             sui_test.show(false);
         });
 
-        context.registerCommand('sui.create_project', async () => {
+        context.registerCommand('create_project', async () => {
 
             const dir = await vscode.window.showSaveDialog({
                 // There is a long term issue about parse()
@@ -279,7 +279,7 @@ const Reg = {
             fs.writeFileSync(dir2 + '/sources/my_module.move',
                 sui_module_file_template.replaceAll(replace_name, project_name));
         });
-        context.registerCommand('sui.move.new', async () => {
+        context.registerCommand('move.new', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
@@ -291,7 +291,7 @@ const Reg = {
             if (name === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.move.new', (): vscode.Terminal => {
+            const t = terminalManager.alloc('move.new', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui move new',
                 });
@@ -300,12 +300,12 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui move new ' + name, true);
         });
-        context.registerCommand('sui.move.build', async () => {
+        context.registerCommand('move.build', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.move.build', (): vscode.Terminal => {
+            const t = terminalManager.alloc('move.build', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui move build',
                 });
@@ -314,12 +314,12 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui move build', true);
         });
-        context.registerCommand('sui.move.coverage', async () => {
+        context.registerCommand('move.coverage', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.move.coverage', (): vscode.Terminal => {
+            const t = terminalManager.alloc('move.coverage', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui move coverage',
                 });
@@ -329,12 +329,12 @@ const Reg = {
             t.sendText('sui move test --coverage', true);
             t.sendText('sui move coverage summary', true);
         });
-        context.registerCommand('sui.move.test', async () => {
+        context.registerCommand('move.test', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.move.test', (): vscode.Terminal => {
+            const t = terminalManager.alloc('move.test', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui move test',
                 });
@@ -343,12 +343,12 @@ const Reg = {
             t.sendText('cd ' + working_dir, true); t.sendText('cd ' + working_dir, true);
             t.sendText('sui move test', true);
         });
-        context.registerCommand('sui.move.prove', async () => {
+        context.registerCommand('move.prove', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.move.prove', (): vscode.Terminal => {
+            const t = terminalManager.alloc('move.prove', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui move prove',
                 });
@@ -357,12 +357,12 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui move prove', true);
         });
-        context.registerCommand('sui.client.active.address', async () => {
+        context.registerCommand('client.active.address', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.client.active.address', (): vscode.Terminal => {
+            const t = terminalManager.alloc('client.active.address', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui client active address',
                 });
@@ -371,12 +371,12 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui client active-address', true);
         });
-        context.registerCommand('sui.client.active.env', async () => {
+        context.registerCommand('client.active.env', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.client.active.env', (): vscode.Terminal => {
+            const t = terminalManager.alloc('client.active.env', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui client active env',
                 });
@@ -385,12 +385,12 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui client active-env', true);
         });
-        context.registerCommand('sui.client.addresses', async () => {
+        context.registerCommand('client.addresses', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.client.addresses', (): vscode.Terminal => {
+            const t = terminalManager.alloc('client.addresses', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui client addresses',
                 });
@@ -399,12 +399,12 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui client addresses', true);
         });
-        context.registerCommand('sui.client.envs', async () => {
+        context.registerCommand('client.envs', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.client.envs', (): vscode.Terminal => {
+            const t = terminalManager.alloc('client.envs', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui client envs',
                 });
@@ -413,12 +413,12 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui client envs', true);
         });
-        context.registerCommand('sui.client.gas', async () => {
+        context.registerCommand('client.gas', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.client.gas', (): vscode.Terminal => {
+            const t = terminalManager.alloc('client.gas', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui client gas',
                 });
@@ -427,7 +427,7 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui client gas', true);
         });
-        context.registerCommand('sui.client.object', async () => {
+        context.registerCommand('client.object', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
@@ -438,7 +438,7 @@ const Reg = {
             if (objectID === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.client.object', (): vscode.Terminal => {
+            const t = terminalManager.alloc('client.object', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui client object',
                 });
@@ -447,12 +447,12 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui client object ' + objectID, true);
         });
-        context.registerCommand('sui.client.objects', async () => {
+        context.registerCommand('client.objects', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.client.objects', (): vscode.Terminal => {
+            const t = terminalManager.alloc('client.objects', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui client objects',
                 });
@@ -461,7 +461,7 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui client objects', true);
         });
-        context.registerCommand('sui.client.publish', async () => {
+        context.registerCommand('client.publish', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
@@ -472,7 +472,7 @@ const Reg = {
             if (budget === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.client.publish', (): vscode.Terminal => {
+            const t = terminalManager.alloc('client.publish', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui client publish',
                 });
@@ -481,7 +481,7 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui client publish --gas-budget ' + budget, true);
         });
-        context.registerCommand('sui.client.new.address', async () => {
+        context.registerCommand('client.new.address', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
@@ -492,7 +492,7 @@ const Reg = {
             if (schema === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.client.new.address', (): vscode.Terminal => {
+            const t = terminalManager.alloc('client.new.address', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui client new address',
                 });
@@ -501,7 +501,7 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui client new-address ' + schema, true);
         });
-        context.registerCommand('sui.keytool.generate', async () => {
+        context.registerCommand('keytool.generate', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
@@ -512,7 +512,7 @@ const Reg = {
             if (schema === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.client.keytool.generate', (): vscode.Terminal => {
+            const t = terminalManager.alloc('client.keytool.generate', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui keytool generate',
                 });
@@ -521,7 +521,7 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui keytool generate ' + schema, true);
         });
-        context.registerCommand('sui.keytool.import', async () => {
+        context.registerCommand('keytool.import', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
@@ -538,7 +538,7 @@ const Reg = {
             if (schema === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.client.keytool.import', (): vscode.Terminal => {
+            const t = terminalManager.alloc('client.keytool.import', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui keytool import',
                 });
@@ -547,12 +547,12 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui keytool import ' + m + ' ' + schema, true);
         });
-        context.registerCommand('sui.keytool.list', async () => {
+        context.registerCommand('keytool.list', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.client.keytool.list', (): vscode.Terminal => {
+            const t = terminalManager.alloc('client.keytool.list', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui keytool list',
                 });
@@ -561,7 +561,7 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui keytool list ', true);
         });
-        context.registerCommand('sui.keytool.load.keypair', async () => {
+        context.registerCommand('keytool.load.keypair', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
@@ -576,7 +576,7 @@ const Reg = {
                 return;
             }
             if (file[0] !== undefined) {
-                const t = terminalManager.alloc('sui.client.keytool.load.keypair', (): vscode.Terminal => {
+                const t = terminalManager.alloc('client.keytool.load.keypair', (): vscode.Terminal => {
                     return vscode.window.createTerminal({
                         name: 'sui keytool load keypair',
                     });
@@ -586,7 +586,7 @@ const Reg = {
                 t.sendText('sui keytool load-keypair ' + file[0].fsPath, true);
             }
         });
-        context.registerCommand('sui.keytool.show', async () => {
+        context.registerCommand('keytool.show', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
@@ -601,7 +601,7 @@ const Reg = {
                 return;
             }
             if (file[0] !== undefined) {
-                const t = terminalManager.alloc('sui.client.keytool.show', (): vscode.Terminal => {
+                const t = terminalManager.alloc('client.keytool.show', (): vscode.Terminal => {
                     return vscode.window.createTerminal({
                         name: 'sui keytool show',
                     });
@@ -611,7 +611,7 @@ const Reg = {
                 t.sendText('sui keytool show ' + file[0].fsPath, true);
             }
         });
-        context.registerCommand('sui.keytool.unpack', async () => {
+        context.registerCommand('keytool.unpack', async () => {
             const working_dir = await sui_working_dir.get_working_dir();
             if (working_dir === undefined) {
                 return;
@@ -622,7 +622,7 @@ const Reg = {
             if (str === undefined) {
                 return;
             }
-            const t = terminalManager.alloc('sui.client.keytool.unpack', (): vscode.Terminal => {
+            const t = terminalManager.alloc('client.keytool.unpack', (): vscode.Terminal => {
                 return vscode.window.createTerminal({
                     name: 'sui keytool unpack',
                 });
@@ -631,13 +631,42 @@ const Reg = {
             t.sendText('cd ' + working_dir, true);
             t.sendText('sui keytool unpack \'' + str + '\'', true);
         });
-        context.registerCommand('sui.reset.working.space', async () => {
+        context.registerCommand('reset.working.space', async () => {
             const new_ = await sui_working_dir.get_use_input_working_dir();
             if (new_ === undefined) {
                 return;
             }
             sui_working_dir.set_dir(new_);
             void vscode.window.showInformationMessage('sui working directory set to ' + new_);
+        });
+        context.registerCommand('runLinter', (_, ...args) => {
+            interface FsPath {
+                fsPath: string;
+            }
+            if (args.length === 0) {
+                console.log("runlinter args = 0");
+                return;
+            }
+            const fsPath = (args[0] as FsPath).fsPath;
+            const client = context.getClient();
+            if (client === undefined) {
+                return;
+            }
+            interface Result {
+                result_msg: string;
+            }
+            // const working_dir = sui_working_dir.get_use_input_working_dir();
+            // if (working_dir === undefined) {
+            //     return;
+            // }
+            client.sendRequest<Result>('runLinter', { 'fpath': fsPath }).then(
+                (result) => {
+                    console.log("run linter result.result_msg = ", result.result_msg);
+                    // void vscode.window.showErrorMessage('run linter result: ' + result.result_msg);
+                },
+            ).catch((err) => {
+                void vscode.window.showErrorMessage('run linter failed: ' + (err as string));
+            });
         });
     },
 
