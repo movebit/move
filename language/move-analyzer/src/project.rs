@@ -145,8 +145,8 @@ impl Project {
                 dependents_paths.extend(source_paths);
             }
     
-            self.load_layout_files(&manifest_path, SourcePackageLayout::Tests);
-            self.load_layout_files(&manifest_path, SourcePackageLayout::Scripts);
+            let _ = self.load_layout_files(&manifest_path, SourcePackageLayout::Tests);
+            let _ = self.load_layout_files(&manifest_path, SourcePackageLayout::Scripts);
         }
 
         if !manifest_path.exists() {
