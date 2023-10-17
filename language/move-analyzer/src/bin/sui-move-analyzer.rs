@@ -26,8 +26,8 @@ use sui_move_analyzer::{
     completion::on_completion_request,
     context::{Context, FileDiags, MultiProject},
     goto_definition, hover, inlay_hints, inlay_hints::*,
-    // move_generate_spec_file::on_generate_spec_file,
-    // move_generate_spec_sel::on_generate_spec_sel,
+    move_generate_spec_file::on_generate_spec_file,
+    move_generate_spec_sel::on_generate_spec_sel,
     project::ConvertLoc,
     references, symbols,
     utils::*,
@@ -299,12 +299,12 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
         lsp_types::request::InlayHintRequest::METHOD => {
             inlay_hints::on_inlay_hints(context, request, *inlay_hints_config);
         }
-        // "move/generate/spec/file" => {
-        //     on_generate_spec_file(context, request);
-        // }
-        // "move/generate/spec/sel" => {
-        //     on_generate_spec_sel(context, request);
-        // }
+        "move/generate/spec/file" => {
+            on_generate_spec_file(context, request);
+        }
+        "move/generate/spec/sel" => {
+            on_generate_spec_sel(context, request);
+        }
         "move/lsp/client/inlay_hints/config" => {
             let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
                 .expect("could not deserialize inlay hints request");

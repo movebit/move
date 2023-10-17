@@ -55,14 +55,14 @@ pub fn on_run_linter(context: &Context, request: &Request) {
     let parameters = serde_json::from_value::<ReqParameters>(request.params.clone())
         .expect("could not deserialize go-to-def request");
     let fpath = PathBuf::from_str(parameters.fpath.as_str()).unwrap();
-    let send_err = |context: &Context, msg: String| {
-        let r = Response::new_err(request.id.clone(), ErrorCode::UnknownErrorCode as i32, msg);
-        context
-            .connection
-            .sender
-            .send(Message::Response(r))
-            .unwrap();
-    };
+    // let send_err = |context: &Context, msg: String| {
+    //     let r = Response::new_err(request.id.clone(), ErrorCode::UnknownErrorCode as i32, msg);
+    //     context
+    //         .connection
+    //         .sender
+    //         .send(Message::Response(r))
+    //         .unwrap();
+    // };
     match context.projects.get_project(&fpath) {
         Some(project) => {
             let mut target = vec![];
@@ -382,7 +382,8 @@ fn run_project_linter(
         deps.extend(tmp_deps);
     }
     let (filter_attr_name, filters) = known_filters_for_linter();
-    let (files, comments_and_compiler_res) = Compiler::from_files(
+    // let (files, comments_and_compiler_res) = Compiler::from_files(
+    let (_, comments_and_compiler_res) = Compiler::from_files(
         targets,
         deps.clone(),
         addrs,
@@ -410,7 +411,7 @@ fn run_project_linter(
 }
 
 fn run_tests(path: &Path) -> Option<String> {
-    let exp_path = path.with_extension(EXP_EXT);
+    // let exp_path = path.with_extension(EXP_EXT);
 
     let targets: Vec<String> = vec![path.to_str().unwrap().to_owned()];
     let lint_visitors = vec![
