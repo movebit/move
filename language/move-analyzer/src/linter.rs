@@ -3,14 +3,10 @@
 
 use crate::{
     project::ConvertLoc,
-    project::Project,
-    context::{Context, FileDiags, MultiProject},
+    context::Context,
     utils::discover_manifest_and_kind,
 };
-use move_command_line_common::{
-    testing::EXP_EXT,
-    testing::{add_update_baseline_fix, format_diff, read_env_update_baseline},
-};
+use move_command_line_common::testing::EXP_EXT;
 use move_compiler::{
     cfgir::visitor::AbstractInterpreterVisitor,
     command_line::compiler::move_check_for_errors,
@@ -33,17 +29,12 @@ use std::{
     str::FromStr, str,
     collections::{BTreeMap, HashMap},
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
-    thread,
 };
 use url::Url;
 
-use super::context::*;
-use lsp_server::{Connection, Message, Notification, Request, Response, ErrorCode};
+use lsp_server::{Message, Notification, Request, Response, ErrorCode};
 use lsp_types::{
-    notification::Notification as _, request::Request as _, CompletionOptions, Diagnostic,
-    HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
+    notification::Notification as _,
 };
 use serde::Deserialize;
 

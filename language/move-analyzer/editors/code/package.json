@@ -145,11 +145,20 @@
 				"command": "sui-move-analyzer.reset.working.space",
 				"title": "Sui reset working space",
 				"category": "Move Analyzer"
-			}
-			,
+			},
 			{
 				"command": "sui-move-analyzer.runLinter",
 				"title": "run linter",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "sui-move-analyzer.move.generate.spec.file",
+				"title": "Generate Move Spec File",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "sui-move-analyzer.move.generate.spec.sel",
+				"title": "Generate Move Spec",
 				"category": "Move Analyzer"
 			}
 		],
