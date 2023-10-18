@@ -11,6 +11,7 @@ use move_symbol_pool::Symbol;
 use serde::Deserialize;
 
 pub fn on_generate_spec_file(context: &Context, request: &Request) {
+    log::info!("on_generate_spec_file request = {:?}", request);
     let parameters = serde_json::from_value::<ReqParameters>(request.params.clone())
         .expect("could not deserialize go-to-def request");
     let fpath = PathBuf::from_str(parameters.fpath.as_str()).unwrap();

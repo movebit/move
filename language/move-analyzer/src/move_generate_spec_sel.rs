@@ -11,6 +11,7 @@ use serde::Deserialize;
 use std::{path::PathBuf, str::FromStr};
 
 pub fn on_generate_spec_sel(context: &Context, request: &Request) {
+    log::info!("on_generate_spec_sel request = {:?}", request);
     let parameters = serde_json::from_value::<ReqParameters>(request.params.clone())
         .expect("could not deserialize go-to-def request");
     let send_err = |context: &Context, msg: String| {

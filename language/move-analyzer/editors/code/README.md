@@ -24,7 +24,7 @@ The `sui-move-analyzer` language server is a Rust program that is part of the
    is recommended for people who do not work on core Move.
    1. If you don't already have a Rust toolchain installed, you should install
       [Rustup](https://rustup.rs/), which will install the latest stable Rust toolchain.
-   2. Invoke `cargo install --git https://github.com/movebit/move --branch feature/sui_move_analyzer-linter sui-move-analyzer` to install the
+   2. Invoke `cargo install --git https://github.com/movebit/move --branch sui_move_analyzer sui-move-analyzer` to install the
       `sui-move-analyzer` language server in your Cargo binary directory. On macOS and Linux, this is
       usually `~/.cargo/bin`. You'll want to make sure this location is in your `PATH` environment
       variable. If you plan to use the language server with Move language flavors different from core Move,
@@ -90,6 +90,5 @@ Move source file (a file with a `.move` file extension) and:
   - go to type definition
   - go to references
   - type on hover
-  - outline view showing symbol tree for Move source files
   - sui commands line tool
   - sui project template
