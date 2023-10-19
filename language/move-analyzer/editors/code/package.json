@@ -75,6 +75,16 @@
 				"command": "aptos-move-analyzer.reset.working.space",
 				"title": "aptos reset working space",
 				"category": "Aptos Move Analyzer"
+			},
+			{
+				"command": "aptos-move-analyzer.move.generate.spec.file",
+				"title": "Generate Move Spec File",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "aptos-move-analyzer.move.generate.spec.sel",
+				"title": "Generate Move Spec",
+				"category": "Move Analyzer"
 			}
 		],
 		"configuration": {
@@ -136,6 +146,18 @@
 			"commandPalette": [
 				{
 					"command": "aptos-move-analyzer.serverVersion"
+				}
+			],
+			"editor/context" : [
+				{
+					"when": "resourceLangId == move",
+					"command": "aptos-move-analyzer.move.generate.spec.file",
+					"group": "5_cutcopypaste"
+				},
+				{
+					"when": "resourceLangId == move",
+					"command": "aptos-move-analyzer.move.generate.spec.sel",
+					"group": "5_cutcopypaste"
 				}
 			]
 		}

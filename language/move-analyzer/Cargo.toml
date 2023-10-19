@@ -30,14 +30,14 @@ tempfile = "3.2.0"
 url = "2.2.2"
 clap = { version = "3.1.8", features = ["derive"] }
 crossbeam = "0.8"
-move-model = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-model" }
-move-command-line-common = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-command-line-common" }
-move-compiler = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-compiler" }
-move-ir-types = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-ir-types" }
-move-package = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-package" }
-move-symbol-pool = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-symbol-pool" }
-move-core-types = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-core-types" }
-move-cli = { git = "https://github.com/aptos-labs/aptos-core.git", branch = "main", package = "move-cli" }
+move-model = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-model" }
+move-command-line-common = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-command-line-common" }
+move-compiler = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-compiler" }
+move-ir-types = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-ir-types" }
+move-package = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-package" }
+move-symbol-pool = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-symbol-pool" }
+move-core-types = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-core-types" }
+move-cli = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-cli" }
 itertools = "0.10.0"
 walkdir = "2"
 log = "0.4.14"

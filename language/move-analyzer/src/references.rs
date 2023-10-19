@@ -9,8 +9,8 @@ use crate::{
 use lsp_server::*;
 use lsp_types::*;
 use move_model::{
-    ast::{ExpData::*, Operation::*, Value, Value::*, Spec, SpecBlockInfo, SpecBlockTarget},
-    model::{FunId, SpecFunId, GlobalEnv, ModuleEnv, ModuleId, FunctionEnv, StructId},
+    ast::{ExpData::*, Operation::*, SpecBlockTarget},
+    model::{FunId, GlobalEnv, ModuleEnv, ModuleId, StructId},
 };
 use std::{path::{Path, PathBuf}, collections::BTreeSet};
 
@@ -246,14 +246,14 @@ impl Handler {
         for spec_block_info in target_module.get_spec_block_infos() {
             if let SpecBlockTarget::Function(_, fun_id) = spec_block_info.target {
                 // log::info!("lll >> spec_block_info spec_source = {:?}", env.get_source(&spec_block_info.loc));
-                let mut span_first_col = move_model::model::Loc::new(
+                let span_first_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
                         spec_block_info.loc.span().start(),
                         spec_block_info.loc.span().start() + codespan::ByteOffset(1),
                     ),
                 );
-                let mut span_last_col = move_model::model::Loc::new(
+                let span_last_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
                         spec_block_info.loc.span().end(),
@@ -376,14 +376,14 @@ impl Handler {
         for spec_block_info in target_module.get_spec_block_infos() {
             if let SpecBlockTarget::Struct(_, stct_id) = spec_block_info.target {
                 // log::info!("lll >> spec_block_info spec_source = {:?}", env.get_source(&spec_block_info.loc));
-                let mut span_first_col = move_model::model::Loc::new(
+                let span_first_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
                         spec_block_info.loc.span().start(),
                         spec_block_info.loc.span().start() + codespan::ByteOffset(1),
                     ),
                 );
-                let mut span_last_col = move_model::model::Loc::new(
+                let span_last_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
                         spec_block_info.loc.span().end(),
@@ -513,7 +513,7 @@ impl Handler {
                     "lll >> get_spec_functions = {}",
                     spec_fun.name.display(env.symbol_pool())
                 );
-                let spec_fun_loc = spec_fun.loc.clone();
+                // let spec_fun_loc = spec_fun.loc.clone();
                 let mut result_candidates: Vec<FileRange> = Vec::new();
                 for callee in spec_fun.callees.clone() {
                     let module = env.get_module(callee.module_id);

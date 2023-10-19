@@ -2,6 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#[macro_use(sp)]
 extern crate move_ir_types;
 
 #[macro_export]
@@ -43,3 +44,18 @@ pub mod references;
 pub mod hover;
 pub mod completion;
 pub mod inlay_hints;
+
+pub mod context_ori;
+pub mod item_ori;
+pub mod project_ori;
+pub mod project_context_ori;
+pub mod project_visitor_ori;
+pub mod scope_ori;
+pub mod syntax_ori;
+pub mod types_ori;
+pub mod utils_ori;
+pub mod ast_debug;
+pub mod move_generate_spec;
+pub mod move_generate_spec_chen;
+pub mod move_generate_spec_sel;
+pub mod move_generate_spec_file;

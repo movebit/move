@@ -8,13 +8,17 @@ use crate::{
 };
 use lsp_server::*;
 use lsp_types::*;
-use move_ir_types::location::sp;
+// use move_ir_types::location::sp;
+// use move_model::{
+//     ast::{ExpData::*, Operation::*, Value, Value::*, Spec, SpecBlockInfo, SpecBlockTarget},
+//     model::{FunId, SpecFunId, GlobalEnv, ModuleEnv, ModuleId, FunctionEnv, StructId},
+// };
 use move_model::{
-    ast::{ExpData::*, Operation::*, Value, Value::*, Spec, SpecBlockInfo, SpecBlockTarget},
-    model::{FunId, SpecFunId, GlobalEnv, ModuleEnv, ModuleId, FunctionEnv, StructId},
+    ast::{ExpData::*, Operation::*, Spec, SpecBlockTarget},
+    model::{FunId, GlobalEnv, ModuleId, StructId},
 };
 use std::path::{Path, PathBuf};
-use itertools::Itertools;
+// use itertools::Itertools;
 
 /// Handles go-to-def request of the language server.
 pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server::Response {
@@ -211,7 +215,7 @@ impl Handler {
             // log::info!("use_decl.loc = {:?}, use_decl.loc.len = {:?}", 
             //     use_decl.loc, use_decl.loc.span().end() - use_decl.loc.span().start());
             if !use_decl.members.is_empty() {
-                for (member_loc, name, alias_name) in use_decl.members.clone().into_iter() {
+                for (member_loc, name, _alias_name) in use_decl.members.clone().into_iter() {
                     log::info!("member_loc = {:?} ---", env.get_location(&member_loc));
                     if self.check_move_model_loc_contains_mouse_pos(env, &member_loc) {
                         log::info!("find use symbol = {}", name.display(spool));
@@ -323,14 +327,14 @@ impl Handler {
         for spec_block_info in target_module.get_spec_block_infos() {
             if let SpecBlockTarget::Function(_, fun_id) = spec_block_info.target {
                 // log::info!("lll >> spec_block_info spec_source = {:?}", env.get_source(&spec_block_info.loc));
-                let mut span_first_col = move_model::model::Loc::new(
+                let span_first_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
                         spec_block_info.loc.span().start(),
                         spec_block_info.loc.span().start() + codespan::ByteOffset(1),
                     ),
                 );
-                let mut span_last_col = move_model::model::Loc::new(
+                let span_last_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
                         spec_block_info.loc.span().end(),
@@ -452,14 +456,14 @@ impl Handler {
         for spec_block_info in target_module.get_spec_block_infos() {
             if let SpecBlockTarget::Struct(_, stct_id) = spec_block_info.target {
                 // log::info!("lll >> spec_block_info spec_source = {:?}", env.get_source(&spec_block_info.loc));
-                let mut span_first_col = move_model::model::Loc::new(
+                let span_first_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
                         spec_block_info.loc.span().start(),
                         spec_block_info.loc.span().start() + codespan::ByteOffset(1),
                     ),
                 );
-                let mut span_last_col = move_model::model::Loc::new(
+                let span_last_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
                         spec_block_info.loc.span().end(),
@@ -505,7 +509,7 @@ impl Handler {
         log::info!("\n\nlll >> process_expr -------------------------\n");
         exp.visit(&mut |e| {
             match e {
-                Value(node_id, v) => {
+                Value(node_id, _) => {
                     // Const variable
                     let value_loc = env.get_node_loc(*node_id);
                     if self.check_move_model_loc_contains_mouse_pos(env, &value_loc) {
@@ -575,10 +579,10 @@ impl Handler {
                     self.process_call_spec_func(env, e);
                     self.process_call(env, e);
                 },
-                Return(node_id, ret_exp) => {
+                Return(_, ret_exp) => {
                     self.process_expr(env, ret_exp);
                 },
-                Sequence(node_id, exp_vec) => {
+                Sequence(_, exp_vec) => {
                     for seq_exp in exp_vec {
                         self.process_expr(env, seq_exp);
                     }
@@ -797,45 +801,45 @@ impl Handler {
         log::info!("lll << process_call");
     }
 
-    fn print_spec_block_info(&mut self, info: &SpecBlockInfo) {
-        log::info!("Spec block location: {:?}", info.loc);
-        log::info!("Spec block target:");
-        match &info.target {
-            SpecBlockTarget::Module => log::info!("  - Module"),
-            SpecBlockTarget::Struct(module_id, struct_id) => {
-                log::info!("  - Struct: {:?}, {:?}", module_id, struct_id)
-            }
-            SpecBlockTarget::Function(module_id, fun_id) => {
-                log::info!("  - Function: {:?}, {:?}", module_id, fun_id)
-            }
-            SpecBlockTarget::FunctionCode(module_id, fun_id, code_offset) => {
-                log::info!(
-                    "  - Function code: {:?}, {:?}, code offset: {}",
-                    module_id, fun_id, code_offset
-                )
-            }
-            SpecBlockTarget::Schema(module_id, schema_id, type_params) => {
-                log::info!("  - Schema: {:?}, {:?}", module_id, schema_id);
-                log::info!("    type parameters:");
-                for param in type_params {
-                    log::info!("    - {:?}", param);
-                }
-            }
-        }
-        log::info!("Spec block member locations:");
-        for loc in &info.member_locs {
-            log::info!("{:?}", loc);
-        }
-    }
+    // fn print_spec_block_info(&mut self, info: &SpecBlockInfo) {
+    //     log::info!("Spec block location: {:?}", info.loc);
+    //     log::info!("Spec block target:");
+    //     match &info.target {
+    //         SpecBlockTarget::Module => log::info!("  - Module"),
+    //         SpecBlockTarget::Struct(module_id, struct_id) => {
+    //             log::info!("  - Struct: {:?}, {:?}", module_id, struct_id)
+    //         }
+    //         SpecBlockTarget::Function(module_id, fun_id) => {
+    //             log::info!("  - Function: {:?}, {:?}", module_id, fun_id)
+    //         }
+    //         SpecBlockTarget::FunctionCode(module_id, fun_id, code_offset) => {
+    //             log::info!(
+    //                 "  - Function code: {:?}, {:?}, code offset: {}",
+    //                 module_id, fun_id, code_offset
+    //             )
+    //         }
+    //         SpecBlockTarget::Schema(module_id, schema_id, type_params) => {
+    //             log::info!("  - Schema: {:?}, {:?}", module_id, schema_id);
+    //             log::info!("    type parameters:");
+    //             for param in type_params {
+    //                 log::info!("    - {:?}", param);
+    //             }
+    //         }
+    //     }
+    //     log::info!("Spec block member locations:");
+    //     for loc in &info.member_locs {
+    //         log::info!("{:?}", loc);
+    //     }
+    // }
     
     fn process_spec_block(
         &mut self,
         env: &GlobalEnv,
         capture_items_loc: &move_model::model::Loc,
-        speck_block: &Spec,
+        _speck_block: &Spec,
     ) {
         log::info!("\n\n");
-        let target_module = env.get_module(self.target_module_id);
+        // let target_module = env.get_module(self.target_module_id);
         // for spec_block_info in target_module.get_spec_block_infos() {
             // log::info!("lll >> process_spec_block loc = {:?}", env.get_location(capture_items_loc));
             // log::info!("lll >> spec_block_info.loc = {:?}", env.get_location(&spec_block_info.loc));

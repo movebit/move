@@ -11,8 +11,8 @@ use crate::{
 use lsp_server::*;
 use lsp_types::*;
 use move_model::{
-    ast::{ExpData::*, Operation::*, Value, Value::*, Spec, SpecBlockInfo, SpecBlockTarget},
-    model::{FunId, SpecFunId, GlobalEnv, ModuleEnv, ModuleId, FunctionEnv, StructId},
+    ast::{ExpData::*, Operation::*, SpecBlockTarget},
+    model::{GlobalEnv, FunctionEnv, ModuleId},
 };
 use std::path::{Path, PathBuf};
 
@@ -157,7 +157,7 @@ impl Handler {
                 }
             }
     
-            if let SpecBlockTarget::Schema(_, schema_id, _) = spec_block_info.target {
+            if let SpecBlockTarget::Schema(_, _, _) = spec_block_info.target {
                 let (_, block_start_pos) = env.get_file_and_location(&spec_block_info.loc).unwrap();
                 let (_, block_end_pos) = env
                     .get_file_and_location(&move_model::model::Loc::new(
@@ -412,20 +412,20 @@ fn para_inlay_hints_parts(name: &str, label_pos: FileRange) -> InlayHintLabel {
 }
 
 // use move_model::ty::Type::*;
-fn ty_inlay_hints_label_parts(
-    ty: &move_model::ty::Type,
-    label_pos: FileRange,
-) -> InlayHintLabel {
-    let mut ret = Vec::new();
-    ret.push(InlayHintLabelPart {
-        value: ": ".to_string(),
-        tooltip: None,
-        location: None,
-        command: None,
-    });
-    ty_inlay_hints_label_parts_(&mut ret, ty, label_pos);
-    InlayHintLabel::LabelParts(ret)
-}
+// fn ty_inlay_hints_label_parts(
+//     ty: &move_model::ty::Type,
+//     label_pos: FileRange,
+// ) -> InlayHintLabel {
+//     let mut ret = Vec::new();
+//     ret.push(InlayHintLabelPart {
+//         value: ": ".to_string(),
+//         tooltip: None,
+//         location: None,
+//         command: None,
+//     });
+//     ty_inlay_hints_label_parts_(&mut ret, ty, label_pos);
+//     InlayHintLabel::LabelParts(ret)
+// }
 
 fn mk_command(label_pos: FileRange) -> Option<Command> {
     // let loc = move_ir_types::location::Loc::new(FileHash::empty(), 0, 0);
@@ -433,89 +433,89 @@ fn mk_command(label_pos: FileRange) -> Option<Command> {
     Some(MoveAnalyzerClientCommands::GotoDefinition(label_pos.mk_location()).to_lsp_command())
 }
 
-fn ty_inlay_hints_label_parts_(
-    ret: &mut Vec<InlayHintLabelPart>,
-    ty: &move_model::ty::Type,
-    label_pos: FileRange,
-) {
-    let type_args = |ret: &mut Vec<InlayHintLabelPart>, types: &Vec<move_model::ty::Type>| {
-        if types.is_empty() {
-            return;
-        }
-        let last = types.len() - 1;
-        ret.push(InlayHintLabelPart {
-            value: "<".to_string(),
-            tooltip: None,
-            location: None,
-            command: None,
-        });
-        for (index, ty) in types.iter().enumerate() {
-            ty_inlay_hints_label_parts_(ret, ty, label_pos.clone());
-            if index != last {
-                ret.push(InlayHintLabelPart {
-                    value: ",".to_string(),
-                    tooltip: None,
-                    location: None,
-                    command: None,
-                });
-            }
-        }
-        ret.push(InlayHintLabelPart {
-            value: ">".to_string(),
-            tooltip: None,
-            location: None,
-            command: None,
-        });
-    };
-    use move_model::ty::*;
-    use move_model::ty::Type::*;
-    match ty {
-        Error => {},
-        Struct(_, _, tys) => {
-            ret.push(InlayHintLabelPart {
-                value: "struct".to_string(),
-                tooltip: None,
-                location: None,
-                command: mk_command(label_pos.clone()),
-            });
-            type_args(ret, tys);
-        },
-        Primitive(x) => ret.push(InlayHintLabelPart {
-            value: x.to_string(),
-            tooltip: None,
-            location: None,
-            command: None,
-        }),
-        TypeParameter(x) => ret.push(InlayHintLabelPart {
-            value: x.to_string(),
-            tooltip: None,
-            location: None,
-            command: mk_command(label_pos),
-        }),
-        Reference(is_mut, ty) => {
-            ret.push(InlayHintLabelPart {
-                value: format!("&{}", if *is_mut == ReferenceKind::Mutable  { "mut " } else { "" }),
-                tooltip: None,
-                location: None,
-                command: None,
-            });
-            ty_inlay_hints_label_parts_(ret, ty.as_ref(), label_pos);
-        },
-        Vector(v) => {
-            ret.push(InlayHintLabelPart {
-                value: "vector<".to_string(),
-                tooltip: None,
-                location: None,
-                command: None,
-            });
-            ty_inlay_hints_label_parts_(ret, v.as_ref(), label_pos);
-            ret.push(InlayHintLabelPart {
-                value: ">".to_string(),
-                tooltip: None,
-                location: None,
-                command: None,
-            });
-        },
-        _ => {}
-    };
-}
+// fn ty_inlay_hints_label_parts_(
+//     ret: &mut Vec<InlayHintLabelPart>,
+//     ty: &move_model::ty::Type,
+//     label_pos: FileRange,
+// ) {
+//     let type_args = |ret: &mut Vec<InlayHintLabelPart>, types: &Vec<move_model::ty::Type>| {
+//         if types.is_empty() {
+//             return;
+//         }
+//         let last = types.len() - 1;
+//         ret.push(InlayHintLabelPart {
+//             value: "<".to_string(),
+//             tooltip: None,
+//             location: None,
+//             command: None,
+//         });
+//         for (index, ty) in types.iter().enumerate() {
+//             ty_inlay_hints_label_parts_(ret, ty, label_pos.clone());
+//             if index != last {
+//                 ret.push(InlayHintLabelPart {
+//                     value: ",".to_string(),
+//                     tooltip: None,
+//                     location: None,
+//                     command: None,
+//                 });
+//             }
+//         }
+//         ret.push(InlayHintLabelPart {
+//             value: ">".to_string(),
+//             tooltip: None,
+//             location: None,
+//             command: None,
+//         });
+//     };
+//     use move_model::ty::*;
+//     use move_model::ty::Type::*;
+//     match ty {
+//         Error => {},
+//         Struct(_, _, tys) => {
+//             ret.push(InlayHintLabelPart {
+//                 value: "struct".to_string(),
+//                 tooltip: None,
+//                 location: None,
+//                 command: mk_command(label_pos.clone()),
+//             });
+//             type_args(ret, tys);
+//         },
+//         Primitive(x) => ret.push(InlayHintLabelPart {
+//             value: x.to_string(),
+//             tooltip: None,
+//             location: None,
+//             command: None,
+//         }),
+//         TypeParameter(x) => ret.push(InlayHintLabelPart {
+//             value: x.to_string(),
+//             tooltip: None,
+//             location: None,
+//             command: mk_command(label_pos),
+//         }),
+//         Reference(is_mut, ty) => {
+//             ret.push(InlayHintLabelPart {
+//                 value: format!("&{}", if *is_mut == ReferenceKind::Mutable  { "mut " } else { "" }),
+//                 tooltip: None,
+//                 location: None,
+//                 command: None,
+//             });
+//             ty_inlay_hints_label_parts_(ret, ty.as_ref(), label_pos);
+//         },
+//         Vector(v) => {
+//             ret.push(InlayHintLabelPart {
+//                 value: "vector<".to_string(),
+//                 tooltip: None,
+//                 location: None,
+//                 command: None,
+//             });
+//             ty_inlay_hints_label_parts_(ret, v.as_ref(), label_pos);
+//             ret.push(InlayHintLabelPart {
+//                 value: ">".to_string(),
+//                 tooltip: None,
+//                 location: None,
+//                 command: None,
+//             });
+//         },
+//         _ => {}
+//     };
+// }

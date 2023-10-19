@@ -9,8 +9,8 @@ use crate::{
 use lsp_server::*;
 use lsp_types::*;
 use move_model::{
-    ast::{ExpData::*, Operation::*, Value, Value::*, Spec, SpecBlockInfo, SpecBlockTarget},
-    model::{FunId, SpecFunId, GlobalEnv, ModuleEnv, ModuleId, FunctionEnv, StructId},
+    ast::{ExpData::*, Operation::*, SpecBlockTarget},
+    model::{FunId, GlobalEnv, ModuleId, StructId},
 };
 use std::path::{Path, PathBuf};
 
@@ -216,14 +216,14 @@ impl Handler {
             log::info!("use_decl.loc = {:?}, use_decl.loc.len = {:?}", 
                 use_decl.loc, use_decl.loc.span().end() - use_decl.loc.span().start());
 
-            let mut mouse_line_first_col = move_model::model::Loc::new(
+            let mouse_line_first_col = move_model::model::Loc::new(
                 use_decl.loc.file_id(),
                 codespan::Span::new(
                     use_decl.loc.span().start(),
                     use_decl.loc.span().start() + codespan::ByteOffset(1),
                 ),
             );
-            let mut mouse_line_last_col = move_model::model::Loc::new(
+            let mouse_line_last_col = move_model::model::Loc::new(
                 use_decl.loc.file_id(),
                 codespan::Span::new(
                     use_decl.loc.span().end(),
@@ -239,7 +239,7 @@ impl Handler {
                 log::info!("use_last_col = {:?}", use_last_col);
             }
             if !use_decl.members.is_empty() {
-                for (member_loc, name, alias_name) in use_decl.members.clone().into_iter() {
+                for (member_loc, name, _) in use_decl.members.clone().into_iter() {
                     log::info!("member_loc = {:?} ---", env.get_location(&member_loc));
                     if self.check_move_model_loc_contains_mouse_pos(env, &member_loc) {
                         log::info!("find use symbol = {}", name.display(spool));
@@ -328,14 +328,14 @@ impl Handler {
         for spec_block_info in target_module.get_spec_block_infos() {
             if let SpecBlockTarget::Function(_, fun_id) = spec_block_info.target {
                 // log::info!("lll >> spec_block_info spec_source = {:?}", env.get_source(&spec_block_info.loc));
-                let mut span_first_col = move_model::model::Loc::new(
+                let span_first_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
                         spec_block_info.loc.span().start(),
                         spec_block_info.loc.span().start() + codespan::ByteOffset(1),
                     ),
                 );
-                let mut span_last_col = move_model::model::Loc::new(
+                let span_last_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
                         spec_block_info.loc.span().end(),
@@ -458,14 +458,14 @@ impl Handler {
         for spec_block_info in target_module.get_spec_block_infos() {
             if let SpecBlockTarget::Struct(_, stct_id) = spec_block_info.target {
                 // log::info!("lll >> spec_block_info spec_source = {:?}", env.get_source(&spec_block_info.loc));
-                let mut span_first_col = move_model::model::Loc::new(
+                let span_first_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
                         spec_block_info.loc.span().start(),
                         spec_block_info.loc.span().start() + codespan::ByteOffset(1),
                     ),
                 );
-                let mut span_last_col = move_model::model::Loc::new(
+                let span_last_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
                         spec_block_info.loc.span().end(),
@@ -511,7 +511,7 @@ impl Handler {
         log::info!("\n\nlll >> process_expr -------------------------\n");
         exp.visit(&mut |e| {
             match e {
-                Value(node_id, v) => {
+                Value(node_id, _v) => {
                     // Const variable
                     let value_loc = env.get_node_loc(*node_id);
                     if self.check_move_model_loc_contains_mouse_pos(env, &value_loc) {

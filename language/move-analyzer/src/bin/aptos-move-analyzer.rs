@@ -31,6 +31,8 @@ use aptos_move_analyzer::{
     inlay_hints,
     inlay_hints::*,
     utils::*,
+    // move_generate_spec_file::on_generate_spec_file,
+    move_generate_spec_sel::on_generate_spec_sel,
 };
 use url::Url;
 
@@ -183,27 +185,33 @@ fn main() {
 fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut InlayHintsConfig) {
     // log::info!("aptos receive method:{}", request.method.as_str());
     match request.method.as_str() {
-        lsp_types::request::GotoDefinition::METHOD => {
-            goto_definition::on_go_to_def_request(context, request);
-        },
-        lsp_types::request::References::METHOD => {
-            references::on_references_request(context, request);
+        // lsp_types::request::GotoDefinition::METHOD => {
+        //     goto_definition::on_go_to_def_request(context, request);
+        // },
+        // lsp_types::request::References::METHOD => {
+        //     references::on_references_request(context, request);
+        // }
+        // lsp_types::request::HoverRequest::METHOD => {
+        //     hover::on_hover_request(context, request);
+        // }
+        // lsp_types::request::Completion::METHOD => {
+        //     completion::on_completion_request(context, request);
+        // }
+        // lsp_types::request::InlayHintRequest::METHOD => {
+        //     inlay_hints::on_inlay_hints(context, request, *inlay_hints_config);
+        // }
+        // "move/generate/spec/file" => {
+        //     on_generate_spec_file(context, request);
+        // }
+        "move/generate/spec/sel" => {
+            on_generate_spec_sel(context, request);
         }
-        lsp_types::request::HoverRequest::METHOD => {
-            hover::on_hover_request(context, request);
-        }
-        lsp_types::request::Completion::METHOD => {
-            completion::on_completion_request(context, request);
-        }
-        lsp_types::request::InlayHintRequest::METHOD => {
-            inlay_hints::on_inlay_hints(context, request, *inlay_hints_config);
-        }
-        "move/lsp/client/inlay_hints/config" => {
-            let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
-                .expect("could not deserialize inlay hints request");
-            eprintln!("call inlay_hints config {:?}", parameters);
-            *inlay_hints_config = parameters;
-        }
+        // "move/lsp/client/inlay_hints/config" => {
+        //     let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
+        //         .expect("could not deserialize inlay hints request");
+        //     eprintln!("call inlay_hints config {:?}", parameters);
+        //     *inlay_hints_config = parameters;
+        // }
         _ => {
             eprintln!("handle request '{}' from client", request.method)
         },
