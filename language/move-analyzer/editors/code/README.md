@@ -1,4 +1,8 @@
-# This a project modified from https://github.com/move-language/move
+# Support
+1. If you have any problem, please report
+   [a GitHub issue to the movebit/sui-move-analyzer-issue repository](https://github.com/movebit/sui-move-analyzer-issue) to get help.
+2. Welcome to the developer discussion group as well：
+   https://t.me/moveanalyzer
 
 # Sui-Move-Analyzer
 
@@ -17,7 +21,9 @@ The sui-move-analyzer Visual Studio Code extension works via two components: the
 ### 1. Installing the `sui-move-analyzer` language server<span id="Step1">
 
 The `sui-move-analyzer` language server is a Rust program that is part of the
-[Move repository](https://github.com/move-language/move). It may be installed in one of two ways:
+[Move repository](https://github.com/move-language/move). Before installation, you need install [Sui Client CLI](https://docs.sui.io/build/install). 
+
+`sui-move-analyzer` may be installed in one of two ways:
 
 * Use Cargo (Recommended)
    Use Rust's package manager `cargo` to install `sui-move-analyzer` in your user's PATH. This
@@ -70,7 +76,9 @@ bottom-right of your Visual Studio Code screen when opening a Move file, it mean
    `sui-move-analyzer.server.path` setting, and set it to the location of the `sui-move-analyzer` language
    server you installed.
 3. If the above steps don't work, then report
-   [a GitHub issue to the Move repository](https://github.com/move-language/move/issues) to get help.
+   [a GitHub issue to the movebit/sui-move-analyzer-issue repository](https://github.com/movebit/sui-move-analyzer-issue) to get help.
+4. Welcome to the developer discussion group as well：
+   https://t.me/moveanalyzer
 
 ## Features
 
@@ -90,5 +98,6 @@ Move source file (a file with a `.move` file extension) and:
   - go to type definition
   - go to references
   - type on hover
-  - sui commands line tool
+  - sui commands line tool(you need install Sui Client CLI locally)
   - sui project template
+  - linter for move file

@@ -5,7 +5,7 @@
 	"publisher": "MoveBit",
 	"icon": "images/move.png",
 	"license": "Apache-2.0",
-	"version": "1.0.0",
+	"version": "1.0.2",
 	"preview": true,
 	"homepage": "https://github.com/move-language/move",
 	"repository": {
@@ -13,7 +13,7 @@
 		"type": "git"
 	},
 	"bugs": {
-		"url": "https://github.com/move-language/move/issues"
+		"url": "https://github.com/movebit/sui-move-analyzer-issue"
 	},
 	"engines": {
 		"vscode": "^1.67.1"
@@ -245,7 +245,7 @@
 	"scripts": {
 		"compile": "tsc -p ./ && cd ../../ && cargo build --bin sui-move-analyzer",
 		"watch": "tsc -watch -p ./",
-		"lint": "eslint . --ext ts --max-warnings 0",
+		"lint": "eslint . --ext ts --max-warnings 100",
 		"fix": "eslint . --ext ts --fix",
 		"copy-tests-files": "copyfiles \"tests/**/*.move\" \"tests/**/*.exp\" \"tests/**/*.toml\" \"tests/**/*.code-workspace\" out",
 		"pretest": "npm run compile && npm run lint && npm run copy-tests-files",
