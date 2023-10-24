@@ -1,7 +1,0 @@
-[package]
-name = "goto-definition-tests"
-version = "0.0.0"
-
-[dependencies]
-
-[addresses]

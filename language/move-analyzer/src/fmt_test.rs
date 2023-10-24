@@ -13,7 +13,27 @@ use move_compiler::{
     Flags,
 };
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+fn mk_result_filepath(x: &PathBuf) -> PathBuf {
+    let mut x = x.clone();
+    let b = x
+        .components()
+        .last()
+        .map(|x| x.as_os_str().to_str())
+        .flatten()
+        .unwrap()
+        .to_string();
+    let index = b.as_str().rfind(".").unwrap();
+    x.pop();
+    let mut ret = x.clone();
+    ret.push(format!(
+        "{}{}",
+        b.as_str()[0..index].to_string(),
+        "_formatted.move"
+    ));
+    ret
+}
 
 #[test]
 fn scan_dir() {
@@ -41,7 +61,7 @@ fn scan_dir() {
 #[test]
 fn xxx() {
     test_on_file(&Path::new(
-        "/Users/yuyang/projects/aptos-core/third_party/move/move-compiler/tests/move_check/parser/byte_string_success.move",
+        "/data/lzw/rust_projects/move/language/move-analyzer/tests/symbols/sources/format_case1.move",
     ));
 }
 
@@ -122,7 +142,10 @@ fn test_content(content_origin: &str, p: impl AsRef<Path>) {
         "{:?} comments count should equal",
         p,
     );
-    eprintln!("{:?} format ok. \n{}\n", p, content_format);
+
+    let result_file_path = mk_result_filepath(&p.to_path_buf());
+    std::fs::write(result_file_path.clone(), content_format);
+    // eprintln!("{:?} format ok. \n{}\n", p, content_format);
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

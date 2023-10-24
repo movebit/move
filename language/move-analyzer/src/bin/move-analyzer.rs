@@ -220,46 +220,46 @@ fn try_reload_projects(context: &mut Context) {
 fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut InlayHintsConfig) {
     log::info!("receive method:{}", request.method.as_str());
     match request.method.as_str() {
-        lsp_types::request::Completion::METHOD => on_completion_request(context, request),
-        lsp_types::request::GotoDefinition::METHOD => {
-            goto_definition::on_go_to_def_request(context, request);
-        }
-        lsp_types::request::GotoTypeDefinition::METHOD => {
-            goto_definition::on_go_to_type_def_request(context, request);
-        }
-        lsp_types::request::References::METHOD => {
-            references::on_references_request(context, request);
-        }
-        lsp_types::request::HoverRequest::METHOD => {
-            hover::on_hover_request(context, request);
-        }
-        lsp_types::request::DocumentSymbolRequest::METHOD => {
-            document_symbol::on_document_symbol_request(context, request);
-        }
-        lsp_types::request::CodeLensRequest::METHOD => {
-            code_lens::move_get_test_code_lens(context, request);
-        }
-        lsp_types::request::InlayHintRequest::METHOD => {
-            inlay_hitnt::on_inlay_hints(context, request, inlay_hints_config.clone());
-        }
+        // lsp_types::request::Completion::METHOD => on_completion_request(context, request),
+        // lsp_types::request::GotoDefinition::METHOD => {
+        //     goto_definition::on_go_to_def_request(context, request);
+        // }
+        // lsp_types::request::GotoTypeDefinition::METHOD => {
+        //     goto_definition::on_go_to_type_def_request(context, request);
+        // }
+        // lsp_types::request::References::METHOD => {
+        //     references::on_references_request(context, request);
+        // }
+        // lsp_types::request::HoverRequest::METHOD => {
+        //     hover::on_hover_request(context, request);
+        // }
+        // lsp_types::request::DocumentSymbolRequest::METHOD => {
+        //     document_symbol::on_document_symbol_request(context, request);
+        // }
+        // lsp_types::request::CodeLensRequest::METHOD => {
+        //     code_lens::move_get_test_code_lens(context, request);
+        // }
+        // lsp_types::request::InlayHintRequest::METHOD => {
+        //     inlay_hitnt::on_inlay_hints(context, request, inlay_hints_config.clone());
+        // }
         lsp_types::request::Formatting::METHOD => {
             lsp_fmt::on_fmt_request(context, request);
         }
-        "move/generate/spec/file" => {
-            on_generate_spec_file(context, request);
-        }
-        "move/generate/spec/sel" => {
-            on_generate_spec_sel(context, request);
-        }
-        "move/call/tree" => {
-            call::on_get_call_tree(context, request);
-        }
-        "move/lsp/client/inlay_hints/config" => {
-            let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
-                .expect("could not deserialize inlay hints request");
-            eprintln!("call inlay_hints config {:?}", parameters);
-            *inlay_hints_config = parameters;
-        }
+        // "move/generate/spec/file" => {
+        //     on_generate_spec_file(context, request);
+        // }
+        // "move/generate/spec/sel" => {
+        //     on_generate_spec_sel(context, request);
+        // }
+        // "move/call/tree" => {
+        //     call::on_get_call_tree(context, request);
+        // }
+        // "move/lsp/client/inlay_hints/config" => {
+        //     let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
+        //         .expect("could not deserialize inlay hints request");
+        //     eprintln!("call inlay_hints config {:?}", parameters);
+        //     *inlay_hints_config = parameters;
+        // }
         _ => log::error!("handle request '{}' from client", request.method),
     }
 }

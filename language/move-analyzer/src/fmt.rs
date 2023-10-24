@@ -321,6 +321,9 @@ impl Format {
     fn add_comments(&self, pos: u32) {
         for c in &self.comments[self.comments_index.get()..] {
             if c.start_offset < pos {
+                eprintln!("self.translate_line(c.start_offset) = {:?}, self.cur_line.get() = {:?}", 
+                    self.translate_line(c.start_offset), self.cur_line.get());
+                eprintln!("c.content.as_str() = {:?}", c.content.as_str());
                 if (self.translate_line(c.start_offset) - self.cur_line.get()) > 1 {
                     self.new_line(None);
                 }
