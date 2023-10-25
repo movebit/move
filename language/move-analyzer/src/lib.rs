@@ -32,30 +32,18 @@ macro_rules! impl_convert_loc {
 }
 extern crate move_ir_types;
 
-pub mod completion;
 #[macro_use]
 pub mod context;
-pub mod call;
-pub mod code_lens;
-pub mod document_symbol;
 pub mod fmt;
 #[cfg(test)]
 mod fmt_test;
-pub mod goto_definition;
-pub mod hover;
 #[cfg(test)]
 mod ide_test;
-pub mod inlay_hitnt;
 pub mod item;
 pub mod lsp_fmt;
-pub mod move_generate_spec;
-pub mod move_generate_spec_chen;
-pub mod move_generate_spec_file;
-pub mod move_generate_spec_sel;
 pub mod project;
 pub mod project_context;
 pub mod project_visitor;
-pub mod references;
 pub mod scope;
 pub mod syntax;
 pub mod token_tree;

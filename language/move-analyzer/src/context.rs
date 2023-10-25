@@ -5,7 +5,6 @@
 use super::utils::*;
 use crate::project::Project;
 use crate::project::*;
-use crate::references::ReferencesCache;
 use im::HashSet;
 use lsp_server::Connection;
 use lsp_types::notification::Notification;
@@ -24,7 +23,6 @@ pub struct Context {
     pub projects: MultiProject,
     /// The connection with the language server's client.
     pub connection: Connection,
-    pub ref_caches: ReferencesCache,
     pub diag_version: FileDiags,
 }
 
