@@ -15,21 +15,27 @@ typing, and other basic language features in Move files.
 For information about Move visit [the Move repository](https://github.com/move-language/move).
 
 ## How to Install
+The `sui-move-analyzer` Visual Studio Code extension works via two components: the `sui-move-analyzer language server` and the extension itself.
 
-The sui-move-analyzer Visual Studio Code extension works via two components: the extension itself and
+### 1. Installing the `sui-move-analyzer language server`<span id="Step1">
+`sui-move-analyzer language server` may be installed in one of two ways:
 
-### 1. Installing the `sui-move-analyzer` language server<span id="Step1">
+#### A. Download the precompiled installer for the `sui-move-analyzer language server`.(Recommended)
 
-The `sui-move-analyzer` language server is a Rust program that is part of the
-[Move repository](https://github.com/move-language/move). Before installation, you need install [Sui Client CLI](https://docs.sui.io/build/install). 
+```Windows```  Download [sui-move-analyzer-win-installer-v1.1.1.msi
+](https://github.com/movebit/move/releases), and proceed with the installation. After installation, restart VSCode.
 
-`sui-move-analyzer` may be installed in one of two ways:
+```MacOS```
+ Download [sui-move-analyzer-mac-v1.1.1](https://github.com/movebit/move/releases), and put it in `~/.cargo/bin`.
 
-* Use Cargo (Recommended)
+```Linux```
+
+#### B. Use Cargo
    Use Rust's package manager `cargo` to install `sui-move-analyzer` in your user's PATH. This
    is recommended for people who do not work on core Move.
    1. If you don't already have a Rust toolchain installed, you should install
       [Rustup](https://rustup.rs/), which will install the latest stable Rust toolchain.
+
    2. Invoke `cargo install --git https://github.com/movebit/move --branch sui_move_analyzer sui-move-analyzer` to install the
       `sui-move-analyzer` language server in your Cargo binary directory. On macOS and Linux, this is
       usually `~/.cargo/bin`. You'll want to make sure this location is in your `PATH` environment
@@ -40,13 +46,8 @@ The `sui-move-analyzer` language server is a Rust program that is part of the
       for Move flavors requiring 32-byte long addresses (e.g., Aptos Move).
 
 To confirm that you've installed the language server program successfully, execute
-`sui-move-analyzer --version` on the command line. You should see the output `sui-move-analyzer version number`.
-
-* Manual Install
-   Clone [the Move repository](https://github.com/movebit/move) yourself and build
-   `sui-move-analyzer` from its source code, which is especially useful if you will work on core Move.
-   To do so, follow the instructions in the Move tutorial's
-   [Step 0: Installation](https://github.com/move-language/move/tree/main/language/documentation/tutorial#step-0-installation).
+`sui-move-analyzer --version` on the command line. You should see the output `sui-move-analyzer version number(v1.1.1)`.
+If you don't see it, check the troubleshooting section at the end.
 
 ### 2. Installing the sui-move-analyzer Visual Studio Code extension
 
@@ -61,7 +62,18 @@ To confirm that you've installed the language server program successfully, execu
    different colors.
 
 ### Troubleshooting
+Please note: If you don't see the version number, you can refer to the troubleshooting section."
 
+#### [1] cannot find the 'sui-move-analyzer' program
+##### 1) windows
+If you are installing this extension on a Windows system and have followed the steps in Section 1.A by running the windows-installer.msi, but executing 'sui-move-analyzer --version' in the command line doesn't find the 'sui-move-analyzer' program, the issue may be that VSCode cannot locate the configured environment variables. You can try the following:
+
+   1. Restart VSCode and install the 'sui-move-analyzer' VSCode extension.
+   2. In the Windows system settings, find the user environment variable 'Path.' Look for an entry ending with 'MoveBit\sui-move-analyzer\,' and copy it.
+   3. Open the extension settings for 'sui-move-analyzer' in the VSCode extension store. In the 'sui-move-analyzer > server:path' entry, add the path ending with 'MoveBit\sui-move-analyzer\' before 'sui-move-analyzer.' The final result should look like: 'C:\Users\Windows\AppData\Local\Apps\MoveBit\sui-move-analyzer\'
+   4. Try running 'sui-move-analyzer --version' in the command line again.
+
+##### 2) mac & linux
 If you see an error message *language server executable 'sui-move-analyzer' could not be found* in the
 bottom-right of your Visual Studio Code screen when opening a Move file, it means that the
 `sui-move-analyzer` executable could not be found in your `PATH`. You may try the following:
@@ -75,10 +87,30 @@ bottom-right of your Visual Studio Code screen when opening a Move file, it mean
    settings (`⌘,` on macOS, or use the menu item *Code > Preferences > Settings*). Search for the
    `sui-move-analyzer.server.path` setting, and set it to the location of the `sui-move-analyzer` language
    server you installed.
-3. If the above steps don't work, then report
-   [a GitHub issue to the movebit/sui-move-analyzer-issue repository](https://github.com/movebit/sui-move-analyzer-issue) to get help.
-4. Welcome to the developer discussion group as well：
-   https://t.me/moveanalyzer
+3. If you're using it in MacOS, you may meet the error `Macos cannot verify if this app contains malicious software`, you need to add support for `sui-move-analyzer-mac-v1.1.1` in the system settings Program Trust.
+
+
+#### [2] analyzer not work
+Open a Move source file (a file with a .move file extension) and if the opened Move source file is located within a buildable project (a Move.toml file can be found in one of its parent directories), the following advanced features will be available:
+
+  - compiler diagnostics
+  - go to definition
+  - go to references
+  - type on hover
+  - autocomplete
+  - ...
+
+Therefore, the Move.toml file must be found in the project directory for the plug-in's functionality to take effect.
+
+In addition, if you have already opened the move project before, the installed plug-in will not take effect in time. You need to reopen the vscode window and open the move project code again before the plug-in is activated. 
+
+#### [3] cannot run sui_cli command
+You need to install SuiCli refer as https://docs.sui.io/references/cli.
+
+#### [4] build failed with steps in Section 1.B
+If `cargo install --git https://github.com/movebit/move --branch sui_move_analyzer sui-move-analyzer` run failed.
+
+It's because it relies on `MystenLabs/sui_move_build` library, which requires an LLVM environment. You can refer to [llvm-project](https://github.com/llvm/llvm-project) go and install llvm.
 
 ## Features
 
