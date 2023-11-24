@@ -1,49 +1,58 @@
-# Support
-1. If you have any problem, please report
-   [a GitHub issue to the movebit/sui-move-analyzer-issue repository](https://github.com/movebit/sui-move-analyzer-issue) to get help.
-2. Welcome to the developer discussion group as well：
-   https://t.me/moveanalyzer
+# sui-move-analyzer
+**Table of Contents**
+* [Introduction](#Introduction)
+* [Installation](#Installation)
+* [Features](#Features)
+* [Support](#Support)
 
-# Sui-Move-Analyzer
-We are providing comprehensive language support for the Move programming language. Currently, this means that the basic syntax and language configurations of Move (.Move) are enabled, allowing you to enjoy features such as syntax highlighting, simple context-independent completion suggestions, and other essential language functions within your files. This enhances your efficiency and overall experience when coding and manipulating files.
+## Introduction <span id="Introduction">
+The **sui-move-analyzer** is a Visual Studio Code plugin for **Sui Move** language developed by [MoveBit](https://movebit.xyz). Although this is an alpha release, it has many useful features, such as **highlight, autocomplete, go to definition/references**, and so on.
 
-## How to Install
-The `sui-move-analyzer` Visual Studio Code extension works via two components: the `sui-move-analyzer language server` and the extension itself.
-You need to install SuiCli refer as https://docs.sui.io/references/cli before install `sui-move-analyzer`.
+
+## Installation <span id="Installation">
+
+**Note**:
+
+1.If you already have installed *move-analyzer* or *aptos-move-analyzer*, please disable them before installing **sui-move-analyzer**, because it may have some conflicts.
+
+2.You need to install SuiCli refer as https://docs.sui.io/references/cli before install `sui-move-analyzer`.
+
+### How to Install (Must Read)
+The `sui-move-analyzer` Visual Studio Code extension works via two components: the `sui-move-analyzer language server` and the extension itself. Below are two steps that describe how to install all of them.
+
 
 ### 1. Installing the `sui-move-analyzer language server`<span id="Step1">
 `sui-move-analyzer language server` may be installed in one of two ways:
 
-#### A. Download the precompiled installer for the `sui-move-analyzer language server`.(Recommended)
+#### A. Download the precompiled binaries for the sui-move-analyzer language server(Recommended)
 
-```Windows```  Download [sui-move-analyzer-win-installer-v1.1.1.msi](https://github.com/movebit/move/releases), and proceed with the installation. This installation program will automatically add the path of 'sui move analyzer' to the environment variable.
+```Windows```  Download [sui-move-analyzer-win-installer-v1.1.1.msi](https://github.com/movebit/move/releases), and proceed with the installation. This installation program will automatically add the path of `sui-move-analyzer` to the environment variable.
 
-```MacOS```
- Download the binary program [sui-move-analyzer-mac-v1.1.1](https://github.com/movebit/move/releases) and add its path to the environment variable by yourself.
+```MacOS & Ubuntu```
+ 1.Download binary files for the corresponding platform from [sui-move-analyzer-releases-pages](https://github.com/movebit/move/releases).
 
-```Linux```
- Download the binary program [sui-move-analyzer-ubuntu-v1.1.1](https://github.com/movebit/move/releases) and add its path to the environment variable by yourself.
+ 2.Rename it to `sui-move-analyzer`. 
+
+ 3.Make sure `sui-move-analyzer` can be found in your **PATH** environment.
+
+After completing the above steps, **restart** VSCode.
+
 
 #### B. Use Cargo
-   Use Rust's package manager `cargo` to install `sui-move-analyzer` in your user's PATH. This
-   is recommended for people who do not work on core Move.
-   1. If you don't already have a Rust toolchain installed, you should install
-      [Rustup](https://rustup.rs/), which will install the latest stable Rust toolchain.
 
-   2. Invoke `cargo install --git https://github.com/movebit/move --branch sui_move_analyzer sui-move-analyzer` to install the
-      `sui-move-analyzer` language server in your Cargo binary directory. On macOS and Linux, this is
-      usually `~/.cargo/bin`. You'll want to make sure this location is in your `PATH` environment
-      variable. If you plan to use the language server with Move language flavors different from core Move,
-      you should specify an additional option to `cargo install` command as different Move flavors
-      may enforce different max length of the Move address type: `--features "address20"` option for Move
-      flavors requiring 20-byte long addresses (e.g., Sui Move) and `--features "address32"` option
-      for Move flavors requiring 32-byte long addresses (e.g., Aptos Move).
+The `sui-move-analyzer` language server is a Rust program, so we suggest installing it via `cargo`. If you haven't installed the Rust toolchain, you can install [Rustup](https://rustup.rs/), which will install the latest stable Rust toolchain including `cargo`.
+
+**Execute the below command to install `sui_move_analyzer`**
+```
+cargo install --git https://github.com/movebit/move --branch sui_move_analyzer sui-move-analyzer
+```
+The installation may take some time, often several minutes. After installation, the `sui-move-analyzer` program is in your `cargo` binary directory. On macOS and Linux, this directory is usually `~/.cargo/bin`. You should make sure this location is in your `PATH` environment variable via `export PATH="$PATH:~/.cargo/bin"` .
 
 To confirm that you've installed the language server program successfully, execute
-`sui-move-analyzer --version` on the command line. You should see the output `sui-move-analyzer version number(v1.1.1)`.
+`sui-move-analyzer --version` on the command line. You should see the output `sui-move-analyzer version number(1.1.1)`.
 If you don't see it, check the troubleshooting section at the end.
 
-After installation, restart VSCode.
+After completing the above steps, **restart** VSCode.
 
 ### 2. Installing the sui-move-analyzer Visual Studio Code extension
 
@@ -56,6 +65,8 @@ After installation, restart VSCode.
 4. Open any file that ends in `.move`. Or to create a new file, click **Select a language**, and
    choose the **Move** language. As you type, you should see that keywords and types appear in
    different colors.
+
+After completing the above steps, **restart** VSCode.
 
 ### Troubleshooting
 Please note: If you don't see the version number, you can refer to the troubleshooting section."
@@ -83,7 +94,7 @@ bottom-right of your Visual Studio Code screen when opening a Move file, it mean
    settings (`⌘,` on macOS, or use the menu item *Code > Preferences > Settings*). Search for the
    `sui-move-analyzer.server.path` setting, and set it to the location of the `sui-move-analyzer` language
    server you installed.
-3. If you're using it in MacOS, you may meet the error `Macos cannot verify if this app contains malicious software`, you need to add support for `sui-move-analyzer-mac-v1.1.1` in the system settings Program Trust.
+3. If you're using it in MacOS, you may meet the error `Macos cannot verify if this app contains malicious software`, you need to add support for `sui-move-analyzer` in the system settings Program Trust.
 
 
 #### [2] analyzer not work
@@ -114,7 +125,7 @@ thread 'main' panicked at 'Unable to find libclang: "couldn't find any valid sha
 It's because it relies on `MystenLabs/sui_move_build` library, which requires an LLVM environment. You can refer to [llvm-project](https://github.com/llvm/llvm-project) go and install llvm.
 
 
-## Features
+## Features <span id="Features">
 
 Here are some of the features of the sui-move-analyzer Visual Studio Code extension. To see them, open a
 Move source file (a file with a `.move` file extension) and:
@@ -132,3 +143,9 @@ Move source file (a file with a `.move` file extension) and:
   - inlay hints
   - linter for move file
   - ...
+
+
+## Support <span id="Support">
+
+If you find any issues, please join the [MoveAnalyzer](https://t.me/moveanalyzer) Telegram developer discussion group and report issues.
+
