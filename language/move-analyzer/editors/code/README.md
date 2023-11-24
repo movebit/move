@@ -15,7 +15,7 @@ The **sui-move-analyzer** is a Visual Studio Code plugin for **Sui Move** langua
 
 1.If you already have installed *move-analyzer* or *aptos-move-analyzer*, please disable them before installing **sui-move-analyzer**, because it may have some conflicts.
 
-2.You need to install SuiCli refer as https://docs.sui.io/references/cli before install `sui-move-analyzer`.
+2.You need to install SuiCLI refer as https://docs.sui.io/references/cli before install `sui-move-analyzer`.
 
 ### How to Install (Must Read)
 The `sui-move-analyzer` Visual Studio Code extension works via two components: the `sui-move-analyzer language server` and the extension itself. Below are two steps that describe how to install all of them.
@@ -26,14 +26,16 @@ The `sui-move-analyzer` Visual Studio Code extension works via two components: t
 
 #### A. Download the precompiled binaries for the sui-move-analyzer language server(Recommended)
 
-```Windows```  Download [sui-move-analyzer-win-installer-v1.1.1.msi](https://github.com/movebit/move/releases), and proceed with the installation. This installation program will automatically add the path of `sui-move-analyzer` to the environment variable.
+```Windows```  
+> Download [sui-move-analyzer-win-installer-v1.1.1.msi](https://github.com/movebit/move/releases), and proceed with the installation. This installation program will automatically add the path of `sui-move-analyzer` to the **PATH** environment variable.
 
 ```MacOS & Ubuntu```
- 1.Download binary files for the corresponding platform from [sui-move-analyzer-releases-pages](https://github.com/movebit/move/releases).
-
- 2.Rename it to `sui-move-analyzer`. 
-
- 3.Make sure `sui-move-analyzer` can be found in your **PATH** environment.
+ 
+ > 1.Download binary files for the corresponding platform from [sui-move-analyzer-releases-pages](https://github.com/movebit/move/releases).
+ >
+ > 2.Rename it to `sui-move-analyzer`. 
+ > 
+ > 3.Make sure `sui-move-analyzer` can be found in your **PATH** environment.
 
 After completing the above steps, **restart** VSCode.
 
@@ -54,7 +56,7 @@ If you don't see it, check the troubleshooting section at the end.
 
 After completing the above steps, **restart** VSCode.
 
-### 2. Installing the sui-move-analyzer Visual Studio Code extension
+### 2. Installing the `sui-move-analyzer` Visual Studio Code extension
 
 1. Open a new window in any Visual Studio Code application version 1.55.2 or greater.
 2. Open the command palette (`⇧⌘P` on macOS, or use the menu item *View > Command Palette...*) and
@@ -71,14 +73,14 @@ After completing the above steps, **restart** VSCode.
 ### Troubleshooting
 Please note: If you don't see the version number, you can refer to the troubleshooting section."
 
-#### [1] cannot find the 'sui-move-analyzer' program
+#### [1] cannot find the `sui-move-analyzer` program
 ##### 1) windows
-If you are installing this extension on a Windows system and have followed the steps in Section 1.A by running the windows-installer.msi, but executing 'sui-move-analyzer --version' in the command line doesn't find the 'sui-move-analyzer' program, the issue may be that VSCode cannot locate the configured environment variables. You can try the following:
+If you are installing this extension on a Windows system and have followed the steps in Section 1.A by running the windows-installer.msi, but executing `sui-move-analyzer --version` in the command line doesn't find the 'sui-move-analyzer' program, the issue may be that VSCode cannot locate the configured environment variables. You can try the following:
 
    1. Restart VSCode and install the 'sui-move-analyzer' VSCode extension.
    2. In the Windows system settings, find the user environment variable 'Path.' Look for an entry ending with 'MoveBit\sui-move-analyzer\,' and copy it.
    3. Open the extension settings for 'sui-move-analyzer' in the VSCode extension store. In the 'sui-move-analyzer > server:path' entry, add the path ending with 'MoveBit\sui-move-analyzer\' before 'sui-move-analyzer.' The final result should look like: 'C:\Users\Windows\AppData\Local\Apps\MoveBit\sui-move-analyzer\'
-   4. Try running 'sui-move-analyzer --version' in the command line again.
+   4. Try running `sui-move-analyzer --version` in the command line again.
 
 ##### 2) mac & linux
 If you see an error message *language server executable 'sui-move-analyzer' could not be found* in the
@@ -147,5 +149,6 @@ Move source file (a file with a `.move` file extension) and:
 
 ## Support <span id="Support">
 
-If you find any issues, please join the [MoveAnalyzer](https://t.me/moveanalyzer) Telegram developer discussion group and report issues.
+1.If you find any issues, please report a GitHub issue to the [movebit/sui-move-analyzer-issue](https://github.com/movebit/sui-move-analyzer-issue) repository to get help.
 
+2.Welcome to the developer discussion group as well: [MoveAnalyzer](https://t.me/moveanalyzer). 
