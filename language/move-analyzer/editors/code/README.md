@@ -5,30 +5,24 @@
    https://t.me/moveanalyzer
 
 # Sui-Move-Analyzer
-
-Provides language support for the Move programming language.
-
-Currently, this means a basic grammar and language configuration for Move (`.move`) that enables
-syntax highlighting, commenting/uncommenting, simple context-unaware completion suggestions while
-typing, and other basic language features in Move files.
-
-For information about Move visit [the Move repository](https://github.com/move-language/move).
+We are providing comprehensive language support for the Move programming language. Currently, this means that the basic syntax and language configurations of Move (.Move) are enabled, allowing you to enjoy features such as syntax highlighting, simple context-independent completion suggestions, and other essential language functions within your files. This enhances your efficiency and overall experience when coding and manipulating files.
 
 ## How to Install
 The `sui-move-analyzer` Visual Studio Code extension works via two components: the `sui-move-analyzer language server` and the extension itself.
+You need to install SuiCli refer as https://docs.sui.io/references/cli before install `sui-move-analyzer`.
 
 ### 1. Installing the `sui-move-analyzer language server`<span id="Step1">
 `sui-move-analyzer language server` may be installed in one of two ways:
 
 #### A. Download the precompiled installer for the `sui-move-analyzer language server`.(Recommended)
 
-```Windows```  Download [sui-move-analyzer-win-installer-v1.1.1.msi
-](https://github.com/movebit/move/releases), and proceed with the installation. After installation, restart VSCode.
+```Windows```  Download [sui-move-analyzer-win-installer-v1.1.1.msi](https://github.com/movebit/move/releases), and proceed with the installation. This installation program will automatically add the path of 'sui move analyzer' to the environment variable.
 
 ```MacOS```
- Download [sui-move-analyzer-mac-v1.1.1](https://github.com/movebit/move/releases), and put it in `~/.cargo/bin`.
+ Download the binary program [sui-move-analyzer-mac-v1.1.1](https://github.com/movebit/move/releases) and add its path to the environment variable by yourself.
 
 ```Linux```
+ Download the binary program [sui-move-analyzer-ubuntu-v1.1.1](https://github.com/movebit/move/releases) and add its path to the environment variable by yourself.
 
 #### B. Use Cargo
    Use Rust's package manager `cargo` to install `sui-move-analyzer` in your user's PATH. This
@@ -48,6 +42,8 @@ The `sui-move-analyzer` Visual Studio Code extension works via two components: t
 To confirm that you've installed the language server program successfully, execute
 `sui-move-analyzer --version` on the command line. You should see the output `sui-move-analyzer version number(v1.1.1)`.
 If you don't see it, check the troubleshooting section at the end.
+
+After installation, restart VSCode.
 
 ### 2. Installing the sui-move-analyzer Visual Studio Code extension
 
@@ -104,13 +100,19 @@ Therefore, the Move.toml file must be found in the project directory for the plu
 
 In addition, if you have already opened the move project before, the installed plug-in will not take effect in time. You need to reopen the vscode window and open the move project code again before the plug-in is activated. 
 
-#### [3] cannot run sui_cli command
-You need to install SuiCli refer as https://docs.sui.io/references/cli.
+#### [3] build failed with steps in Section 1.B
+If `cargo install --git https://github.com/movebit/move --branch sui_move_analyzer sui-move-analyzer` run failed, and meet the 
+error info as follows:
+```
+error: failed to run custom build command for librocksdb-sys...
 
-#### [4] build failed with steps in Section 1.B
-If `cargo install --git https://github.com/movebit/move --branch sui_move_analyzer sui-move-analyzer` run failed.
+--- stderr
+thread 'main' panicked at 'Unable to find libclang: "couldn't find any valid shared libraries matching: 
+['clang.dll', 'libclang.dll']..."'
+```
 
 It's because it relies on `MystenLabs/sui_move_build` library, which requires an LLVM environment. You can refer to [llvm-project](https://github.com/llvm/llvm-project) go and install llvm.
+
 
 ## Features
 
@@ -118,18 +120,15 @@ Here are some of the features of the sui-move-analyzer Visual Studio Code extens
 Move source file (a file with a `.move` file extension) and:
 
 - See Move keywords and types highlighted in appropriate colors.
-- Comment and un-comment lines of code using the `⌘/` shortcut on macOS (or the menu command *Edit >
-  Toggle Line Comment*).
-- Place your cursor on a delimiter, such as `<`, `(`, or `{`, and its corresponding delimiter --
-  `>`, `)`, or `}` -- will be highlighted.
 - As you type, Move keywords will appear as completion suggestions.
 - If the opened Move source file is located within a buildable project (a `Move.toml` file can be
   found in one of its parent directories), the following advanced features will also be available:
   - compiler diagnostics
-  - go to definition
-  - go to type definition
-  - go to references
-  - type on hover
   - sui commands line tool(you need install Sui Client CLI locally)
   - sui project template
+  - go to definition
+  - go to references
+  - type on hover
+  - inlay hints
   - linter for move file
+  - ...
