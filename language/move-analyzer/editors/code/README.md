@@ -88,7 +88,7 @@ bottom-right of your Visual Studio Code screen when opening a Move file, it mean
 `sui-move-analyzer` executable could not be found in your `PATH`. You may try the following:
 
 1. Confirm that invoking `sui-move-analyzer --version` in a command line terminal prints out
-   `sui-move-analyzer version number`. If it doesn't, then retry the instructions in [step 1](./Step1). If it
+   `sui-move-analyzer version number`. If it doesn't, then retry the instructions in **[step 1]**. If it
    does successfully print this output, try closing and re-opening the Visual Studio Code
    application, as it may not have picked up the update to your `PATH`.
 2. If you installed the `sui-move-analyzer` executable to a different location that is outside of your
