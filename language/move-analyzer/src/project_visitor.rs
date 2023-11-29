@@ -71,6 +71,7 @@ impl Project {
             .unwrap_or(&d2)
             .as_ref()
             .borrow();
+
         call_back(VecDefAstProvider::new(
             if layout == SourcePackageLayout::Sources {
                 b.sources.get(filepath).unwrap_or(&d)
@@ -259,6 +260,7 @@ impl Project {
         provider.with_const(|addr, name, c| {
             self.visit_const(Some((addr, name)), c, project_context, visitor);
         });
+        
         provider.with_struct(|addr, module_name, c| {
             let item = Item::StructNameRef(ItemStructNameRef {
                 addr,

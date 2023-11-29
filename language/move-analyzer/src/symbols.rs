@@ -48,9 +48,9 @@
 
 use crate::{
     context::Context,
-    diagnostics::{lsp_diagnostics, lsp_empty_diagnostics},
-    // utils::get_loc,
+    diagnostics::{lsp_diagnostics, lsp_empty_diagnostics}, project::{ConvertLoc, Project}, 
 };
+use crate::utils::discover_manifest_and_kind;
 use anyhow::{anyhow, Result};
 use codespan_reporting::files::SimpleFiles;
 use crossbeam::channel::Sender;
@@ -67,7 +67,7 @@ use std::{
     cmp,
     collections::{BTreeMap, BTreeSet, HashMap},
     fmt,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf, self},
     sync::{Arc, Condvar, Mutex},
     thread,
 };
@@ -78,6 +78,7 @@ use move_command_line_common::files::FileHash;
 use move_compiler::{
     expansion::ast::{Address, ModuleIdent_},
     naming::ast::{Type, TypeName_, Type_},
+    parser::ast::{Definition, ModuleMember, StructDefinition, StructFields, Function},
     shared::Identifier,
     PASS_TYPING,
 };
@@ -770,33 +771,35 @@ impl Symbolicator {
             }
         }
 
-        // let modules = &typed_ast.unwrap().modules;
+        // let modules = &typed_ast.unwrap().inner.modules;
 
         // let mut mod_outer_defs = BTreeMap::new();
         // let mut mod_use_defs = BTreeMap::new();
         let file_mods = BTreeMap::new();
 
         // for (pos, module_ident, module_def) in modules {
-        //     let (defs, symbols) = Self::get_mod_outer_defs(
-        //         &pos,
-        //         &sp(pos, *module_ident),
-        //         module_def,
-        //         &files,
-        //         &file_id_mapping,
-        //     );
+        //     eprintln!("pos = {:?}, module_name ={:?}", pos, module_ident.module);
+        //     eprintln!(" module_name ={:?}",module_ident.module.clone().to_string());
+            // let (defs, symbols) = Self::get_mod_outer_defs(
+            //     &pos,
+            //     &sp(pos, *module_ident),
+            //     module_def,
+            //     &files,
+            //     &file_id_mapping,
+            // );
 
-        //     let cloned_defs = defs.clone();
-        //     let path = file_name_mapping.get(&cloned_defs.fhash.clone()).unwrap();
-        //     file_mods
-        //         .entry(
-        //             dunce::canonicalize(path.as_str())
-        //                 .unwrap_or_else(|_| PathBuf::from(path.as_str())),
-        //         )
-        //         .or_insert_with(BTreeSet::new)
-        //         .insert(cloned_defs);
+            // let cloned_defs = defs.clone();
+            // let path = file_name_mapping.get(&cloned_defs.fhash.clone()).unwrap();
+            // file_mods
+            //     .entry(
+            //         dunce::canonicalize(path.as_str())
+            //             .unwrap_or_else(|_| PathBuf::from(path.as_str())),
+            //     )
+            //     .or_insert_with(BTreeSet::new)
+            //     .insert(cloned_defs);
 
-        //     mod_outer_defs.insert(*module_ident, defs);
-        //     mod_use_defs.insert(*module_ident, symbols);
+            // mod_outer_defs.insert(*module_ident, defs);
+            // mod_use_defs.insert(*module_ident, symbols);
         // }
 
         // eprintln!("get_symbols loaded file_mods length: {}", file_mods.len());
@@ -1077,110 +1080,174 @@ pub fn on_use_request(
 
 /// Handles document symbol request of the language server
 #[allow(deprecated)]
-pub fn on_document_symbol_request(context: &Context, request: &Request, symbols: &Symbols) {
+pub fn on_document_symbol_request(context: &Context, request: &Request, symbols: &Symbols) -> lsp_server::Response {
     let parameters = serde_json::from_value::<DocumentSymbolParams>(request.params.clone())
         .expect("could not deserialize document symbol request");
 
     let fpath = parameters.text_document.uri.to_file_path().unwrap();
     eprintln!("on_document_symbol_request: {:?}", fpath);
 
-    let empty_mods: BTreeSet<ModuleDefs> = BTreeSet::new();
-    let mods = symbols.file_mods.get(&fpath).unwrap_or(&empty_mods);
-
-    let mut defs: Vec<DocumentSymbol> = vec![];
-    for mod_def in mods {
-        let name = mod_def.name.module.clone().to_string();
-        let detail = Some(mod_def.name.clone().to_string());
-        let kind = SymbolKind::MODULE;
-        let range = Range {
-            start: mod_def.start,
-            end: mod_def.start,
-        };
-
-        let mut children = vec![];
-
-        // handle constants
-        let cloned_const_def = mod_def.constants.clone();
-        for (sym, const_def_pos) in cloned_const_def {
-            let const_range = Range {
-                start: const_def_pos,
-                end: const_def_pos,
+    let path_project = match context.projects.get_project(&fpath) {
+        Some(x) => x,
+        None => {
+            log::error!("project not found:{:?}", fpath.as_path());
+            return lsp_server::Response {
+                id: "".to_string().into(),
+                result: Some(serde_json::json!({"msg": "No available project"})),
+                error: None,
             };
-
-            children.push(DocumentSymbol {
-                name: sym.clone().to_string(),
-                detail: None,
-                kind: SymbolKind::CONSTANT,
-                range: const_range,
-                selection_range: const_range,
-                children: None,
-                tags: Some(vec![]),
-                deprecated: Some(false),
-            });
         }
-
-        // handle structs
-        let cloned_struct_def = mod_def.structs.clone();
-        for (sym, struct_def) in cloned_struct_def {
-            let struct_range = Range {
-                start: struct_def.name_start,
-                end: struct_def.name_start,
+    };
+    
+    let (manifest_path, _) = match discover_manifest_and_kind(fpath.as_path()) {
+        Some(x) => x,
+        None => {
+            log::error!("project not found:{:?}", fpath.as_path());
+            return lsp_server::Response {
+                id: "".to_string().into(),
+                result: Some(serde_json::json!({"msg": "project not found"})),
+                error: None,
             };
-
-            let mut fields: Vec<DocumentSymbol> = vec![];
-            handle_struct_fields(struct_def, &mut fields);
-
-            children.push(DocumentSymbol {
-                name: sym.clone().to_string(),
-                detail: None,
-                kind: SymbolKind::STRUCT,
-                range: struct_range,
-                selection_range: struct_range,
-                children: Some(fields),
-                tags: Some(vec![]),
-                deprecated: Some(false),
-            });
         }
+    };
 
-        // handle functions
-        let cloned_func_def = mod_def.functions.clone();
-        for (sym, func_def) in cloned_func_def {
-            let func_range = Range {
-                start: func_def.start,
-                end: func_def.start,
-            };
+    let d2 = Default::default();
+    let b = path_project
+        .modules
+        .get(&manifest_path)
+        .unwrap_or(&d2)
+        .as_ref()
+        .borrow();
 
-            let mut detail = None;
-            if !func_def.attrs.is_empty() {
-                detail = Some(format!("{:?}", func_def.attrs));
+    let mut result_defs: Vec<DocumentSymbol> = vec![];
+    let vec_defs =  b.sources.get(&fpath).unwrap();
+    for def in vec_defs.iter() {
+        match def {
+            Definition::Module(def_module) => {
+                let file_range = path_project.convert_loc_range(&def_module.loc).unwrap();
+                let range = lsp_types::Range {
+                    start: lsp_types::Position {
+                        line: file_range.line_start,
+                        character: file_range.col_start,
+                    },
+                    end: Position {
+                        line: file_range.line_end,
+                        character: file_range.col_end,
+                    },
+                };
+
+                let name = def_module.name.clone().to_string();
+                let detail = Some(def_module.name.clone().to_string());
+                let kind = SymbolKind::MODULE;
+
+                let mut children = vec![];
+                for def_module_member in def_module.members.iter() {
+                    match def_module_member {
+                        ModuleMember::Function(x) => {
+                            let file_range = path_project.convert_loc_range(&x.loc).unwrap();
+                            let func_range = lsp_types::Range {
+                                start: lsp_types::Position {
+                                    line: file_range.line_start,
+                                    character: file_range.col_start,
+                                },
+                                end: Position {
+                                    line: file_range.line_end,
+                                    character: file_range.col_end,
+                                },
+                            };
+                
+                            children.push(DocumentSymbol {
+                                name: x.name.to_string(),
+                                detail:None,
+                                kind: SymbolKind::FUNCTION,
+                                range: func_range,
+                                selection_range: func_range,
+                                children: None,
+                                tags: Some(vec![]),
+                                deprecated: Some(false),
+                            });
+                        
+                        }, // match def_module_member => function
+                        ModuleMember::Struct(x) => {
+                            let file_range = path_project.convert_loc_range(&x.loc).unwrap();
+                            let struct_range = lsp_types::Range {
+                                start: lsp_types::Position {
+                                    line: file_range.line_start,
+                                    character: file_range.col_start,
+                                },
+                                end: Position {
+                                    line: file_range.line_end,
+                                    character: file_range.col_end,
+                                },
+                            };
+                
+                            let mut fields: Vec<DocumentSymbol> = vec![];
+                            handle_struct_fields_zx(path_project, x.clone(), &mut fields);
+                
+                            children.push(DocumentSymbol {
+                                name: x.name.to_string(),
+                                detail: None,
+                                kind: SymbolKind::STRUCT,
+                                range: struct_range,
+                                selection_range: struct_range,
+                                children: Some(fields),
+                                tags: Some(vec![]),
+                                deprecated: Some(false),
+                            });
+                        
+                        }, // match def_module_member => function
+                        ModuleMember::Constant(x) => {
+                            let file_range = path_project.convert_loc_range(&x.loc).unwrap();
+                            let const_range = lsp_types::Range {
+                                start: lsp_types::Position {
+                                    line: file_range.line_start,
+                                    character: file_range.col_start,
+                                },
+                                end: Position {
+                                    line: file_range.line_end,
+                                    character: file_range.col_end,
+                                },
+                            };
+                
+                            children.push(DocumentSymbol {
+                                name: x.name.clone().to_string(),
+                                detail: None,
+                                kind: SymbolKind::CONSTANT,
+                                range: const_range,
+                                selection_range: const_range,
+                                children: None,
+                                tags: Some(vec![]),
+                                deprecated: Some(false),
+                            });
+                        }, // match def_module_member => const
+                        _ => {},
+                    } // match def_module_member
+                } // for def_module_member in def.member
+                
+                result_defs.push(DocumentSymbol {
+                    name,
+                    detail,
+                    kind,
+                    range,
+                    selection_range: range,
+                    children: Some(children),
+                    tags: Some(vec![]),
+                    deprecated: Some(false),
+                });
+
+            }, // match def => Definition::Module
+            _ => {
+
             }
-
-            children.push(DocumentSymbol {
-                name: sym.clone().to_string(),
-                detail,
-                kind: SymbolKind::FUNCTION,
-                range: func_range,
-                selection_range: func_range,
-                children: None,
-                tags: Some(vec![]),
-                deprecated: Some(false),
-            });
-        }
-
-        defs.push(DocumentSymbol {
-            name,
-            detail,
-            kind,
-            range,
-            selection_range: range,
-            children: Some(children),
-            tags: Some(vec![]),
-            deprecated: Some(false),
-        });
-    }
+        } // match def
+    } // for def in vec_defs
 
     // unwrap will succeed based on the logic above which the compiler is unable to figure out
-    let response = lsp_server::Response::new_ok(request.id.clone(), defs);
+    let response = lsp_server::Response::new_ok(
+        request.id.clone(), 
+        result_defs
+    );
+    let ret_response = response.clone();
     if let Err(err) = context
         .connection
         .sender
@@ -1188,6 +1255,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
     {
         eprintln!("could not send use response: {:?}", err);
     }
+    ret_response
 }
 
 /// Helper function to handle struct fields
@@ -1211,5 +1279,46 @@ fn handle_struct_fields(struct_def: StructDef, fields: &mut Vec<DocumentSymbol>)
             tags: Some(vec![]),
             deprecated: Some(false),
         });
+    }
+}
+
+/// Helper function to handle struct fields for VSCode outline
+/// author: zx
+#[allow(deprecated)]
+fn handle_struct_fields_zx(project: &Project, struct_def: StructDefinition, fields: &mut Vec<DocumentSymbol>) {
+    let clonded_fileds = struct_def.fields;
+    match clonded_fileds {
+        StructFields::Defined(x) => {
+            for (struct_field,spanned_type) in x.iter() {
+                let file_range = project.convert_loc_range(&spanned_type.loc).unwrap();
+                let struct_field_range = lsp_types::Range {
+                    start: lsp_types::Position {
+                        line: file_range.line_start,
+                        character: file_range.col_start,
+                    },
+                    end: Position {
+                        line: file_range.line_end,
+                        character: file_range.col_end,
+                    },
+                };
+
+                fields.push(DocumentSymbol {
+                    name: struct_field.clone().to_string(),
+                    detail: None,
+                    kind: SymbolKind::FIELD,
+                    range: struct_field_range,
+                    selection_range: struct_field_range,
+                    children: None,
+                    tags: Some(vec![]),
+                    deprecated: Some(false),
+                });
+            }
+        }
+        StructFields::Native(_) => {
+            eprintln!("struct filed Native not handle");
+        }
+        StructFields::Positional(_) => {
+            eprintln!("struct filed Positional not handle");
+        }
     }
 }
