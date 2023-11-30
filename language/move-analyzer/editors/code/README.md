@@ -51,7 +51,7 @@ cargo install --git https://github.com/movebit/move --branch sui_move_analyzer s
 The installation may take some time, often several minutes. After installation, the `sui-move-analyzer` program is in your `cargo` binary directory. On macOS and Linux, this directory is usually `~/.cargo/bin`. You should make sure this location is in your `PATH` environment variable via `export PATH="$PATH:~/.cargo/bin"` .
 
 To confirm that you've installed the language server program successfully, execute
-`sui-move-analyzer --version` on the command line. You should see the output `sui-move-analyzer version number(1.1.1)`.
+`sui-move-analyzer --version` on the command line. You should see the output `sui-move-analyzer version number(1.1.2)`.
 If you don't see it, check the troubleshooting section at the end.
 
 After completing the above steps, **restart** VSCode.
