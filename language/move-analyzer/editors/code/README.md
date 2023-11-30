@@ -79,8 +79,8 @@ If you are installing this extension on a Windows system and have followed the s
 
    1. Restart VSCode and install the `sui-move-analyzer` VSCode extension.
    2. In the Windows system settings, find the user environment variable `PATH`. Look for an entry ending with `MoveBit\sui-move-analyzer\`, and copy it.
-   3. Open the extension settings for `sui-move-analyzer` in the VSCode extension store. In the `sui-move-analyzer > server:path` entry, add the path ending with `MoveBit\sui-move-analyzer\` before `sui-move-analyzer`. The final result should look like: `C:\Users\Windows\AppData\Local\Apps\MoveBit\sui-move-analyzer\`
-   4. Try running `sui-move-analyzer --version` in the command line again.
+   3. Open the extension settings for `sui-move-analyzer` in the VSCode extension store. In the `sui-move-analyzer > server:path` entry, add the path ending with `MoveBit\sui-move-analyzer\` before `sui-move-analyzer`. The final result should look like: `C:\Users\Windows\AppData\Local\Apps\MoveBit\sui-move-analyzer\sui-move-analyzer.exe`
+   4. Restart a terminal and try running `sui-move-analyzer --version` in the command line again.
 
 ##### 2) mac & linux
 If you see an error message *language server executable `sui-move-analyzer` could not be found* in the
