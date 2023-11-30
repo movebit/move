@@ -27,11 +27,11 @@ The `sui-move-analyzer` Visual Studio Code extension works via two components: t
 #### A. Download the precompiled binaries for the sui-move-analyzer language server(Recommended)
 
 ```Windows```  
-> Download [sui-move-analyzer-win-installer-v1.1.1.msi](https://github.com/movebit/move/releases), and proceed with the installation. This installation program will automatically add the path of `sui-move-analyzer` to the **PATH** environment variable.
+> Download [sui-move-analyzer-win-installer-v1.1.2.msi](https://github.com/movebit/move/releases/tag/release_sui_move_analyzerV1.1.2), and proceed with the installation. This installation program will automatically add the path of `sui-move-analyzer` to the **PATH** environment variable.
 
 ```MacOS & Ubuntu```
  
- > 1.Download binary files for the corresponding platform from [sui-move-analyzer-releases-pages](https://github.com/movebit/move/releases).
+ > 1.Download binary files for the corresponding platform from [sui-move-analyzer-releases-pages](https://github.com/movebit/move/releases/tag/release_sui_move_analyzerV1.1.2).
  >
  > 2.Rename it to `sui-move-analyzer`. 
  > 
@@ -79,7 +79,7 @@ If you are installing this extension on a Windows system and have followed the s
 
    1. Restart VSCode and install the `sui-move-analyzer` VSCode extension.
    2. In the Windows system settings, find the user environment variable `PATH`. Look for an entry ending with `MoveBit\sui-move-analyzer\`, and copy it.
-   3. Open the extension settings for `sui-move-analyzer` in the VSCode extension store. In the `sui-move-analyzer > server:path` entry, add the path ending with `MoveBit\sui-move-analyzer\` before `sui-move-analyzer`. The final result should look like: `C:\Users\Windows\AppData\Local\Apps\MoveBit\sui-move-analyzer\sui-move-analyzer.exe`
+   3. Open the extension settings for `sui-move-analyzer` in the VSCode extension store. In the `sui-move-analyzer > server:path` entry, add the path ending with `MoveBit\sui-move-analyzer\` before `sui-move-analyzer`. The final result may look like: `C:\Users\YourUserName\AppData\Local\Apps\MoveBit\sui-move-analyzer\sui-move-analyzer.exe`
    4. Restart a terminal and try running `sui-move-analyzer --version` in the command line again.
 
 ##### 2) mac & linux
@@ -107,6 +107,7 @@ Open a Move source file (a file with a .move file extension) and if the opened M
   - go to references
   - type on hover
   - autocomplete
+  - outline view
   - ...
 
 Therefore, the Move.toml file must be found in the project directory for the plug-in's functionality to take effect.
