@@ -1086,7 +1086,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
 
     let fpath = parameters.text_document.uri.to_file_path().unwrap();
     eprintln!("on_document_symbol_request: {:?}", fpath);
-
+    eprintln!("new on_document_symbol_request handle");
     let path_project = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
