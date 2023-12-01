@@ -890,7 +890,6 @@ pub trait ConvertLoc {
     fn convert_file_hash_filepath(&self, hash: &FileHash) -> Option<PathBuf>;
     fn convert_loc_range(&self, loc: &Loc) -> Option<FileRange>;
 }
-
 impl_convert_loc!(Project);
 
 pub trait Name2Addr {

@@ -29,7 +29,7 @@ export async function textDocumentDocumentSymbol(
     if (client === undefined) {
         return Promise.reject(new Error('No language client connected.'));
     }
-
+    
     // Send the request to the language client.
     return client.sendRequest(DocumentSymbolRequest.type, params);
 }

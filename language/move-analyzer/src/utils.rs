@@ -355,6 +355,7 @@ pub fn get_target_module(env: &GlobalEnv, move_file_path: &Path, target_module_i
                 }
             } else {
                 move_file_str = file_stem_str;
+                eprintln!("move_file_str = {:?}", move_file_str)
             }
         }
     }
@@ -368,3 +369,21 @@ pub fn get_target_module(env: &GlobalEnv, move_file_path: &Path, target_module_i
     }
     false
 }
+
+use move_model::model::ModuleEnv;
+pub fn get_modulus_in_file<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Vec<ModuleEnv<'a>> {
+    let mut result_vec_modules: Vec<ModuleEnv> = vec![];
+
+    let mut target_module_id = ModuleId::new(0);
+    get_target_module(env, &fpath, &mut target_module_id);
+    let target_module_env = env.get_module(target_module_id);
+    let target_file_id = target_module_env.get_loc().file_id();
+
+    eprintln!("target file id = {:?}", target_file_id);
+    for module_env in env.get_target_modules() {
+        if (target_file_id == module_env.get_loc().file_id()) {
+            result_vec_modules.push(module_env)
+        }
+    }
+    return result_vec_modules;
+} 

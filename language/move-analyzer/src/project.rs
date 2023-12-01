@@ -12,6 +12,7 @@ use std::{
     time::SystemTime,
 };
 use move_compiler::shared::PackagePaths;
+// use move_model::model::Loc;
 /// Project
 pub struct Project {
     pub(crate) modules: HashMap<
@@ -29,4 +30,32 @@ pub struct Project {
     pub(crate) current_modifing_file_content: String,
     pub(crate) targets: Vec<PackagePaths<std::string::String, std::string::String>>,
     pub(crate) dependents: Vec<PackagePaths<std::string::String, std::string::String>>,
+}
+
+// impl_convert_loc!(Project);
+
+impl Project {
+    pub fn loc_to_range(&self, loc: &move_model::model::Loc) -> lsp_types::Range {
+        let location_start = self.global_env.get_location(loc).unwrap();
+        let location_end = self.global_env.get_location(
+            &move_model::model::Loc::new(
+                loc.file_id(), 
+                codespan::Span::new(
+                    loc.span().end(), 
+                    loc.span().end()
+                )
+            )
+        ).unwrap();
+        let range = lsp_types::Range {
+                start: lsp_types::Position {
+                line: location_start.line.0,
+                character: location_start.column.0,
+            },
+            end: lsp_types::Position {
+                line: location_end.line.0,
+                character: location_end.column.0,
+            },
+        };
+        return range;
+    }
 }

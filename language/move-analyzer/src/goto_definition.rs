@@ -193,7 +193,7 @@ impl Handler {
                 mouse_line_last_col.span().start(),
             ),
         ));
-        log::info!("lll >> mouse_source = {:?}", mouse_source);
+        eprintln!("lll >> mouse_source = {:?}", mouse_source);
     
         self.mouse_span = codespan::Span::new(mouse_line_first_col.span().start(), mouse_line_last_col.span().start());
     }
@@ -212,8 +212,8 @@ impl Handler {
                     continue;
                 }
             }
-            // log::info!("use_decl.loc = {:?}, use_decl.loc.len = {:?}", 
-            //     use_decl.loc, use_decl.loc.span().end() - use_decl.loc.span().start());
+            eprintln!("use_decl.loc = {:?}, use_decl.loc.len = {:?}", 
+                use_decl.loc, use_decl.loc.span().end() - use_decl.loc.span().start());
             if !use_decl.members.is_empty() {
                 for (member_loc, name, _alias_name) in use_decl.members.clone().into_iter() {
                     log::info!("member_loc = {:?} ---", env.get_location(&member_loc));
@@ -295,12 +295,12 @@ impl Handler {
                     codespan::Span::new(this_fun_loc.span().end(), this_fun_loc.span().end()),
                 ))
                 .unwrap();
+            eprintln!("lll >> func_start_pos = {:?}, func_end_pos = {:?}", func_start_pos, func_end_pos);
             if func_start_pos.line.0 < self.line && self.line < func_end_pos.line.0 {
                 target_fun_id = fun.get_id();
                 found_target_fun = true;
                 break;
             }
-            // log::info!("lll >> func_start_pos = {:?}, func_end_pos = {:?}", func_start_pos, func_end_pos);
         }
 
         if !found_target_fun {
@@ -309,7 +309,8 @@ impl Handler {
 
         let target_module = env.get_module(self.target_module_id);
         let target_fun = target_module.get_function(target_fun_id);
-        let target_fun_loc = target_fun.get_loc();
+        let target_fun_loc: move_model::model::Loc = target_fun.get_loc();
+        eprintln!("target_fun_loc start = {:?}, end = {:?}", target_fun_loc.span().start(), target_fun_loc.span().end());
         self.get_mouse_loc(env, &target_fun_loc);
 
         if let Some(exp) = target_fun.get_def() {
