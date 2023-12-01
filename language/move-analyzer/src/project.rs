@@ -57,6 +57,21 @@ impl Project {
     pub fn load_ok(&self) -> bool {
         self.manifest_not_exists.is_empty() && self.manifest_load_failures.is_empty()
     }
+
+    pub fn loc_to_range(&self, loc: &Loc) -> lsp_types::Range {
+        let file_range = self.convert_loc_range(loc).unwrap();
+        let range = lsp_types::Range {
+            start: lsp_types::Position {
+                line: file_range.line_start,
+                character: file_range.col_start,
+            },
+            end: lsp_types::Position {
+                line: file_range.line_end,
+                character: file_range.col_end,
+            },
+        };
+        return range;
+    }
 }
 
 impl Project {

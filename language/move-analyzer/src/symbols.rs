@@ -1124,17 +1124,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
     for def in vec_defs.iter() {
         match def {
             Definition::Module(def_module) => {
-                let file_range = path_project.convert_loc_range(&def_module.loc).unwrap();
-                let range = lsp_types::Range {
-                    start: lsp_types::Position {
-                        line: file_range.line_start,
-                        character: file_range.col_start,
-                    },
-                    end: Position {
-                        line: file_range.line_end,
-                        character: file_range.col_end,
-                    },
-                };
+                let range = path_project.loc_to_range(&def_module.loc);
 
                 let name = def_module.name.clone().to_string();
                 let detail = Some(def_module.name.clone().to_string());
@@ -1144,18 +1134,8 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
                 for def_module_member in def_module.members.iter() {
                     match def_module_member {
                         ModuleMember::Function(x) => {
-                            let file_range = path_project.convert_loc_range(&x.loc).unwrap();
-                            let func_range = lsp_types::Range {
-                                start: lsp_types::Position {
-                                    line: file_range.line_start,
-                                    character: file_range.col_start,
-                                },
-                                end: Position {
-                                    line: file_range.line_end,
-                                    character: file_range.col_end,
-                                },
-                            };
-                
+                            let func_range = path_project.loc_to_range(&x.loc);
+                            
                             children.push(DocumentSymbol {
                                 name: x.name.to_string(),
                                 detail:None,
@@ -1169,18 +1149,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
                         
                         }, // match def_module_member => function
                         ModuleMember::Struct(x) => {
-                            let file_range = path_project.convert_loc_range(&x.loc).unwrap();
-                            let struct_range = lsp_types::Range {
-                                start: lsp_types::Position {
-                                    line: file_range.line_start,
-                                    character: file_range.col_start,
-                                },
-                                end: Position {
-                                    line: file_range.line_end,
-                                    character: file_range.col_end,
-                                },
-                            };
-                
+                            let struct_range = path_project.loc_to_range(&x.loc);
                             let mut fields: Vec<DocumentSymbol> = vec![];
                             handle_struct_fields_zx(path_project, x.clone(), &mut fields);
                 
@@ -1197,17 +1166,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
                         
                         }, // match def_module_member => function
                         ModuleMember::Constant(x) => {
-                            let file_range = path_project.convert_loc_range(&x.loc).unwrap();
-                            let const_range = lsp_types::Range {
-                                start: lsp_types::Position {
-                                    line: file_range.line_start,
-                                    character: file_range.col_start,
-                                },
-                                end: Position {
-                                    line: file_range.line_end,
-                                    character: file_range.col_end,
-                                },
-                            };
+                            let const_range = path_project.loc_to_range(&x.loc);
                 
                             children.push(DocumentSymbol {
                                 name: x.name.clone().to_string(),
