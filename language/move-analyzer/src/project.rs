@@ -58,8 +58,11 @@ impl Project {
         self.manifest_not_exists.is_empty() && self.manifest_load_failures.is_empty()
     }
 
-    pub fn loc_to_range(&self, loc: &Loc) -> lsp_types::Range {
-        let file_range = self.convert_loc_range(loc).unwrap();
+    pub fn loc_to_range(&self, loc: &Loc) -> Option<lsp_types::Range> {
+        let file_range = match self.convert_loc_range(loc) {
+            Some(x) => x,
+            None => return None,
+        };
         let range = lsp_types::Range {
             start: lsp_types::Position {
                 line: file_range.line_start,
@@ -70,7 +73,7 @@ impl Project {
                 character: file_range.col_end,
             },
         };
-        return range;
+        return Some(range);
     }
 }
 

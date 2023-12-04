@@ -67,7 +67,7 @@ use std::{
     cmp,
     collections::{BTreeMap, BTreeSet, HashMap},
     fmt,
-    path::{Path, PathBuf, self},
+    path::{Path, PathBuf},
     sync::{Arc, Condvar, Mutex},
     thread,
 };
@@ -78,7 +78,7 @@ use move_command_line_common::files::FileHash;
 use move_compiler::{
     expansion::ast::{Address, ModuleIdent_},
     naming::ast::{Type, TypeName_, Type_},
-    parser::ast::{Definition, ModuleMember, StructDefinition, StructFields, Function},
+    parser::ast::{Definition, ModuleMember, StructDefinition, StructFields},
     shared::Identifier,
     PASS_TYPING,
 };
@@ -1080,7 +1080,7 @@ pub fn on_use_request(
 
 /// Handles document symbol request of the language server
 #[allow(deprecated)]
-pub fn on_document_symbol_request(context: &Context, request: &Request, symbols: &Symbols) -> lsp_server::Response {
+pub fn on_document_symbol_request(context: &Context, request: &Request, symbols: &Symbols) {
     let parameters = serde_json::from_value::<DocumentSymbolParams>(request.params.clone())
         .expect("could not deserialize document symbol request");
 
@@ -1091,11 +1091,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
         Some(x) => x,
         None => {
             log::error!("project not found:{:?}", fpath.as_path());
-            return lsp_server::Response {
-                id: "".to_string().into(),
-                result: Some(serde_json::json!({"msg": "No available project"})),
-                error: None,
-            };
+            return ;
         }
     };
     
@@ -1103,11 +1099,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
         Some(x) => x,
         None => {
             log::error!("project not found:{:?}", fpath.as_path());
-            return lsp_server::Response {
-                id: "".to_string().into(),
-                result: Some(serde_json::json!({"msg": "project not found"})),
-                error: None,
-            };
+            return ;
         }
     };
 
@@ -1124,7 +1116,13 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
     for def in vec_defs.iter() {
         match def {
             Definition::Module(def_module) => {
-                let range = path_project.loc_to_range(&def_module.loc);
+                let range = match path_project.loc_to_range(&def_module.loc) {
+                    Some(x) => x,
+                    None => {
+                        log::error!("Could not covert Definition::Module({:?}).loc to range", def_module.name);
+                        return ;
+                    }
+                };
 
                 let name = def_module.name.clone().to_string();
                 let detail = Some(def_module.name.clone().to_string());
@@ -1134,7 +1132,13 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
                 for def_module_member in def_module.members.iter() {
                     match def_module_member {
                         ModuleMember::Function(x) => {
-                            let func_range = path_project.loc_to_range(&x.loc);
+                            let func_range = match path_project.loc_to_range(&x.loc) {
+                                Some(x) => x,
+                                None => {
+                                    log::error!("Could not covert ModuleMember::Function({:?}).loc to range", x.name);
+                                    return ;
+                                }
+                            };
                             
                             children.push(DocumentSymbol {
                                 name: x.name.to_string(),
@@ -1149,9 +1153,15 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
                         
                         }, // match def_module_member => function
                         ModuleMember::Struct(x) => {
-                            let struct_range = path_project.loc_to_range(&x.loc);
+                            let struct_range = match path_project.loc_to_range(&x.loc) {
+                                Some(x) => x,
+                                None => {
+                                    log::error!("Could not covert ModuleMember::Struct({:?}).loc to range", x.name);
+                                    return ;
+                                }
+                            };
                             let mut fields: Vec<DocumentSymbol> = vec![];
-                            handle_struct_fields_zx(path_project, x.clone(), &mut fields);
+                            handle_struct_fields(path_project, x.clone(), &mut fields);
                 
                             children.push(DocumentSymbol {
                                 name: x.name.to_string(),
@@ -1166,7 +1176,13 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
                         
                         }, // match def_module_member => function
                         ModuleMember::Constant(x) => {
-                            let const_range = path_project.loc_to_range(&x.loc);
+                            let const_range = match path_project.loc_to_range(&x.loc) {
+                                Some(x) => x,
+                                None => {
+                                    log::error!("Could not covert ModuleMember::Const({:?}).loc to range", x.name);
+                                    return ;
+                                }
+                            };
                 
                             children.push(DocumentSymbol {
                                 name: x.name.clone().to_string(),
@@ -1214,42 +1230,24 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
     {
         eprintln!("could not send use response: {:?}", err);
     }
-    ret_response
-}
-
-/// Helper function to handle struct fields
-#[allow(deprecated)]
-fn handle_struct_fields(struct_def: StructDef, fields: &mut Vec<DocumentSymbol>) {
-    let clonded_fileds = struct_def.field_defs;
-
-    for field_def in clonded_fileds {
-        let field_range = Range {
-            start: field_def.start,
-            end: field_def.start,
-        };
-
-        fields.push(DocumentSymbol {
-            name: field_def.name.clone().to_string(),
-            detail: None,
-            kind: SymbolKind::FIELD,
-            range: field_range,
-            selection_range: field_range,
-            children: None,
-            tags: Some(vec![]),
-            deprecated: Some(false),
-        });
-    }
+    
 }
 
 /// Helper function to handle struct fields for VSCode outline
 /// author: zx
 #[allow(deprecated)]
-fn handle_struct_fields_zx(project: &Project, struct_def: StructDefinition, fields: &mut Vec<DocumentSymbol>) {
+fn handle_struct_fields(project: &Project, struct_def: StructDefinition, fields: &mut Vec<DocumentSymbol>) {
     let clonded_fileds = struct_def.fields;
     match clonded_fileds {
         StructFields::Defined(x) => {
             for (struct_field,spanned_type) in x.iter() {
-                let file_range = project.convert_loc_range(&spanned_type.loc).unwrap();
+                let file_range = match project.convert_loc_range(&spanned_type.loc) {
+                    Some(x) => x,
+                    None => {
+                        log::error!("could not convert StructFields::Defined({:?}).loc to range", struct_field);
+                        return ;
+                    }
+                };
                 let struct_field_range = lsp_types::Range {
                     start: lsp_types::Position {
                         line: file_range.line_start,
