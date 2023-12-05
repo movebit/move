@@ -1112,7 +1112,9 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
         .borrow();
 
     let mut result_defs: Vec<DocumentSymbol> = vec![];
-    let vec_defs =  b.sources.get(&fpath).unwrap();
+    let vec_defs_defaule = Default::default();
+    let vec_defs =  b.sources.get(&fpath).unwrap_or(&vec_defs_defaule);
+    // let vec_defs =  b.sources.get(&fpath).unwrap();
     for def in vec_defs.iter() {
         match def {
             Definition::Module(def_module) => {
@@ -1183,7 +1185,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
                                     return ;
                                 }
                             };
-                
+
                             children.push(DocumentSymbol {
                                 name: x.name.clone().to_string(),
                                 detail: None,
