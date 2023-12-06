@@ -115,7 +115,7 @@ fun init(ctx: &mut sui::tx_context::TxContext) {
 ///
 /// The completions returned depend upon where the user's cursor is positioned.
 pub fn on_completion_request(context: &Context, request: &Request) {
-    log::info!("on_completion_request request = {:?}", request);
+    eprintln!("on_completion_request request = {:?}", request);
     let parameters = serde_json::from_value::<CompletionParams>(request.params.clone())
         .expect("could not deserialize references request");
     let fpath = parameters
@@ -124,6 +124,7 @@ pub fn on_completion_request(context: &Context, request: &Request) {
         .uri
         .to_file_path()
         .unwrap();
+    eprintln!("completion_request file path = {:?}", fpath.as_path());
     let loc = parameters.text_document_position.position;
     let line = loc.line;
     let col = loc.character;
@@ -132,7 +133,10 @@ pub fn on_completion_request(context: &Context, request: &Request) {
     let mut handler = Handler::new(fpath.clone(), line, col);
     let _ = match context.projects.get_project(&fpath) {
         Some(x) => x,
-        None => return,
+        None => {
+            log::error!("completion_request Could not find project");
+            return
+        },
     }
     .run_visitor_for_file(&mut handler, &fpath, false);
     let mut result = handler.result.unwrap_or_default();
@@ -146,6 +150,7 @@ pub fn on_completion_request(context: &Context, request: &Request) {
         .sender
         .send(Message::Response(r))
         .unwrap();
+    eprintln!("completion_request Success.");
 }
 
 pub(crate) struct Handler {

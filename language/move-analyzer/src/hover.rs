@@ -20,6 +20,7 @@ pub fn on_hover_request(context: &Context, request: &Request) -> lsp_server::Res
         .uri
         .to_file_path()
         .unwrap();
+    
     let loc = parameters.text_document_position_params.position;
     let line = loc.line;
     let col = loc.character;
@@ -27,7 +28,7 @@ pub fn on_hover_request(context: &Context, request: &Request) -> lsp_server::Res
         std::env::current_dir().unwrap().as_path(),
         fpath.as_path(),
     );
-    log::info!(
+    eprintln!(
         "request is hover,fpath:{:?} line:{} col:{}",
         fpath.as_path(),
         line,

@@ -53,7 +53,7 @@ const LOGGER: SimpleLogger = SimpleLogger;
 
 pub fn init_log() {
     log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(log::LevelFilter::Trace))
+        .map(|()| log::set_max_level(log::LevelFilter::Warn))
         .unwrap()
 }
 
@@ -547,7 +547,6 @@ fn send_not_project_file_error(context: &mut Context, fpath: PathBuf, is_open: b
 }
 
 fn send_diag(context: &mut Context, mani: PathBuf, x: Diagnostics) {
-    eprintln!("send_diag ~~~~~~~");
     let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
     for x in x.into_codespan_format() {
         let (s, msg, (loc, m), _, notes) = x;

@@ -23,7 +23,7 @@ use std::path::PathBuf;
 
 /// Handles inlay_hints request of the language server.
 pub fn on_inlay_hints(context: &Context, request: &Request, config: InlayHintsConfig) -> lsp_server::Response {
-    log::info!("on_inlay_hints request = {:?}", request);
+    eprintln!("on_inlay_hints request = {:?}", request);
     let parameters = serde_json::from_value::<InlayHintParams>(request.params.clone())
         .expect("could not deserialize go-to-def request");
     let fpath = parameters.text_document.uri.to_file_path().unwrap();
@@ -31,6 +31,7 @@ pub fn on_inlay_hints(context: &Context, request: &Request, config: InlayHintsCo
         std::env::current_dir().unwrap().as_path(),
         fpath.as_path(),
     );
+    eprintln!("inlay_hints,fpath:{:?}",fpath.as_path());
     let mut handler = Handler::new(fpath.clone(), parameters.range, config);
     let _ = match context.projects.get_project(&fpath) {
         Some(x) => x,
@@ -52,6 +53,7 @@ pub fn on_inlay_hints(context: &Context, request: &Request, config: InlayHintsCo
         .sender
         .send(Message::Response(r))
         .unwrap();
+    eprintln!("inlay_hints Success");
     ret_response
 }
 

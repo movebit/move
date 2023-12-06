@@ -13,7 +13,7 @@ use std::path::PathBuf;
 
 /// Handles go-to-def request of the language server.
 pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server::Response {
-    log::info!("on_go_to_def_request request = {:?}", request);
+    eprintln!("on_go_to_def_request request = {:?}", request);
     let parameters = serde_json::from_value::<GotoDefinitionParams>(request.params.clone())
         .expect("could not deserialize go-to-def request");
     let fpath = parameters
@@ -57,6 +57,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server:
         .sender
         .send(Message::Response(r))
         .unwrap();
+    eprintln!("goto definition Success");
     ret_response
 }
 
