@@ -31,7 +31,7 @@ The `sui-move-analyzer` Visual Studio Code extension works via two components: t
 
 ```MacOS & Ubuntu```
  
- > 1.Download binary files for the corresponding platform from [sui-move-analyzer-releases-pages](https://github.com/movebit/move/releases/tag/release_sui_move_analyzerV1.1.2).
+ > 1.Download binary files for the corresponding platform from [sui-move-analyzer-releases-pages](https://github.com/movebit/move/releases/tag/sui_move_analyzer_release_v1.1.3).
  >
  > 2.Rename it to `sui-move-analyzer`. 
  > 
