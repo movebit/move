@@ -520,44 +520,6 @@ impl SymbolicatorRunner {
     }
 }
 
-// impl UseDef {
-//     fn new(
-//         references: &mut BTreeMap<DefLoc, BTreeSet<UseLoc>>,
-//         use_fhash: FileHash,
-//         use_start: Position,
-//         def_fhash: FileHash,
-//         def_start: Position,
-//         use_name: &Symbol,
-//         use_type: IdentType,
-//         type_def_loc: Option<DefLoc>,
-//         doc_string: String,
-//     ) -> Self {
-//         let def_loc = DefLoc {
-//             fhash: def_fhash,
-//             start: def_start,
-//         };
-//         let col_end = use_start.character + use_name.len() as u32;
-//         let use_loc = UseLoc {
-//             fhash: use_fhash,
-//             start: use_start,
-//             col_end,
-//         };
-
-//         references
-//             .entry(def_loc)
-//             .or_insert_with(BTreeSet::new)
-//             .insert(use_loc);
-//         Self {
-//             col_start: use_start.character,
-//             col_end,
-//             use_type,
-//             def_loc,
-//             type_def_loc,
-//             doc_string,
-//         }
-//     }
-// }
-
 impl UseDef {
     pub fn get_col_start(&self) -> u32 {
         self.col_start
@@ -1081,12 +1043,12 @@ pub fn on_use_request(
 /// Handles document symbol request of the language server
 #[allow(deprecated)]
 pub fn on_document_symbol_request(context: &Context, request: &Request, symbols: &Symbols) {
+    eprintln!("on_document_symbol_request: {:?}", request);
     let parameters = serde_json::from_value::<DocumentSymbolParams>(request.params.clone())
         .expect("could not deserialize document symbol request");
-
     let fpath = parameters.text_document.uri.to_file_path().unwrap();
-    eprintln!("on_document_symbol_request: {:?}", fpath);
-    eprintln!("new on_document_symbol_request handle");
+    eprintln!("symbol_request file path = {:?}", fpath.as_path());
+    
     let path_project = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
@@ -1114,14 +1076,17 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
     let mut result_defs: Vec<DocumentSymbol> = vec![];
     let vec_defs_defaule = Default::default();
     let vec_defs =  b.sources.get(&fpath).unwrap_or(&vec_defs_defaule);
-    // let vec_defs =  b.sources.get(&fpath).unwrap();
+    eprintln!("get Definition, {:?}", !vec_defs.is_empty());
     for def in vec_defs.iter() {
         match def {
             Definition::Module(def_module) => {
+                eprintln!("handle symbol, Module, {:?}", def_module.name);
+                
                 let range = match path_project.loc_to_range(&def_module.loc) {
                     Some(x) => x,
                     None => {
                         log::error!("Could not covert Definition::Module({:?}).loc to range", def_module.name);
+                        log::error!("Module Loc start = {:?}, end = {:?}", def_module.loc.start(), def_module.loc.end());
                         return ;
                     }
                 };
@@ -1175,7 +1140,6 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
                                 tags: Some(vec![]),
                                 deprecated: Some(false),
                             });
-                        
                         }, // match def_module_member => function
                         ModuleMember::Constant(x) => {
                             let const_range = match path_project.loc_to_range(&x.loc) {
@@ -1211,6 +1175,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
                     tags: Some(vec![]),
                     deprecated: Some(false),
                 });
+                eprintln!("handle symbol, Module, {:?}, Success.", def_module.name);
 
             }, // match def => Definition::Module
             _ => {
@@ -1224,7 +1189,6 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
         request.id.clone(), 
         result_defs
     );
-    let ret_response = response.clone();
     if let Err(err) = context
         .connection
         .sender
@@ -1232,7 +1196,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
     {
         eprintln!("could not send use response: {:?}", err);
     }
-    
+    eprintln!("on_document_symbol_request Success");
 }
 
 /// Helper function to handle struct fields for VSCode outline

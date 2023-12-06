@@ -59,7 +59,8 @@ impl Project {
     }
 
     pub fn loc_to_range(&self, loc: &Loc) -> Option<lsp_types::Range> {
-        let file_range = match self.convert_loc_range(loc) {
+        let loc_in_file = Loc::new(loc.file_hash(), loc.start(), loc.end() - 1);
+        let file_range = match self.convert_loc_range(&loc_in_file) {
             Some(x) => x,
             None => return None,
         };
