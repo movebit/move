@@ -11,20 +11,23 @@ use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::borrow::BorrowMut;
 use std::collections::{HashMap, HashSet};
+use std::fmt::format;
 use std::hash::Hash;
 use std::path::PathBuf;
 
 // -----------------
 use move_model::{
-    model::{GlobalEnv, FunctionEnv, StructEnv, ModuleId},
+    model::{GlobalEnv, FunctionEnv, StructEnv, ModuleId, NodeId},
     ty::{TypeDisplayContext, Type as MoveModelType},
     ast::{
         Exp as MoveModelExp, ExpData as MoveModelExpData, Value as MoveModelValue,
+        Operation as MoveModelOperation
     },
 };
 
 use crate::move_generate_spec_zx::{
     ShadowItems as ShadowItemsZX,
+    ShadowItem as ShadowItemZX,
     SpecExpItem as SpecExpItemZX,
     BinOPReason as BinOPReasonZX,
 };
@@ -160,11 +163,10 @@ impl FunSpecGenerator {
             _ => {}
         }
         self.result.push_str(return_type_string.as_str());
-
         self.result.push_str("{\n");
         self.result.push_str("\n");
         let assert = Self::generate_body_zx(self, f, global_env, fpath);
-        // self.result.push_str(assert.as_str());
+        self.result.push_str(assert.as_str());
         self.result.push_str(format!("{}}}\n", indent(1)).as_str())
     }
 
@@ -178,7 +180,6 @@ impl FunSpecGenerator {
     
         if let Some(exp) = f.get_def() {
             get_shadows(exp, global_env, &mut shadows);
-            eprintln!("---------------------");
             FunSpecGenerator::try_emit_exp_zx(
                 self, 
                 &shadows,
@@ -464,7 +465,7 @@ impl FunSpecGenerator {
         shadows: &ShadowItemsZX,
         statements: &mut String,
         exp: &MoveModelExp,
-        local_emited: &mut HashSet<usize>,
+        local_emited: &mut HashSet<NodeId>,
         body: &MoveModelExp,
         env: &GlobalEnv,
         func_env: &FunctionEnv
@@ -477,51 +478,185 @@ impl FunSpecGenerator {
                 SpecExpItemZX::BinOP { reason, left, right } => {
                     let left_node_id = left.as_ref().node_id();
                     let right_node_id = right.as_ref().node_id();
-
                     let left_node_loc = env.get_node_loc(left_node_id);
                     let right_node_loc = env.get_node_loc(right_node_id);
+                    let left_node_type = env.get_node_type(left_node_id);
+                    let right_node_type = env.get_node_type(right_node_id);
+                    
 
-                    let left_node_type = env.get_node_type(left.as_ref().node_id());
-                    let right_node_type = env.get_node_type(right.as_ref().node_id());
-                    let reason_str = match reason {
-                        BinOPReasonZX::DivByZero => "DivByZero",
-                        BinOPReasonZX::OverFlowADD => "OverFlowADD",
-                        BinOPReasonZX::OverFlowMUL => "OverFlowMUL",
-                        BinOPReasonZX::OverFlowSHL => "OverFlowSHL",
-                        BinOPReasonZX::UnderFlow => "UnderFlow",
+                    let left_exp_str = match env.get_source(&left_node_loc) {
+                        Ok(x) => FunSpecGenerator::remove_parentheses(x),
+                        Err(_) => continue,
                     };
-                    
 
-                    eprintln!("BinOP = {:?} left = {:?}, left_type = {:?}, 
-                                            right = {:?}, right_type = {:?}", 
-                        reason_str,
-                        env.get_source(&left_node_loc),
-                        left_node_type.display(display_context).to_string(),
-                        env.get_source(&right_node_loc),
-                        right_node_type.display(display_context).to_string(),
-                    );
-                    
+                    let right_exp_str = match env.get_source(&right_node_loc) {
+                        Ok(x) => FunSpecGenerator::remove_parentheses(x),
+                        Err(_) => continue,
+                    };
+
+                    eprintln!("left exp");
+                    FunSpecGenerator::helper_exp_print(left, env,1);
+                    eprintln!("right exp");
+                    FunSpecGenerator::helper_exp_print(right, env,1);
+                    eprintln!("--------------- ");
+                    eprintln!("--------------- ");
+                    eprintln!("--------------- ");
+                    eprintln!("--------------- ");
+
+                    if *reason != BinOPReasonZX::DivByZero 
+                        && !FunSpecGenerator::is_support_exp(left, env) 
+                    {
+                            continue;
+                    }
+
+                    if !FunSpecGenerator::is_support_exp(right , env) {
+                        continue;
+                    }
+
+                    match reason {
+                        BinOPReasonZX::OverFlowADD 
+                        | BinOPReasonZX::OverFlowMUL 
+                        | BinOPReasonZX::OverFlowSHL => {
+                            let statements_abort_if = format!(
+                                                                "{}aborts_if {} {} {} > {};\n",
+                                                                indent(2),
+                                                                left_exp_str,
+                                                                match reason {
+                                                                    BinOPReasonZX::OverFlowADD => "+",
+                                                                    BinOPReasonZX::OverFlowMUL => "*",
+                                                                    BinOPReasonZX::OverFlowSHL => "<<",
+                                                                    _ => unreachable!(),
+                                                                },
+                                                                right_exp_str,
+                                                                format!(
+                                                                    "MAX_{}",
+                                                                    left_node_type.display(display_context)
+                                                                                    .to_string()
+                                                                                    .to_uppercase(),
+                                                                ),
+                                                            );
+                            statements.push_str(statements_abort_if.as_str());
+                        },
+                        BinOPReasonZX::DivByZero => {
+                            statements.push_str(
+                                format!(
+                                    "{}aborts_if {} == 0;\n",
+                                    indent(2),
+                                    right_exp_str,
+                                )
+                                .as_str(),
+                            );
+                        },
+                        BinOPReasonZX::UnderFlow => {
+                            statements.push_str(
+                                format!(
+                                    "{}aborts_if {} - {} <= 0;\n",
+                                    indent(2),
+                                    left_exp_str,
+                                    right_exp_str,
+                                )
+                                .as_str(),
+                            );
+                        },
+                    };
                 },
-                SpecExpItemZX::BorrowGlobalMut { ty, addr } => {
-                    eprintln!("BorrowGlobalMut ty = {:?} addr = {:?}", 
-                        ty.display(display_context).to_string(),
-                        addr.as_ref().display(env).to_string()
+                SpecExpItemZX::PatternLet { left, right } => {
+                    let right_node_id = right.as_ref().node_id();
+                    let right_node_loc = env.get_node_loc(right_node_id);
+                    let right_node_type = env.get_node_type(right_node_id);
+                    let right_exp_str = match env.get_source(&right_node_loc) {
+                        Ok(x) => FunSpecGenerator::remove_parentheses(x),
+                        Err(_) => continue,
+                    };
+
+                    statements.push_str(
+                        format!(
+                            "{}let {} = {};\n",
+                            indent(2),
+                            left.display(func_env.symbol_pool()).to_string(),
+                            right_exp_str,
+                        )
+                        .as_str(),
                     );
                 },
-                SpecExpItemZX::TypeName { ty } => {
-                    eprintln!("TypeName ty = {:?}", 
-                        ty.display(display_context).to_string()
-                    );
-                },
-                SpecExpItemZX::TypeOf { ty } => {
-                    eprintln!("TypeName ty = {:?}", 
-                        ty.display(display_context).to_string()
-                    );
-                }
+                SpecExpItemZX::BorrowGlobalMut { ty, addr } => {},
+                SpecExpItemZX::TypeName { ty } => {},
+                SpecExpItemZX::TypeOf { ty } => {}
             }
         }
     }
 
+    fn remove_parentheses(input: &str) -> &str {
+        // 检查字符串是否以 '(' 开始且以 ')' 结尾
+        if input.starts_with('(') && input.ends_with(')') {
+            // 如果是，使用字符串切片去掉左右两边的括号
+            &input[1..input.len() - 1]
+        } else {
+            // 如果不是，返回原始字符串
+            input
+        }
+    }
+
+    fn helper_exp_print(e: &MoveModelExp, env: &GlobalEnv, depth: u32) {
+        let display_context = &TypeDisplayContext::new(env);
+        let node_id = e.as_ref().node_id();
+        let node_loc = env.get_node_loc(node_id);
+        let node_type = env.get_node_type(node_id);
+        let exp_str = match env.get_source(&node_loc) {
+            Ok(x) => FunSpecGenerator::remove_parentheses(x),
+            Err(_) => {""},
+        };
+
+        eprintln!("{:?}{:?} {:?}",
+                indent(depth.try_into().unwrap()),
+                exp_str,
+                node_type.display(display_context).to_string()
+            );
+        let exp_data = e.as_ref();
+        match exp_data {
+            MoveModelExpData::Invalid(_) => {eprintln!("body is Invalid")},
+            MoveModelExpData::Value(_, v) => {
+                eprintln!("{:?}body is value", indent(depth.try_into().unwrap()));
+            },
+            MoveModelExpData::LocalVar(_, sym) => {
+                eprintln!("{:?}LocalVar = {:?}", indent(depth.try_into().unwrap()), sym.display(env.symbol_pool()).to_string());
+            },
+            MoveModelExpData::Temporary(_, _) => {
+                eprintln!("{:?}body is Temporary", indent(depth.try_into().unwrap()));
+            },
+            MoveModelExpData::Call(_, op, args) => {
+                eprintln!("{:?}body is Call", indent(depth.try_into().unwrap()));
+                // FunSpecGenerator::helper_op_print();
+                for a in args.iter() {
+                    FunSpecGenerator::helper_exp_print(a, env, depth + 1);
+                }
+            },
+            MoveModelExpData::Invoke(_, _, _) => {eprintln!("{:?}body is Invalid", indent(depth.try_into().unwrap()))},
+            MoveModelExpData::Lambda(_, _, _) => {eprintln!("{:?}body is Lambda", indent(depth.try_into().unwrap()))},
+            MoveModelExpData::Quant(_,_,_,_,_,_) => {eprintln!("{:?}body is Quant", indent(depth.try_into().unwrap()))},
+            MoveModelExpData::Block(_,p,s,exp) => {
+                eprintln!("{:?}body is Block", indent(depth.try_into().unwrap()));
+                // handle_expdata_block_parren(p, env, shadows);
+                if let Some(op_exp) = s {
+                    FunSpecGenerator::helper_exp_print(op_exp, env, depth + 1);
+                }
+                FunSpecGenerator::helper_exp_print(exp, env, depth + 1);
+            },
+            MoveModelExpData::IfElse(_,_,_,_) => {eprintln!("body is IfElse")},
+            MoveModelExpData::Return(_,_) => {eprintln!("body is Return")},
+            MoveModelExpData::Sequence(_,vec_exp) => {
+                    eprintln!("{:?}body is Sequence",indent(depth.try_into().unwrap()));
+                    for a in vec_exp.iter() {
+                        FunSpecGenerator::helper_exp_print(a, env, depth + 1);
+                    }
+            },
+            MoveModelExpData::Loop(_,_) => {eprintln!("body is Loop")},
+            MoveModelExpData::LoopCont(_,_) => {eprintln!("body is LoopCont")},
+            MoveModelExpData::Assign(_,_,_) => {eprintln!("body is Assign")},
+            MoveModelExpData::Mutate(_,_,_) => {eprintln!("body is Mutate")},
+            MoveModelExpData::SpecBlock(_,_) => {eprintln!("body is SpecBlock")},
+        }
+    }
     
 }
 impl FunSpecGenerator {

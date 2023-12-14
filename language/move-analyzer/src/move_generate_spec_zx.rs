@@ -38,7 +38,7 @@ pub enum ShadowItemUse {
 
 #[derive(Clone, Copy, Debug)]
 pub struct ShadowItemLocal {
-    index: usize,
+    pub index: NodeId,
 }
 
 
@@ -48,7 +48,7 @@ pub enum ShadowItem {
 }
 
 pub struct ShadowItems {
-    items: HashMap<Symbol, Vec<ShadowItem>>,
+    pub items: HashMap<Symbol, Vec<ShadowItem>>,
     function_loc: Loc,
 }
 
@@ -187,12 +187,11 @@ pub fn handle_expdata_block_parren(
     shadows: &mut ShadowItems
 ) {
     let vec_sym = p.vars();
-    for (index, (_, sym)) in vec_sym.iter().enumerate() {
+    for (node_id, sym) in vec_sym.iter() {
         shadows.insert(
             sym.clone(), 
-            ShadowItem::Local(ShadowItemLocal { index })
+            ShadowItem::Local(ShadowItemLocal { index:*node_id })
         );
-        eprintln!("-> pattern sym = {:?}", sym.display(env.symbol_pool()).to_string());
     }
 }
 
@@ -213,6 +212,10 @@ pub(crate) enum SpecExpItem {
         ty: MoveModelType,
         addr: MoveModelExp,
     },
+    PatternLet {
+        left: Symbol,
+        right: MoveModelExp,
+    }
 }
 
 
@@ -425,31 +428,27 @@ impl FunSpecGenerator {
 
     fn collect_spec_exp_(&self, ret: &mut Vec<SpecExpItem>, e: &MoveModelExp, env: &GlobalEnv) {
         match e.as_ref() {
-            MoveModelExpData::Block(_, _, assign_exp, exp) => {
-                eprintln!("collect spec exp Block");
+            MoveModelExpData::Block(_, p, assign_exp, exp) => {
                 if let Some(op) = assign_exp {
-                    self.collect_spec_exp_(ret, op, env);
+                    if FunSpecGenerator::is_support_exp(op, env) {
+                        self.handle_pattern(ret, p, op, env);
+                    }
                 }
-                
                 self.collect_spec_exp_(ret, exp, env);
             },
             MoveModelExpData::Sequence(_, vec_exp) => {
-                eprintln!("collect spec exp Sequence");
                 for exp in vec_exp.iter() {
                     self.collect_spec_exp_(ret, exp, env);
                 }
             },
             MoveModelExpData::Assign(_, _, exp) => {
-                eprintln!("collect spec exp Assign");
                 self.collect_spec_exp_(ret, exp, env);
             },
             MoveModelExpData::Mutate(_, exp_left, exp_right) => {
-                eprintln!("collect spec exp Mutate");
                 self.collect_spec_exp_(ret, exp_left, env);
                 self.collect_spec_exp_(ret, exp_right, env);
             },
             MoveModelExpData::Call(id, op, vec_exp) => {
-                eprintln!("collect spec exp Call");
                 self.collect_spec_exp_op(ret, op, vec_exp, env);
             },
             _ => {}
@@ -461,6 +460,82 @@ impl FunSpecGenerator {
         self.collect_spec_exp_(&mut ret, exp, env);
         return ret;
     }
+
+    pub fn is_support_exp(e: &MoveModelExp, env: &GlobalEnv) -> bool {
+        let exp_data = e.as_ref();
+        match exp_data {
+            MoveModelExpData::Invalid(_) => {return false},
+            MoveModelExpData::Call(_, op, args) => {
+                if !FunSpecGenerator::is_support_operation(op) {
+                    return false;
+                }
+                for a in args.iter() {
+                    if !FunSpecGenerator::is_support_exp(a, env) {
+                        return false;
+                    }
+                }
+            },
+            MoveModelExpData::Block(_,p,s,exp) => {
+                // handle_expdata_block_parren(p, env, shadows);
+                if let Some(op_exp) = s {
+                    if !FunSpecGenerator::is_support_exp(op_exp, env) {
+                        return false;
+                    }
+                }
+                if !FunSpecGenerator::is_support_exp(exp, env) {
+                    return false;
+                }
+                
+            },
+            MoveModelExpData::IfElse(_,_,_,_) => {},
+            MoveModelExpData::Return(_,_) => {},
+            MoveModelExpData::Sequence(_,vec_exp) => {
+                    for a in vec_exp.iter() {
+                        if !FunSpecGenerator::is_support_exp(a, env) {
+                            return false;
+                        }
+                    }
+            },
+            _ => {}
+        }
+        return true;
+    }
+
+    fn handle_pattern(&self, ret: &mut Vec<SpecExpItem>, p: &MoveModelPattern, op:&MoveModelExp, env: &GlobalEnv) {
+        match p {
+            MoveModelPattern::Var(_, v) => {
+                self.collect_spec_exp_(ret, op, env);
+                    ret.push(
+                        SpecExpItem::PatternLet {
+                            left: v.clone(),
+                            right: op.clone(),
+                        }
+                    );
+            },
+            MoveModelPattern::Tuple(_, vec_pattern) => {
+                for pat in vec_pattern.iter() {
+                    self.handle_pattern(ret, pat, op, env);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn is_support_operation(op:&Operation) -> bool {
+        match op {
+            Operation::BorrowGlobal(_)
+            | Operation::Borrow(_)
+            | Operation::Deref
+            | Operation::MoveTo
+            | Operation::MoveFrom
+            | Operation::Freeze
+            | Operation::Abort
+            | Operation::Vector => return false,
+            _ => return true,
+        }
+    }
+
+
 }
 
 
