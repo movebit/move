@@ -3,14 +3,33 @@ use crate::item_ori::MacroCall;
 use crate::project_ori::Project;
 use crate::types_ori::ResolvedType;
 use crate::ast_debug::*;
+use crate::utils::get_target_module;
 use move_compiler::shared::Identifier;
 // use move_compiler::{parser::ast::*, shared::ast_debug::AstDebug};
 use move_compiler::parser::ast::*;
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
+use std::borrow::BorrowMut;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::path::PathBuf;
+
+// -----------------
+use move_model::{
+    model::{GlobalEnv, FunctionEnv, StructEnv, ModuleId},
+    ty::{TypeDisplayContext, Type as MoveModelType},
+    ast::{
+        Exp as MoveModelExp, ExpData as MoveModelExpData, Value as MoveModelValue,
+    },
+};
+
+use crate::move_generate_spec_zx::{
+    ShadowItems as ShadowItemsZX,
+    SpecExpItem as SpecExpItemZX,
+    BinOPReason as BinOPReasonZX,
+};
+use std::ops::Deref;
+use crate::move_generate_spec_zx::get_shadows;
 
 #[derive(Default)]
 pub struct StructSpecGenerator {
@@ -24,9 +43,11 @@ impl StructSpecGenerator {
     pub(crate) fn to_string(self) -> String {
         self.result
     }
-    pub(crate) fn generate(&mut self, x: &StructDefinition) {
+    pub(crate) fn generate(&mut self, x: &StructEnv) {
         self.result
-            .push_str(format!("{}spec {}", indent(1), x.name.0.value.as_str()).as_str());
+            .push_str(format!("{}spec {}", indent(1), 
+                                    x.get_name().display(x.symbol_pool()).to_string()).as_str()
+        );
         self.result.push_str("{\n");
         self.result.push_str("\n");
         self.result.push_str(format!("{}}}\n", indent(1)).as_str())
@@ -45,7 +66,15 @@ pub fn generate_fun_spec(f: &Function, get_exp_ty: &dyn GetExprType) -> String {
     r
 }
 
-pub fn genrate_struct_spec(s: &StructDefinition) -> String {
+
+pub fn generate_fun_spec_zx(global_env: &GlobalEnv, f: &FunctionEnv, fpath: &PathBuf) -> String {
+    let mut g = FunSpecGenerator::new();
+    g.generate_zx(global_env, f, fpath);
+    let r = g.to_string();
+    r
+}
+
+pub fn genrate_struct_spec(s: &StructEnv) -> String {
     let mut g = StructSpecGenerator::new();
     g.generate(s);
     let r = g.to_string();
@@ -89,6 +118,88 @@ impl FunSpecGenerator {
         self.result.push_str(assert.as_str());
         self.result.push_str(format!("{}}}\n", indent(1)).as_str())
     }
+
+    pub(crate) fn generate_zx(&mut self, global_env: &GlobalEnv, f: &FunctionEnv, fpath: &PathBuf) {
+        let display_context = &TypeDisplayContext::new(global_env);
+        
+        self.result
+            .push_str(format!("{}spec {}", indent(1), f.get_name_str()).as_str());
+        self.result.push_str("(");
+
+        let para_len = f.get_parameter_count();
+        if para_len > 0 {
+            for (index, para) in f.get_parameters().iter().enumerate() {
+                self.result.push_str(para.0.display(f.symbol_pool()).to_string().as_str());
+                self.result.push_str(": ");
+    
+                let para_type_display = para.1.display(&display_context);
+                let mut para_type_string = para_type_display.to_string();
+                if let Some(position) = para_type_string.rfind("::") {
+                    para_type_string = para_type_string.get(position+2..).unwrap_or("").to_string();
+                } 
+
+                self.result.push_str(para_type_string.as_str());
+                if (index + 1) < para_len {
+                    self.result.push_str(", ");
+                }
+            }
+        }
+        self.result.push_str(")");
+        
+        let return_type = f.get_result_type();
+        let return_type_display = return_type.display(&display_context);
+        let mut return_type_string = String::from(": ");
+        return_type_string.push_str(&return_type_display.to_string());
+        match return_type {
+            MoveModelType::Tuple(_) => {
+                // ": ()" len is 4
+                if return_type_string.len() <= 4 {
+                    return_type_string = String::new();
+                }
+            },
+            _ => {}
+        }
+        self.result.push_str(return_type_string.as_str());
+
+        self.result.push_str("{\n");
+        self.result.push_str("\n");
+        let assert = Self::generate_body_zx(self, f, global_env, fpath);
+        // self.result.push_str(assert.as_str());
+        self.result.push_str(format!("{}}}\n", indent(1)).as_str())
+    }
+
+    fn generate_body_zx(&self, f: &FunctionEnv, global_env: &GlobalEnv, fpath: &PathBuf) -> String {        
+
+        eprintln!("generate_body_zx-----------");
+
+        let mut statements = String::new();
+        let mut shadows = ShadowItemsZX::new(f.get_loc());
+        let mut local_emited = HashSet::new();
+    
+        if let Some(exp) = f.get_def() {
+            get_shadows(exp, global_env, &mut shadows);
+            eprintln!("---------------------");
+            FunSpecGenerator::try_emit_exp_zx(
+                self, 
+                &shadows,
+                &mut statements,
+                &exp,
+                &mut local_emited,
+                &exp,
+                global_env,
+                f
+            );
+        } else {
+            eprint!("body is none");
+            return statements;
+        }
+
+        
+
+
+        return statements;
+    }
+
 
     fn generate_body(f: &Function, get_expr_type: &dyn GetExprType) -> String {
         let mut statements = String::new();
@@ -167,6 +278,9 @@ impl FunSpecGenerator {
         }
     }
 }
+
+
+
 
 impl FunSpecGenerator {
     fn try_emit_exp(
@@ -344,6 +458,71 @@ impl FunSpecGenerator {
             }
         }
     }
+
+    fn try_emit_exp_zx(
+        &self, 
+        shadows: &ShadowItemsZX,
+        statements: &mut String,
+        exp: &MoveModelExp,
+        local_emited: &mut HashSet<usize>,
+        body: &MoveModelExp,
+        env: &GlobalEnv,
+        func_env: &FunctionEnv
+    ) {
+        
+        let items = FunSpecGenerator::collect_spec_exp_zx(self, exp, env);
+        let display_context = &TypeDisplayContext::new(env);
+        for item in items.iter() {
+            match item {
+                SpecExpItemZX::BinOP { reason, left, right } => {
+                    let left_node_id = left.as_ref().node_id();
+                    let right_node_id = right.as_ref().node_id();
+
+                    let left_node_loc = env.get_node_loc(left_node_id);
+                    let right_node_loc = env.get_node_loc(right_node_id);
+
+                    let left_node_type = env.get_node_type(left.as_ref().node_id());
+                    let right_node_type = env.get_node_type(right.as_ref().node_id());
+                    let reason_str = match reason {
+                        BinOPReasonZX::DivByZero => "DivByZero",
+                        BinOPReasonZX::OverFlowADD => "OverFlowADD",
+                        BinOPReasonZX::OverFlowMUL => "OverFlowMUL",
+                        BinOPReasonZX::OverFlowSHL => "OverFlowSHL",
+                        BinOPReasonZX::UnderFlow => "UnderFlow",
+                    };
+                    
+
+                    eprintln!("BinOP = {:?} left = {:?}, left_type = {:?}, 
+                                            right = {:?}, right_type = {:?}", 
+                        reason_str,
+                        env.get_source(&left_node_loc),
+                        left_node_type.display(display_context).to_string(),
+                        env.get_source(&right_node_loc),
+                        right_node_type.display(display_context).to_string(),
+                    );
+                    
+                },
+                SpecExpItemZX::BorrowGlobalMut { ty, addr } => {
+                    eprintln!("BorrowGlobalMut ty = {:?} addr = {:?}", 
+                        ty.display(display_context).to_string(),
+                        addr.as_ref().display(env).to_string()
+                    );
+                },
+                SpecExpItemZX::TypeName { ty } => {
+                    eprintln!("TypeName ty = {:?}", 
+                        ty.display(display_context).to_string()
+                    );
+                },
+                SpecExpItemZX::TypeOf { ty } => {
+                    eprintln!("TypeName ty = {:?}", 
+                        ty.display(display_context).to_string()
+                    );
+                }
+            }
+        }
+    }
+
+    
 }
 impl FunSpecGenerator {
     fn expr_has_spec_unsupprted(e: &Exp) -> bool {

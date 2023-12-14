@@ -1,161 +1,155 @@
 // use super::context_ori::*;
-use super::context::*;
-use super::project_ori::*;
-use super::move_generate_spec::*;
-use crate::context_ori;
-use crate::project_ori;
-use crate::project_ori::ConvertLoc;
-use crate::project_ori::{attributes_has_test, AstProvider};
 
-use crate::utils_ori::GetPosition;
-use lsp_server::*;
-use move_compiler::parser::ast::*;
-use move_ir_types::location::Loc;
-use serde::Deserialize;
+use crate::{
+    utils::{get_modulus_in_file, GetPosition},
+    project::Project,
+    context::Context,
+    move_generate_spec::{genrate_struct_spec, generate_fun_spec_zx, GetExprTypeImpl},
+    
+};
+use move_model::model::{ModuleEnv, GlobalEnv, Loc};
 use std::{path::PathBuf, str::FromStr};
+use serde::{Deserialize, Serialize};
+// use lsp_server::{Request,Response};
+use lsp_server::{*, Message, Request, Response};
+use codespan::Location;
+
 
 pub fn on_generate_spec_sel(context: &mut Context, request: &Request) {
     log::info!("on_generate_spec_sel request = {:?}", request);
     let parameters = serde_json::from_value::<ReqParameters>(request.params.clone())
         .expect("could not deserialize go-to-def request");
-    let send_err = |context: &Context, msg: String| {
-        let r = Response::new_err(request.id.clone(), ErrorCode::UnknownErrorCode as i32, msg);
-        context
-            .connection
-            .sender
-            .send(Message::Response(r))
-            .unwrap();
-    };
+    
     let parameters = match ReqParametersPath::try_from(parameters) {
         Ok(p) => p,
         Err(_) => {
-            send_err(context, "not a valid path".to_string());
+            send_err(context, request,"not a valid path".to_string());
             return;
         }
     };
 
-    // let project = match context.projects.get_project(&parameters.fpath) {
-    //     Some(x) => x,
-    //     None => return,
-    // };
-
-    let mut manifest = PathBuf::new();    
-    match super::utils::discover_manifest_and_kind(&parameters.fpath.as_path()) {
-        Some((mani, _)) => { manifest = mani; },
-        _ => {}
-    }
-
-    let mut projects = context_ori::MultiProject::new();
-    let project = match project_ori::Project::new(manifest, &mut projects, |msg: String| {
-        log::info!("msg = {:?}", msg);
-    }) {
-        Ok(x) => x,
-        Err(err) => {
-            return;
-        }
-    };
-
-    let mut result: Option<Resp> = None;
-    let insert_pos = |loc: Loc, module_loc: Loc, context: &Context| -> Option<(u32, u32)> {
-        let module_loc = match project.convert_loc_range(&module_loc) {
-            Some(x) => x,
-            None => return None,
-        };
-        project.convert_loc_range(&loc).map(|x| {
-            let mut r = parameters.clone();
-            r.line = x.line_end + 1;
-            r.col = 4;
-            if ReqParametersPath::in_range(&r, &module_loc) {
-                (x.line_end + 1, x.col_end)
-            } else {
-                (x.line_end, x.col_end)
-            }
-        })
-    };
-    let mut process_member = |m: &ModuleMember, module_loc: Loc| {
-        match m {
-            ModuleMember::Function(f) => {
-                if attributes_has_test(&f.attributes).is_test() {
-                    return;
-                }
-                if let Some(range) = project.convert_loc_range(&f.loc) {
-                    if ReqParametersPath::in_range(&parameters, &range) {
-                        if let Some(insert_pos) = insert_pos(f.loc, module_loc, context) {
-                            let s = generate_fun_spec(
-                                f,
-                                &GetExprTypeImpl::new(&parameters.fpath.clone(), &project),
-                            );
-                            result = Some(Resp {
-                                line: insert_pos.0,
-                                col: insert_pos.1,
-                                content: s,
-                            });
-                        }
-                    }
-                }
-            }
-            ModuleMember::Struct(f) => {
-                if attributes_has_test(&f.attributes).is_test() {
-                    return;
-                }
-                if let Some(range) = project.convert_loc_range(&f.loc) {
-                    if ReqParametersPath::in_range(&parameters, &range) {
-                        if let Some(insert_pos) = insert_pos(f.loc, module_loc, context) {
-                            let s = genrate_struct_spec(f);
-                            result = Some(Resp {
-                                line: insert_pos.0,
-                                col: insert_pos.1,
-                                content: s,
-                            });
-                        }
-                    }
-                }
-            }
-            _ => {}
-        };
-    };
-    let call_back = |ds: &Definition| {
-        match ds {
-            Definition::Module(x) => {
-                if x.is_spec_module {
-                    return;
-                }
-                if attributes_has_test(&x.attributes).is_test() {
-                    return;
-                }
-                let module_loc = x.loc;
-                for m in x.members.iter() {
-                    process_member(m, module_loc);
-                }
-            }
-            Definition::Address(x) => {
-                if attributes_has_test(&x.attributes).is_test() {
-                    return;
-                }
-                for m in x.modules.iter() {
-                    let module_loc = x.loc;
-                    for m in m.members.iter() {
-                        process_member(m, module_loc);
-                    }
-                }
-            }
-            Definition::Script(_) => {}
-        };
-    };
-    let _ = project.get_defs(&parameters.fpath, |x| x.with_definition(call_back));
-    let result = match result {
+    let project = match context.projects.get_project(&parameters.fpath) {
         Some(x) => x,
         None => {
-            send_err(context, "spec target not found.".to_string());
-            return;
+            log::error!("project not found:{:?}", parameters.fpath.as_path());
+            return ;
         }
     };
+
+    let mut result = Default::default();
+    let mut insert_pos: (u32, u32) = (0,0);
+    let mut result_string :String = String::new();
+    let mut is_find = false;
+
+    for module_env in get_modulus_in_file(&project.global_env, &parameters.fpath) {
+        if handle_struct(&project, &module_env, &parameters, &mut insert_pos, &mut result_string) ||
+            handle_function(&project, &module_env, &parameters, &mut insert_pos, &mut result_string) {
+                is_find = true;
+                break;
+        }
+    }
+
+    if !is_find {
+        send_err(context, request,"spec target not found.".to_string());
+        return ;
+    }
+
+    result = Some(Resp {line: insert_pos.0, 
+                        col: insert_pos.1,
+                        content: result_string.clone(),
+                    }
+                );
+
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(result).unwrap());
     context
         .connection
         .sender
         .send(Message::Response(r))
         .unwrap();
+}
+
+fn send_err(context: &Context, requset: &Request, msg: String) {
+    let r = Response::new_err(requset.id.clone(), ErrorCode::UnknownErrorCode as i32, msg);
+    context
+        .connection
+        .sender
+        .send(Message::Response(r))
+        .unwrap();
+}
+
+fn handle_struct(project :&Project, module_env : &ModuleEnv, 
+                parameters: &ReqParametersPath, insert_pos: &mut(u32, u32),
+                result_string: &mut String) -> bool 
+{
+    for struct_env in module_env.get_structs() {
+        if !ReqParametersPath::is_linecol_in_loc(parameters.line, parameters.col, 
+                                                &struct_env.get_loc(), &project.global_env) 
+        {
+            continue;
+        }
+        let end_location = match ReqParametersPath::get_loc_end_location(&struct_env.get_loc(), &project.global_env) {
+            Some(x) => x,
+            None => return false,
+        };
+
+        let mut new_parameters = parameters.clone();
+        new_parameters.line = end_location.line.0 + 1;
+        new_parameters.col = 4;
+
+        insert_pos.0 = end_location.line.0;
+        insert_pos.1 = 4;
+        if ReqParametersPath::is_linecol_in_loc(new_parameters.line, new_parameters.col, 
+                                                &module_env.get_loc(), &project.global_env) 
+        {
+            insert_pos.0 = insert_pos.0 + 1;
+        }
+
+        result_string.push_str(genrate_struct_spec(&struct_env).as_str());
+        
+        return true;
+    }
+    return false;
+}
+
+fn handle_function(project :&Project, module_env : &ModuleEnv, 
+    parameters: &ReqParametersPath, insert_pos: &mut(u32, u32),
+    result_string: &mut String) -> bool 
+{
+    for func_env in module_env.get_functions() {
+        if !ReqParametersPath::is_linecol_in_loc(parameters.line, parameters.col, 
+                                                &func_env.get_loc(), &project.global_env) 
+        {
+            continue;
+        }
+
+        let end_location = match ReqParametersPath::get_loc_end_location(&func_env.get_loc(), &project.global_env) {
+            Some(x) => x,
+            None => return false,
+        };
+
+        let mut new_parameters = parameters.clone();
+        new_parameters.line = end_location.line.0 + 1;
+        new_parameters.col = 4;
+
+        insert_pos.0 = end_location.line.0;
+        insert_pos.1 = 4;
+
+        if ReqParametersPath::is_linecol_in_loc(new_parameters.line, new_parameters.col, 
+                                                &module_env.get_loc(), &project.global_env) 
+        {
+            insert_pos.0 = insert_pos.0 + 1;
+        }
+
+        result_string.push_str(
+            generate_fun_spec_zx(
+                &project.global_env, 
+                &func_env, 
+                &new_parameters.fpath)
+            .as_str()
+        );
+        return true;
+    }
+    return false;
 }
 
 #[derive(Clone, Deserialize)]
@@ -185,59 +179,60 @@ impl TryFrom<ReqParameters> for ReqParametersPath {
         }
     }
 }
+
 impl GetPosition for ReqParametersPath {
     fn get_position(&self) -> (PathBuf, u32 /* line */, u32 /* col */) {
         (self.fpath.clone(), self.line, self.col)
     }
 }
 
-#[derive(Clone, serde::Serialize)]
+impl ReqParametersPath {
+    fn is_linecol_in_loc(line :u32, col :u32, loc : &Loc, env:&GlobalEnv) -> bool {
+        let start_location = match env.get_location(loc) {
+            Some(x) => x,
+            None => return false,
+        };
+
+        let end_location = match Self::get_loc_end_location(loc, env) {
+            Some(x) => x,
+            None => return false,
+        };
+
+
+        if line < start_location.line.0 {
+            return false;
+        }
+        if line == start_location.line.0 && col < start_location.column.0 {
+            return false;
+        }
+        if line > end_location.line.0 {
+            return false;
+        }
+        if line == end_location.line.0 && col > end_location.column.0 {
+            return false;
+        }
+
+        return true;
+    }
+
+    fn get_loc_end_location(loc: &Loc, env: &GlobalEnv) -> Option<Location> {
+        env.get_location(
+            &move_model::model::Loc::new(
+                loc.file_id(), 
+                codespan::Span::new(
+                    loc.span().end(), 
+                    loc.span().end()
+                )
+            )
+        )
+    }
+}
+
+
+
+#[derive(Clone, Serialize)]
 pub struct Resp {
     line: u32,
     col: u32,
     content: String,
-}
-
-#[cfg(test)]
-#[test]
-fn test_fun_pure() {
-    use move_command_line_common::files::FileHash;
-    use move_compiler::{parser::syntax::parse_file_string, shared::CompilationEnv, Flags};
-    let fh = FileHash::empty();
-    let mut env = CompilationEnv::new(Flags::empty());
-    let defs = parse_file_string(
-        &mut env,
-        fh,
-        r#"
-        module 0x1::xxx { 
-            fun aaa() :u8 {1}
-        }
-    "#,
-    )
-    .unwrap();
-    let defs = defs.0;
-
-    let mut f = None;
-    for d in defs.iter() {
-        match d {
-            Definition::Module(x) => {
-                for xx in x.members.iter() {
-                    match xx {
-                        ModuleMember::Function(x) => f = Some(x),
-                        ModuleMember::Struct(_) => unreachable!(),
-                        ModuleMember::Use(_) => unreachable!(),
-                        ModuleMember::Friend(_) => unreachable!(),
-                        ModuleMember::Constant(_) => unreachable!(),
-                        ModuleMember::Spec(_) => unreachable!(),
-                    }
-                }
-            }
-            Definition::Address(_) => unreachable!(),
-            Definition::Script(_) => unreachable!(),
-        }
-    }
-    let f = f.unwrap();
-
-    let (_, pure) = fun_may_pure(f);
-    assert!(pure)
 }
