@@ -85,6 +85,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
 
         handle_document_symbols_function(&project, &module_env, &mut children);
         handle_document_symbols_const(&project, &module_env, &mut children);
+        handle_document_symbols_struct(project, &module_env, &mut children);
 
         result_vec_document_symbols.push( DocumentSymbol{
             name: module_name,
