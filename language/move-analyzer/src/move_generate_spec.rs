@@ -123,8 +123,7 @@ impl FunSpecGenerator {
     }
 
     pub(crate) fn generate_zx(&mut self, global_env: &GlobalEnv, f: &FunctionEnv, fpath: &PathBuf) {
-        let display_context = &TypeDisplayContext::new(global_env);
-        
+        let display_context = f.get_type_display_ctx();
         self.result
             .push_str(format!("{}spec {}", indent(1), f.get_name_str()).as_str());
         self.result.push_str("(");
@@ -151,8 +150,13 @@ impl FunSpecGenerator {
         
         let return_type = f.get_result_type();
         let return_type_display = return_type.display(&display_context);
-        let mut return_type_string = String::from(": ");
-        return_type_string.push_str(&return_type_display.to_string());
+        let mut return_type_string = return_type_display.to_string();
+        
+        if let Some(position) = return_type_string.rfind("::") {
+            return_type_string = return_type_string.get(position+2..).unwrap_or("").to_string();
+        } 
+
+        return_type_string.insert_str(0, ": ");
         match return_type {
             MoveModelType::Tuple(_) => {
                 // ": ()" len is 4
@@ -279,8 +283,6 @@ impl FunSpecGenerator {
         }
     }
 }
-
-
 
 
 impl FunSpecGenerator {
