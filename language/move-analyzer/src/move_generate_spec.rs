@@ -17,7 +17,7 @@ use std::path::PathBuf;
 
 // -----------------
 use move_model::{
-    model::{GlobalEnv, FunctionEnv, StructEnv, ModuleId, NodeId},
+    model::{GlobalEnv, FunctionEnv, StructEnv, ModuleId, NodeId, },
     ty::{TypeDisplayContext, Type as MoveModelType},
     ast::{
         Exp as MoveModelExp, ExpData as MoveModelExpData, Value as MoveModelValue,
@@ -123,50 +123,58 @@ impl FunSpecGenerator {
     }
 
     pub(crate) fn generate_zx(&mut self, global_env: &GlobalEnv, f: &FunctionEnv, fpath: &PathBuf) {
+
         let display_context = f.get_type_display_ctx();
-        self.result
-            .push_str(format!("{}spec {}", indent(1), f.get_name_str()).as_str());
-        self.result.push_str("(");
+        // self.result
+        //     .push_str(format!("{}spec {}", indent(1), f.get_name_str()).as_str());
+        let mut fun_header = f.get_header_string();
+        if let Some(position) = fun_header.find("fun") {
+            fun_header = fun_header.get(position+3..).unwrap_or("").to_string();
 
-        let para_len = f.get_parameter_count();
-        if para_len > 0 {
-            for (index, para) in f.get_parameters().iter().enumerate() {
-                self.result.push_str(para.0.display(f.symbol_pool()).to_string().as_str());
-                self.result.push_str(": ");
-    
-                let para_type_display = para.1.display(&display_context);
-                let mut para_type_string = para_type_display.to_string();
-                if let Some(position) = para_type_string.rfind("::") {
-                    para_type_string = para_type_string.get(position+2..).unwrap_or("").to_string();
-                } 
-
-                self.result.push_str(para_type_string.as_str());
-                if (index + 1) < para_len {
-                    self.result.push_str(", ");
-                }
-            }
+            fun_header.insert_str(0, format!("{}spec" , indent(1)).as_str());
         }
-        self.result.push_str(")");
-        
-        let return_type = f.get_result_type();
-        let return_type_display = return_type.display(&display_context);
-        let mut return_type_string = return_type_display.to_string();
-        
-        if let Some(position) = return_type_string.rfind("::") {
-            return_type_string = return_type_string.get(position+2..).unwrap_or("").to_string();
-        } 
+        self.result.push_str(fun_header.as_str());
+        // self.result.push_str("(");
 
-        return_type_string.insert_str(0, ": ");
-        match return_type {
-            MoveModelType::Tuple(_) => {
-                // ": ()" len is 4
-                if return_type_string.len() <= 4 {
-                    return_type_string = String::new();
-                }
-            },
-            _ => {}
-        }
-        self.result.push_str(return_type_string.as_str());
+        // let para_len = f.get_parameter_count();
+        // if para_len > 0 {
+        //     for (index, para) in f.get_parameters().iter().enumerate() {
+        //         self.result.push_str(para.0.display(f.symbol_pool()).to_string().as_str());
+        //         self.result.push_str(": ");
+                
+        //         let para_type_display = para.1.display(&display_context);
+        //         let mut para_type_string = para_type_display.to_string();
+        //         // if let Some(position) = para_type_string.rfind("::") {
+        //         //     para_type_string = para_type_string.get(position+2..).unwrap_or("").to_string();
+        //         // } 
+
+        //         self.result.push_str(para_type_string.as_str());
+        //         if (index + 1) < para_len {
+        //             self.result.push_str(", ");
+        //         }
+        //     }
+        // }
+        // self.result.push_str(")");
+        
+        // let return_type = f.get_result_type();
+        // let return_type_display = return_type.display(&display_context);
+        // let mut return_type_string = return_type_display.to_string();
+        
+        // if let Some(position) = return_type_string.rfind("::") {
+        //     return_type_string = return_type_string.get(position+2..).unwrap_or("").to_string();
+        // } 
+
+        // return_type_string.insert_str(0, ": ");
+        // match return_type {
+        //     MoveModelType::Tuple(_) => {
+        //         // ": ()" len is 4
+        //         if return_type_string.len() <= 4 {
+        //             return_type_string = String::new();
+        //         }
+        //     },
+        //     _ => {}
+        // }
+        // self.result.push_str(return_type_string.as_str());
         self.result.push_str("{\n");
         self.result.push_str("\n");
         let assert = Self::generate_body_zx(self, f, global_env, fpath);
@@ -565,6 +573,22 @@ impl FunSpecGenerator {
                         },
                     };
                 },
+                SpecExpItemZX::MarcoAbort{if_exp, abort_exp} => {
+                    match if_exp.as_ref() {
+                        MoveModelExpData::Call(_, op, _) => match op {
+                            MoveModelOperation::Eq | MoveModelOperation::Neq | 
+                            MoveModelOperation::Lt | MoveModelOperation::Gt | 
+                            MoveModelOperation::Le | MoveModelOperation::Ge => {
+                                FunSpecGenerator::handle_binop_exp(statements, if_exp, op, abort_exp, env);
+                            }
+                            MoveModelOperation::MoveFunction(_, _) => {
+                                FunSpecGenerator::handle_funcop_exp(statements, if_exp, abort_exp, env);
+                            }
+                            _ => {}
+                        },
+                        _ => {}
+                    }
+                },
                 SpecExpItemZX::PatternLet { left, right } => {
                     let right_node_id = right.as_ref().node_id();
                     let right_node_loc = env.get_node_loc(right_node_id);
@@ -589,6 +613,81 @@ impl FunSpecGenerator {
                 SpecExpItemZX::TypeOf { ty } => {}
             }
         }
+    }
+
+    fn handle_binop_exp(statements: &mut String, if_exp: &MoveModelExp, op: &MoveModelOperation, abort_exp: &MoveModelExp, env: &GlobalEnv) {
+        fn inverse_binop_zx(op: &MoveModelOperation) -> (String, String) {
+            match op {
+                MoveModelOperation::Eq => (String::from("=="), String::from("!=")),
+                MoveModelOperation::Neq => (String::from("!="), String::from("==")),
+                MoveModelOperation::Lt => (String::from("<"), String::from(">=")),
+                MoveModelOperation::Gt => (String::from(">"), String::from("<=")),
+                MoveModelOperation::Le => (String::from("<="), String::from(">")),
+                MoveModelOperation::Ge => (String::from(">="), String::from("<")),
+                _ => (String::from("_"), String::from("_")),
+            }
+        }
+        
+        let op2 = inverse_binop_zx(op);
+                            
+        let if_exp_node_id = if_exp.as_ref().node_id();
+        let mut if_exp_node_loc = env.get_node_loc(if_exp_node_id);
+        let if_exp_str = match env.get_source(&if_exp_node_loc) {
+            Ok(x) => FunSpecGenerator::remove_parentheses(x),
+            Err(_) => return,
+        };
+        
+        let mut if_exp_inverse_str = String::new();
+        if let Some(_) = if_exp_str.find(op2.0.as_str()) {
+            eprintln!("before {:?}" , if_exp_str);
+            if_exp_inverse_str = if_exp_str.replace(op2.0.as_str(), op2.1.as_str());
+            eprintln!("after {:?}" , if_exp_str);
+        } else {
+            return;
+        }
+
+        let abort_exp_node_id = abort_exp.as_ref().node_id();
+        let abort_exp_node_loc = env.get_node_loc(abort_exp_node_id);
+        let abort_exp_str = match env.get_source(&abort_exp_node_loc) {
+            Ok(x) => FunSpecGenerator::remove_parentheses(x),
+            Err(_) => return,
+        };
+
+        statements.push_str(
+            format!(
+                "{}aborts_if {} with {};\n",
+                indent(2),
+                if_exp_inverse_str,
+                abort_exp_str,
+            )
+            .as_str(),
+        );
+    }
+
+    fn handle_funcop_exp(statements: &mut String, if_exp: &MoveModelExp, abort_exp: &MoveModelExp, env: &GlobalEnv) {                  
+        let if_exp_node_id = if_exp.as_ref().node_id();
+        let mut if_exp_node_loc = env.get_node_loc(if_exp_node_id);
+        let if_exp_str = match env.get_source(&if_exp_node_loc) {
+            Ok(x) => FunSpecGenerator::remove_parentheses(x),
+            Err(_) => return,
+        };
+
+        let abort_exp_node_id = abort_exp.as_ref().node_id();
+        let abort_exp_node_loc = env.get_node_loc(abort_exp_node_id);
+        let abort_exp_str = match env.get_source(&abort_exp_node_loc) {
+            Ok(x) => FunSpecGenerator::remove_parentheses(x),
+            Err(_) => return,
+        };
+
+        statements.push_str(
+            format!(
+                "{}aborts_if !{} with {};\n",
+                indent(2),
+                if_exp_str,
+                abort_exp_str,
+            )
+            .as_str(),
+        );
     }
 
     fn remove_parentheses(input: &str) -> &str {

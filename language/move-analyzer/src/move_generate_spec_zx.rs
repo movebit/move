@@ -113,7 +113,13 @@ pub fn get_shadows(exp: &MoveModelExp, env: &GlobalEnv, shadows: &mut ShadowItem
             eprintln!("LocalVar = {:?}", sym.display(env.symbol_pool()).to_string());
         },
         MoveModelExpData::Temporary(_, _) => {eprintln!("body is Temporary")},
-        MoveModelExpData::Call(_, _, _) => {eprintln!("body is Call")},
+        MoveModelExpData::Call(node_id, oper, args) => {
+            eprintln!("call op is {:?}", oper.display(env, *node_id).to_string());
+            for arg in args.iter() {
+                eprint!("    ");
+                get_shadows(arg, env, shadows);
+            }
+        },
         MoveModelExpData::Invoke(_, _, _) => {eprintln!("body is Invalid")},
         MoveModelExpData::Lambda(_, _, _) => {eprintln!("body is Lambda")},
         MoveModelExpData::Quant(_,_,_,_,_,_) => {eprintln!("body is Quant")},
@@ -126,7 +132,15 @@ pub fn get_shadows(exp: &MoveModelExp, env: &GlobalEnv, shadows: &mut ShadowItem
             eprint!("body is Block ->");
             get_shadows(exp, env, shadows)
         },
-        MoveModelExpData::IfElse(_,_,_,_) => {eprintln!("body is IfElse")},
+        MoveModelExpData::IfElse(_,if_exp,if_do_exp,else_do_exp) => {
+            eprintln!("body is IfElse ->");
+            eprint!("if exp: ");
+            get_shadows(if_exp, env, shadows);
+            eprint!("if do exp: ");
+            get_shadows(if_do_exp, env, shadows);
+            eprint!("if exp: ");
+            get_shadows(else_do_exp, env, shadows);
+        },
         MoveModelExpData::Return(_,_) => {eprintln!("body is Return")},
         MoveModelExpData::Sequence(_,vec_exp) => {
             
@@ -216,6 +230,10 @@ pub(crate) enum SpecExpItem {
     PatternLet {
         left: Symbol,
         right: MoveModelExp,
+    },
+    MarcoAbort {
+        if_exp:MoveModelExp,
+        abort_exp: MoveModelExp,
     }
 }
 
@@ -437,6 +455,30 @@ impl FunSpecGenerator {
             MoveModelExpData::Call(id, op, vec_exp) => {
                 self.collect_spec_exp_op(ret, op, vec_exp, env);
             },
+            MoveModelExpData::IfElse(_, if_exp, if_do_exp, else_do_exp) => {
+                // 如果 if_do_exp为空且else_do_exp调用了 abort num, 则源代码应该调用了宏函数
+                match if_do_exp.as_ref() {
+                    MoveModelExpData::Call(_, _, if_do_args) => {
+                        if !if_do_args.is_empty() {return ;}
+                        match else_do_exp.as_ref() {
+                            MoveModelExpData::Call(_, oper, abort_exp) => match oper {
+                                Operation::Abort => {
+                                    if abort_exp.len() != 1 {return ;}
+                                    ret.push(
+                                        SpecExpItem::MarcoAbort  {
+                                            if_exp: if_exp.clone(),
+                                            abort_exp: abort_exp.get(0).unwrap().clone(),
+                                        }
+                                    );
+                                }
+                                _ => {}
+                            } ,
+                            _ => {}
+                        }
+                    },
+                    _ => {}
+                }
+            }
             _ => {}
         }
     }
@@ -567,7 +609,6 @@ impl FunSpecGenerator {
             | Operation::MoveTo
             | Operation::MoveFrom
             | Operation::Freeze
-            | Operation::Abort
             | Operation::Vector => return false,
             _ => return true,
         }
