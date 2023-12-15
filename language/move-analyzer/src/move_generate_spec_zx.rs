@@ -1,8 +1,9 @@
 use std::{
     collections::HashMap,
-    path::PathBuf,
+    path::PathBuf, ops::Deref,
 };
 
+use im::HashSet;
 use move_model::{
     symbol::Symbol,
     ast::{UseDecl, ModuleName, Operation},
@@ -195,7 +196,7 @@ pub fn handle_expdata_block_parren(
     }
 }
 
-
+#[derive(Clone)]
 pub(crate) enum SpecExpItem {
     BinOP {
         reason: BinOPReason,
@@ -227,21 +228,6 @@ pub(crate) enum BinOPReason {
     OverFlowSHL,
     DivByZero,
     UnderFlow,
-}
-
-impl BinOPReason {
-    /// 匹配可能有问题的错误类型
-    fn cause_exception()  {
-        // match op {
-        //     BinOp_::Add => Some(Self::OverFlowADD),
-        //     BinOp_::Sub => Some(Self::UnderFlow),
-        //     BinOp_::Mul => Some(Self::OverFlowMUL),
-        //     BinOp_::Mod => Some(Self::DivByZero),
-        //     BinOp_::Div => Some(Self::DivByZero),
-        //     BinOp_::Shl => Some(Self::OverFlowSHL),
-        //     _ => None,
-        // }
-    }
 }
 
 impl FunSpecGenerator {
@@ -458,6 +444,7 @@ impl FunSpecGenerator {
     pub(crate) fn collect_spec_exp_zx(&self, exp: &MoveModelExp, env: &GlobalEnv) -> Vec<SpecExpItem> {
         let mut ret: Vec<SpecExpItem> = Vec::new();
         self.collect_spec_exp_(&mut ret, exp, env);
+        let ret = FunSpecGenerator::handle_unused_pattern(&mut ret, env);
         return ret;
     }
 
@@ -501,24 +488,75 @@ impl FunSpecGenerator {
         return true;
     }
 
-    fn handle_pattern(&self, ret: &mut Vec<SpecExpItem>, p: &MoveModelPattern, op:&MoveModelExp, env: &GlobalEnv) {
+    fn handle_pattern(&self, ret: &mut Vec<SpecExpItem>, p: &MoveModelPattern, assign_exp:&MoveModelExp, env: &GlobalEnv) {
         match p {
             MoveModelPattern::Var(_, v) => {
-                self.collect_spec_exp_(ret, op, env);
+                self.collect_spec_exp_(ret, assign_exp, env);
                     ret.push(
                         SpecExpItem::PatternLet {
                             left: v.clone(),
-                            right: op.clone(),
+                            right: assign_exp.clone(),
                         }
                     );
             },
             MoveModelPattern::Tuple(_, vec_pattern) => {
-                for pat in vec_pattern.iter() {
-                    self.handle_pattern(ret, pat, op, env);
+                match assign_exp.as_ref() {
+                    MoveModelExpData::Call(call_node_id, oper, args) => {
+                        if vec_pattern.len() != args.len() {
+                            return ;
+                        }
+
+                        for index in 0..vec_pattern.len() {
+                            let pat = vec_pattern.get(index).unwrap();
+                            let arg_exp = args.get(index).unwrap();
+                            self.handle_pattern(ret, pat, arg_exp, env);
+                        }
+                        
+                    }
+                    _ => return ,
+                }  
+                eprintln!("handle tuple pattern start ---------");
+                for (index, pat) in vec_pattern.iter().enumerate() {
+                    // self.handle_pattern(ret, pat, op, env);
+                               
                 }
+                eprintln!("handle tuple pattern end ---------");
             }
             _ => {}
         }
+    }
+
+    fn handle_unused_pattern(items: &Vec<SpecExpItem>, env: &GlobalEnv) -> Vec<SpecExpItem>{
+        let mut ret = items.clone();
+        let mut used_local_var:HashSet<Symbol> = HashSet::new();
+        for item in items.iter().rev() {
+            match item {
+                SpecExpItem::BinOP { reason, left, right } => {
+                    let left_vars = left.free_vars(env);
+                    let right_vars = right.free_vars(env);
+
+                    left_vars.iter().for_each(|(sym, _)| { used_local_var.insert(sym.clone()); });
+                    right_vars.iter().for_each(|(sym, _)| { used_local_var.insert(sym.clone()); });
+                },
+                SpecExpItem::PatternLet { left, right } => {
+                    if used_local_var.contains(left) {
+                        let right_vars = right.free_vars(env);
+                        right_vars.iter().for_each(|(sym, _)| { used_local_var.insert(sym.clone()); });
+                    } else {
+                        ret.retain(|x| {
+                            match x {
+                                SpecExpItem::PatternLet { left: l_iter, right: r_iter } =>
+                                    !(*left == *l_iter && *right == *r_iter),
+                                _ => true,
+                            }
+                        });
+                    }
+                },
+                _ => {}
+            }
+        }
+
+        return ret;
     }
 
     fn is_support_operation(op:&Operation) -> bool {

@@ -471,7 +471,7 @@ impl FunSpecGenerator {
         func_env: &FunctionEnv
     ) {
         
-        let items = FunSpecGenerator::collect_spec_exp_zx(self, exp, env);
+        let mut items = FunSpecGenerator::collect_spec_exp_zx(self, exp, env);        
         let display_context = &TypeDisplayContext::new(env);
         for item in items.iter() {
             match item {
@@ -496,8 +496,11 @@ impl FunSpecGenerator {
 
                     eprintln!("left exp");
                     FunSpecGenerator::helper_exp_print(left, env,1);
+                    // let temps = left.used_temporaries(func_env);
                     eprintln!("right exp");
                     FunSpecGenerator::helper_exp_print(right, env,1);
+                    
+
                     eprintln!("--------------- ");
                     eprintln!("--------------- ");
                     eprintln!("--------------- ");
