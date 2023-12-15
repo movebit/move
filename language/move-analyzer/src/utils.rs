@@ -375,10 +375,12 @@ pub fn get_modulus_in_file<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Vec<Modul
     let mut result_vec_modules: Vec<ModuleEnv> = vec![];
 
     let mut target_module_id = ModuleId::new(0);
-    get_target_module(env, &fpath, &mut target_module_id);
+    if !get_target_module(env, &fpath, &mut target_module_id) {
+        return result_vec_modules;
+    }
+
     let target_module_env = env.get_module(target_module_id);
     let target_file_id = target_module_env.get_loc().file_id();
-
     eprintln!("target file id = {:?}", target_file_id);
     for module_env in env.get_target_modules() {
         if (target_file_id == module_env.get_loc().file_id()) {
