@@ -360,9 +360,10 @@ pub fn get_target_module(env: &GlobalEnv, move_file_path: &Path, target_module_i
         }
     }
     for module in env.get_target_modules() {
+        log::info!("lll >> cpmper move_file_str = {:?}, module.name = {:?}",
+                move_file_str,
+                module.get_full_name_str());
         if module.matches_name(move_file_str) {
-            log::info!("lll >> get_target_module move_file_str = {:?}, module.name = {:?}",
-                move_file_str, module.get_full_name_str());
             *target_module_id = module.get_id();
             return true;
         }
@@ -370,7 +371,19 @@ pub fn get_target_module(env: &GlobalEnv, move_file_path: &Path, target_module_i
     false
 }
 
+
 use move_model::model::ModuleEnv;
+pub fn get_target_module_by_fpath<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Vec<ModuleEnv<'a>> {
+    let mut result_vec_modules: Vec<ModuleEnv> = vec![];
+    for module_env in env.get_target_modules() {
+        if env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string() != fpath.to_string_lossy().to_string() {
+            continue;
+        }
+        result_vec_modules.push(module_env);
+    }
+    return result_vec_modules;
+}
+
 pub fn get_modulus_in_file<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Vec<ModuleEnv<'a>> {
     let mut result_vec_modules: Vec<ModuleEnv> = vec![];
 

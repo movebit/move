@@ -1,7 +1,7 @@
 // use super::context_ori::*;
 
 use crate::{
-    utils::{get_modulus_in_file, GetPosition},
+    utils::{GetPosition, get_target_module_by_fpath},
     project::Project,
     context::Context,
     move_generate_spec::{genrate_struct_spec, generate_fun_spec_zx, GetExprTypeImpl},
@@ -42,7 +42,9 @@ pub fn on_generate_spec_sel(context: &mut Context, request: &Request) {
     let mut result_string :String = String::new();
     let mut is_find = false;
 
-    for module_env in get_modulus_in_file(&project.global_env, &parameters.fpath) {
+    // get_target_module_by_fpath(&project.global_env, &parameters.fpath);
+
+    for module_env in get_target_module_by_fpath(&project.global_env, &parameters.fpath) {
         if handle_struct(&project, &module_env, &parameters, &mut insert_pos, &mut result_string) ||
             handle_function(&project, &module_env, &parameters, &mut insert_pos, &mut result_string) {
                 is_find = true;
@@ -128,6 +130,8 @@ fn handle_function(project :&Project, module_env : &ModuleEnv,
             None => return false,
         };
 
+        eprintln!("function end line = {:?}", end_location.line);
+
         let mut new_parameters = parameters.clone();
         new_parameters.line = end_location.line.0 + 1;
         new_parameters.col = 4;
@@ -135,11 +139,13 @@ fn handle_function(project :&Project, module_env : &ModuleEnv,
         insert_pos.0 = end_location.line.0;
         insert_pos.1 = 4;
 
+        eprintln!("insert spec function end line = {:?}, before", insert_pos.0);
         if ReqParametersPath::is_linecol_in_loc(new_parameters.line, new_parameters.col, 
                                                 &module_env.get_loc(), &project.global_env) 
         {
             insert_pos.0 = insert_pos.0 + 1;
         }
+        eprintln!("insert spec function end line = {:?}, before", insert_pos.0);
 
    
         result_string.push_str(

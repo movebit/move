@@ -124,8 +124,6 @@ impl FunSpecGenerator {
     }
 
     pub(crate) fn generate_zx(&mut self, project: &ProjectZX, global_env: &GlobalEnv, f: &FunctionEnv, fpath: &PathBuf) {
-
-    
         let display_context = f.get_type_display_ctx();
         self.result
             .push_str(format!("{}spec {}", indent(1), f.get_name_str()).as_str());
@@ -216,7 +214,6 @@ impl FunSpecGenerator {
     fn struct_str(mid: ModuleId, sid: StructId, context: &TypeDisplayContext, project: &ProjectZX) -> String {
         let env = context.env;
         if let Some(builder_table) = context.builder_struct_table {
-            eprintln!("111111111111");
             let qsym = builder_table.get(&(mid, sid)).expect("type known");
             qsym.display(context.env).to_string()
         } else {
@@ -233,8 +230,7 @@ impl FunSpecGenerator {
             let struct_module_env_full_name = struct_module_env.get_full_name_str();
             let addr_end = struct_module_env_full_name.find("::").unwrap_or_default();
             let addr = struct_module_env_full_name[0..addr_end].to_string();
-            
-
+        
             let struct_env = struct_module_env.clone().into_struct(sid);
             format!(
                 "{}::{}::{}",
