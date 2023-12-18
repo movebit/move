@@ -86,6 +86,14 @@ impl FunSpecGenerator {
     }
 
     pub(crate) fn generate_zx(&mut self, project: &ProjectZX, global_env: &GlobalEnv, f: &FunctionEnv, fpath: &PathBuf) {
+        use crate::type_display_zx::TypeDisplayZX;
+        let mut addr_2_addrname = HashMap::new();
+        for helper1 in project.targets.iter() {
+            for (addr_name, addr) in helper1.named_address_map.iter() {
+                addr_2_addrname.insert(addr.to_string(), addr_name.clone());
+            }
+        }
+        
         let display_context = f.get_type_display_ctx();
         self.result
             .push_str(format!("{}spec {}", indent(1), f.get_name_str()).as_str());
@@ -97,16 +105,12 @@ impl FunSpecGenerator {
             for (index, para) in f.get_parameters().iter().enumerate() {
                 self.result.push_str(para.0.display(f.symbol_pool()).to_string().as_str());
                 self.result.push_str(": ");
-
-                let mut para_type_string = match &para.1 {
-                    MoveModelType::Struct(module_id, struct_id, _ ) => {
-                        let s = FunSpecGenerator::struct_str(*module_id, *struct_id, &display_context, project);
-                        s
-                    }
-                    _ => para.1.display(&display_context).to_string(),
+                let display_context_para = TypeDisplayZX {
+                    type_: &para.1,
+                    context: &display_context,
+                    addr_2_addrname: &addr_2_addrname,
                 };
-
- 
+                let para_type_string = display_context_zx.to_string();
                 self.result.push_str(para_type_string.as_str());
                 if (index + 1) < para_len {
                     self.result.push_str(", ");
@@ -116,13 +120,12 @@ impl FunSpecGenerator {
         self.result.push_str(")");
         
         let return_type = f.get_result_type();
-        let mut return_type_string = match return_type {
-            MoveModelType::Struct(module_id, struct_id, _ ) => {
-                let s = FunSpecGenerator::struct_str(module_id, struct_id, &display_context, project);
-                s
-            }
-            _ => return_type.display(&display_context).to_string(),
+        let display_context_return = TypeDisplayZX {
+            type_: &return_type,
+            context: &display_context,
+            addr_2_addrname: &addr_2_addrname,
         };
+        let mut return_type_string = display_context_return.to_string();
         
         return_type_string.insert_str(0, ": ");
         match return_type {
@@ -139,7 +142,7 @@ impl FunSpecGenerator {
         self.result.push_str("\n");
         let assert = Self::generate_body_zx(self, f, global_env, fpath);
         self.result.push_str(assert.as_str());
-        self.result.push_str(format!("{}}}\n", indent(1)).as_str())
+        self.result.push_str(format!("{}}}\n", indent(1)).as_str());
     }
 
     fn generate_body_zx(&self, f: &FunctionEnv, global_env: &GlobalEnv, fpath: &PathBuf) -> String {        
@@ -151,7 +154,7 @@ impl FunSpecGenerator {
         let mut local_emited = HashSet::new();
     
         if let Some(exp) = f.get_def() {
-            get_shadows(exp, global_env, &mut shadows);
+            // get_shadows(exp, global_env, &mut shadows);
             FunSpecGenerator::try_emit_exp_zx(
                 self, 
                 &shadows,
@@ -176,7 +179,6 @@ impl FunSpecGenerator {
             let qsym = builder_table.get(&(mid, sid)).expect("type known");
             qsym.display(context.env).to_string()
         } else {
-            eprintln!("0000000000000000000");
             let mut addr_2_addrname = HashMap::new();
             
             for helper1 in project.targets.iter() {
@@ -499,3 +501,6 @@ impl FunSpecGenerator {
 pub(crate) fn indent(num: usize) -> String {
     "    ".to_string().repeat(num)
 }
+
+
+
