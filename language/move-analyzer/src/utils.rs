@@ -360,9 +360,6 @@ pub fn get_target_module(env: &GlobalEnv, move_file_path: &Path, target_module_i
         }
     }
     for module in env.get_target_modules() {
-        log::info!("lll >> cpmper move_file_str = {:?}, module.name = {:?}",
-                move_file_str,
-                module.get_full_name_str());
         if module.matches_name(move_file_str) {
             *target_module_id = module.get_id();
             return true;
