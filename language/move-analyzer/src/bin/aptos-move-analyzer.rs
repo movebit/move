@@ -32,7 +32,7 @@ use aptos_move_analyzer::{
     inlay_hints::*,
     utils::*,
     symbols,
-    // move_generate_spec_file::on_generate_spec_file,
+    move_generate_spec_file::on_generate_spec_file,
     move_generate_spec_sel::on_generate_spec_sel,
 };
 use url::Url;
@@ -204,9 +204,9 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             symbols::on_document_symbol_request(context, request);
         }
-        // "move/generate/spec/file" => {
-        //     on_generate_spec_file(context, request);
-        // }
+        "move/generate/spec/file" => {
+            on_generate_spec_file(context, request);
+        }
         "move/generate/spec/sel" => {
             on_generate_spec_sel(context, request);
         }
