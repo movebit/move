@@ -56,7 +56,6 @@ pub mod types_ori;
 pub mod utils_ori;
 pub mod ast_debug;
 pub mod move_generate_spec;
-pub mod move_generate_spec_chen;
 pub mod move_generate_spec_sel;
 pub mod move_generate_spec_zx;
 // pub mod move_generate_spec_file;

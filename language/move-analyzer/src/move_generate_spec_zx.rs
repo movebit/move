@@ -1,20 +1,20 @@
 use std::{
     collections::HashMap,
-    path::PathBuf, ops::Deref,
+    path::PathBuf, 
 };
 
 use im::HashSet;
 use move_model::{
     symbol::Symbol,
-    ast::{UseDecl, ModuleName, Operation},
+    ast::{ModuleName, Operation},
     model::{GlobalEnv, Loc, NodeId, FunctionEnv},
     ast::{Exp as MoveModelExp, ExpData as MoveModelExpData, Value as MoveModelValue,
         Address as MoveModelAddress, Pattern as MoveModelPattern},
-    ty::{Type as MoveModelType, TypeDisplayContext},
+    ty::Type as MoveModelType,
 };
 
 use super::move_generate_spec::FunSpecGenerator;
-use crate::utils::get_modulus_in_file;
+use crate::utils::get_target_module_by_fpath;
 
 
 
@@ -70,14 +70,14 @@ impl ShadowItems {
         fpath: &PathBuf
     ) {
         eprintln!("getting use decl, fpath = {:?}", fpath.as_path());
-        let vec_modules = get_modulus_in_file(env, fpath);
+        let vec_modules = get_target_module_by_fpath(env, fpath);
         for module_env in vec_modules.iter() {
             eprintln!("modlue env name = {:?}", module_env.get_full_name_str());
             let vec_use_decls = module_env.get_use_decls();
             for use_decl in vec_use_decls {
-                // if !is_loc_in_loc(&use_decl.loc, &self.function_loc) {
-                //     continue;
-                // }
+                if !is_loc_in_loc(&use_decl.loc, &self.function_loc) {
+                    continue;
+                }
                 eprintln!("right use decl, {:?}", use_decl.module_name.display(env).to_string());
             }
         }
@@ -249,11 +249,6 @@ pub(crate) enum BinOPReason {
 }
 
 impl FunSpecGenerator {
-
-    fn helper(&self, left: &MoveModelExp, right: &MoveModelExp, env: &GlobalEnv) {
-        
-    }
-
     fn collect_spec_exp_op_movefunc(
         &self, 
         ret: &mut Vec<SpecExpItem>,

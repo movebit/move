@@ -90,7 +90,7 @@ impl Handler {
         }
     }
 
-    fn process_func(&mut self, env: &GlobalEnv, move_file_path: &Path) {
+    fn process_func(&mut self, env: &GlobalEnv) {
         log::info!("lll >> <on_inlay_hints>process_func =======================================\n\n");
         let target_module = env.get_module(self.target_module_id);
         for fun in target_module.get_functions() {
@@ -350,7 +350,7 @@ impl Handler {
         }
         if let Some(s) = move_file_path.to_str() {
             if !s.contains(".spec") {
-                self.process_func(env, move_file_path);
+                self.process_func(env);
             } else {
                 self.process_spec_func(env);
             }

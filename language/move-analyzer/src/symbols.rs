@@ -50,10 +50,10 @@ use crate::{
     context::Context,
     utils::{get_target_module_by_fpath}, project::Project,
 };
-use lsp_server::{Request, Response};
+use lsp_server::Request;
 use lsp_types::{DocumentSymbol, DocumentSymbolParams, SymbolKind};
 use move_model::{
-    model::{ModuleId, ModuleEnv, StructEnv}
+    model::{ModuleEnv, StructEnv}
 };
 
 

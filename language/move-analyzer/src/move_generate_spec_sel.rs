@@ -7,7 +7,6 @@ use crate::{
     move_generate_spec::{genrate_struct_spec, generate_fun_spec_zx},
     
 };
-use im::HashMap;
 use move_model::model::{ModuleEnv, GlobalEnv, Loc};
 use std::{path::PathBuf, str::FromStr};
 use serde::{Deserialize, Serialize};

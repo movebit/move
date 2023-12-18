@@ -14,11 +14,8 @@ use move_model::{
 use std::{
     collections::HashMap,
     fmt,
-    fmt::{Debug, Formatter},
+    fmt::Formatter,
 };
-
-use crate::project::Project;
-
 pub struct TypeDisplayZX<'a> {
     pub type_: &'a Type,
     pub context: &'a TypeDisplayContext<'a>,

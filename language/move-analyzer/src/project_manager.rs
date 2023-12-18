@@ -164,7 +164,7 @@ impl Project {
         let addrs = parse_addresses_from_options(named_address_mapping.clone())?;
 
         let mut addrs_zx: BTreeMap<String, NumericalAddress> = BTreeMap::new();
-        for (index, (s, add)) in addrs.iter().enumerate() {
+        for (index, (s, _)) in addrs.iter().enumerate() {
             let add_key = NumericalAddress::new(
                 AccountAddress::from_hex_literal(&format!("0x{}", index)).unwrap().into_bytes(), 
             move_compiler::shared::NumberFormat::Hex);

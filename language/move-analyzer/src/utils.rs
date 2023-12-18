@@ -393,7 +393,7 @@ pub fn get_modulus_in_file<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Vec<Modul
     let target_file_id = target_module_env.get_loc().file_id();
     eprintln!("target file id = {:?}", target_file_id);
     for module_env in env.get_target_modules() {
-        if (target_file_id == module_env.get_loc().file_id()) {
+        if target_file_id == module_env.get_loc().file_id() {
             result_vec_modules.push(module_env)
         }
     }
