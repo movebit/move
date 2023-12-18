@@ -137,7 +137,7 @@ fn handle_function(project :&Project, module_env : &ModuleEnv,
         new_parameters.col = 4;
 
         insert_pos.0 = end_location.line.0;
-        insert_pos.1 = 4;
+        insert_pos.1 = end_location.column.0;
 
         eprintln!("insert spec function end line = {:?}, before", insert_pos.0);
         if ReqParametersPath::is_linecol_in_loc(new_parameters.line, new_parameters.col, 
