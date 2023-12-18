@@ -4,7 +4,7 @@ use crate::{
     utils::{GetPosition, get_target_module_by_fpath},
     project::Project,
     context::Context,
-    move_generate_spec::{genrate_struct_spec, generate_fun_spec_zx, GetExprTypeImpl},
+    move_generate_spec::{genrate_struct_spec, generate_fun_spec_zx},
     
 };
 use im::HashMap;
@@ -97,7 +97,7 @@ fn handle_struct(project :&Project, module_env : &ModuleEnv,
 
         let mut new_parameters = parameters.clone();
         new_parameters.line = end_location.line.0 + 1;
-        new_parameters.col = 4;
+        new_parameters.col = end_location.column.0;
 
         insert_pos.0 = end_location.line.0;
         insert_pos.1 = 4;
