@@ -7,6 +7,7 @@ use crate::{
     move_generate_spec::{genrate_struct_spec, generate_fun_spec_zx, GetExprTypeImpl},
     
 };
+use im::HashMap;
 use move_model::model::{ModuleEnv, GlobalEnv, Loc};
 use std::{path::PathBuf, str::FromStr};
 use serde::{Deserialize, Serialize};
@@ -140,8 +141,10 @@ fn handle_function(project :&Project, module_env : &ModuleEnv,
             insert_pos.0 = insert_pos.0 + 1;
         }
 
+   
         result_string.push_str(
             generate_fun_spec_zx(
+                project,
                 &project.global_env, 
                 &func_env, 
                 &new_parameters.fpath)

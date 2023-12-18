@@ -17,7 +17,7 @@ use std::path::PathBuf;
 
 // -----------------
 use move_model::{
-    model::{GlobalEnv, FunctionEnv, StructEnv, ModuleId, NodeId, },
+    model::{GlobalEnv, FunctionEnv, StructEnv, ModuleId, NodeId, StructId},
     ty::{TypeDisplayContext, Type as MoveModelType},
     ast::{
         Exp as MoveModelExp, ExpData as MoveModelExpData, Value as MoveModelValue,
@@ -33,6 +33,7 @@ use crate::move_generate_spec_zx::{
 };
 use std::ops::Deref;
 use crate::move_generate_spec_zx::get_shadows;
+use crate::project::Project as ProjectZX;
 
 #[derive(Default)]
 pub struct StructSpecGenerator {
@@ -70,9 +71,9 @@ pub fn generate_fun_spec(f: &Function, get_exp_ty: &dyn GetExprType) -> String {
 }
 
 
-pub fn generate_fun_spec_zx(global_env: &GlobalEnv, f: &FunctionEnv, fpath: &PathBuf) -> String {
+pub fn generate_fun_spec_zx(project: &ProjectZX, global_env: &GlobalEnv, f: &FunctionEnv, fpath: &PathBuf) -> String {
     let mut g = FunSpecGenerator::new();
-    g.generate_zx(global_env, f, fpath);
+    g.generate_zx(project, global_env, f, fpath);
     let r = g.to_string();
     r
 }
@@ -122,59 +123,58 @@ impl FunSpecGenerator {
         self.result.push_str(format!("{}}}\n", indent(1)).as_str())
     }
 
-    pub(crate) fn generate_zx(&mut self, global_env: &GlobalEnv, f: &FunctionEnv, fpath: &PathBuf) {
+    pub(crate) fn generate_zx(&mut self, project: &ProjectZX, global_env: &GlobalEnv, f: &FunctionEnv, fpath: &PathBuf) {
 
+    
         let display_context = f.get_type_display_ctx();
-        // self.result
-        //     .push_str(format!("{}spec {}", indent(1), f.get_name_str()).as_str());
-        let mut fun_header = f.get_header_string();
-        if let Some(position) = fun_header.find("fun") {
-            fun_header = fun_header.get(position+3..).unwrap_or("").to_string();
+        self.result
+            .push_str(format!("{}spec {}", indent(1), f.get_name_str()).as_str());
 
-            fun_header.insert_str(0, format!("{}spec" , indent(1)).as_str());
+        self.result.push_str("(");
+
+        let para_len = f.get_parameter_count();
+        if para_len > 0 {
+            for (index, para) in f.get_parameters().iter().enumerate() {
+                self.result.push_str(para.0.display(f.symbol_pool()).to_string().as_str());
+                self.result.push_str(": ");
+
+                let mut para_type_string = match &para.1 {
+                    MoveModelType::Struct(module_id, struct_id, _ ) => {
+                        let s = FunSpecGenerator::struct_str(*module_id, *struct_id, &display_context, project);
+                        s
+                    }
+                    _ => para.1.display(&display_context).to_string(),
+                };
+
+ 
+                self.result.push_str(para_type_string.as_str());
+                if (index + 1) < para_len {
+                    self.result.push_str(", ");
+                }
+            }
         }
-        self.result.push_str(fun_header.as_str());
-        // self.result.push_str("(");
-
-        // let para_len = f.get_parameter_count();
-        // if para_len > 0 {
-        //     for (index, para) in f.get_parameters().iter().enumerate() {
-        //         self.result.push_str(para.0.display(f.symbol_pool()).to_string().as_str());
-        //         self.result.push_str(": ");
-                
-        //         let para_type_display = para.1.display(&display_context);
-        //         let mut para_type_string = para_type_display.to_string();
-        //         // if let Some(position) = para_type_string.rfind("::") {
-        //         //     para_type_string = para_type_string.get(position+2..).unwrap_or("").to_string();
-        //         // } 
-
-        //         self.result.push_str(para_type_string.as_str());
-        //         if (index + 1) < para_len {
-        //             self.result.push_str(", ");
-        //         }
-        //     }
-        // }
-        // self.result.push_str(")");
+        self.result.push_str(")");
         
-        // let return_type = f.get_result_type();
-        // let return_type_display = return_type.display(&display_context);
-        // let mut return_type_string = return_type_display.to_string();
+        let return_type = f.get_result_type();
+        let mut return_type_string = match return_type {
+            MoveModelType::Struct(module_id, struct_id, _ ) => {
+                let s = FunSpecGenerator::struct_str(module_id, struct_id, &display_context, project);
+                s
+            }
+            _ => return_type.display(&display_context).to_string(),
+        };
         
-        // if let Some(position) = return_type_string.rfind("::") {
-        //     return_type_string = return_type_string.get(position+2..).unwrap_or("").to_string();
-        // } 
-
-        // return_type_string.insert_str(0, ": ");
-        // match return_type {
-        //     MoveModelType::Tuple(_) => {
-        //         // ": ()" len is 4
-        //         if return_type_string.len() <= 4 {
-        //             return_type_string = String::new();
-        //         }
-        //     },
-        //     _ => {}
-        // }
-        // self.result.push_str(return_type_string.as_str());
+        return_type_string.insert_str(0, ": ");
+        match return_type {
+            MoveModelType::Tuple(_) => {
+                // ": ()" len is 4
+                if return_type_string.len() <= 4 {
+                    return_type_string = String::new();
+                }
+            },
+            _ => {}
+        }
+        self.result.push_str(return_type_string.as_str());
         self.result.push_str("{\n");
         self.result.push_str("\n");
         let assert = Self::generate_body_zx(self, f, global_env, fpath);
@@ -213,6 +213,37 @@ impl FunSpecGenerator {
         return statements;
     }
 
+    fn struct_str(mid: ModuleId, sid: StructId, context: &TypeDisplayContext, project: &ProjectZX) -> String {
+        let env = context.env;
+        if let Some(builder_table) = context.builder_struct_table {
+            eprintln!("111111111111");
+            let qsym = builder_table.get(&(mid, sid)).expect("type known");
+            qsym.display(context.env).to_string()
+        } else {
+            eprintln!("0000000000000000000");
+            let mut addr_2_addrname = HashMap::new();
+            
+            for helper1 in project.targets.iter() {
+                for (addr_name, addr) in helper1.named_address_map.iter() {
+                    addr_2_addrname.insert(addr.to_string(), addr_name.clone());
+                }
+            }
+
+            let struct_module_env = env.get_module(mid);
+            let struct_module_env_full_name = struct_module_env.get_full_name_str();
+            let addr_end = struct_module_env_full_name.find("::").unwrap_or_default();
+            let addr = struct_module_env_full_name[0..addr_end].to_string();
+            
+
+            let struct_env = struct_module_env.clone().into_struct(sid);
+            format!(
+                "{}::{}::{}",
+                addr_2_addrname.get(&addr).unwrap_or(&String::from("0x0")),
+                struct_module_env.get_name().display(env).to_string(),
+                struct_env.get_name().display(env.symbol_pool()),
+            )
+        }
+    }
 
     fn generate_body(f: &Function, get_expr_type: &dyn GetExprType) -> String {
         let mut statements = String::new();

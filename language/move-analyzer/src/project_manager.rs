@@ -163,6 +163,14 @@ impl Project {
         // log::info!("named_address_mapping = {:?}", named_address_mapping);
         let addrs = parse_addresses_from_options(named_address_mapping.clone())?;
 
+        let mut addrs_zx: BTreeMap<String, NumericalAddress> = BTreeMap::new();
+        for (index, (s, add)) in addrs.iter().enumerate() {
+            let add_key = NumericalAddress::new(
+                AccountAddress::from_hex_literal(&format!("0x{}", index)).unwrap().into_bytes(), 
+            move_compiler::shared::NumberFormat::Hex);
+            addrs_zx.insert(s.clone(), add_key);
+        }
+
         let targets = vec![PackagePaths {
             name: None,
             paths: targets_paths
@@ -170,8 +178,9 @@ impl Project {
                 .map(|p| p.to_string_lossy().to_string())
                 .collect::<Vec<_>>()
                 .clone(),
-            named_address_map: addrs.clone(),
+            named_address_map: addrs_zx.clone(),
         }];
+
         let dependents = vec![PackagePaths {
             name: None,
             paths: dependents_paths
@@ -179,8 +188,10 @@ impl Project {
                 .map(|p| p.to_string_lossy().to_string())
                 .collect::<Vec<_>>()
                 .clone(),
-            named_address_map: addrs,
+            named_address_map: addrs_zx,
         }];
+
+        
 
         let attributes: BTreeSet<String> = Default::default();
         new_project.targets = targets.clone();
@@ -196,6 +207,8 @@ impl Project {
             &attributes,
         )
         .expect("Failed to create GlobalEnv!");
+
+        
 
         eprintln!("env.get_module_count() = {:?}", &new_project.global_env.get_module_count());
         eprintln!("env.diag_count() = {:?}", &new_project.global_env.diag_count(Severity::Error));
