@@ -110,7 +110,7 @@ impl FunSpecGenerator {
                     context: &display_context,
                     addr_2_addrname: &addr_2_addrname,
                 };
-                let para_type_string = display_context_zx.to_string();
+                let para_type_string = display_context_para.to_string();
                 self.result.push_str(para_type_string.as_str());
                 if (index + 1) < para_len {
                     self.result.push_str(", ");
