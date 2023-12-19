@@ -315,7 +315,7 @@ impl FunSpecGenerator {
                                 BinOPReason::DivByZero => {
                                     statements.push_str(
                                         format!(
-                                            "{}aborts_if {} = 0;\n",
+                                            "{}aborts_if {} == 0;\n",
                                             indent(2),
                                             format_xxx(right, true)
                                         )

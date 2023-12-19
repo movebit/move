@@ -1,6 +1,23 @@
 module Symbols::M1 {
+    use std::vector;
+    fun mytest(a: u64, b1:u128, b2:u256) :u64{
+        let myvec:vector<u64> = vector::empty<u64>();
+        vector::push_back(&mut myvec, 1u64);
+        vector::push_back(&mut myvec,2u64);
 
-    struct SomeStruct has key, drop, store {
+        let b = 2;
+        let c = *vector::borrow(&myvec, 0) + 1;
+        let e = SOME_CONST * b + cp(1, 2);
+        let f = a / b;
+        let g = a % (cp(1, 2) +b);
+        let h = a << 1;
+        let q = 1 < 2;
+        let w = !q;
+        e
+    }
+
+    
+struct SomeStruct has key, drop, store {
         some_field: u64,
     }
 
@@ -12,7 +29,7 @@ module Symbols::M1 {
         value
     }
 
-    fun cp(value: u64): u64 {
+    fun cp(value: u64, val:u64): u64 {
         let ret = value;
         ret
     }
@@ -102,6 +119,7 @@ module Symbols::M1 {
             outer
         }.some_struct.some_field
     }
+    
 
     fun chain_access_borrow(): u64 {
         let inner = SomeStruct{ some_field: 42 };
