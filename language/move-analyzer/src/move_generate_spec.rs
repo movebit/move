@@ -172,7 +172,6 @@ impl FunSpecGenerator {
                     let _left_node_type = env.get_node_type(_left_node_id);
                     let _right_node_type = env.get_node_type(_right_node_id);
                     
-
                     let _left_exp_str = match env.get_source(&_left_node_loc) {
                         Ok(x) => FunSpecGenerator::remove_parentheses(x),
                         Err(_) => continue,
@@ -364,6 +363,7 @@ impl FunSpecGenerator {
     fn remove_parentheses(input: &str) -> &str {
         // 检查字符串是否以 '(' 开始且以 ')' 结尾
         if input.starts_with('(') && input.ends_with(')') {
+
             // 如果是，使用字符串切片去掉左右两边的括号
             &input[1..input.len() - 1]
         } else {
