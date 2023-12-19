@@ -212,7 +212,7 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     eprintln!("about to send completion response");
     let response = lsp_server::Response::new_ok(request.id.clone(), result);
     let ret_response = response.clone();
-    log::info!("on complete------------------------------------> \n{:?}", ret_response);
+    // log::info!("on complete------------------------------------> \n{:?}", ret_response);
     if let Err(err) = context
         .connection
         .sender
