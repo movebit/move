@@ -39,6 +39,13 @@ pub struct PathBufHashMap {
 }
 
 impl PathBufHashMap {
+    pub fn new() -> PathBufHashMap {
+        Self {
+            path_2_hash: HashMap::new(),
+            hash_2_path: HashMap::new(),
+        }
+    }
+
     pub fn update(&mut self, path: PathBuf, hash: FileHash) {
         if let Some(hash) = self.path_2_hash.get(&path) {
             self.hash_2_path.remove(hash);
@@ -57,6 +64,12 @@ pub struct FileLineMapping {
 }
 
 impl FileLineMapping {
+    pub fn new() -> FileLineMapping {
+        Self {
+            m: HashMap::new()
+        }
+    }
+
     pub fn update(&mut self, filepath: PathBuf, content: String) {
         let mut v = vec![0];
         for (index, s) in content.as_bytes().iter().enumerate() {
