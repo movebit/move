@@ -22,7 +22,7 @@ pub struct MultiProject {
     pub projects: HashMap<HashSet<PathBuf>, Project>,
     pub hash_file: Rc<RefCell<PathBufHashMap>>,
     pub file_line_mapping: Rc<RefCell<FileLineMapping>>,
-    pub asts: HashMap<PathBuf, Rc<RefCell<SourceDefs>>>,
+    // pub asts: HashMap<PathBuf, Rc<RefCell<SourceDefs>>>,
 }
 
 impl MultiProject {
@@ -74,7 +74,7 @@ impl MultiProject {
                 return anyhow::Result::Err(anyhow::anyhow!("fetch deps failed"));
             }
         }
-        Project::new(mani, self, |msg: String| {
+        Project::new(mani, |msg: String| {
             send_show_message(sender, MessageType::ERROR, msg)
         })
     }
@@ -116,7 +116,7 @@ impl MultiProject {
                 return;
             },
         };
-        drop(self.asts.get_mut(&manifest).unwrap().borrow_mut());
+        // drop(self.asts.get_mut(&manifest).unwrap().borrow_mut());
         self.get_projects_mut(&file_path)
             .into_iter()
             .for_each(|x| x.update_defs(&file_path, content.clone()));
@@ -160,7 +160,7 @@ impl MultiProject {
                 continue;
             }
             eprintln!("reload  {:?}", root_manifest.as_path());
-            let x = match Project::new(root_manifest, self, |msg| {
+            let x = match Project::new(root_manifest, |msg| {
                 send_show_message(connection, MessageType::ERROR, msg)
             }) {
                 Ok(x) => x,
@@ -177,7 +177,7 @@ impl MultiProject {
                 MessageType::INFO,
                 format!("trying reload {:?}.", root_manifest.as_path()),
             );
-            let x = match Project::new(root_manifest, self, |msg| {
+            let x = match Project::new(root_manifest, |msg| {
                 send_show_message(connection, MessageType::ERROR, msg);
             }) {
                 Ok(x) => x,
