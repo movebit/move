@@ -84,6 +84,10 @@ fn handle_struct(project :&Project, module_env : &ModuleEnv,
                 result_string: &mut String) -> bool 
 {
     for struct_env in module_env.get_structs() {
+        if struct_env.is_test_only() {
+            continue;
+        }
+        
         if !ReqParametersPath::is_linecol_in_loc(parameters.line, parameters.col, 
                                                 &struct_env.get_loc(), &project.global_env) 
         {
