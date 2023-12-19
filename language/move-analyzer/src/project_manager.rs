@@ -115,7 +115,6 @@ impl Project {
 
     pub fn new(
         root_dir: impl Into<PathBuf>,
-        multi: &mut MultiProject,
         report_err: impl FnMut(String) + Clone,
     ) -> Result<Self> {
         let working_dir = root_dir.into();
@@ -123,8 +122,8 @@ impl Project {
         let mut new_project = Self {
             modules: Default::default(),
             manifests: Default::default(),
-            hash_file: multi.hash_file.clone(),
-            file_line_mapping: multi.file_line_mapping.clone(),
+            hash_file: Rc::new(RefCell::new(PathBufHashMap::new())),
+            file_line_mapping: Rc::new(RefCell::new(FileLineMapping::new())),
             manifest_paths: Default::default(),
             manifest_not_exists: Default::default(),
             manifest_load_failures: Default::default(),
@@ -139,7 +138,6 @@ impl Project {
         let mut dependents_paths: Vec<PathBuf> = Vec::new();
         new_project.load_project(
             &working_dir,
-            multi,
             report_err,
             true,
             &mut targets_paths,
@@ -164,7 +162,7 @@ impl Project {
         let addrs = parse_addresses_from_options(named_address_mapping.clone())?;
 
         let mut addrs_zx: BTreeMap<String, NumericalAddress> = BTreeMap::new();
-        for (index, (s, _)) in addrs.iter().enumerate() {
+        for (index, (s, add)) in addrs.iter().enumerate() {
             let add_key = NumericalAddress::new(
                 AccountAddress::from_hex_literal(&format!("0x{}", index)).unwrap().into_bytes(), 
             move_compiler::shared::NumberFormat::Hex);
@@ -191,8 +189,6 @@ impl Project {
             named_address_map: addrs_zx,
         }];
 
-        
-
         let attributes: BTreeSet<String> = Default::default();
         new_project.targets = targets.clone();
         new_project.dependents = dependents.clone();
@@ -207,9 +203,6 @@ impl Project {
             &attributes,
         )
         .expect("Failed to create GlobalEnv!");
-
-        
-
         eprintln!("env.get_module_count() = {:?}", &new_project.global_env.get_module_count());
         eprintln!("env.diag_count() = {:?}", &new_project.global_env.diag_count(Severity::Error));
         let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
@@ -218,23 +211,39 @@ impl Project {
     }
 
     pub fn update_defs(&mut self, file_path: &PathBuf, content: String) {
+        use std::result::Result::Ok;
         log::info!("lll >> update_defs for file:{:?}", file_path);
-        self.current_modifing_file_content = content;
+        let root_dir = match super::utils::discover_manifest_and_kind(&file_path) {
+            Some((x, _)) => x,
+            None => {
+                log::error!("not move project.");
+                return;
+            }
+        };
 
-        let targets = self.targets.clone();
-        let dependents = self.dependents.clone();
-        let attributes: BTreeSet<String> = Default::default();
-        self.global_env = run_model_builder_with_options(
-            targets,
-            dependents,
-            ModelBuilderOptions {
-                compile_via_model: true,
-                ..Default::default()
+        let new_project = match Project::new(root_dir, |msg| {eprintln!("{}", msg)}) {
+            Ok(x) => x,
+            Err(_) => {
+                log::error!("reload project failed");
+                return;
             },
-            false,
-            &attributes,
-        )
-        .expect("Failed to create GlobalEnv!");
+        };
+        self.current_modifing_file_content = content;
+        self.targets = new_project.targets.clone();
+        self.dependents = new_project.dependents.clone();
+        self.global_env = new_project.global_env;
+
+        for tar in self.targets.iter() {
+            eprintln!("target --------");
+            for pa in tar.paths.iter() {
+                eprintln!("target file: {}", pa);
+            }
+        }
+
+        for a in self.global_env.get_source_file_names() {
+            eprintln!("new source file: {}", a);
+        }
+
         eprintln!("env.get_module_count() = {:?}", &self.global_env.get_module_count());
         eprintln!("env.diag_count() = {:?}", &self.global_env.diag_count(Severity::Error));
         let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
@@ -245,7 +254,6 @@ impl Project {
     pub(crate) fn load_project(
         &mut self,
         manifest_path: &Path,
-        multi: &mut MultiProject,
         mut report_err: impl FnMut(String) + Clone,
         is_main_source: bool,
         targets_paths: &mut Vec<PathBuf>,
@@ -258,13 +266,7 @@ impl Project {
         }
         self.manifest_paths.push(manifest_path.clone());
         eprintln!("load manifest file at {:?}", &manifest_path);
-        if let Some(x) = multi.asts.get(&manifest_path) {
-            self.modules.insert(manifest_path.clone(), x.clone());
-        } else {
-            let d: Rc<RefCell<SourceDefs>> = Default::default();
-            self.modules.insert(manifest_path.clone(), d.clone());
-            multi.asts.insert(manifest_path.clone(), d);
-        }
+
         let source_paths1 =
             self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Sources)?;
         let source_paths2 =
@@ -323,7 +325,6 @@ impl Project {
             );
             self.load_project(
                 &p,
-                multi,
                 report_err.clone(),
                 false,
                 targets_paths,
@@ -366,16 +367,16 @@ impl Project {
                 log::debug!("load source file {:?}", file.path());
                 let file_hash = FileHash::new(file_content.as_str());
                 ret_paths.push(file.path().to_path_buf());
-                // update hash
-                self.hash_file
-                    .as_ref()
-                    .borrow_mut()
-                    .update(file.path().to_path_buf(), file_hash);
-                // update line mapping.
-                self.file_line_mapping
-                    .as_ref()
-                    .borrow_mut()
-                    .update(file.path().to_path_buf(), file_content);
+                // // update hash
+                // self.hash_file
+                //     .as_ref()
+                //     .borrow_mut()
+                //     .update(file.path().to_path_buf(), file_hash);
+                // // update line mapping.
+                // self.file_line_mapping
+                //     .as_ref()
+                //     .borrow_mut()
+                //     .update(file.path().to_path_buf(), file_content);
             }
         }
         // log::info!("lll << load_layout_files_v2");
