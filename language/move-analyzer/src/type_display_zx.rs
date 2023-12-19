@@ -115,11 +115,9 @@ impl<'a> TypeDisplayZX<'a> {
     fn struct_str(&self, mid: ModuleId, sid: StructId) -> String {
         let env = self.context.env;
         if let Some(builder_table) = self.context.builder_struct_table {
-            eprintln!("stryct 00000000000000000000");
             let qsym = builder_table.get(&(mid, sid)).expect("type known");
             qsym.display(self.context.env).to_string()
         } else {
-            eprintln!("stryct 11111111111111111111");
             let struct_module_env = env.get_module(mid);
             let struct_module_env_full_name = struct_module_env.get_full_name_str();
             let addr_end = struct_module_env_full_name.find("::").unwrap_or_default();
