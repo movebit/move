@@ -383,9 +383,10 @@ pub fn get_target_module(env: &GlobalEnv, move_file_path: &Path, target_module_i
 
 
 use move_model::model::ModuleEnv;
-pub fn get_target_module_by_fpath<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Vec<ModuleEnv<'a>> {
+pub fn get_modules_by_fpath_in_target_modules<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Vec<ModuleEnv<'a>> {
     let mut result_vec_modules: Vec<ModuleEnv> = vec![];
     for module_env in env.get_target_modules() {
+        eprintln!("macth module: {}", module_env.get_full_name_str());
         if env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string() != fpath.to_string_lossy().to_string() {
             continue;
         }
@@ -394,21 +395,13 @@ pub fn get_target_module_by_fpath<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Ve
     return result_vec_modules;
 }
 
-pub fn get_modulus_in_file<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Vec<ModuleEnv<'a>> {
+pub fn get_modules_by_fpath_in_all_modules<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Vec<ModuleEnv<'a>> {
     let mut result_vec_modules: Vec<ModuleEnv> = vec![];
-
-    let mut target_module_id = ModuleId::new(0);
-    if !get_target_module(env, &fpath, &mut target_module_id) {
-        return result_vec_modules;
-    }
-
-    let target_module_env = env.get_module(target_module_id);
-    let target_file_id = target_module_env.get_loc().file_id();
-    eprintln!("target file id = {:?}", target_file_id);
-    for module_env in env.get_target_modules() {
-        if target_file_id == module_env.get_loc().file_id() {
-            result_vec_modules.push(module_env)
+    for module_env in env.get_modules() {
+        if env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string() != fpath.to_string_lossy().to_string() {
+            continue;
         }
+        result_vec_modules.push(module_env);
     }
     return result_vec_modules;
-} 
+}
