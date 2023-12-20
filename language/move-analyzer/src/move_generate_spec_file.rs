@@ -8,7 +8,7 @@ use serde::Deserialize;
 
 // ----------
 use crate::{
-    utils::get_target_module_by_fpath,
+    utils::get_modules_by_fpath_in_target_modules,
     project::Project,
     context::Context,
 };
@@ -52,7 +52,8 @@ where
     }
     
     let mut result = ModuleSpecBuilder::new();
-    for module_env in get_target_module_by_fpath(&project.global_env, &fpath) {
+    for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &fpath) {
+        eprintln!("generate spec module: {}", module_env.get_full_name_str());
         // find module_env's namespace
         let module_env_full_name = module_env.get_full_name_str();
         let addr_end = module_env_full_name.find("::").unwrap_or_default();
@@ -84,17 +85,22 @@ where
     
         env_item_list.sort_by(|a, b| a.line.cmp(&b.line));
 
-        for item in env_item_list.iter() {
-            if let Some(struct_env) = item.get_struct_env() {
-                let spec = genrate_struct_spec(&struct_env);   
-                result.insert(AddrAndModuleName::new(addr_name.clone(), module_name.clone()), spec);
-            } else if let Some(f_env) = item.get_function_env() {
-                let spec = generate_fun_spec_zx(project, &project.global_env, f_env, &fpath);
-                result.insert(AddrAndModuleName::new(addr_name.clone(), module_name.clone()), spec);
-            } else {
-                continue;
-            }
-        } 
+        for item in env_item_list {
+            let spec = match item {
+                EnvItem { struct_env: Some(struct_env), function_env: None, .. } => {
+                    genrate_struct_spec(&struct_env)
+                }
+                EnvItem { struct_env: None, function_env: Some(f_env), .. } => {
+                    generate_fun_spec_zx(project, &project.global_env, &f_env, &fpath)
+                }
+                _ => continue,
+            };
+        
+            result.insert(
+                AddrAndModuleName::new(addr_name.clone(), module_name.clone()),
+                spec,
+            );
+        }
     } // for module_env
 
     let file_content = result.to_string();
@@ -105,12 +111,6 @@ where
             return;
         }
     };
-
-    // project.update_defs(
-    //     &fpath, 
-    //     format!("create spec file: {}", result_file_path.as_path()), 
-    //     &mut context.projects
-    // );
 
     let r = Response::new_ok(
         request.id.clone(),

@@ -14,7 +14,7 @@ use move_model::{
 };
 
 use super::move_generate_spec::FunSpecGenerator;
-use crate::utils::get_target_module_by_fpath;
+use crate::utils::get_modules_by_fpath_in_target_modules;
 
 
 
@@ -70,7 +70,7 @@ impl ShadowItems {
         fpath: &PathBuf
     ) {
         eprintln!("getting use decl, fpath = {:?}", fpath.as_path());
-        let vec_modules = get_target_module_by_fpath(env, fpath);
+        let vec_modules = get_modules_by_fpath_in_target_modules(env, fpath);
         for module_env in vec_modules.iter() {
             eprintln!("modlue env name = {:?}", module_env.get_full_name_str());
             let vec_use_decls = module_env.get_use_decls();

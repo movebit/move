@@ -1,7 +1,7 @@
 // use super::context_ori::*;
 
 use crate::{
-    utils::{GetPosition, get_target_module_by_fpath},
+    utils::{GetPosition, get_modules_by_fpath_in_target_modules},
     project::Project,
     context::Context,
     move_generate_spec::{genrate_struct_spec, generate_fun_spec_zx},
@@ -43,7 +43,7 @@ pub fn on_generate_spec_sel(context: &mut Context, request: &Request) {
 
     // get_target_module_by_fpath(&project.global_env, &parameters.fpath);
 
-    for module_env in get_target_module_by_fpath(&project.global_env, &parameters.fpath) {
+    for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &parameters.fpath) {
         if handle_struct(&project, &module_env, &parameters, &mut insert_pos, &mut result_string) ||
             handle_function(&project, &module_env, &parameters, &mut insert_pos, &mut result_string) {
                 is_find = true;

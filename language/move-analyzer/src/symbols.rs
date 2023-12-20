@@ -48,7 +48,7 @@
 
 use crate::{
     context::Context,
-    utils::{get_target_module_by_fpath}, project::Project,
+    utils::{get_modules_by_fpath_in_target_modules}, project::Project,
 };
 use lsp_server::Request;
 use lsp_types::{DocumentSymbol, DocumentSymbolParams, SymbolKind};
@@ -74,7 +74,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
     };
 
     let mut result_vec_document_symbols: Vec<DocumentSymbol> = vec![];
-    for module_env in get_target_module_by_fpath(&project.global_env, &fpath) {
+    for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &fpath) {
         eprintln!("start handle module env name: {:?}", module_env.get_full_name_str());
         let module_range = project.loc_to_range(&module_env.get_loc());
         let module_name = module_env.get_name().display(&project.global_env).to_string().clone();
@@ -98,7 +98,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
             deprecated: Some(false),
         });
         eprintln!("end handle module env name: {:?}", module_env.get_full_name_str());
-    } // for module_env in get_modulus_in_file()
+    }
     
     let response = lsp_server::Response::new_ok(
         request.id.clone(), 
