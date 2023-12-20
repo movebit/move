@@ -40,9 +40,7 @@ pub fn on_generate_spec_sel(context: &mut Context, request: &Request) {
     let mut insert_pos: (u32, u32) = (0,0);
     let mut result_string :String = String::new();
     let mut is_find = false;
-
-    // get_target_module_by_fpath(&project.global_env, &parameters.fpath);
-
+    
     for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &parameters.fpath) {
         if handle_struct(&project, &module_env, &parameters, &mut insert_pos, &mut result_string) ||
             handle_function(&project, &module_env, &parameters, &mut insert_pos, &mut result_string) {
