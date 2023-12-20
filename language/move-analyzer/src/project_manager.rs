@@ -228,21 +228,23 @@ impl Project {
                 return;
             },
         };
+
+        // new_project.global_env = run_model_builder_with_options(
+        //     targets,
+        //     dependents,
+        //     ModelBuilderOptions {
+        //         compile_via_model: true,
+        //         ..Default::default()
+        //     },
+        //     false,
+        //     &attributes,
+        // )
+        // .expect("Failed to create GlobalEnv!");
+
         self.current_modifing_file_content = content;
         self.targets = new_project.targets.clone();
         self.dependents = new_project.dependents.clone();
         self.global_env = new_project.global_env;
-
-        for tar in self.targets.iter() {
-            eprintln!("target --------");
-            for pa in tar.paths.iter() {
-                eprintln!("target file: {}", pa);
-            }
-        }
-
-        for a in self.global_env.get_source_file_names() {
-            eprintln!("new source file: {}", a);
-        }
 
         eprintln!("env.get_module_count() = {:?}", &self.global_env.get_module_count());
         eprintln!("env.diag_count() = {:?}", &self.global_env.diag_count(Severity::Error));
@@ -264,6 +266,11 @@ impl Project {
             log::info!("manifest '{:?}' loaded before skipped.", &manifest_path);
             return Ok(());
         }
+        if self.manifest_paths.contains(&manifest_path) {
+            log::info!("manifest '{:?}' loaded before skipped.", &manifest_path);
+            return Ok(());
+        }
+
         self.manifest_paths.push(manifest_path.clone());
         eprintln!("load manifest file at {:?}", &manifest_path);
 
