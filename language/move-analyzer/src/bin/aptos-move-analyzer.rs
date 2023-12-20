@@ -299,7 +299,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             match context.projects.get_project(&fpath) {
                 Some(_) => {
                     if let Ok(x) = std::fs::read_to_string(fpath.as_path()) {
-                        update_defs_on_changed(context, fpath.clone(), x);
+                        // update_defs_on_changed(context, fpath.clone(), x);
                     };
                     return;
                 },

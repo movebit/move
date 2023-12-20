@@ -66,6 +66,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server:
         .sender
         .send(Message::Response(r))
         .unwrap();
+    eprintln!("goto definition Success");
     ret_response
 }
 
@@ -137,7 +138,9 @@ impl Handler {
         let mut ret = Vec::with_capacity(2);
         if let Some(x) = self.result.as_ref() {
             ret.push(x.mk_location());
+            eprintln!("goto definition result path = {}, line = {}", x.path.display(), x.line_start);
         }
+        
         self.capture_items_span.clear();
         self.result_candidates.clear();
         ret
@@ -577,6 +580,7 @@ impl Handler {
                     }
                 },
                 Call(..) => {
+                    log::info!("lll >> exp.visit Call", );
                     self.process_call_spec_func(env, e);
                     self.process_call(env, e);
                 },
@@ -969,18 +973,30 @@ impl Handler {
         env: &GlobalEnv,
         move_file_path: &Path
     ) {
-        if !crate::utils::get_target_module(env, move_file_path, &mut self.target_module_id) {
+        // if !crate::utils::get_target_module(env, move_file_path, &mut self.target_module_id) {
+        //     log::info!("<goto def>cannot get target module\n");
+        //     return;
+        // }
+        let candidate_modules 
+            = crate::utils::get_modules_by_fpath_in_all_modules(
+                env, 
+                &PathBuf::from(move_file_path)
+            );
+        if candidate_modules.is_empty() {
             log::info!("<goto def>cannot get target module\n");
             return;
         }
-        if let Some(s) = move_file_path.to_str() {
-            if s.contains(".spec") {
-                self.process_spec_func(env);
-                self.process_spec_struct(env);
-            } else {
-                self.process_use_decl(env);
-                self.process_func(env);
-                self.process_struct(env);    
+        for module_env in candidate_modules.iter() {
+            self.target_module_id = module_env.get_id();
+            if let Some(s) = move_file_path.to_str() {
+                if s.contains(".spec") {
+                    self.process_spec_func(env);
+                    self.process_spec_struct(env);
+                } else {
+                    self.process_use_decl(env);
+                    self.process_func(env);
+                    self.process_struct(env);    
+                }
             }
         }
     }
