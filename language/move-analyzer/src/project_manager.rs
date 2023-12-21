@@ -229,18 +229,6 @@ impl Project {
             },
         };
 
-        // new_project.global_env = run_model_builder_with_options(
-        //     targets,
-        //     dependents,
-        //     ModelBuilderOptions {
-        //         compile_via_model: true,
-        //         ..Default::default()
-        //     },
-        //     false,
-        //     &attributes,
-        // )
-        // .expect("Failed to create GlobalEnv!");
-
         self.current_modifing_file_content = content;
         self.targets = new_project.targets.clone();
         self.dependents = new_project.dependents.clone();
