@@ -45,16 +45,6 @@ pub mod hover;
 pub mod completion;
 pub mod inlay_hints;
 
-pub mod context_ori;
-pub mod item_ori;
-pub mod project_ori;
-pub mod project_context_ori;
-pub mod project_visitor_ori;
-pub mod scope_ori;
-pub mod syntax_ori;
-pub mod types_ori;
-pub mod utils_ori;
-pub mod ast_debug;
 pub mod move_generate_spec;
 pub mod move_generate_spec_sel;
 pub mod move_generate_spec_zx;
