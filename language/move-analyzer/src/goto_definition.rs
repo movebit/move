@@ -14,7 +14,7 @@ use lsp_types::*;
 //     model::{FunId, SpecFunId, GlobalEnv, ModuleEnv, ModuleId, FunctionEnv, StructId},
 // };
 use move_model::{
-    ast::{ExpData::*, Operation::*, Spec, SpecBlockTarget},
+    ast::{ExpData::*, Operation::*, Spec, SpecBlockTarget, Pattern as MoveModelPattern},
     model::{FunId, GlobalEnv, ModuleId, StructId},
 };
 use std::path::{Path, PathBuf};
@@ -154,18 +154,24 @@ impl Handler {
                 target_fn_or_struct_loc.span().start() + codespan::ByteOffset(1),
             ),
         );
+
         let mut mouse_loc = env.get_location(&mouse_line_first_col).unwrap();
+        eprintln!("init line col = {} {}", mouse_loc.line.0, mouse_loc.column.0);
+
+        
         // locate to self.line first column
         while mouse_loc.line.0 < self.line {
             mouse_line_first_col = move_model::model::Loc::new(
                 target_fn_or_struct_loc.file_id(),
                 codespan::Span::new(
-                    mouse_line_first_col.span().start() + codespan::ByteOffset(1),
-                    mouse_line_first_col.span().start() + codespan::ByteOffset(2),
+                    mouse_line_first_col.span().end(),
+                    mouse_line_first_col.span().end() + codespan::ByteOffset(1),
                 ),
             );
             mouse_loc = env.get_location(&mouse_line_first_col).unwrap();
         }
+        eprintln!("second line col = {} {}", mouse_loc.line.0, mouse_loc.column.0);
+
         // locate to self.line last column
         let mut mouse_line_last_col = move_model::model::Loc::new(
             target_fn_or_struct_loc.file_id(),
@@ -174,21 +180,22 @@ impl Handler {
                 mouse_line_first_col.span().end() + codespan::ByteOffset(1),
             ),
         );
-    
+        
         mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
+        eprintln!("third line col = {} {}", mouse_loc.line.0, mouse_loc.column.0);
         // locate to self.line first column
         while mouse_loc.column.0 < self.col && mouse_loc.line.0 == self.line {
             mouse_line_last_col = move_model::model::Loc::new(
                 target_fn_or_struct_loc.file_id(),
                 codespan::Span::new(
-                    mouse_line_last_col.span().start() + codespan::ByteOffset(1),
-                    mouse_line_last_col.span().start() + codespan::ByteOffset(2),
+                    mouse_line_last_col.span().end(),
+                    mouse_line_last_col.span().end() + codespan::ByteOffset(1),
                 ),
             );
             mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
             // log::info!("lll >> loop: mouse_loc = {:?}", mouse_loc);
         }
-    
+        eprintln!("fourtg line col = {} {}", mouse_loc.line.0, mouse_loc.column.0);
         let mouse_source = env.get_source(&move_model::model::Loc::new(
             target_fn_or_struct_loc.file_id(),
             codespan::Span::new(
@@ -196,7 +203,7 @@ impl Handler {
                 mouse_line_last_col.span().start(),
             ),
         ));
-        eprintln!("lll >> mouse_source = {:?}", mouse_source);
+        eprintln!("llll >> mouse_source = {:?}", mouse_source);
     
         self.mouse_span = codespan::Span::new(mouse_line_first_col.span().start(), mouse_line_last_col.span().start());
     }
@@ -510,8 +517,11 @@ impl Handler {
         env: &GlobalEnv,
         exp: &move_model::ast::Exp,
     ) {
+        
         log::info!("\n\nlll >> process_expr -------------------------\n");
+        
         exp.visit(&mut |e| {
+            eprintln!("expdata is {}", e.display(env).to_string());
             match e {
                 Value(node_id, _) => {
                     // Const variable
@@ -554,7 +564,7 @@ impl Handler {
                     let local_source = env.get_source(&localvar_loc);
                     log::info!("lll >> local_source = {:?}", local_source);
                     if localvar_loc.span().start() > self.mouse_span.end()
-                        || self.mouse_span.end() > localvar_loc.span().end()
+                        || localvar_loc.span().end() < self.mouse_span.start() 
                     {
                         // log::info!("??? localvar return");
                         return;
@@ -566,15 +576,23 @@ impl Handler {
                 Temporary(node_id, _) => {
                     let tmpvar_loc = env.get_node_loc(*node_id);
                     log::info!(
-                        "lll >> exp.visit tmpvar_loc = {:?}",
-                        env.get_location(&tmpvar_loc)
+                        "lll >> exp.visit  = {:?}",env.get_location(&tmpvar_loc)
                     );
-                    if tmpvar_loc.span().start() > self.mouse_span.end()
-                        || self.mouse_span.end() > tmpvar_loc.span().end()
-                    {
+                    match env.get_source(&tmpvar_loc) {
+                        Ok(x) => eprintln!("temp_source = {}", x),
+                        _ => {}
+                    }
+
+                    if tmpvar_loc.span().start() > self.mouse_span.end()  {
+                        eprintln!("tmpvar_loc.span().start() > self.mouse_span.end()");
                         return;
                     }
 
+                    if tmpvar_loc.span().end() < self.mouse_span.end() {
+                        eprintln!("tmpvar_loc.span().end() < self.mouse_span.end()");
+                        return ;
+                    }
+                    eprintln!("Temporary is available");
                     if let Some(node_type) = env.get_node_type_opt(*node_id) {
                         self.process_type(env, &tmpvar_loc, &node_type);
                     }
@@ -594,6 +612,15 @@ impl Handler {
                 },
                 SpecBlock(node_id, spec) => {
                     self.process_spec_block(env, &env.get_node_loc(*node_id), spec);
+                },
+                Block(node_id,pat,left_exp, right_exp) => {
+                    eprintln!("exp is block");
+                    self.process_pattern(env, pat);
+
+                    if let Some(l_exp) = left_exp {
+                        self.process_expr(env, l_exp);
+                    }
+                    self.process_expr(env, right_exp);
                 },
                 _ => {
                     log::info!("________________");
@@ -803,6 +830,43 @@ impl Handler {
                 }
             }
         }
+    
+        if let Call(node_id, Pack(mid, sid), _) = expdata {
+            let this_call_loc = env.get_node_loc(*node_id);
+            log::info!(
+                "lll >> exp.visit this_call_loc = {:?}",
+                env.get_location(&this_call_loc)
+                
+            );
+            if this_call_loc.span().start() > self.mouse_span.end()
+            || self.mouse_span.end() > this_call_loc.span().end()
+            {
+                return;
+            }
+            let pack_module = env.get_module(*mid);
+            let pack_struct = pack_module.get_struct(*sid);
+            log::info!(
+                "lll >> pack_struct = {:?}",
+                pack_struct.get_full_name_str()
+            );
+
+            let pack_struct_loc = pack_struct.get_loc();
+
+            let (pack_struct_file, pack_struct_location) =
+                env.get_file_and_location(&pack_struct_loc).unwrap();
+        
+            let path_buf = PathBuf::from(pack_struct_file);
+            let result = FileRange {
+                path: path_buf,
+                line_start: pack_struct_location.line.0,
+                col_start: pack_struct_location.column.0,
+                line_end: pack_struct_location.line.0,
+                col_end: pack_struct_location.column.0
+                    + pack_struct.get_full_name_str().len() as u32,
+            };
+            self.result_candidates.push(result);
+            self.capture_items_span.push(this_call_loc.span());
+        }
         log::info!("lll << process_call");
     }
 
@@ -837,6 +901,48 @@ impl Handler {
     //     }
     // }
     
+    fn process_pattern(&mut self, env: &GlobalEnv, pattern: &MoveModelPattern) {
+        match pattern {
+            MoveModelPattern::Struct(node_id, q_id, _) => {
+            let this_call_loc = env.get_node_loc(*node_id);
+            log::info!(
+                "lll >> exp.visit this_call_loc = {:?}",
+                env.get_location(&this_call_loc)
+                
+            );
+            if this_call_loc.span().start() > self.mouse_span.end()
+            || self.mouse_span.end() > this_call_loc.span().end()
+            {
+                return;
+            }
+            let pattern_module = env.get_module(q_id.module_id);
+            let pattern_struct = pattern_module.get_struct(q_id.id);
+            log::info!(
+                "lll >> pattern_struct = {:?}",
+                pattern_struct.get_full_name_str()
+            );
+
+            let pattern_struct_loc = pattern_struct.get_loc();
+
+            let (pattern_struct_file, pattern_struct_location) =
+                env.get_file_and_location(&pattern_struct_loc).unwrap();
+        
+            let path_buf = PathBuf::from(pattern_struct_file);
+            let result = FileRange {
+                path: path_buf,
+                line_start: pattern_struct_location.line.0,
+                col_start: pattern_struct_location.column.0,
+                line_end: pattern_struct_location.line.0,
+                col_end: pattern_struct_location.column.0
+                    + pattern_struct.get_full_name_str().len() as u32,
+            };
+            self.result_candidates.push(result);
+            self.capture_items_span.push(this_call_loc.span());
+            },
+            _ => {}
+        }
+    }
+
     fn process_spec_block(
         &mut self,
         env: &GlobalEnv,
@@ -871,6 +977,7 @@ impl Handler {
         capture_items_loc: &move_model::model::Loc,
         ty: &move_model::ty::Type,
     ) {
+        eprintln!("process_type ============= ");
         use move_model::ty::Type::*;
         match ty {
             Tuple(..) => {
