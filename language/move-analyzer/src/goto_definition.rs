@@ -330,31 +330,19 @@ impl Handler {
         eprintln!("target_fun_loc start = {:?}, end = {:?}", target_fun_loc.span().start(), target_fun_loc.span().end());
         self.get_mouse_loc(env, &target_fun_loc);
 
-        
-        self.process_parameter(env, &target_fun, &para);
-        
+        self.process_parameter();
+        self.process_return_type();
 
         if let Some(exp) = target_fun.get_def() {
             self.process_expr(env, exp);
         }
     }
 
-    fn process_parameter(&mut self, env: &GlobalEnv, fun_env: &FunctionEnv, para: &Parameter) {
-        for para in fun_env.get_parameters() {
-            let sym_str = para.0.display(env.symbol_pool()).to_string();
-            let sym_str_full = sym_str + ": ";
-            if let Some(pos) = self.mouse_source.rfind(sym_str_full) {
-                
-            }
-
-            let sym_str_full = sym_str + " :";
-            if let Some(pos) = self.mouse_source.rfind(sym_str_full) {
-                
-            }
-        }
-        
-        
-    }
+    /// MoveModel currently lacks support for obtaining the Span and Loc of function parameters and return type.
+    /// As a result, it is unable to compare positions with user-clicked addresses.
+    /// Parameters and return types in function signatures are currently not supported for navigation.
+    fn process_parameter(&mut self) {}
+    fn process_return_type(&mut self) {}
 
     fn process_spec_func(&mut self, env: &GlobalEnv) {
         log::info!("lll >> process_spec_func =======================================");
