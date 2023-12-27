@@ -85,7 +85,6 @@ pub(crate) struct Handler {
     pub(crate) result_candidates: Vec<FileRange>,
     pub(crate) target_module_id: ModuleId,
     pub(crate) symbol_2_pattern_id: HashMap<Symbol, NodeId>, // LocalVar => Block::Pattern, only remeber the last pattern
-    pub(crate) mouse_source: String,
 }
 
 impl Handler {
@@ -210,7 +209,6 @@ impl Handler {
             ),
         ));
         eprintln!("llll >> mouse_source = {:?}", mouse_source);
-        self.mouse_source = mouse_source;
     
         self.mouse_span = codespan::Span::new(mouse_line_first_col.span().start(), mouse_line_last_col.span().start());
     }
