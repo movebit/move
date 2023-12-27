@@ -578,7 +578,7 @@ impl Handler {
                     let local_source = env.get_source(&localvar_loc);
                     log::info!("lll >> local_source = {:?}", local_source);
                     if localvar_loc.span().start() > self.mouse_span.end()
-                        || localvar_loc.span().end() > self.mouse_span.start() 
+                        || self.mouse_span.end() > localvar_loc.span().end()
                     {
                         // log::info!("??? localvar return");
                         return;
