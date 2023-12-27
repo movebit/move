@@ -6,6 +6,7 @@ use crate::{
     context::*,
     utils::{path_concat, FileRange},
 };
+use im::HashMap;
 use lsp_server::*;
 use lsp_types::*;
 // use move_ir_types::location::sp;
@@ -15,7 +16,9 @@ use lsp_types::*;
 // };
 use move_model::{
     ast::{ExpData::*, Operation::*, Spec, SpecBlockTarget, Pattern as MoveModelPattern},
-    model::{FunId, GlobalEnv, ModuleId, StructId},
+    model::{FunId, GlobalEnv, ModuleId, StructId, NodeId, Parameter, Loc, FunctionEnv}, 
+    symbol::Symbol,
+    ty::Type,
 };
 use std::path::{Path, PathBuf};
 // use itertools::Itertools;
@@ -81,6 +84,8 @@ pub(crate) struct Handler {
     pub(crate) capture_items_span: Vec<codespan::Span>,
     pub(crate) result_candidates: Vec<FileRange>,
     pub(crate) target_module_id: ModuleId,
+    pub(crate) symbol_2_pattern_id: HashMap<Symbol, NodeId>, // LocalVar => Block::Pattern, only remeber the last pattern
+    pub(crate) mouse_source: String,
 }
 
 impl Handler {
@@ -94,6 +99,7 @@ impl Handler {
             capture_items_span: vec![],
             result_candidates: vec![],
             target_module_id: ModuleId::new(0),
+            symbol_2_pattern_id: HashMap::new(),
         }
     }
 
@@ -204,6 +210,7 @@ impl Handler {
             ),
         ));
         eprintln!("llll >> mouse_source = {:?}", mouse_source);
+        self.mouse_source = mouse_source;
     
         self.mouse_span = codespan::Span::new(mouse_line_first_col.span().start(), mouse_line_last_col.span().start());
     }
@@ -306,7 +313,7 @@ impl Handler {
                 ))
                 .unwrap();
             eprintln!("lll >> func_start_pos = {:?}, func_end_pos = {:?}", func_start_pos, func_end_pos);
-            if func_start_pos.line.0 < self.line && self.line < func_end_pos.line.0 {
+            if func_start_pos.line.0 <= self.line && self.line < func_end_pos.line.0 {
                 target_fun_id = fun.get_id();
                 found_target_fun = true;
                 break;
@@ -323,10 +330,19 @@ impl Handler {
         eprintln!("target_fun_loc start = {:?}, end = {:?}", target_fun_loc.span().start(), target_fun_loc.span().end());
         self.get_mouse_loc(env, &target_fun_loc);
 
+        self.process_parameter();
+        self.process_return_type();
+
         if let Some(exp) = target_fun.get_def() {
             self.process_expr(env, exp);
         }
     }
+
+    /// MoveModel currently lacks support for obtaining the Span and Loc of function parameters and return type.
+    /// As a result, it is unable to compare positions with user-clicked addresses.
+    /// Parameters and return types in function signatures are currently not supported for navigation.
+    fn process_parameter(&mut self) {}
+    fn process_return_type(&mut self) {}
 
     fn process_spec_func(&mut self, env: &GlobalEnv) {
         log::info!("lll >> process_spec_func =======================================");
@@ -569,8 +585,20 @@ impl Handler {
                         // log::info!("??? localvar return");
                         return;
                     }
-                    if let Some(node_type) = env.get_node_type_opt(*node_id) {
-                        self.process_type(env, &localvar_loc, &node_type);
+                    
+                    if let Some(pattern_id) = self.symbol_2_pattern_id.get(localvar_symbol) {
+                        let pattern_loc = env.get_node_loc(*pattern_id);
+                        if let Some((def_file, def_location)) = env.get_file_and_location(&pattern_loc) {
+                            let result = FileRange {
+                                path: PathBuf::from(def_file),
+                                line_start: def_location.line.0,
+                                col_start: def_location.column.0,
+                                line_end: def_location.line.0,
+                                col_end: def_location.column.0,
+                            };
+                            self.capture_items_span.push(pattern_loc.span());
+                            self.result_candidates.push(result); 
+                        }
                     }
                 },
                 Temporary(node_id, _) => {
@@ -614,7 +642,7 @@ impl Handler {
                     self.process_spec_block(env, &env.get_node_loc(*node_id), spec);
                 },
                 Block(node_id,pat,left_exp, right_exp) => {
-                    eprintln!("exp is block");
+                    self.collect_local_var_in_pattern(pat);
                     self.process_pattern(env, pat);
 
                     if let Some(l_exp) = left_exp {
@@ -901,43 +929,49 @@ impl Handler {
     //     }
     // }
     
+    fn collect_local_var_in_pattern(&mut self, pattern: &MoveModelPattern) {
+        for (node_id, sym) in pattern.vars().iter() {
+            self.symbol_2_pattern_id.insert(sym.clone(), node_id.clone());
+        }
+    }
+
     fn process_pattern(&mut self, env: &GlobalEnv, pattern: &MoveModelPattern) {
         match pattern {
-            MoveModelPattern::Struct(node_id, q_id, _) => {
-            let this_call_loc = env.get_node_loc(*node_id);
-            log::info!(
-                "lll >> exp.visit this_call_loc = {:?}",
-                env.get_location(&this_call_loc)
-                
-            );
-            if this_call_loc.span().start() > self.mouse_span.end()
-            || self.mouse_span.end() > this_call_loc.span().end()
-            {
-                return;
-            }
-            let pattern_module = env.get_module(q_id.module_id);
-            let pattern_struct = pattern_module.get_struct(q_id.id);
-            log::info!(
-                "lll >> pattern_struct = {:?}",
-                pattern_struct.get_full_name_str()
-            );
+            MoveModelPattern::Struct(node_id, q_id, vec_pattern) => {
+                let this_call_loc = env.get_node_loc(*node_id);
+                log::info!(
+                    "lll >> exp.visit this_call_loc = {:?}",
+                    env.get_location(&this_call_loc)
+                    
+                );
+                if this_call_loc.span().start() > self.mouse_span.end()
+                || self.mouse_span.end() > this_call_loc.span().end()
+                {
+                    return;
+                }
+                let pattern_module = env.get_module(q_id.module_id);
+                let pattern_struct = pattern_module.get_struct(q_id.id);
+                log::info!(
+                    "lll >> pattern_struct = {:?}",
+                    pattern_struct.get_full_name_str()
+                );
 
-            let pattern_struct_loc = pattern_struct.get_loc();
+                let pattern_struct_loc = pattern_struct.get_loc();
 
-            let (pattern_struct_file, pattern_struct_location) =
-                env.get_file_and_location(&pattern_struct_loc).unwrap();
-        
-            let path_buf = PathBuf::from(pattern_struct_file);
-            let result = FileRange {
-                path: path_buf,
-                line_start: pattern_struct_location.line.0,
-                col_start: pattern_struct_location.column.0,
-                line_end: pattern_struct_location.line.0,
-                col_end: pattern_struct_location.column.0
-                    + pattern_struct.get_full_name_str().len() as u32,
-            };
-            self.result_candidates.push(result);
-            self.capture_items_span.push(this_call_loc.span());
+                let (pattern_struct_file, pattern_struct_location) =
+                    env.get_file_and_location(&pattern_struct_loc).unwrap();
+            
+                let path_buf = PathBuf::from(pattern_struct_file);
+                let result = FileRange {
+                    path: path_buf,
+                    line_start: pattern_struct_location.line.0,
+                    col_start: pattern_struct_location.column.0,
+                    line_end: pattern_struct_location.line.0,
+                    col_end: pattern_struct_location.column.0
+                        + pattern_struct.get_full_name_str().len() as u32,
+                };
+                self.result_candidates.push(result);
+                self.capture_items_span.push(this_call_loc.span());
             },
             _ => {}
         }
