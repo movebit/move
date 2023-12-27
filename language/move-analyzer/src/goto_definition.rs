@@ -231,7 +231,7 @@ impl Handler {
                 use_decl.loc, use_decl.loc.span().end() - use_decl.loc.span().start());
             if !use_decl.members.is_empty() {
                 for (member_loc, name, _alias_name) in use_decl.members.clone().into_iter() {
-                    log::info!("member_loc = {:?} ---", env.get_location(&member_loc));
+                    log::trace!("member_loc = {:?} ---", env.get_location(&member_loc));
                     if self.check_move_model_loc_contains_mouse_pos(env, &member_loc) {
                         log::info!("find use symbol = {}", name.display(spool));
                         target_stct_or_fn = name.display(spool).to_string();
@@ -578,7 +578,7 @@ impl Handler {
                     let local_source = env.get_source(&localvar_loc);
                     log::info!("lll >> local_source = {:?}", local_source);
                     if localvar_loc.span().start() > self.mouse_span.end()
-                        || localvar_loc.span().end() < self.mouse_span.start() 
+                        || localvar_loc.span().end() > self.mouse_span.start() 
                     {
                         // log::info!("??? localvar return");
                         return;
