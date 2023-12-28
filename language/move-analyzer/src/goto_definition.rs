@@ -16,7 +16,7 @@ use lsp_types::*;
 // };
 use move_model::{
     ast::{ExpData::*, Operation::*, Spec, SpecBlockTarget, Pattern as MoveModelPattern, ModuleName, Address},
-    model::{FunId, GlobalEnv, ModuleId, StructId, NodeId, Parameter, Loc, FunctionEnv}, 
+    model::{FunId, GlobalEnv, ModuleId, StructId, NodeId, Parameter, Loc, FunctionEnv, ModuleEnv}, 
     symbol::Symbol,
     ty::Type,
 };
@@ -46,7 +46,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server:
     );
 
     let mut handler = Handler::new(fpath.clone(), line, col);
-    let _ = match context.projects.get_project(&fpath) {
+    let project = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
             log::error!("project not found:{:?}", fpath.as_path());
@@ -56,8 +56,10 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server:
                 error: None,
             };
         },
-    }
-    .run_visitor_for_file(&mut handler, &fpath, String::default());
+    };
+
+    handler.addr_2_addrname = project.addr_2_addrname.clone();
+    project.run_visitor_for_file(&mut handler, &fpath, String::default());
     let locations = handler.to_locations();
     let r = Response::new_ok(
         request.id.clone(),
@@ -85,6 +87,7 @@ pub(crate) struct Handler {
     pub(crate) result_candidates: Vec<FileRange>,
     pub(crate) target_module_id: ModuleId,
     pub(crate) symbol_2_pattern_id: HashMap<Symbol, NodeId>, // LocalVar => Block::Pattern, only remeber the last pattern
+    pub(crate) addr_2_addrname: HashMap<String, String>,
 }
 
 impl Handler {
@@ -99,7 +102,26 @@ impl Handler {
             result_candidates: vec![],
             target_module_id: ModuleId::new(0),
             symbol_2_pattern_id: HashMap::new(),
+            addr_2_addrname: HashMap::new(),
         }
+    }
+
+    fn check_usedecl_is_same_line_with_mouse_pos(&self, env: &GlobalEnv, loc: &move_model::model::Loc) -> bool {
+        if let Some(obj_first_col) = env.get_location(&
+            move_model::model::Loc::new(
+                loc.file_id(),
+                codespan::Span::new(
+                    loc.span().start(),
+                    loc.span().start() + codespan::ByteOffset(1),
+                )
+            )
+        ) {
+            if self.line == obj_first_col.line.0 {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     fn check_move_model_loc_contains_mouse_pos(&self, env: &GlobalEnv, loc: &move_model::model::Loc) -> bool {
@@ -217,36 +239,33 @@ impl Handler {
         log::info!("lll >> process_use_decl =======================================\n\n");
         let mut target_module = env.get_module(self.target_module_id);
         let spool = env.symbol_pool();
-        let mut ref_module_id = ModuleId::new(0);
         let mut target_stct_or_fn = String::default();
         let mut found_target_stct_or_fn = false;
+        let mut found_usedecl_same_line = false;
         let mut capture_items_loc = move_model::model::Loc::default();
         let mut used_module_name = Default::default();
-        let mut opton_used_module_addr = Default::default();
-        let mut option_use_decl_module= Default::default();
         for use_decl in target_module.get_use_decls() {
             if let Some(use_pos) = env.get_location(&use_decl.loc) {
                 if u32::from(use_pos.line) != self.line {
                     continue;
                 }
+                log::trace!("find use decl module, line: {}", use_pos.line.0);
             }
-            eprintln!("use_decl.loc = {:?}, use_decl.loc.len = {:?}", 
-                use_decl.loc, use_decl.loc.span().end() - use_decl.loc.span().start());
+
+            used_module_name = use_decl.module_name.display_full(env).to_string();
+            found_usedecl_same_line = true;
+            capture_items_loc = use_decl.loc.clone();
+        
             if !use_decl.members.is_empty() {
                 for (member_loc, name, _alias_name) in use_decl.members.clone().into_iter() {
-                    log::info!("member_loc = {:?} ---", env.get_location(&member_loc));
+                    log::trace!("member_loc = {:?} ---", env.get_location(&member_loc));
                     if self.check_move_model_loc_contains_mouse_pos(env, &member_loc) {
-
-                        opton_used_module_addr = env.resolve_address_alias(name);
-                        used_module_name = use_decl.module_name.display_full(env).to_string();
                         
-                        option_use_decl_module = env.find_module_by_name(name);
+                        used_module_name = use_decl.module_name.display_full(env).to_string();
                         target_stct_or_fn = name.display(spool).to_string();
                         found_target_stct_or_fn = true;
-                        if let Some(mid) = use_decl.module_id {
-                            ref_module_id = mid;
-                        }
                         capture_items_loc = member_loc;
+                        log::trace!("find use decl member {}", target_stct_or_fn);
                         break;
                     }
                 }
@@ -256,61 +275,89 @@ impl Handler {
             }
         }
 
-        if !found_target_stct_or_fn {
+        if !found_target_stct_or_fn && !found_usedecl_same_line {
             return;
         }
         
+        let mut option_use_module: Option<ModuleEnv<'_>> = None;
         for mo_env in env.get_modules() {
-
-            eprintln!("modules = {}, used_module_name = {}", 
-                mo_env.get_name().display_full(env).to_string(),
-                used_module_name
-            );
+            let mo_name_str = mo_env.get_name().display_full(env).to_string();
+            match mo_name_str.find("::") {
+                Some(pos) => {
+                    let mo_addr = mo_name_str[0..pos].to_string();
+                    let mo_addrname = self.addr_2_addrname.get(&mo_addr).unwrap_or(&String::new()).clone(); 
+                    let mo_addrname_with_moname = mo_addrname +&mo_name_str[pos..].to_string();
+                    if mo_addrname_with_moname == used_module_name {
+                        option_use_module = Some(mo_env);
+                        break;
+                    }
+                },
+                None => continue,
+            }
         }
 
-        match opton_used_module_addr {
-            Some(x) => eprintln!("opton_used_module_addr {}",x),
+        let use_decl_module = match option_use_module {
+            Some(x) => x,
             None => return,
+        };
+
+        if found_target_stct_or_fn {
+            log::info!("finding use decl module member...");
+            for stct in use_decl_module.get_structs() {
+                log::trace!("per_struct_name = {:?}, target_struct: {}", stct.get_full_name_str(), target_stct_or_fn);
+                if stct.get_full_name_str().contains(&target_stct_or_fn) {
+                    log::info!("stct.get_full_name_str() = {:?}", stct.get_full_name_str());
+                    let (type_struct_file, type_struct_pos) =
+                        env.get_file_and_location(&stct.get_loc()).unwrap();
+                    let result = FileRange {
+                        path: PathBuf::from(type_struct_file).clone(),
+                        line_start: type_struct_pos.line.0,
+                        col_start: type_struct_pos.column.0,
+                        line_end: type_struct_pos.line.0,
+                        col_end: type_struct_pos.column.0,
+                    };
+                    self.capture_items_span.push(capture_items_loc.span());
+                    self.result_candidates.push(result);
+                    return;
+                }
+            }
+            for func in use_decl_module.get_functions() {
+                log::trace!("per_fun_name = {:?}, target_fun: {}", func.get_full_name_str(), target_stct_or_fn);
+                if func.get_name_str().contains(&target_stct_or_fn) {
+                    log::info!("func.get_name_str() = {:?}", func.get_name_str());
+                    let (use_fun_file, use_fun_line) =
+                        env.get_file_and_location(&func.get_loc()).unwrap();
+                    let path_buf = PathBuf::from(use_fun_file);
+                    let result = FileRange {
+                        path: path_buf,
+                        line_start: use_fun_line.line.0,
+                        col_start: use_fun_line.column.0,
+                        line_end: use_fun_line.line.0,
+                        col_end: use_fun_line.column.0,
+                    };
+                    self.capture_items_span.push(capture_items_loc.span());
+                    self.result_candidates.push(result);
+                    return;
+                }
+            }
+        }
+            
+        if found_usedecl_same_line {
+            log::info!("find use decl module...");
+            let (module_file, module_pos) =
+                env.get_file_and_location(&use_decl_module.get_loc()).unwrap();
+            let result = FileRange {
+                path: PathBuf::from(module_file).clone(),
+                line_start: module_pos.line.0,
+                col_start: module_pos.column.0,
+                line_end: module_pos.line.0,
+                col_end: module_pos.column.0,
+            };
+            self.capture_items_span.push(capture_items_loc.span());
+            self.result_candidates.push(result);
+            return;
         }
         
-        // eprintln!("find use decl success");
-        // for stct in use_decl_module.get_structs() {
-        //     log::trace!("per_struct_name = {:?}, target_struct: {}", stct.get_full_name_str(), target_stct_or_fn);
-        //     if stct.get_full_name_str().contains(&target_stct_or_fn) {
-        //         log::info!("stct.get_full_name_str() = {:?}", stct.get_full_name_str());
-        //         let (type_struct_file, type_struct_pos) =
-        //             env.get_file_and_location(&stct.get_loc()).unwrap();
-        //         let result = FileRange {
-        //             path: PathBuf::from(type_struct_file).clone(),
-        //             line_start: type_struct_pos.line.0,
-        //             col_start: type_struct_pos.column.0,
-        //             line_end: type_struct_pos.line.0,
-        //             col_end: type_struct_pos.column.0,
-        //         };
-        //         self.capture_items_span.push(capture_items_loc.span());
-        //         self.result_candidates.push(result);
-        //         return;
-        //     }
-        // }
-        // for func in use_decl_module.get_functions() {
-        //     log::trace!("per_fun_name = {:?}, target_fun: {}", func.get_full_name_str(), target_stct_or_fn);
-        //     if func.get_name_str().contains(&target_stct_or_fn) {
-        //         log::info!("func.get_name_str() = {:?}", func.get_name_str());
-        //         let (use_fun_file, use_fun_line) =
-        //             env.get_file_and_location(&func.get_loc()).unwrap();
-        //         let path_buf = PathBuf::from(use_fun_file);
-        //         let result = FileRange {
-        //             path: path_buf,
-        //             line_start: use_fun_line.line.0,
-        //             col_start: use_fun_line.column.0,
-        //             line_end: use_fun_line.line.0,
-        //             col_end: use_fun_line.column.0,
-        //         };
-        //         self.capture_items_span.push(capture_items_loc.span());
-        //         self.result_candidates.push(result);
-        //         return;
-        //     }
-        // }
     }
 
     fn process_func(&mut self, env: &GlobalEnv) {
