@@ -15,7 +15,7 @@ use lsp_types::*;
 //     model::{FunId, SpecFunId, GlobalEnv, ModuleEnv, ModuleId, FunctionEnv, StructId},
 // };
 use move_model::{
-    ast::{ExpData::*, Operation::*, Spec, SpecBlockTarget, Pattern as MoveModelPattern},
+    ast::{ExpData::*, Operation::*, Spec, SpecBlockTarget, Pattern as MoveModelPattern, ModuleName, Address},
     model::{FunId, GlobalEnv, ModuleId, StructId, NodeId, Parameter, Loc, FunctionEnv}, 
     symbol::Symbol,
     ty::Type,
@@ -217,10 +217,12 @@ impl Handler {
         log::info!("lll >> process_use_decl =======================================\n\n");
         let mut target_module = env.get_module(self.target_module_id);
         let spool = env.symbol_pool();
-        let mut ref_module = String::default();
+        let mut ref_module_id = ModuleId::new(0);
         let mut target_stct_or_fn = String::default();
         let mut found_target_stct_or_fn = false;
         let mut capture_items_loc = move_model::model::Loc::default();
+
+        let mut option_use_decl_module= Default::default();
         for use_decl in target_module.get_use_decls() {
             if let Some(use_pos) = env.get_location(&use_decl.loc) {
                 if u32::from(use_pos.line) != self.line {
@@ -234,9 +236,13 @@ impl Handler {
                     log::info!("member_loc = {:?} ---", env.get_location(&member_loc));
                     if self.check_move_model_loc_contains_mouse_pos(env, &member_loc) {
                         log::info!("find use symbol = {}", name.display(spool));
+                        option_use_decl_module = env.find_module_by_name(&name);
                         target_stct_or_fn = name.display(spool).to_string();
                         found_target_stct_or_fn = true;
-                        ref_module = use_decl.module_name.display_full(env).to_string();
+                        eprintln!("{}", use_decl.module_name.display_full(env).to_string());
+                        if let Some(mid) = use_decl.module_id {
+                            ref_module_id = mid;
+                        }
                         capture_items_loc = member_loc;
                         break;
                     }
@@ -250,15 +256,19 @@ impl Handler {
         if !found_target_stct_or_fn {
             return;
         }
-
-        for module in env.get_modules() {
-            let module_name = module.get_name().display(env).to_string();
-            if ref_module.contains(&module_name) {
-                target_module = module;
-                break;
-            }
+        
+        for mo_env in env.get_modules() {
+            eprintln!("global env {}", mo_env.get_full_name_str());
         }
-        for stct in target_module.get_structs() {
+
+        let use_decl_module = match option_use_decl_module {
+            Some(x) => x,
+            None => return, 
+        };
+        
+        eprintln!("find use decl success");
+        for stct in use_decl_module.get_structs() {
+            log::trace!("per_struct_name = {:?}, target_struct: {}", stct.get_full_name_str(), target_stct_or_fn);
             if stct.get_full_name_str().contains(&target_stct_or_fn) {
                 log::info!("stct.get_full_name_str() = {:?}", stct.get_full_name_str());
                 let (type_struct_file, type_struct_pos) =
@@ -275,7 +285,8 @@ impl Handler {
                 return;
             }
         }
-        for func in target_module.get_functions() {
+        for func in use_decl_module.get_functions() {
+            log::trace!("per_fun_name = {:?}, target_fun: {}", func.get_full_name_str(), target_stct_or_fn);
             if func.get_name_str().contains(&target_stct_or_fn) {
                 log::info!("func.get_name_str() = {:?}", func.get_name_str());
                 let (use_fun_file, use_fun_line) =
