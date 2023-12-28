@@ -235,7 +235,7 @@ impl FunSpecGenerator {
                         BinOPReasonZX::UnderFlow => {
                             statements.push_str(
                                 format!(
-                                    "{}aborts_if {} - {} <= 0;\n",
+                                    "{}aborts_if {} - {} < 0;\n",
                                     indent(2),
                                     _left_exp_str,
                                     _right_exp_str,
