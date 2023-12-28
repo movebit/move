@@ -69,12 +69,6 @@ impl FunSpecGenerator {
 
     pub(crate) fn generate_zx(&mut self, project: &ProjectZX, global_env: &GlobalEnv, f: &FunctionEnv, fpath: &PathBuf) {
         use crate::type_display_zx::TypeDisplayZX;
-        let mut addr_2_addrname = HashMap::new();
-        for helper1 in project.targets.iter() {
-            for (addr_name, addr) in helper1.named_address_map.iter() {
-                addr_2_addrname.insert(addr.to_string(), addr_name.clone());
-            }
-        }
         
         let display_context = f.get_type_display_ctx();
         self.result
@@ -90,7 +84,7 @@ impl FunSpecGenerator {
                 let display_context_para = TypeDisplayZX {
                     type_: &para.1,
                     context: &display_context,
-                    addr_2_addrname: &addr_2_addrname,
+                    addr_2_addrname: &project.addr_2_addrname,
                 };
                 let para_type_string = display_context_para.to_string();
                 self.result.push_str(para_type_string.as_str());
@@ -105,7 +99,7 @@ impl FunSpecGenerator {
         let display_context_return = TypeDisplayZX {
             type_: &return_type,
             context: &display_context,
-            addr_2_addrname: &addr_2_addrname,
+            addr_2_addrname: &project.addr_2_addrname,
         };
         let mut return_type_string = display_context_return.to_string();
         

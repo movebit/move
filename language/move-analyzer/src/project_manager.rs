@@ -19,7 +19,7 @@ use std::{
 };
 use walkdir::WalkDir;
 use move_model::{options::ModelBuilderOptions, run_model_builder_with_options};
-
+use im::HashMap;
 use num_bigint::BigUint;
 use tempfile::tempdir;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
@@ -132,6 +132,7 @@ impl Project {
             current_modifing_file_content: Default::default(),
             targets: vec![],
             dependents: vec![],
+            addr_2_addrname: Default::default(),
         };
 
         let mut targets_paths: Vec<PathBuf> = Vec::new();
@@ -206,6 +207,14 @@ impl Project {
         eprintln!("env.get_module_count() = {:?}", &new_project.global_env.get_module_count());
         eprintln!("env.diag_count() = {:?}", &new_project.global_env.diag_count(Severity::Error));
         let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
+
+        let mut addr_2_addrname = im::HashMap::new();
+        for helper1 in new_project.targets.iter() {
+            for (addr_name, addr) in helper1.named_address_map.iter() {
+                addr_2_addrname.insert(addr.to_string(), addr_name.clone());
+            }
+        }
+        new_project.addr_2_addrname = addr_2_addrname;
         new_project.global_env.report_diag(&mut error_writer, Severity::Error);
         Ok(new_project)
     }
