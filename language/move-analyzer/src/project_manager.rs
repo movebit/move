@@ -162,14 +162,6 @@ impl Project {
         // log::info!("named_address_mapping = {:?}", named_address_mapping);
         let addrs = parse_addresses_from_options(named_address_mapping.clone())?;
 
-        let mut addrs_zx: BTreeMap<String, NumericalAddress> = BTreeMap::new();
-        for (index, (s, add)) in addrs.iter().enumerate() {
-            let add_key = NumericalAddress::new(
-                AccountAddress::from_hex_literal(&format!("0x{}", index)).unwrap().into_bytes(), 
-            move_compiler::shared::NumberFormat::Hex);
-            addrs_zx.insert(s.clone(), add_key);
-        }
-
         let targets = vec![PackagePaths {
             name: None,
             paths: targets_paths
@@ -177,7 +169,7 @@ impl Project {
                 .map(|p| p.to_string_lossy().to_string())
                 .collect::<Vec<_>>()
                 .clone(),
-            named_address_map: addrs_zx.clone(),
+            named_address_map: addrs.clone(),
         }];
 
         let dependents = vec![PackagePaths {
@@ -187,7 +179,7 @@ impl Project {
                 .map(|p| p.to_string_lossy().to_string())
                 .collect::<Vec<_>>()
                 .clone(),
-            named_address_map: addrs_zx,
+            named_address_map: addrs.clone(),
         }];
 
         let attributes: BTreeSet<String> = Default::default();
@@ -208,13 +200,14 @@ impl Project {
         eprintln!("env.diag_count() = {:?}", &new_project.global_env.diag_count(Severity::Error));
         let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
 
-        let mut addr_2_addrname = im::HashMap::new();
-        for helper1 in new_project.targets.iter() {
-            for (addr_name, addr) in helper1.named_address_map.iter() {
-                addr_2_addrname.insert(addr.to_string(), addr_name.clone());
-            }
+
+        let mut helper = im::HashMap::new();
+        for (index, (s, _)) in addrs.iter().enumerate() {
+            let add_key = format!("0x{}", index);
+            helper.insert(add_key, s.clone());
         }
-        new_project.addr_2_addrname = addr_2_addrname;
+        
+        new_project.addr_2_addrname = helper;
         new_project.global_env.report_diag(&mut error_writer, Severity::Error);
         Ok(new_project)
     }

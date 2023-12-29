@@ -44,12 +44,7 @@ where
         }
     };
     
-    let mut addr_2_addrname = HashMap::new();
-    for helper1 in project.targets.iter() {
-        for (addr_name, addr) in helper1.named_address_map.iter() {
-            addr_2_addrname.insert(addr.to_string(), addr_name.clone());
-        }
-    }
+    let mut addr_2_addrname = &project.addr_2_addrname;
     
     let mut result = ModuleSpecBuilder::new();
     for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &fpath) {

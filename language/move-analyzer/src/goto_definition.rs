@@ -106,24 +106,6 @@ impl Handler {
         }
     }
 
-    fn check_usedecl_is_same_line_with_mouse_pos(&self, env: &GlobalEnv, loc: &move_model::model::Loc) -> bool {
-        if let Some(obj_first_col) = env.get_location(&
-            move_model::model::Loc::new(
-                loc.file_id(),
-                codespan::Span::new(
-                    loc.span().start(),
-                    loc.span().start() + codespan::ByteOffset(1),
-                )
-            )
-        ) {
-            if self.line == obj_first_col.line.0 {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     fn check_move_model_loc_contains_mouse_pos(&self, env: &GlobalEnv, loc: &move_model::model::Loc) -> bool {
         if let Some(obj_first_col) = env.get_location(&
             move_model::model::Loc::new(
@@ -245,12 +227,17 @@ impl Handler {
         let mut capture_items_loc = move_model::model::Loc::default();
         let mut used_module_name = Default::default();
         for use_decl in target_module.get_use_decls() {
-            if let Some(use_pos) = env.get_location(&use_decl.loc) {
-                if u32::from(use_pos.line) != self.line {
-                    continue;
-                }
-                log::trace!("find use decl module, line: {}", use_pos.line.0);
+           // if let Some(use_pos) = env.get_location(&use_decl.loc) {
+            //     log::trace!("find use decl module, line: {}", use_pos.line.0);
+            //     if u32::from(use_pos.line) != self.line {
+            //         continue;
+            //     }
+            //     log::trace!("find use decl module, line: {}", use_pos.line.0);
+            // }
+            if !self.check_move_model_loc_contains_mouse_pos(env, &use_decl.loc) {
+                continue;
             }
+            log::trace!("find use decl module, line: {}", use_decl.loc.span().start());
 
             used_module_name = use_decl.module_name.display_full(env).to_string();
             found_usedecl_same_line = true;
