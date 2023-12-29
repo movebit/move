@@ -52,7 +52,3 @@ pprof = { version = "0.11.0" , features = ["flamegraph" , "protobuf"]}
 aptos = []
 sui = []
 pprof = []
-
-[[test]]
-name = "testsuite"
-harness = false
