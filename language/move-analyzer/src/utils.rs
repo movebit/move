@@ -386,7 +386,6 @@ use move_model::model::ModuleEnv;
 pub fn get_modules_by_fpath_in_target_modules<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Vec<ModuleEnv<'a>> {
     let mut result_vec_modules: Vec<ModuleEnv> = vec![];
     for module_env in env.get_target_modules() {
-        eprintln!("macth module: {}", module_env.get_full_name_str());
         if env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string() != fpath.to_string_lossy().to_string() {
             continue;
         }
@@ -404,4 +403,43 @@ pub fn get_modules_by_fpath_in_all_modules<'a>(env: &'a GlobalEnv, fpath: &PathB
         result_vec_modules.push(module_env);
     }
     return result_vec_modules;
+}
+
+use move_model::ast::{ModuleName, Address};
+use move_model::symbol::Symbol as SpecSymbol;
+use move_core_types::account_address::AccountAddress;
+use crate::project::Project;
+pub fn collect_use_decl(addrname_2_addrnum :&std::collections::HashMap<String, String>, module_env: &ModuleEnv, global_env: &GlobalEnv) -> HashMap<ModuleName, Vec<SpecSymbol>> {
+    let mut result: HashMap<ModuleName, Vec<SpecSymbol>> = Default::default();
+    for using_decl in module_env.get_use_decls() {
+        let using_decl_name = using_decl.module_name.display_full(global_env).to_string();
+        
+        let before_after = using_decl_name.split("::").collect::<Vec<_>>();
+        if before_after.len() != 2 {
+            log::error!("use decl module name len should be 2");
+            continue;
+        }
+
+        let addr_name = before_after[0];
+        log::info!("full module name {}", using_decl_name);
+        let addr_num = match addrname_2_addrnum.get(addr_name) {
+            Some(x) => x,
+            None => {
+                log::error!("use decl module name not found in project");
+                continue;
+            },
+        };
+
+        let addr_addrnum_with_module_name = ModuleName::from_str(addr_num, using_decl.module_name.name());
+        let mut using_decl_member: Vec<SpecSymbol> = vec![];
+        for (_, acc_symbol, may_sym) in using_decl.members.clone().into_iter() {
+            match may_sym {
+                Some(x) => using_decl_member.push(x),
+                None =>  using_decl_member.push(acc_symbol),
+            }
+        }
+        result.insert(addr_addrnum_with_module_name, using_decl_member);
+    }
+
+    return result;
 }
