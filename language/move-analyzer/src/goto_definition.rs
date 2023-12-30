@@ -208,7 +208,6 @@ impl Handler {
 
     fn process_use_decl(&mut self, env: &GlobalEnv) {
 
-
         log::trace!("process_use_decl =======================================\n\n");
         let mut target_module = env.get_module(self.target_module_id);
         let spool = env.symbol_pool();
@@ -266,10 +265,16 @@ impl Handler {
             return;
         }
         
+        eprintln!("target name : {:?}, len = {}", addrnum_with_module_name, addrnum_with_module_name.len());
         let mut option_use_module: Option<ModuleEnv<'_>> = None;
         for mo_env in env.get_modules() {
             let mo_name_str = mo_env.get_name().display_full(env).to_string();
-            if mo_name_str == addrnum_with_module_name {
+            eprintln!("accual name : {:?}, len = {}", mo_name_str, mo_name_str.len());
+            if addrnum_with_module_name.len() != mo_name_str.len() {
+                continue;
+            }
+            
+            if mo_name_str.to_lowercase() == addrnum_with_module_name.to_lowercase() {
                 option_use_module = Some(mo_env);
                 break;
             }
