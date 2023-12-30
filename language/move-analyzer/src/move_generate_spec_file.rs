@@ -8,7 +8,7 @@ use serde::Deserialize;
 
 // ----------
 use crate::{
-    utils::get_modules_by_fpath_in_target_modules,
+    utils::{get_modules_by_fpath_in_target_modules, collect_use_decl},
     project::Project,
     context::Context,
 };
@@ -44,17 +44,20 @@ where
         }
     };
     
-    let mut addr_2_addrname = &project.addr_2_addrname;
+    let mut addrname_2_addrnum = &project.addrname_2_addrnum;
     
+
     let mut result = ModuleSpecBuilder::new();
     for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &fpath) {
+        let using_module_map = collect_use_decl(&project.addrname_2_addrnum, &module_env, &project.global_env);
+
         eprintln!("generate spec module: {}", module_env.get_full_name_str());
         // find module_env's namespace
         let module_env_full_name = module_env.get_full_name_str();
         let addr_end = module_env_full_name.find("::").unwrap_or_default();
         let addr = module_env_full_name[0..addr_end].to_string();
         let addr_name_default = String::from("0x0");
-        let addr_name = addr_2_addrname.get(&addr).unwrap_or(&addr_name_default);
+        let addr_name = addrname_2_addrnum.get(&addr).unwrap_or(&addr_name_default);
         let module_name = module_env_full_name[addr_end+2..].to_string();
 
         // find all available StructEnv and FunctionEnv
@@ -86,7 +89,14 @@ where
                     genrate_struct_spec(&struct_env)
                 }
                 EnvItem { struct_env: None, function_env: Some(f_env), .. } => {
-                    generate_fun_spec_zx(project, &project.global_env, &f_env, &fpath)
+                    generate_fun_spec_zx(
+                        project, 
+                        &project.global_env, 
+                        &module_env, 
+                        &f_env, 
+                        &using_module_map, 
+                        &fpath
+                    )
                 }
                 _ => continue,
             };

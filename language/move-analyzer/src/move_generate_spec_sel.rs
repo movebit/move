@@ -1,19 +1,20 @@
 // use super::context_ori::*;
 
 use crate::{
-    utils::{GetPosition, get_modules_by_fpath_in_target_modules},
+    utils::{GetPosition, get_modules_by_fpath_in_target_modules, collect_use_decl},
     project::Project,
     context::Context,
     move_generate_spec::{genrate_struct_spec, generate_fun_spec_zx},
     
 };
 use move_model::model::{ModuleEnv, GlobalEnv, Loc};
-use std::{path::PathBuf, str::FromStr};
+use std::{path::PathBuf, str::FromStr, collections::HashMap};
 use serde::{Deserialize, Serialize};
 // use lsp_server::{Request,Response};
 use lsp_server::{*, Message, Request, Response};
 use codespan::Location;
-
+use move_model::ast::{Address, ModuleName};
+use move_model::symbol::Symbol as SpecSymbol;
 
 pub fn on_generate_spec_sel(context: &mut Context, request: &Request) {
     log::info!("on_generate_spec_sel request = {:?}", request);
@@ -40,12 +41,21 @@ pub fn on_generate_spec_sel(context: &mut Context, request: &Request) {
     let mut insert_pos: (u32, u32) = (0,0);
     let mut result_string :String = String::new();
     let mut is_find = false;
-    
     for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &parameters.fpath) {
-        if handle_struct(&project, &module_env, &parameters, &mut insert_pos, &mut result_string) ||
-            handle_function(&project, &module_env, &parameters, &mut insert_pos, &mut result_string) {
-                is_find = true;
-                break;
+        log::info!("collect_use_decl");
+        let using_module_map = collect_use_decl(&project.addrname_2_addrnum, &module_env, &project.global_env);
+
+        if handle_struct(&project, &module_env, &parameters, &mut insert_pos, &mut result_string) 
+        || handle_function(
+            &project, 
+            &module_env,
+            using_module_map,
+            &parameters,
+            &mut insert_pos,
+            &mut result_string
+        ) {
+            is_find = true;
+            break;
         }
     }
 
@@ -115,9 +125,14 @@ fn handle_struct(project :&Project, module_env : &ModuleEnv,
     return false;
 }
 
-fn handle_function(project :&Project, module_env : &ModuleEnv, 
-    parameters: &ReqParametersPath, insert_pos: &mut(u32, u32),
-    result_string: &mut String) -> bool 
+fn handle_function(
+    project :&Project, 
+    module_env : &ModuleEnv, 
+    using_module_map: HashMap<ModuleName, Vec<SpecSymbol>>,
+    parameters: &ReqParametersPath, 
+    insert_pos: &mut(u32, u32),
+    result_string: &mut String
+) -> bool 
 {
     for func_env in module_env.get_functions() {
         if !ReqParametersPath::is_linecol_in_loc(parameters.line, parameters.col, 
@@ -147,13 +162,14 @@ fn handle_function(project :&Project, module_env : &ModuleEnv,
             insert_pos.0 = insert_pos.0 + 1;
         }
         eprintln!("insert spec function end line = {:?}, before", insert_pos.0);
-
    
         result_string.push_str(
             generate_fun_spec_zx(
                 project,
                 &project.global_env, 
+                &module_env,
                 &func_env, 
+                &using_module_map,
                 &new_parameters.fpath)
             .as_str()
         );
@@ -161,6 +177,8 @@ fn handle_function(project :&Project, module_env : &ModuleEnv,
     }
     return false;
 }
+
+
 
 #[derive(Clone, Deserialize)]
 pub struct ReqParameters {

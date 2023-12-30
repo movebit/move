@@ -3,12 +3,12 @@ use std::path::PathBuf;
 
 // -----------------
 use move_model::{
-    model::{GlobalEnv, FunctionEnv, StructEnv},
+    model::{GlobalEnv, ModuleEnv, FunctionEnv, StructEnv},
     ty::{TypeDisplayContext, Type as MoveModelType},
     ast::{
         Exp as MoveModelExp, ExpData as MoveModelExpData,
-        Operation as MoveModelOperation
-    },
+        Operation as MoveModelOperation, ModuleName
+    }, symbol::Symbol,
 };
 
 use crate::move_generate_spec_zx::{
@@ -45,9 +45,16 @@ pub struct FunSpecGenerator {
     result: String,
 }
 
-pub fn generate_fun_spec_zx(project: &ProjectZX, global_env: &GlobalEnv, f: &FunctionEnv, fpath: &PathBuf) -> String {
+pub fn generate_fun_spec_zx(
+    project: &ProjectZX, 
+    global_env: &GlobalEnv, 
+    module_env: &ModuleEnv,
+    f: &FunctionEnv, 
+    using_module_map: &HashMap<ModuleName, Vec<Symbol>>,
+    fpath: &PathBuf) -> String 
+{
     let mut g = FunSpecGenerator::new();
-    g.generate_zx(project, global_env, f, fpath);
+    g.generate_zx(project, global_env, module_env, f, using_module_map, fpath);
     let r = g.to_string();
     r
 }
@@ -67,13 +74,35 @@ impl FunSpecGenerator {
         self.result
     }
 
-    pub(crate) fn generate_zx(&mut self, project: &ProjectZX, global_env: &GlobalEnv, f: &FunctionEnv, fpath: &PathBuf) {
+    pub(crate) fn generate_zx(
+        &mut self, 
+        project: &ProjectZX, 
+        global_env: &GlobalEnv, 
+        module_env: &ModuleEnv,
+        f: &FunctionEnv, 
+        using_module_map: &HashMap<ModuleName, Vec<Symbol>>,
+        fpath: &PathBuf
+    ) {
         use crate::type_display_zx::TypeDisplayZX;
         
         let display_context = f.get_type_display_ctx();
         self.result
             .push_str(format!("{}spec {}", indent(1), f.get_name_str()).as_str());
 
+        let generics = if !f.get_type_parameters().is_empty() {
+            format!(
+                "<{}>",
+                    f.get_type_parameters()
+                    .iter()
+                    .map(|p| p.0.display(f.symbol_pool()).to_string())
+                    .collect::<Vec<_>>()
+
+                    .join(",")
+            )   
+        } else {
+            "".to_owned()
+        };
+        self.result.push_str(generics.as_str());
         self.result.push_str("(");
 
         let para_len = f.get_parameter_count();
@@ -84,7 +113,8 @@ impl FunSpecGenerator {
                 let display_context_para = TypeDisplayZX {
                     type_: &para.1,
                     context: &display_context,
-                    addr_2_addrname: &project.addr_2_addrname,
+                    module_env: module_env,
+                    using_module_map: using_module_map,
                 };
                 let para_type_string = display_context_para.to_string();
                 self.result.push_str(para_type_string.as_str());
@@ -99,7 +129,8 @@ impl FunSpecGenerator {
         let display_context_return = TypeDisplayZX {
             type_: &return_type,
             context: &display_context,
-            addr_2_addrname: &project.addr_2_addrname,
+            module_env: module_env,
+            using_module_map: using_module_map,
         };
         let mut return_type_string = display_context_return.to_string();
         
@@ -122,9 +153,6 @@ impl FunSpecGenerator {
     }
 
     fn generate_body_zx(&self, f: &FunctionEnv, global_env: &GlobalEnv, fpath: &PathBuf) -> String {        
-
-        eprintln!("generate_body_zx-----------");
-
         let mut statements = String::new();
         if let Some(exp) = f.get_def() {
             // get_shadows(exp, global_env, &mut shadows);
@@ -136,7 +164,7 @@ impl FunSpecGenerator {
                 f
             );
         } else {
-            eprint!("body is none");
+            log::trace!("body is none");
             return statements;
         }
 
@@ -167,12 +195,12 @@ impl FunSpecGenerator {
                     let _right_node_type = env.get_node_type(_right_node_id);
                     
                     let _left_exp_str = match env.get_source(&_left_node_loc) {
-                        Ok(x) => FunSpecGenerator::remove_parentheses(x),
+                        Ok(x) => FunSpecGenerator::remove_parentheses(x, left),
                         Err(_) => continue,
                     };
 
                     let _right_exp_str = match env.get_source(&_right_node_loc) {
-                        Ok(x) => FunSpecGenerator::remove_parentheses(x),
+                        Ok(x) => FunSpecGenerator::remove_parentheses(x, right),
                         Err(_) => continue,
                     };
 
@@ -229,7 +257,7 @@ impl FunSpecGenerator {
                         BinOPReasonZX::UnderFlow => {
                             statements.push_str(
                                 format!(
-                                    "{}aborts_if {} - {} <= 0;\n",
+                                    "{}aborts_if {} - {} < 0;\n",
                                     indent(2),
                                     _left_exp_str,
                                     _right_exp_str,
@@ -256,23 +284,26 @@ impl FunSpecGenerator {
                     }
                 },
                 SpecExpItemZX::PatternLet { left, right } => {
-                    let _right_node_id = right.as_ref().node_id();
-                    let _right_node_loc = env.get_node_loc(_right_node_id);
-                    let _right_node_type = env.get_node_type(_right_node_id);
-                    let _right_exp_str = match env.get_source(&_right_node_loc) {
-                        Ok(x) => FunSpecGenerator::remove_parentheses(x),
+                    let _left_node_id = left.node_id();
+                    let _left_node_loc = env.get_node_loc(_left_node_id);
+                    let _left_exp_str = match env.get_source(&_left_node_loc) {
+                        Ok(x) => x,
                         Err(_) => continue,
                     };
-
-                    statements.push_str(
-                        format!(
-                            "{}let {} = {};\n",
-                            indent(2),
-                            left.display(func_env.symbol_pool()).to_string(),
-                            _right_exp_str,
-                        )
-                        .as_str(),
-                    );
+                    
+                    statements.push_str(format!("{}let ", indent(2)).as_str());
+                    statements.push_str(_left_exp_str);
+                    
+                    statements.push_str(" = ");
+                    let _right_node_id = right.as_ref().node_id();
+                    let _right_node_loc = env.get_node_loc(_right_node_id);
+                    let _right_exp_str = match env.get_source(&_right_node_loc) {
+                        Ok(x) => FunSpecGenerator::remove_parentheses(x, right),
+                        _ => continue,
+                    };
+                    statements.push_str(_right_exp_str.as_str());
+                    statements.push_str(";\n");
+                    
                 },
                 SpecExpItemZX::BorrowGlobalMut { .. } => {},
                 SpecExpItemZX::TypeName { .. } => {},
@@ -299,7 +330,7 @@ impl FunSpecGenerator {
         let if_exp_node_id = if_exp.as_ref().node_id();
         let mut if_exp_node_loc = env.get_node_loc(if_exp_node_id);
         let if_exp_str = match env.get_source(&if_exp_node_loc) {
-            Ok(x) => FunSpecGenerator::remove_parentheses(x),
+            Ok(x) => FunSpecGenerator::remove_parentheses(x, if_exp),
             Err(_) => return,
         };
         
@@ -313,7 +344,7 @@ impl FunSpecGenerator {
         let abort_exp_node_id = abort_exp.as_ref().node_id();
         let abort_exp_node_loc = env.get_node_loc(abort_exp_node_id);
         let abort_exp_str = match env.get_source(&abort_exp_node_loc) {
-            Ok(x) => FunSpecGenerator::remove_parentheses(x),
+            Ok(x) => FunSpecGenerator::remove_parentheses(x, abort_exp),
             Err(_) => return,
         };
 
@@ -332,14 +363,14 @@ impl FunSpecGenerator {
         let if_exp_node_id = if_exp.as_ref().node_id();
         let mut if_exp_node_loc = env.get_node_loc(if_exp_node_id);
         let if_exp_str = match env.get_source(&if_exp_node_loc) {
-            Ok(x) => FunSpecGenerator::remove_parentheses(x),
+            Ok(x) => FunSpecGenerator::remove_parentheses(x, if_exp),
             Err(_) => return,
         };
 
         let abort_exp_node_id = abort_exp.as_ref().node_id();
         let abort_exp_node_loc = env.get_node_loc(abort_exp_node_id);
         let abort_exp_str = match env.get_source(&abort_exp_node_loc) {
-            Ok(x) => FunSpecGenerator::remove_parentheses(x),
+            Ok(x) => FunSpecGenerator::remove_parentheses(x, abort_exp),
             Err(_) => return,
         };
 
@@ -354,16 +385,21 @@ impl FunSpecGenerator {
         );
     }
 
-    fn remove_parentheses(input: &str) -> &str {
-        // 检查字符串是否以 '(' 开始且以 ')' 结尾
-        if input.starts_with('(') && input.ends_with(')') {
-
-            // 如果是，使用字符串切片去掉左右两边的括号
-            &input[1..input.len() - 1]
-        } else {
-            // 如果不是，返回原始字符串
-            input
+    fn remove_parentheses(input: &str, exp: &MoveModelExp) -> String {
+        match exp.as_ref() {
+            MoveModelExpData::Call(_, op, _) => match op {
+                MoveModelOperation::Cast => return input.to_string(),
+                _ => {}
+            },
+            _ => {}
         }
+
+        if input.starts_with('(') && input.ends_with(')') {
+            return input[1..input.len() - 1].to_string();
+        } else {
+            return input.to_string();
+        }
+        
     }
 
     // fn helper_exp_print(e: &MoveModelExp, env: &GlobalEnv, depth: u32) {
