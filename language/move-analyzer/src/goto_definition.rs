@@ -4,9 +4,9 @@
 use crate::{
     analyzer_handler::*,
     context::*,
-    utils::{path_concat, FileRange},
+    utils::{path_concat, FileRange, collect_use_decl}, project,
 };
-use im::HashMap;
+use std::collections::HashMap;
 use lsp_server::*;
 use lsp_types::*;
 // use move_ir_types::location::sp;
@@ -16,7 +16,7 @@ use lsp_types::*;
 // };
 use move_model::{
     ast::{ExpData::*, Operation::*, Spec, SpecBlockTarget, Pattern as MoveModelPattern, ModuleName, Address},
-    model::{FunId, GlobalEnv, ModuleId, StructId, NodeId, Parameter, Loc, FunctionEnv, ModuleEnv}, 
+    model::{FunId, GlobalEnv ,ModuleId, StructId, NodeId, Parameter, Loc, FunctionEnv, ModuleEnv}, 
     symbol::Symbol,
     ty::Type,
 };
@@ -45,7 +45,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server:
         col,
     );
 
-    let mut handler = Handler::new(fpath.clone(), line, col);
+    
     let project = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
@@ -57,8 +57,9 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server:
             };
         },
     };
-
-    handler.addr_2_addrname = project.addr_2_addrname.clone();
+    let mut handler = Handler::new(fpath.clone(), line, col);
+    handler.addrname_2_addrnum = project.addrname_2_addrnum.clone();
+    // handler.addrname_2_addrnum = project.addrname_2_addrnum.clone();
     project.run_visitor_for_file(&mut handler, &fpath, String::default());
     let locations = handler.to_locations();
     let r = Response::new_ok(
@@ -87,7 +88,7 @@ pub(crate) struct Handler {
     pub(crate) result_candidates: Vec<FileRange>,
     pub(crate) target_module_id: ModuleId,
     pub(crate) symbol_2_pattern_id: HashMap<Symbol, NodeId>, // LocalVar => Block::Pattern, only remeber the last pattern
-    pub(crate) addr_2_addrname: HashMap<String, String>,
+    pub(crate) addrname_2_addrnum: HashMap<String, String>,
 }
 
 impl Handler {
@@ -102,7 +103,7 @@ impl Handler {
             result_candidates: vec![],
             target_module_id: ModuleId::new(0),
             symbol_2_pattern_id: HashMap::new(),
-            addr_2_addrname: HashMap::new(),
+            addrname_2_addrnum: HashMap::new(),
         }
     }
 
@@ -218,6 +219,8 @@ impl Handler {
     }
 
     fn process_use_decl(&mut self, env: &GlobalEnv) {
+
+
         log::info!("lll >> process_use_decl =======================================\n\n");
         let mut target_module = env.get_module(self.target_module_id);
         let spool = env.symbol_pool();
@@ -226,20 +229,30 @@ impl Handler {
         let mut found_usedecl_same_line = false;
         let mut capture_items_loc = move_model::model::Loc::default();
         let mut used_module_name = Default::default();
+        let mut addrnum_with_module_name = Default::default();
+        
         for use_decl in target_module.get_use_decls() {
-           // if let Some(use_pos) = env.get_location(&use_decl.loc) {
-            //     log::trace!("find use decl module, line: {}", use_pos.line.0);
-            //     if u32::from(use_pos.line) != self.line {
-            //         continue;
-            //     }
-            //     log::trace!("find use decl module, line: {}", use_pos.line.0);
-            // }
             if !self.check_move_model_loc_contains_mouse_pos(env, &use_decl.loc) {
                 continue;
             }
             log::trace!("find use decl module, line: {}", use_decl.loc.span().start());
 
             used_module_name = use_decl.module_name.display_full(env).to_string();
+            let before_after = used_module_name.split("::").collect::<Vec<_>>();
+            if before_after.len() != 2 {
+                log::error!("use decl module name len should be 2");
+                continue;
+            }
+
+            let addrnum = match self.addrname_2_addrnum.get(&before_after[0].to_string()) {
+                Some(x) => x,
+                None => {
+                    log::error!("could not convert addrname to addrnum, please check you use decl");
+                    continue;
+                }
+            };
+
+            addrnum_with_module_name = addrnum.clone() + "::" + before_after[1];
             found_usedecl_same_line = true;
             capture_items_loc = use_decl.loc.clone();
         
@@ -248,7 +261,6 @@ impl Handler {
                     log::trace!("member_loc = {:?} ---", env.get_location(&member_loc));
                     if self.check_move_model_loc_contains_mouse_pos(env, &member_loc) {
                         
-                        used_module_name = use_decl.module_name.display_full(env).to_string();
                         target_stct_or_fn = name.display(spool).to_string();
                         found_target_stct_or_fn = true;
                         capture_items_loc = member_loc;
@@ -269,17 +281,9 @@ impl Handler {
         let mut option_use_module: Option<ModuleEnv<'_>> = None;
         for mo_env in env.get_modules() {
             let mo_name_str = mo_env.get_name().display_full(env).to_string();
-            match mo_name_str.find("::") {
-                Some(pos) => {
-                    let mo_addr = mo_name_str[0..pos].to_string();
-                    let mo_addrname = self.addr_2_addrname.get(&mo_addr).unwrap_or(&String::new()).clone(); 
-                    let mo_addrname_with_moname = mo_addrname +&mo_name_str[pos..].to_string();
-                    if mo_addrname_with_moname == used_module_name {
-                        option_use_module = Some(mo_env);
-                        break;
-                    }
-                },
-                None => continue,
+            if mo_name_str == addrnum_with_module_name {
+                option_use_module = Some(mo_env);
+                break;
             }
         }
 
