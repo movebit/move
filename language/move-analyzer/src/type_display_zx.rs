@@ -6,9 +6,11 @@
 
 use move_model::{
     model:: {
-        StructId, ModuleId
+        StructId, ModuleId, ModuleEnv
     },
-    ty::{Type, TypeDisplayContext, ReferenceKind}   
+    ty::{Type, TypeDisplayContext, ReferenceKind},
+    ast::ModuleName,
+    symbol::{Symbol, SymbolPool},
 };
 
 use std::{
@@ -16,11 +18,12 @@ use std::{
     fmt::Formatter,
 };
 
-use im::HashMap;
+use std::collections::HashMap;
 pub struct TypeDisplayZX<'a> {
     pub type_: &'a Type,
     pub context: &'a TypeDisplayContext<'a>,
-    pub addr_2_addrname:  &'a HashMap<String, String>,
+    pub using_module_map:  &'a HashMap<ModuleName, Vec<Symbol>>,
+    pub module_env: &'a ModuleEnv<'a>,
 }
 
 impl<'a> TypeDisplayZX<'a> {
@@ -28,7 +31,8 @@ impl<'a> TypeDisplayZX<'a> {
         TypeDisplayZX {
             type_: ty,
             context: self.context,
-            addr_2_addrname: self.addr_2_addrname
+            module_env: self.module_env,
+            using_module_map: self.using_module_map,
         }
     }
 }  
@@ -120,17 +124,39 @@ impl<'a> TypeDisplayZX<'a> {
             qsym.display(self.context.env).to_string()
         } else {
             let struct_module_env = env.get_module(mid);
-            let struct_module_env_full_name = struct_module_env.get_full_name_str();
-            let addr_end = struct_module_env_full_name.find("::").unwrap_or_default();
-            let addr = struct_module_env_full_name[0..addr_end].to_string();
+            let struct_env = struct_module_env.get_struct(sid);
+
+            let struct_module_env_name = struct_module_env.get_name();
+            let struct_env_name = struct_env.get_name();
+
+            if struct_module_env.get_id() == self.module_env.get_id() {
+                return struct_env_name.display(env.symbol_pool()).to_string();
+            }
+
+            if let Some(members) = self.using_module_map.get(struct_module_env_name) {
+                //  let result = numbers.iter().find(|&&x| x == 3);
+                let a = members.iter().find(|&&x| x == struct_env_name);
+                match a {
+                    Some(x) => return x.display(env.symbol_pool()).to_string(),
+                    None => {},
+                }
+            } 
+
+            return format!("{}::{}",
+                struct_module_env_name.display(env).to_string(),
+                struct_env_name.display(env.symbol_pool())
+            );
+            
+            // let addr_end = struct_module_env_full_name.find("::").unwrap_or_default();
+            // let addr = struct_module_env_full_name[0..addr_end].to_string();
         
-            let struct_env = struct_module_env.clone().into_struct(sid);
-            format!(
-                "{}::{}::{}",
-                self.addr_2_addrname.get(&addr).unwrap_or(&String::from("0x0")),
-                struct_module_env.get_name().display(env).to_string(),
-                struct_env.get_name().display(env.symbol_pool()),
-            )
+            
+            // format!(
+            //     "{}::{}::{}",
+            //     self.addrname_2_addrnum.get(&addr).unwrap_or(&String::from("0x0")),
+            //     struct_module_env.get_name().display(env).to_string(),
+            //     struct_env.get_name().display(env.symbol_pool()),
+            // )
         }
     }
 }
