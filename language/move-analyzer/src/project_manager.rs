@@ -19,7 +19,7 @@ use std::{
 };
 use walkdir::WalkDir;
 use move_model::{options::ModelBuilderOptions, run_model_builder_with_options};
-use im::HashMap;
+use std::collections::HashMap;
 use num_bigint::BigUint;
 use tempfile::tempdir;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
@@ -44,21 +44,21 @@ pub fn parse_address_number22(
     [u8; AccountAddress::LENGTH],
     move_compiler::shared::NumberFormat,
 )> {
-    let (txt, base) = determine_num_text_and_base22(s);
-    let parsed = BigUint::parse_bytes(
-        txt.as_bytes(),
-        match base {
-            move_compiler::shared::NumberFormat::Hex => 16,
-            move_compiler::shared::NumberFormat::Decimal => 10,
-        },
-    )?;
-    let bytes = parsed.to_bytes_be();
-    if bytes.len() > AccountAddress::LENGTH {
-        return None;
-    }
-    let mut result = [0u8; AccountAddress::LENGTH];
-    result[(AccountAddress::LENGTH - bytes.len())..].clone_from_slice(&bytes);
-    Some((result, base))
+    return None;
+    // let (txt, base) = determine_num_text_and_base22(s);
+
+    // let parsed = match base {
+    //     move_compiler::shared::NumberFormat::Hex => BigUint::parse_bytes(txt[2..].as_bytes(), 16),
+    //     move_compiler::shared::NumberFormat::Decimal => BigUint::parse_bytes(txt.as_bytes(), 10),
+    // }?;
+    
+    // let bytes = parsed.to_bytes_be();
+    // if bytes.len() > AccountAddress::LENGTH {
+    //     return None;
+    // }
+    // let mut result = [0u8; AccountAddress::LENGTH];
+    // result[(AccountAddress::LENGTH - bytes.len())..].clone_from_slice(&bytes);
+    // Some((result, base))
 }
 
 pub fn parse_str22(s: &str) -> Option<NumericalAddress> {
@@ -132,7 +132,7 @@ impl Project {
             current_modifing_file_content: Default::default(),
             targets: vec![],
             dependents: vec![],
-            addr_2_addrname: Default::default(),
+            addrname_2_addrnum: Default::default(),
         };
 
         let mut targets_paths: Vec<PathBuf> = Vec::new();
@@ -161,6 +161,10 @@ impl Project {
             .collect();
         // log::info!("named_address_mapping = {:?}", named_address_mapping);
         let addrs = parse_addresses_from_options(named_address_mapping.clone())?;
+
+        for (a, b) in addrs.iter() {
+            eprintln!("addr insert {} {}", a, b.to_string());
+        }
 
         let targets = vec![PackagePaths {
             name: None,
@@ -201,13 +205,12 @@ impl Project {
         let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
 
 
-        let mut helper = im::HashMap::new();
-        for (index, (s, _)) in addrs.iter().enumerate() {
-            let add_key = format!("0x{}", index);
-            helper.insert(add_key, s.clone());
+        let mut helper = HashMap::new();
+        for (addr_name, addr_num) in addrs.iter() {
+            helper.insert(addr_name.clone(), addr_num.to_string());
         }
-        
-        new_project.addr_2_addrname = helper;
+
+        new_project.addrname_2_addrnum = helper;
         new_project.global_env.report_diag(&mut error_writer, Severity::Error);
         Ok(new_project)
     }
