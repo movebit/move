@@ -53,7 +53,8 @@ use crate::{
 use lsp_server::Request;
 use lsp_types::{DocumentSymbol, DocumentSymbolParams, SymbolKind};
 use move_model::{
-    model::{ModuleEnv, StructEnv}
+    model::{ModuleEnv, StructEnv},
+    ast::SpecBlockTarget,
 };
 
 
@@ -75,7 +76,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
 
     let mut result_vec_document_symbols: Vec<DocumentSymbol> = vec![];
     for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &fpath) {
-        eprintln!("start handle module env name: {:?}", module_env.get_full_name_str());
+        log::info!("start handle module env name: {:?}", module_env.get_full_name_str());
         let module_range = project.loc_to_range(&module_env.get_loc());
         let module_name = module_env.get_name().display(&project.global_env).to_string().clone();
         let module_detail = Some(module_name.clone());
@@ -83,6 +84,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
 
         let mut children = vec![];
 
+        handle_document_symbols_spec_function(&project, &module_env, &mut children);
         handle_document_symbols_function(&project, &module_env, &mut children);
         handle_document_symbols_const(&project, &module_env, &mut children);
         handle_document_symbols_struct(project, &module_env, &mut children);
@@ -113,6 +115,44 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
     }
     
 }
+
+/// Helper function to handle Spec function in the document symbols
+#[allow(deprecated)]
+fn handle_document_symbols_spec_function(project: &Project, module_env :&ModuleEnv, children: &mut Vec<DocumentSymbol>) {
+    for spec_info in module_env.get_spec_block_infos() {
+        let (spec_file_path, spec_location) = match project.global_env.get_file_and_location(&spec_info.loc) {
+            Some((x, y)) => (x, y),
+            None => {
+                log::error!("could not get file and location from spec info, spec: {:?}", spec_info);
+                continue;
+            }
+        };
+
+        let (spec_name, spec_range) = match spec_info.target  {
+            SpecBlockTarget::Function(_, fid) => {
+                let f_env = module_env.get_function(fid);
+                (f_env.get_name_str(), project.loc_to_range(&spec_info.loc))
+            },
+            SpecBlockTarget::Struct(_, sid) => {
+                let s_env = module_env.get_struct(sid);
+                (s_env.get_name().display(project.global_env.symbol_pool()).to_string(), project.loc_to_range(&spec_info.loc))
+            },
+            _ => continue,
+        };
+
+        children.push(DocumentSymbol {
+            name: spec_name,
+            detail:None,
+            kind: SymbolKind::FUNCTION,
+            range: spec_range,
+            selection_range: spec_range,
+            children: None,
+            tags: Some(vec![]),
+            deprecated: Some(false),
+        });  
+    }
+}
+
 
 /// Helper function to handle function in the document symbols
 #[allow(deprecated)]
