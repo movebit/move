@@ -446,12 +446,6 @@ mod tests {
                     ).to_str().unwrap()
             }]),
         );
-        // std::thread::sleep(Duration::new(1, 0));
-        log::trace!("\n------------------------------\n");
-        log::trace!("actual_r = {:?}", actual_r);
-        log::trace!("\n");
-        log::trace!("expect_r = {:?}", expect_r);
-        log::trace!("\n------------------------------\n");
         assert_eq!(actual_r.result, expect_r.result);
     }
 }
