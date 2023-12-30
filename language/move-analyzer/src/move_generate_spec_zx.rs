@@ -213,7 +213,6 @@ pub(crate) enum SpecExpItem {
 }
 
 
-/// 这个枚举代表操作符错误类型
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum BinOPReason {
     OverFlowADD,
@@ -222,6 +221,18 @@ pub(crate) enum BinOPReason {
     DivByZero,
     UnderFlow,
 }
+
+fn match_bin_op(binop: &BinOPReason) -> &str {
+    let op = match binop {
+        BinOPReason::OverFlowADD => "+",
+        BinOPReason::OverFlowMUL=> "*",
+        BinOPReason::OverFlowSHL=> "<<",
+        BinOPReason::DivByZero=> "/",
+        BinOPReason::UnderFlow=> "-",
+    };
+    op
+}
+
 
 impl FunSpecGenerator {
     fn collect_spec_exp_op_movefunc(
@@ -270,6 +281,7 @@ impl FunSpecGenerator {
                 for exp in vec_exp.iter() {
                     self.collect_spec_exp_(ret, exp, env);
                 }
+                eprintln!("hhhhhhhhhhh add");
                 ret.push(SpecExpItem::BinOP {
                         reason: BinOPReason::OverFlowADD,
                         left: vec_exp[0].clone(),
@@ -403,6 +415,7 @@ impl FunSpecGenerator {
     fn collect_spec_exp_(&self, ret: &mut Vec<SpecExpItem>, e: &MoveModelExp, env: &GlobalEnv) {
         match e.as_ref() {
             MoveModelExpData::Block(_, p, assign_exp, exp) => {
+                eprintln!("hhhhhhhhhhh block");
                 match p {
                     MoveModelPattern::Var(_, _) => match assign_exp {
                         Some(x) => {
@@ -420,6 +433,10 @@ impl FunSpecGenerator {
                     _ => {}
                 }
                 
+                match assign_exp {
+                    Some(x) => self.collect_spec_exp_(ret, x, env),
+                    None => {}
+                }
                 self.collect_spec_exp_(ret, exp, env);
             },
             MoveModelExpData::Sequence(_, vec_exp) => {
@@ -471,23 +488,23 @@ impl FunSpecGenerator {
 
     pub(crate) fn collect_spec_exp_zx(&self, exp: &MoveModelExp, env: &GlobalEnv) -> Vec<SpecExpItem> {
         let mut ret: Vec<SpecExpItem> = Vec::new();
-        let mut result: Vec<SpecExpItem> = Vec::new();
+        // let mut result: Vec<SpecExpItem> = Vec::new();
         self.collect_spec_exp_(&mut ret, exp, env);
         let (mut ret1, mut is_change_1) = FunSpecGenerator::handle_unused_pattern(&mut ret, env);
-        let (mut ret2, mut is_change_2) = FunSpecGenerator::handle_exp_without_pattern(&mut ret1, env);
-        result = ret2.clone();
-        let mut count = 0;
-        while ((is_change_1 || is_change_2) && count < 5) {
-            let (mut ret11, is_change_11) = FunSpecGenerator::handle_unused_pattern(&mut result, env);
-            is_change_1 = is_change_11;
-            let (mut ret22, is_change_22) = FunSpecGenerator::handle_exp_without_pattern(&mut ret11, env);
-            is_change_2 = is_change_22;
-            result = ret22;
-            count = count  + 1;
-        }   
+        // let (mut ret2, mut is_change_2) = FunSpecGenerator::handle_exp_without_pattern(&mut ret1, env);
+        // result = ret2.clone();
+        // let mut count = 0;
+        // while ((is_change_1 || is_change_2) && count < 5) {
+        //     let (mut ret11, is_change_11) = FunSpecGenerator::handle_unused_pattern(&mut result, env);
+        //     is_change_1 = is_change_11;
+        //     let (mut ret22, is_change_22) = FunSpecGenerator::handle_exp_without_pattern(&mut ret11, env);
+        //     is_change_2 = is_change_22;
+        //     result = ret22;
+        //     count = count  + 1;
+        // }   
 
-        
-        return result;
+        // let (mut ret2, mut is_change_2) = FunSpecGenerator::handle_exp_without_pattern(&mut ret, env);
+        return ret1;
     }
 
     pub fn is_support_exp(e: &MoveModelExp, env: &GlobalEnv) -> bool {
@@ -538,16 +555,23 @@ impl FunSpecGenerator {
         for item in items.iter().rev() {
             match item {
                 SpecExpItem::BinOP { reason, left, right } => {
+                    log::info!("handle bin op");
                     let left_vars = left.free_vars(env);
                     let right_vars = right.free_vars(env);
 
-                    left_vars.iter().for_each(|(sym, _)| { used_local_var.insert(sym.clone()); });
-                    right_vars.iter().for_each(|(sym, _)| { used_local_var.insert(sym.clone()); });
+                    left_vars.iter().for_each(|(sym, _)| { 
+                        log::info!("bin op left insert symbol {}", sym.display(env.symbol_pool()).to_string());
+                        used_local_var.insert(sym.clone()); 
+                    });
+                    right_vars.iter().for_each(|(sym, _)| {
+                        log::info!("bin op right insert symbol {}", sym.display(env.symbol_pool()).to_string());
+                        used_local_var.insert(sym.clone()); 
+                    });
                 },
                 SpecExpItem::MarcoAbort{if_exp, abort_exp} => {
                     let left_vars = if_exp.free_vars(env);
                     let right_vars = abort_exp.free_vars(env);
-
+                    
                     left_vars.iter().for_each(|(sym, _)| { used_local_var.insert(sym.clone()); });
                     right_vars.iter().for_each(|(sym, _)| { used_local_var.insert(sym.clone()); });
                 },
