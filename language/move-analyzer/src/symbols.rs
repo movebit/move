@@ -60,17 +60,23 @@ use move_model::{
 
 /// Handles document symbol request of the language server
 #[allow(deprecated)]
-pub fn on_document_symbol_request(context: &Context, request: &Request) {
+pub fn on_document_symbol_request(context: &Context, request: &Request) -> lsp_server::Response {
+    log::info!("on_document_symbol_request");
     let parameters = serde_json::from_value::<DocumentSymbolParams>(request.params.clone())
         .expect("could not deserialize document symbol request");
 
     let fpath = parameters.text_document.uri.to_file_path().unwrap();
-    eprintln!("on_document_symbol_request: {:?}", fpath);
+    log::info!("on_document_symbol_request: {:?}", fpath);
+    
     let project = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
             log::error!("project not found:{:?}", fpath.as_path());
-            return ;
+            return lsp_server::Response {
+                id: "".to_string().into(),
+                result: Some(serde_json::json!({"msg": "No available project"})),
+                error: None,
+            };
         }
     };
 
@@ -104,16 +110,20 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
     
     let response = lsp_server::Response::new_ok(
         request.id.clone(), 
-        result_vec_document_symbols
+        serde_json::json!(&result_vec_document_symbols)
     );
     if let Err(err) = context
         .connection
         .sender
-        .send(lsp_server::Message::Response(response))
+        .send(lsp_server::Message::Response(response.clone()))
     {
-        eprintln!("could not send use response: {:?}", err);
+        return lsp_server::Response {
+            id: "".to_string().into(),
+            result: Some(serde_json::json!({"msg": "could not send use response"})),
+            error: None,
+        };
     }
-    
+    response
 }
 
 /// Helper function to handle Spec function in the document symbols

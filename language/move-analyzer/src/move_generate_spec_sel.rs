@@ -16,16 +16,20 @@ use codespan::Location;
 use move_model::ast::{Address, ModuleName};
 use move_model::symbol::Symbol as SpecSymbol;
 
-pub fn on_generate_spec_sel(context: &mut Context, request: &Request) {
+pub fn on_generate_spec_sel(context: &mut Context, request: &Request) -> Response {
     log::info!("on_generate_spec_sel request = {:?}", request);
     let parameters = serde_json::from_value::<ReqParameters>(request.params.clone())
-        .expect("could not deserialize go-to-def request");
+        .expect("could not deserialize generate spec request");
     
     let parameters = match ReqParametersPath::try_from(parameters) {
         Ok(p) => p,
         Err(_) => {
             send_err(context, request,"not a valid path".to_string());
-            return;
+            return lsp_server::Response {
+                id: "".to_string().into(),
+                result: Some(serde_json::json!({"msg": "not a valid path"})),
+                error: None,
+            };
         }
     };
 
@@ -33,7 +37,11 @@ pub fn on_generate_spec_sel(context: &mut Context, request: &Request) {
         Some(x) => x,
         None => {
             log::error!("project not found:{:?}", parameters.fpath.as_path());
-            return ;
+            return lsp_server::Response {
+                id: "".to_string().into(),
+                result: Some(serde_json::json!({"msg": "No available project"})),
+                error: None,
+            };
         }
     };
 
@@ -61,7 +69,11 @@ pub fn on_generate_spec_sel(context: &mut Context, request: &Request) {
 
     if !is_find {
         send_err(context, request,"spec target not found.".to_string());
-        return ;
+        return lsp_server::Response {
+            id: "".to_string().into(),
+            result: Some(serde_json::json!({"msg": "spec target not found"})),
+            error: None,
+        };
     }
 
     result = Some(Resp {line: insert_pos.0, 
@@ -74,8 +86,9 @@ pub fn on_generate_spec_sel(context: &mut Context, request: &Request) {
     context
         .connection
         .sender
-        .send(Message::Response(r))
+        .send(Message::Response(r.clone()))
         .unwrap();
+    r
 }
 
 fn send_err(context: &Context, requset: &Request, msg: String) {
@@ -260,7 +273,7 @@ impl ReqParametersPath {
 
 #[derive(Clone, Serialize)]
 pub struct Resp {
-    line: u32,
-    col: u32,
-    content: String,
+    pub line: u32,
+    pub col: u32,
+    pub content: String,
 }
