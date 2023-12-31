@@ -133,6 +133,7 @@ impl Project {
             targets: vec![],
             dependents: vec![],
             addr_2_addrname: Default::default(),
+            err_diags: String::default(),
         };
 
         let mut targets_paths: Vec<PathBuf> = Vec::new();
@@ -196,10 +197,10 @@ impl Project {
             &attributes,
         )
         .expect("Failed to create GlobalEnv!");
-        eprintln!("env.get_module_count() = {:?}", &new_project.global_env.get_module_count());
-        eprintln!("env.diag_count() = {:?}", &new_project.global_env.diag_count(Severity::Error));
-        let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
-
+        log::info!("env.get_module_count() = {:?}", &new_project.global_env.get_module_count());
+        // let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
+        use codespan_reporting::term::termcolor::Buffer;
+        let mut error_writer = Buffer::no_color();
 
         let mut helper = im::HashMap::new();
         for (index, (s, _)) in addrs.iter().enumerate() {
@@ -209,6 +210,7 @@ impl Project {
         
         new_project.addr_2_addrname = helper;
         new_project.global_env.report_diag(&mut error_writer, Severity::Error);
+        new_project.err_diags = String::from_utf8_lossy(&error_writer.into_inner()).to_string();
         Ok(new_project)
     }
 
@@ -237,9 +239,10 @@ impl Project {
         self.global_env = new_project.global_env;
 
         eprintln!("env.get_module_count() = {:?}", &self.global_env.get_module_count());
-        eprintln!("env.diag_count() = {:?}", &self.global_env.diag_count(Severity::Error));
-        let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
+        use codespan_reporting::term::termcolor::Buffer;
+        let mut error_writer = Buffer::no_color();
         self.global_env.report_diag(&mut error_writer, Severity::Error);
+        self.err_diags = String::from_utf8_lossy(&error_writer.into_inner()).to_string();
     }
 
     /// Load a Move.toml project.
@@ -402,7 +405,7 @@ impl Project {
         filepath: &PathBuf,
         source_str: String
     ) {
-        log::info!("run visitor part for {} ", visitor);
+        // log::info!("run visitor part for {} ", visitor);
         visitor.handle_project_env(self, &self.global_env, &filepath, source_str);
     }
 }

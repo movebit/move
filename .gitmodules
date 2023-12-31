@@ -1,0 +1,3 @@
+[submodule "language/move-analyzer/tests/v1-core"]
+	path = language/move-analyzer/tests/v1-core
+	url = https://github.com/AnimeSwap/v1-core

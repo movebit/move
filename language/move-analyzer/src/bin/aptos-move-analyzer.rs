@@ -228,6 +228,93 @@ fn on_response(_context: &Context, _response: &Response) {
 
 type DiagSender = Arc<Mutex<Sender<(PathBuf, Diagnostics)>>>;
 
+fn report_diag(context: &mut Context, fpath: PathBuf) {
+    let proj = match context.projects.get_project(&fpath) {
+        Some(x) => x,
+        None => {
+            log::error!("project not found:{:?}", fpath.as_path());
+            return;
+        },
+    };
+    log::info!("report_diag -------------");
+
+    let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
+    let diag_err = proj.err_diags.clone();
+    let tokens: Vec<&str> = diag_err.as_str().split("error").collect();
+    for token in tokens {  
+        // eprintln!("diag_line token = \n{}", token);
+        if token.lines().count() < 3 {
+           continue;
+        }
+        let err_msg = token.lines().nth(0).unwrap_or_default();
+        let loc_str = match token.lines().nth(1) {
+            Some(str) => str.to_string(),
+            None => "".to_string()
+        };
+
+        let mut file_path = "";
+        let mut pos = lsp_types::Position::default();
+        if let Some(start_idx) = loc_str.find("/") {
+            if let Some(end_idx) = loc_str.find(":") {
+                file_path = &loc_str[start_idx..end_idx];
+                // eprintln!("loc_str[end_idx..] = {:?}\n", &loc_str[end_idx..]);
+                let line = loc_str[end_idx..].split(":").nth(1).unwrap_or_default();
+                let col = loc_str[end_idx..].split(":").nth(2).unwrap_or_default();
+                let line_num = if line.parse::<u32>().unwrap() > 0 {
+                    line.parse::<u32>().unwrap() - 1
+                } else {
+                    line.parse::<u32>().unwrap()
+                };
+                let col_num = if col.parse::<u32>().unwrap() > 0 {
+                    col.parse::<u32>().unwrap() - 1
+                } else {
+                    col.parse::<u32>().unwrap()
+                };
+                pos = lsp_types::Position::new(line_num, col_num);
+                // eprintln!("file_path = {}\n, line = {:?}\n, col = {:?}\n, ", file_path, line, col);
+            }
+        }
+
+        if file_path.contains("aptos-move/") {
+            continue;
+        }
+
+        let mut code_str = "".to_string();
+        for line_idx in 2..token.lines().count() {
+            code_str.push_str(&token.lines().nth(line_idx).unwrap());
+        }
+        // eprintln!("code_str = {:?}\n", &code_str);
+        let d = lsp_types::Diagnostic {
+            range: lsp_types::Range {
+                start: pos,
+                end: pos,
+            },
+            severity: Some(lsp_types::DiagnosticSeverity::ERROR),
+            message: format!(
+                "{}\n{}{:?}",
+                err_msg,
+                code_str,
+                "".to_string()
+            ),
+            ..Default::default()
+        };
+
+        let url = url::Url::from_file_path(PathBuf::from(file_path).as_path()).unwrap();
+        result.insert(url, vec![d]);
+    }
+    for (k, v) in result.into_iter() {
+        let ds = lsp_types::PublishDiagnosticsParams::new(k.clone(), v, None);
+        context
+            .connection
+            .sender
+            .send(lsp_server::Message::Notification(Notification {
+                method: lsp_types::notification::PublishDiagnostics::METHOD.to_string(),
+                params: serde_json::to_value(ds).unwrap(),
+            }))
+            .unwrap();
+    }
+}
+
 fn on_notification(context: &mut Context, notification: &Notification, diag_sender: DiagSender) {
     fn update_defs_on_changed(context: &mut Context, fpath: PathBuf, content: String) {
         // log::info!("update_defs_on_changed content ------------->\n{:?}", content);
@@ -244,7 +331,8 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             .file_line_mapping
             .as_ref()
             .borrow_mut()
-            .update(fpath, content.clone());
+            .update(fpath.clone(), content.clone());
+        report_diag(context, fpath.clone());
         // log::info!("update_defs_on_changed content <-------------");
     }
 
@@ -314,8 +402,10 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                     return;
                 },
             };
+
             context.projects.insert_project(p);
-            make_diag(context, diag_sender, fpath);
+            make_diag(context, diag_sender, fpath.clone());
+            report_diag(context, fpath.clone());
         },
         lsp_types::notification::DidCloseTextDocument::METHOD => {
             use lsp_types::DidCloseTextDocumentParams;
