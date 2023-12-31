@@ -205,7 +205,7 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
             symbols::on_document_symbol_request(context, request);
         }
         "move/generate/spec/file" => {
-            on_generate_spec_file(context, request);
+            on_generate_spec_file(context, request, true);
         }
         "move/generate/spec/sel" => {
             on_generate_spec_sel(context, request);

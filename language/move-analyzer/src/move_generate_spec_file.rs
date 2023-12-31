@@ -15,7 +15,7 @@ use crate::{
 
 use move_model::{model::{StructEnv, FunctionEnv}, exp_generator::ExpGenerator};
 
-pub fn on_generate_spec_file<'a>(context: &Context, request: &Request) 
+pub fn on_generate_spec_file<'a>(context: &Context, request: &Request, is_generate: bool)  -> Response
 where
     'a: 'static,
 {
@@ -34,19 +34,26 @@ where
     };
     if result_file_path.exists() {
         send_err(context, "file already exists.".to_string());
-        return;
+        return lsp_server::Response {
+            id: "".to_string().into(),
+            result: Some(serde_json::json!({"msg": "file already exists."})),
+            error: None,
+        };
     }
     let project = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
             log::error!("project not found:{:?}", parameters.fpath.as_str());
-            return ;
+            return lsp_server::Response {
+                id: "".to_string().into(),
+                result: Some(serde_json::json!({"msg": "project not found."})),
+                error: None,
+            };
         }
     };
     
     let mut addrname_2_addrnum = &project.addrname_2_addrnum;
     
-
     let mut result = ModuleSpecBuilder::new();
     for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &fpath) {
         let using_module_map = collect_use_decl(&project.addrname_2_addrnum, &module_env, &project.global_env);
@@ -109,13 +116,20 @@ where
     } // for module_env
 
     let file_content = result.to_string();
-    match std::fs::write(result_file_path.clone(), file_content) {
-        Ok(_) => {}
-        Err(err) => {
-            send_err(context, format!("write to file failed,err:{:?}", err));
-            return;
-        }
-    };
+    if is_generate {
+        match std::fs::write(result_file_path.clone(), file_content.clone()) {
+            Ok(_) => {}
+            Err(err) => {
+                send_err(context, format!("write to file failed,err:{:?}", err));
+                return lsp_server::Response {
+                    id: "".to_string().into(),
+                    result: Some(serde_json::json!({"msg": "write to file failed"})),
+                    error: None,
+                };
+            }
+        };
+    }
+    
 
     let r = Response::new_ok(
         request.id.clone(),
@@ -127,9 +141,15 @@ where
     context
         .connection
         .sender
-        .send(Message::Response(r))
+        .send(Message::Response(r.clone()))
         .unwrap();
-    
+
+    let r = Response::new_ok(
+        request.id.clone(),
+        serde_json::json!(file_content)
+        // .unwrap(),
+    );
+    r
 }
 
 #[derive(Debug, Clone)]
