@@ -236,6 +236,81 @@ mod tests {
                     "children": [{
                         "deprecated": false,
                         "kind": 12,
+                        "name": "CapabilityStorage",
+                        "range": {
+                            "end": {
+                                "character": 5,
+                                "line": 8
+                            },
+                            "start": {
+                                "character": 4,
+                                "line": 6
+                            }
+                        },
+                        "selectionRange": {
+                            "end": {
+                                "character": 5,
+                                "line": 8
+                            },
+                            "start": {
+                                "character": 4,
+                                "line": 6
+                            }
+                        },
+                        "tags": []
+                    }, {
+                        "deprecated": false,
+                        "kind": 12,
+                        "name": "initialize_lp_account",
+                        "range": {
+                            "end": {
+                                "character": 5,
+                                "line": 12
+                            },
+                            "start": {
+                                "character": 4,
+                                "line": 9
+                            }
+                        },
+                        "selectionRange": {
+                            "end": {
+                                "character": 5,
+                                "line": 12
+                            },
+                            "start": {
+                                "character": 4,
+                                "line": 9
+                            }
+                        },
+                        "tags": []
+                    }, {
+                        "deprecated": false,
+                        "kind": 12,
+                        "name": "retrieve_signer_cap",
+                        "range": {
+                            "end": {
+                                "character": 5,
+                                "line": 16
+                            },
+                            "start": {
+                                "character": 4,
+                                "line": 13
+                            }
+                        },
+                        "selectionRange": {
+                            "end": {
+                                "character": 5,
+                                "line": 16
+                            },
+                            "start": {
+                                "character": 4,
+                                "line": 13
+                            }
+                        },
+                        "tags": []
+                    }, {
+                        "deprecated": false,
+                        "kind": 12,
                         "name": "initialize_lp_account",
                         "range": {
                             "end": {
