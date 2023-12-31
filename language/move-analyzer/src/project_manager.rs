@@ -44,21 +44,21 @@ pub fn parse_address_number22(
     [u8; AccountAddress::LENGTH],
     move_compiler::shared::NumberFormat,
 )> {
-    return None;
-    // let (txt, base) = determine_num_text_and_base22(s);
 
-    // let parsed = match base {
-    //     move_compiler::shared::NumberFormat::Hex => BigUint::parse_bytes(txt[2..].as_bytes(), 16),
-    //     move_compiler::shared::NumberFormat::Decimal => BigUint::parse_bytes(txt.as_bytes(), 10),
-    // }?;
+    let (txt, base) = determine_num_text_and_base22(s);
+
+    let parsed = match base {
+        move_compiler::shared::NumberFormat::Hex => BigUint::parse_bytes(txt[2..].as_bytes(), 16),
+        move_compiler::shared::NumberFormat::Decimal => BigUint::parse_bytes(txt.as_bytes(), 10),
+    }?;
     
-    // let bytes = parsed.to_bytes_be();
-    // if bytes.len() > AccountAddress::LENGTH {
-    //     return None;
-    // }
-    // let mut result = [0u8; AccountAddress::LENGTH];
-    // result[(AccountAddress::LENGTH - bytes.len())..].clone_from_slice(&bytes);
-    // Some((result, base))
+    let bytes = parsed.to_bytes_be();
+    if bytes.len() > AccountAddress::LENGTH {
+        return None;
+    }
+    let mut result = [0u8; AccountAddress::LENGTH];
+    result[(AccountAddress::LENGTH - bytes.len())..].clone_from_slice(&bytes);
+    Some((result, base))
 }
 
 pub fn parse_str22(s: &str) -> Option<NumericalAddress> {
