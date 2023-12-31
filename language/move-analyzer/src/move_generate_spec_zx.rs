@@ -415,7 +415,6 @@ impl FunSpecGenerator {
     fn collect_spec_exp_(&self, ret: &mut Vec<SpecExpItem>, e: &MoveModelExp, env: &GlobalEnv) {
         match e.as_ref() {
             MoveModelExpData::Block(_, p, assign_exp, exp) => {
-                eprintln!("hhhhhhhhhhh block");
                 match p {
                     MoveModelPattern::Var(_, _) => match assign_exp {
                         Some(x) => {
