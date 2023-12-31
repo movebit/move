@@ -108,7 +108,7 @@ mod tests {
     }
     
 
-    /// Generate Spec for Operators which may Overflow or Underflow in a Function.
+    /// Generate Spec for Operators which may Overflow in a Function.
     #[test]
     fn test_generate_spec_request_002() {
         let (connection, _) = Connection::stdio();
@@ -120,7 +120,63 @@ mod tests {
 
         let fpath = path_concat(
             std::env::current_dir().unwrap().as_path(),
-            PathBuf::from("tests/v1-core/LPResourceAccount/sources/resourceAccount.move").as_path(),
+            PathBuf::from("tests/symbols/sources/SpecTest.move").as_path(),
+        );
+        prepare_project(&mut context, fpath.clone());
+
+        let _ = match context.projects.get_project(&fpath) {
+            Some(x) => x,
+            None => {
+                log::error!("project '{:?}' not found.", fpath.as_path());
+                return;
+            }
+        };
+
+        let params_json = json!({
+            "col": 5,
+            "line": 14,
+            "fpath": fpath.to_string_lossy().to_string()
+        });
+        let request = Request {
+            id: "generate_spec_request_003".to_string().into(),
+            method: String::from("move/generate/spec/sel"),
+            params: params_json,
+        };
+
+        let actual_r = on_generate_spec_sel(&mut context, &request);
+        let ex = Some(
+            Resp {
+                line: 15, 
+                col: 5,
+                content: String::from("    spec test_may_overflow(var_u64: u64, var_u128: u128, var_u256: u256): u64{\n\n        let var_local_u64 = var_u64 + 1;\n        aborts_if var_u64 + 1 > MAX_U64;\n        let var_local_u128 = var_u128 * 2;\n        aborts_if var_u128 * 2 > MAX_U128;\n        let var_local_u256 = var_u256 << 3;\n        aborts_if var_u256 << 3 > MAX_U256;\n        aborts_if (var_local_u64 as u128) + var_local_u128 > MAX_U128;\n        aborts_if (((var_local_u64 as u128) + var_local_u128) as u256) * var_local_u256 > MAX_U256;\n        aborts_if (((var_local_u64 as u128) + var_local_u128) as u256) * var_local_u256 << 3 > MAX_U256;\n    }\n")
+            }
+        );
+        let expect_r = Response::new_ok(
+            "generate_spec_request_002".to_string().into(),
+            serde_json::to_value(ex).unwrap(),
+        );
+        // // std::thread::sleep(Duration::new(1, 0));
+        // log::info!("\n------------------------------\n");
+        eprintln!("actual_r = {:?}", actual_r.result);
+        eprintln!("\n\n\n");
+        // log::trace!("expect_r = {:?}", expect_r);
+        log::info!("\n------------------------------\n");
+        assert_eq!(actual_r.result, expect_r.result);
+    }
+
+    /// Generate Spec for Operators which may Underflow in a Function.
+    #[test]
+    fn test_generate_spec_request_003() {
+        let (connection, _) = Connection::stdio();
+        let mut context = Context {
+            projects: MultiProject::new(),
+            connection,
+            diag_version: FileDiags::new(),
+        };
+
+        let fpath = path_concat(
+            std::env::current_dir().unwrap().as_path(),
+            PathBuf::from("tests/symbols/sources/SpecTest.move").as_path(),
         );
         prepare_project(&mut context, fpath.clone());
 
@@ -138,7 +194,7 @@ mod tests {
             "fpath": fpath.to_string_lossy().to_string()
         });
         let request = Request {
-            id: "generate_spec_request_002".to_string().into(),
+            id: "generate_spec_request_003".to_string().into(),
             method: String::from("move/generate/spec/sel"),
             params: params_json,
         };
@@ -152,7 +208,7 @@ mod tests {
             }
         );
         let expect_r = Response::new_ok(
-            "generate_spec_request_001".to_string().into(),
+            "generate_spec_request_003".to_string().into(),
             serde_json::to_value(ex).unwrap(),
         );
         // // std::thread::sleep(Duration::new(1, 0));
@@ -162,7 +218,5 @@ mod tests {
         // log::trace!("expect_r = {:?}", expect_r);
         log::info!("\n------------------------------\n");
         assert_eq!(actual_r.result, expect_r.result);
-    }
-
-    
+    }    
 }
