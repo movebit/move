@@ -48,7 +48,7 @@
 
 use crate::{
     context::Context,
-    utils::{get_modules_by_fpath_in_target_modules}, project::Project,
+    utils::get_modules_by_fpath_in_all_modules, project::{Project, self},
 };
 use lsp_server::Request;
 use lsp_types::{DocumentSymbol, DocumentSymbolParams, SymbolKind};
@@ -66,22 +66,45 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) -> lsp_s
         .expect("could not deserialize document symbol request");
 
     let fpath = parameters.text_document.uri.to_file_path().unwrap();
-    log::info!("on_document_symbol_request: {:?}", fpath);
     
-    let project = match context.projects.get_project(&fpath) {
-        Some(x) => x,
+    let mut may_target_modules = Default::default();
+    let mut may_project = Default::default();
+    let projects = context.projects.get_projects(&fpath);
+    for project in projects {
+        log::info!("hhhhhhh");
+        let module_envs = get_modules_by_fpath_in_all_modules(&project.global_env, &fpath);
+        if !module_envs.is_empty() {
+            may_target_modules = Some(module_envs);
+        }
+            may_project = Some(project);
+    }
+
+    let project = match may_project {
+        Some(x) => x, 
         None => {
-            log::error!("project not found:{:?}", fpath.as_path());
+            log::error!("coule not found project from file path, fpath = {:?}", fpath.as_path());
             return lsp_server::Response {
                 id: "".to_string().into(),
-                result: Some(serde_json::json!({"msg": "No available project"})),
+                result: Some(serde_json::json!({"msg": "coule not found project from file path"})),
                 error: None,
             };
         }
-    };
+    };    
+
+    let module_envs = match may_target_modules {
+        Some(x) => x, 
+        None => {
+            log::error!("coule not found module from file path, fpath = {:?}", fpath.as_path());
+            return lsp_server::Response {
+                id: "".to_string().into(),
+                result: Some(serde_json::json!({"msg": "coule not found module from file path"})),
+                error: None,
+            };
+        }
+    };    
 
     let mut result_vec_document_symbols: Vec<DocumentSymbol> = vec![];
-    for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &fpath) {
+    for module_env in module_envs {
         log::info!("start handle module env name: {:?}", module_env.get_full_name_str());
         let module_range = project.loc_to_range(&module_env.get_loc());
         let module_name = module_env.get_name().display(&project.global_env).to_string().clone();
@@ -105,7 +128,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) -> lsp_s
             tags: Some(vec![]),
             deprecated: Some(false),
         });
-        eprintln!("end handle module env name: {:?}", module_env.get_full_name_str());
+        log::trace!("end handle module env name: {:?}", module_env.get_full_name_str());
     }
     
     let response = lsp_server::Response::new_ok(

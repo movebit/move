@@ -265,11 +265,9 @@ impl Handler {
             return;
         }
         
-        eprintln!("target name : {:?}, len = {}", addrnum_with_module_name, addrnum_with_module_name.len());
         let mut option_use_module: Option<ModuleEnv<'_>> = None;
         for mo_env in env.get_modules() {
             let mo_name_str = mo_env.get_name().display_full(env).to_string();
-            eprintln!("accual name : {:?}, len = {}", mo_name_str, mo_name_str.len());
             if addrnum_with_module_name.len() != mo_name_str.len() {
                 continue;
             }
@@ -621,7 +619,7 @@ impl Handler {
                         // log::info!("??? localvar return");
                         return;
                     }
-                    log::info!(
+                    log::trace!(
                         "target: exp.visit localvar_symbol = {}",
                         localvar_symbol.display(env.symbol_pool())
                     );

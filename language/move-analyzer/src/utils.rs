@@ -384,10 +384,11 @@ pub fn get_target_module(env: &GlobalEnv, move_file_path: &Path, target_module_i
 
 use move_model::model::ModuleEnv;
 pub fn get_modules_by_fpath_in_target_modules<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Vec<ModuleEnv<'a>> {
-    log::info!("get target module by path");
+    log::trace!("get target module by path");
     let mut result_vec_modules: Vec<ModuleEnv> = vec![];
     for module_env in env.get_target_modules() {
-        log::info!("match module: {}", module_env.get_name().display(env).to_string());
+        // log::trace!("match module: {}", module_env.get_name().display(env).to_string());
+        log::info!("{}", env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string());
         if env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string() != fpath.to_string_lossy().to_string() {
             continue;
         }

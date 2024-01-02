@@ -163,12 +163,6 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     let line = loc.line;
     let col = loc.character;
     let fpath = path_concat(std::env::current_dir().unwrap().as_path(), fpath.as_path());
-    eprintln!(
-        "on_completion_request, fpath:{:?} line:{} col:{}",
-        fpath.as_path(),
-        line,
-        col,
-    );
 
     let current_project = match context.projects.get_project(&fpath) {
         Some(x) => x,
@@ -207,15 +201,14 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
 
     if let Some(buffer) = &buffer {
         let identifiers = identifiers(buffer, &current_project.global_env, &fpath);
-        log::info!("identifiers = {:?}", identifiers);
+        // log::info!("identifiers = {:?}", identifiers);
         items.extend_from_slice(&identifiers);
     }
 
     let result = serde_json::to_value(items).expect("could not serialize completion response");
-    eprintln!("about to send completion response");
     let response = lsp_server::Response::new_ok(request.id.clone(), result);
     let ret_response = response.clone();
-    // log::info!("on complete------------------------------------> \n{:?}", ret_response);
+    log::info!("------------------------------------\n<on_complete>ret_response = {:?}\n\n", ret_response);
     if let Err(err) = context
         .connection
         .sender
@@ -223,6 +216,5 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     {
         eprintln!("could not send completion response: {:?}", err);
     }
-    log::info!("<------------------------------------ \n");
     return ret_response;
 }

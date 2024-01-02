@@ -6,7 +6,6 @@ use crate::{
     analyzer_handler::*,
     context::*,
     utils::*,
-    // {path_concat, FileRange},
 };
 use lsp_server::*;
 use lsp_types::*;
@@ -42,6 +41,7 @@ pub fn on_inlay_hints(context: &Context, request: &Request, config: InlayHintsCo
     let hints = Some(handler.reuslts);
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(hints).unwrap());
     let ret_response = r.clone();
+    // log::info!("------------------------------------\n<on_inlay_hints>ret_response = \n{:?}\n\n", ret_response);
     context
         .connection
         .sender
@@ -91,7 +91,6 @@ impl Handler {
     }
 
     fn process_func(&mut self, env: &GlobalEnv) {
-        log::info!("lll >> <on_inlay_hints>process_func =======================================\n\n");
         let target_module = env.get_module(self.target_module_id);
         for fun in target_module.get_functions() {
             let this_fun_loc = fun.get_loc();
@@ -112,7 +111,6 @@ impl Handler {
     }
 
     fn process_spec_func(&mut self, env: &GlobalEnv) {
-        log::info!("lll >> process_spec_func =======================================");
         let target_module = env.get_module(self.target_module_id);
         for spec_block_info in target_module.get_spec_block_infos() {
             if let SpecBlockTarget::Function(_, fun_id) = spec_block_info.target {
@@ -126,7 +124,7 @@ impl Handler {
                 if self.range.line_start <= block_start_pos.line.0 && block_end_pos.line.0 <= self.range.line_end {
                     let target_fn = target_module.get_function(fun_id);
                     let target_fn_spec = target_fn.get_spec();
-                    log::info!("target_fun's spec = {}",
+                    log::info!("<inlay_hing> -- target_fun's spec = {}",
                         env.display(&*target_fn_spec));
                     for cond in target_fn_spec.conditions.clone() {
                         for exp in cond.all_exps() {
@@ -147,8 +145,8 @@ impl Handler {
                 if self.range.line_start <= block_start_pos.line.0 && block_end_pos.line.0 <= self.range.line_end {
                     let target_fn = target_module.get_function(fun_id);
                     let target_fn_spec = target_fn.get_spec();
-                    log::info!("target_fun_code's spec = {}",
-                        env.display(&*target_fn_spec));
+                    // log::info!("target_fun_code's spec = {}",
+                    //     env.display(&*target_fn_spec));
                     for cond in target_fn_spec.conditions.clone() {
                         for exp in cond.all_exps() {
                             self.process_expr(env, &target_fn, &exp);
@@ -166,7 +164,7 @@ impl Handler {
                     ))
                     .unwrap();
                 if self.range.line_start <= block_start_pos.line.0 && block_end_pos.line.0 <= self.range.line_end {
-                    log::info!("SpecBlockTarget::Schema, spec_block_info.loc = {:?}", env
+                    log::info!("<inlay_hint> -- SpecBlockTarget::Schema, spec_block_info.loc = {:?}", env
                         .get_file_and_location(&spec_block_info.loc.clone()));
                     // let target_stct = target_module.get_struct(stct_id);
                     // let target_stct_spec = target_stct.get_spec();
@@ -183,7 +181,6 @@ impl Handler {
         fun: &FunctionEnv,
         exp: &move_model::ast::Exp,
     ) {
-        log::info!("\n\nlll >> process_expr -------------------------\n");
         exp.visit(&mut |e| {
             match e {
                 Call(..) => {
@@ -197,14 +194,14 @@ impl Handler {
                             localvar_loc.span().start(),
                             localvar_loc.span().end() + codespan::ByteOffset((2).try_into().unwrap())));
 
-                    log::info!(
-                        "lll >> exp.visit localvar_loc = {:?}",
-                        env.get_location(&localvar_loc)
-                    );
-                    log::info!(
-                        "lll >> exp.visit localvar_symbol = {}",
-                        localvar_symbol.display(env.symbol_pool())
-                    );
+                    // log::info!(
+                    //     "lll >> exp.visit localvar_loc = {:?}",
+                    //     env.get_location(&localvar_loc)
+                    // );
+                    // log::info!(
+                    //     "lll >> exp.visit localvar_symbol = {}",
+                    //     localvar_symbol.display(env.symbol_pool())
+                    // );
                     if let Some(node_type) = env.get_node_type_opt(*node_id) {
                         if let Ok(local_var_str) = env.get_source(&localvar_loc) {
                             if let Some(index) = local_var_str.find(localvar_symbol.display(env.symbol_pool()).to_string().as_str()) {
@@ -219,7 +216,7 @@ impl Handler {
                                     Some('.') => return,
                                     Some(':') => return,
                                     _ => {
-                                        log::info!("local_var_str[{:?}] inlay_hint_pos = {:?}", local_var_str, inlay_hint_pos);
+                                        // log::info!("local_var_str[{:?}] inlay_hint_pos = {:?}", local_var_str, inlay_hint_pos);
                                         self.process_type(env, &inlay_hint_pos, &node_type);
                                     }
                                 }
@@ -234,10 +231,10 @@ impl Handler {
                         codespan::Span::new(
                             tmpvar_loc.span().start(),
                             tmpvar_loc.span().end() + codespan::ByteOffset((2).try_into().unwrap())));
-                    log::info!(
-                        "lll >> exp.visit tmpvar_loc = {:?}",
-                        env.get_location(&tmpvar_loc)
-                    );
+                    // log::info!(
+                    //     "lll >> exp.visit tmpvar_loc = {:?}",
+                    //     env.get_location(&tmpvar_loc)
+                    // );
 
                     let mut tmp_var_name_str = "".to_string();
                     if let Some(name) = fun.get_parameters().get(*idx).map(|p| p.0)
@@ -258,7 +255,7 @@ impl Handler {
                                     Some('.') => return,
                                     Some(':') => return,
                                     _ => {
-                                        log::info!("tmp_var_str[{:?}] inlay_hint_pos = {:?}", tmp_var_str, inlay_hint_pos);
+                                        // log::info!("tmp_var_str[{:?}] inlay_hint_pos = {:?}", tmp_var_str, inlay_hint_pos);
                                         self.process_type(env, &inlay_hint_pos, &node_type);
                                     }
                                 }
@@ -269,7 +266,6 @@ impl Handler {
                 _ => {},
             }
         });
-        log::info!("\nlll << process_expr ^^^^^^^^^^^^^^^^^^^^^^^^^\n");
     }
 
     fn process_call(
@@ -287,22 +283,22 @@ impl Handler {
 
             if let Ok(link_access_source) = env.get_source(&this_call_loc) {
                 let called_field_name = ".".to_string() + called_field.get_name().display(env.symbol_pool()).to_string().as_str();
-                log::info!(
-                    "lll >> called_struct = {:?}, link_access_source = {:?}, called_field_name = {:?}",
-                    called_struct.get_full_name_str(), link_access_source, called_field_name
-                );
+                // log::info!(
+                //     "lll >> called_struct = {:?}, link_access_source = {:?}, called_field_name = {:?}",
+                //     called_struct.get_full_name_str(), link_access_source, called_field_name
+                // );
 
                 if let Some(index) = link_access_source.find(called_field_name.as_str()) {
                     let dis = index + called_field_name.len();
-                    log::info!("lll >> index = {:?}, dis = {:?}", index, dis);  
+                    // log::info!("lll >> index = {:?}, dis = {:?}", index, dis);  
                     let inlay_hint_pos = move_model::model::Loc::new(
                         this_call_loc.file_id(),
                         codespan::Span::new(
                             this_call_loc.span().start() + codespan::ByteOffset((dis).try_into().unwrap()),
                             this_call_loc.span().end()
                         ));
-                    log::info!("lll >> exp.visit this_call_loc = {:?}", this_call_loc);
-                    log::info!("lll >> called_struct inlay_hint_pos = {:?}", inlay_hint_pos);
+                    // log::info!("lll >> exp.visit this_call_loc = {:?}", this_call_loc);
+                    // log::info!("lll >> called_struct inlay_hint_pos = {:?}", inlay_hint_pos);
                     self.process_type(env, &inlay_hint_pos, &field_type);        
                 }
             }
@@ -352,7 +348,7 @@ impl Handler {
                 &PathBuf::from(move_file_path)
             );
         if candidate_modules.is_empty() {
-            log::info!("<goto def>cannot get target module\n");
+            log::info!("<inlay_hints>cannot get target module\n");
             return;
         }
         for module_env in candidate_modules.iter() {
@@ -397,7 +393,6 @@ impl std::fmt::Display for Handler {
     }
 }
 
-
 fn mk_inlay_hits(pos: Position, label: InlayHintLabel, kind: InlayHintKind) -> InlayHint {
     InlayHint {
         position: pos,
@@ -412,7 +407,7 @@ fn mk_inlay_hits(pos: Position, label: InlayHintLabel, kind: InlayHintKind) -> I
 }
 
 fn para_inlay_hints_parts(name: &str, label_pos: FileRange) -> InlayHintLabel {
-    log::info!("para_inlay_hints_parts name = {:?}", name);
+    // log::info!("para_inlay_hints_parts name = {:?}", name);
     InlayHintLabel::LabelParts(vec![InlayHintLabelPart {
         value: format!(": {}", name),
         tooltip: None,

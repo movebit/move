@@ -31,6 +31,7 @@ pub struct Project {
     pub(crate) targets: Vec<PackagePaths<std::string::String, std::string::String>>,
     pub(crate) dependents: Vec<PackagePaths<std::string::String, std::string::String>>,
     pub(crate) addrname_2_addrnum: std::collections::HashMap<String, String>,
+    pub        err_diags: String,
 }
 
 // impl_convert_loc!(Project);

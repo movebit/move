@@ -16,7 +16,7 @@ use std::{path::{Path, PathBuf}, collections::BTreeSet};
 
 /// Handles on_references_request of the language server.
 pub fn on_references_request(context: &Context, request: &Request) -> lsp_server::Response {
-    log::info!("on_go_to_def_request request = {:?}", request);
+    log::info!("on_references_request request = {:?}", request);
     let parameters = serde_json::from_value::<ReferenceParams>(request.params.clone())
         .expect("could not deserialize Reference request");
     let fpath = parameters
@@ -29,12 +29,6 @@ pub fn on_references_request(context: &Context, request: &Request) -> lsp_server
     let line = loc.line;
     let col = loc.character;
     let fpath = path_concat(std::env::current_dir().unwrap().as_path(), fpath.as_path());
-    eprintln!(
-        "on_references_request, fpath:{:?} line:{} col:{}",
-        fpath.as_path(),
-        line,
-        col,
-    );
 
     let mut handler = Handler::new(fpath.clone(), line, col);
     let _ = match context.projects.get_project(&fpath) {
@@ -55,7 +49,7 @@ pub fn on_references_request(context: &Context, request: &Request) -> lsp_server
         serde_json::to_value(GotoDefinitionResponse::Array(locations)).unwrap(),
     );
     let ret_response = r.clone();
-    log::info!("\n\n------------------------------------ret_response = {:?}", ret_response);
+    log::info!("------------------------------------\n<on_references_request>ret_response = \n{:?}\n\n", ret_response);
     context
         .connection
         .sender
@@ -166,7 +160,7 @@ impl Handler {
                 mouse_line_last_col.span().start(),
             ),
         ));
-        log::info!("lll >> mouse_source = {:?}", mouse_source);
+        log::info!("<on_references> -- mouse_source = {:?}", mouse_source);
     
         self.mouse_span = codespan::Span::new(mouse_line_first_col.span().start(), mouse_line_last_col.span().start());
     }
@@ -201,7 +195,6 @@ impl Handler {
     */
 
     fn process_func(&mut self, env: &GlobalEnv) {
-        log::info!("lll >> <on_references>process_func =======================================\n\n");
         let mut found_target_fun = false;
         let mut target_fun_id = FunId::new(env.symbol_pool().make("name"));
         let target_module = env.get_module(self.target_module_id);
@@ -223,6 +216,7 @@ impl Handler {
         }
 
         if !found_target_fun {
+            log::info!("<on_references> -- not in fun!\n");
             return;
         }
 
@@ -237,7 +231,6 @@ impl Handler {
     }
     
     fn process_spec_func(&mut self, env: &GlobalEnv) {
-        log::info!("lll >> process_spec_func =======================================");
         let mut found_target_fun = false;
         let mut target_fun_id = FunId::new(env.symbol_pool().make("name"));
         let target_module = env.get_module(self.target_module_id);
@@ -275,7 +268,7 @@ impl Handler {
         }
 
         if !found_target_fun {
-            log::info!("<< not found_target_spec_fun");
+            log::info!("<on_references> -- not in found_target_spec_fun!\n");
             return;
         }
 
@@ -292,7 +285,6 @@ impl Handler {
     }
 
     fn process_struct(&mut self, env: &GlobalEnv) {
-        log::info!("lll >> <on_references>process_struct =======================================\n\n");
         let mut found_target_struct = false;
         let mut target_struct_id = StructId::new(env.symbol_pool().make("name"));
         let target_module = env.get_module(self.target_module_id);
@@ -314,6 +306,7 @@ impl Handler {
         }
     
         if !found_target_struct {
+            log::info!("<on_references> -- not in struct!\n");
             return;
         }
 
@@ -367,7 +360,6 @@ impl Handler {
     }
     
     fn process_spec_struct(&mut self, env: &GlobalEnv) {
-        log::info!("lll >> process_spec_struct =======================================\n\n");
         let mut found_target_spec_stct = false;
         let mut target_stct_id = StructId::new(env.symbol_pool().make("name"));
         let target_module = env.get_module(self.target_module_id);
@@ -405,7 +397,7 @@ impl Handler {
         }
 
         if !found_target_spec_stct {
-            log::info!("<< not found_target_spec_stct");
+            log::info!("<on_references> -- not in found_target_spec_stct!\n");
             return;
         }
 
@@ -426,7 +418,6 @@ impl Handler {
         env: &GlobalEnv,
         exp: &move_model::ast::Exp,
     ) {
-        log::info!("\n\nlll >> process_expr -------------------------\n");
         exp.visit(&mut |e| {
             match e {
                 Call(..) => {
@@ -435,7 +426,6 @@ impl Handler {
                 _ => {},
             }
         });
-        log::info!("\nlll << process_expr ^^^^^^^^^^^^^^^^^^^^^^^^^\n");
     }
 
     fn process_call(
@@ -446,27 +436,28 @@ impl Handler {
     {
         if let Call(node_id, MoveFunction(mid, fid), _) = expdata {
             let this_call_loc = env.get_node_loc(*node_id);
-            log::info!(
-                "lll >> exp.visit this_call_loc = {:?}",
-                env.get_location(&this_call_loc)
-            );
+            // log::info!(
+            //     "lll >> exp.visit this_call_loc = {:?}",
+            //     env.get_location(&this_call_loc)
+            // );
             if this_call_loc.span().start() < self.mouse_span.end()
                 && self.mouse_span.end() < this_call_loc.span().end()
             {
                 let called_module = env.get_module(*mid);
                 let called_fun = called_module.get_function(*fid);
                 log::info!(
-                    "lll >> get_called_functions = {:?}",
+                    "<on_references> -- process_call -- get_called_functions = {:?}",
                     called_fun.get_full_name_str()
                 );
+
                 if let Some(calling_fns) = called_fun.get_calling_functions() {
                     let mut result_candidates: Vec<FileRange> = Vec::new();
                     for caller in calling_fns {
                         let f = env.get_function(caller);
-                        log::info!(
-                            "lll >> caller f = {:?}",
-                            f.get_full_name_str()
-                        );
+                        // log::info!(
+                        //     "lll >> caller f = {:?}",
+                        //     f.get_full_name_str()
+                        // );
                         let mut caller_fun_loc = f.get_loc();
                         // need locate called_fun.get_full_name_str() in f's body source
                         let f_source = env.get_source(&caller_fun_loc);
@@ -500,17 +491,17 @@ impl Handler {
         }
         if let Call(node_id, SpecFunction(mid, fid, _), _) = expdata {
             let this_call_loc = env.get_node_loc(*node_id);
-            log::info!(
-                "lll >> exp.visit this_call_loc = {:?}",
-                env.get_file_and_location(&this_call_loc)
-            );
+            // log::info!(
+            //     "lll >> exp.visit this_call_loc = {:?}",
+            //     env.get_file_and_location(&this_call_loc)
+            // );
             if this_call_loc.span().start() < self.mouse_span.end()
                 && self.mouse_span.end() < this_call_loc.span().end()
             {
                 let called_module = env.get_module(*mid);
                 let spec_fun = called_module.get_spec_fun(*fid);
                 log::info!(
-                    "lll >> get_spec_functions = {}",
+                    "<on_references> -- process_call -- get_spec_functions = {}",
                     spec_fun.name.display(env.symbol_pool())
                 );
                 // let spec_fun_loc = spec_fun.loc.clone();
@@ -566,7 +557,7 @@ impl Handler {
                                 let result_loc = move_model::model::Loc::new(
                                     stc_ref_fn_loc.file_id(),
                                     codespan::Span::new(capture_ref_ty_start, capture_ref_ty_end));
-                                log::info!("ref ty result str = {:?}", env.get_source(&result_loc));
+                                // log::info!("ref ty result str = {:?}", env.get_source(&result_loc));
 
                                 let (ref_ty_file, ref_ty_pos) =
                                     env.get_file_and_location(&result_loc).unwrap();
@@ -593,7 +584,7 @@ impl Handler {
                 self.capture_items_span.push(capture_items_loc.span());
             },
             _ => {
-                log::info!("lll >> type_var is default");
+                // log::info!("lll >> type_var is default");
             },
         }
     }
@@ -609,7 +600,7 @@ impl Handler {
                 &PathBuf::from(move_file_path)
             );
         if candidate_modules.is_empty() {
-            log::info!("<goto def>cannot get target module\n");
+            log::info!("<on_references>cannot get target module\n");
             return;
         }
         for module_env in candidate_modules.iter() {

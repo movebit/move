@@ -29,12 +29,6 @@ pub fn on_hover_request(context: &Context, request: &Request) -> lsp_server::Res
     let line = loc.line;
     let col = loc.character;
     let fpath = path_concat(std::env::current_dir().unwrap().as_path(), fpath.as_path());
-    eprintln!(
-        "on_hover_request, fpath:{:?} line:{} col:{}",
-        fpath.as_path(),
-        line,
-        col,
-    );
 
     let mut handler = Handler::new(fpath.clone(), line, col);
     let _ = match context.projects.get_project(&fpath) {
@@ -52,7 +46,7 @@ pub fn on_hover_request(context: &Context, request: &Request) -> lsp_server::Res
 
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(handler.get_result()).unwrap());
     let ret_response = r.clone();
-    log::info!("\n\n------------------------------------ret_response = {:?}", ret_response);
+    log::info!("------------------------------------\n<on_hover>ret_response = \n{:?}\n\n", ret_response);
     context
         .connection
         .sender
@@ -194,13 +188,12 @@ impl Handler {
                 mouse_line_last_col.span().start(),
             ),
         ));
-        log::info!("lll >> mouse_source = {:?}", mouse_source);
+        log::info!("<on hover> mouse_source = {:?}", mouse_source);
     
         self.mouse_span = codespan::Span::new(mouse_line_first_col.span().start(), mouse_line_last_col.span().start());
     }
 
     fn process_use_decl(&mut self, env: &GlobalEnv) {
-        log::info!("lll >> process_use_decl =======================================\n\n");
         let mut target_module = env.get_module(self.target_module_id);
         let spool = env.symbol_pool();
         let mut ref_module = String::default();
@@ -213,8 +206,8 @@ impl Handler {
                     continue;
                 }
             }
-            log::info!("use_decl.loc = {:?}, use_decl.loc.len = {:?}", 
-                use_decl.loc, use_decl.loc.span().end() - use_decl.loc.span().start());
+            // log::info!("use_decl.loc = {:?}, use_decl.loc.len = {:?}", 
+            //     use_decl.loc, use_decl.loc.span().end() - use_decl.loc.span().start());
 
             let mouse_line_first_col = move_model::model::Loc::new(
                 use_decl.loc.file_id(),
@@ -231,18 +224,18 @@ impl Handler {
                 )
             );
 
-            if let Some(use_first_col) = env.get_location(&mouse_line_first_col) {
-                log::info!("use_first_col = {:?}", use_first_col);
-            }
+            // if let Some(use_first_col) = env.get_location(&mouse_line_first_col) {
+            //     log::info!("use_first_col = {:?}", use_first_col);
+            // }
 
-            if let Some(use_last_col) = env.get_location(&mouse_line_last_col) {
-                log::info!("use_last_col = {:?}", use_last_col);
-            }
+            // if let Some(use_last_col) = env.get_location(&mouse_line_last_col) {
+            //     log::info!("use_last_col = {:?}", use_last_col);
+            // }
             if !use_decl.members.is_empty() {
                 for (member_loc, name, _) in use_decl.members.clone().into_iter() {
-                    log::info!("member_loc = {:?} ---", env.get_location(&member_loc));
+                    // log::info!("member_loc = {:?} ---", env.get_location(&member_loc));
                     if self.check_move_model_loc_contains_mouse_pos(env, &member_loc) {
-                        log::info!("find use symbol = {}", name.display(spool));
+                        // log::info!("find use symbol = {}", name.display(spool));
                         target_stct_or_fn = name.display(spool).to_string();
                         found_target_stct_or_fn = true;
                         ref_module = use_decl.module_name.display_full(env).to_string();
@@ -257,6 +250,7 @@ impl Handler {
         }
 
         if !found_target_stct_or_fn {
+            log::warn!("<on hover> not found_target_stct_or_fn");
             return;
         }
 
@@ -276,7 +270,7 @@ impl Handler {
         }
         for func in target_module.get_functions() {
             if func.get_name_str().contains(&target_stct_or_fn) {
-                log::info!("func.get_name_str() = {:?}", func.get_name_str());
+                log::info!("<on hover> func.get_name_str() = {:?}", func.get_name_str());
                 self.capture_items_span.push(capture_items_loc.span());
                 self.result_candidates.push(func.get_header_string());
                 return;
@@ -285,7 +279,6 @@ impl Handler {
     }
 
     fn process_func(&mut self, env: &GlobalEnv) {
-        log::info!("lll >> <on_hover>process_func =======================================\n\n");
         let mut found_target_fun = false;
         let mut target_fun_id = FunId::new(env.symbol_pool().make("name"));
         let target_module = env.get_module(self.target_module_id);
@@ -306,6 +299,7 @@ impl Handler {
             // log::info!("lll >> func_start_pos = {:?}, func_end_pos = {:?}", func_start_pos, func_end_pos);
         }
         if !found_target_fun {
+            log::warn!("<on hover> not found_target_fun");
             return;
         }
 
@@ -319,7 +313,6 @@ impl Handler {
     }
 
     fn process_spec_func(&mut self, env: &GlobalEnv) {
-        log::info!("lll >> process_spec_func =======================================");
         let mut found_target_fun = false;
         let mut target_fun_id = FunId::new(env.symbol_pool().make("name"));
         let target_module = env.get_module(self.target_module_id);
@@ -357,14 +350,13 @@ impl Handler {
         }
 
         if !found_target_fun {
-            log::info!("<< not found_target_spec_fun");
+            log::warn!("<on hover> not found_target_spec_fun");
             return;
         }
 
         let target_fn = target_module.get_function(target_fun_id);
         let target_fn_spec = target_fn.get_spec();
-        log::info!("target_fun's spec = {}",
-            env.display(&*target_fn_spec));
+        log::info!("target_fun's spec = {}", env.display(&*target_fn_spec));
         self.get_mouse_loc(env, &spec_fn_span_loc);
         for cond in target_fn_spec.conditions.clone() {
             for exp in cond.all_exps() {
@@ -374,7 +366,6 @@ impl Handler {
     }
 
     fn process_struct(&mut self, env: &GlobalEnv) {
-        log::info!("lll >> <on_hover>process_struct =======================================\n\n");
         let mut found_target_struct = false;
         let mut target_struct_id = StructId::new(env.symbol_pool().make("name"));
         let target_module = env.get_module(self.target_module_id);
@@ -396,6 +387,7 @@ impl Handler {
         }
     
         if !found_target_struct {
+            log::warn!("<on hover> not found_target_struct");
             return;
         }
     
@@ -407,7 +399,7 @@ impl Handler {
         for field_env in target_struct.get_fields() {
             let field_name = field_env.get_name();
             let field_name_str = field_name.display(env.symbol_pool());
-            log::info!("lll >> field_name = {}", field_name_str);
+            // log::info!("lll >> field_name = {}", field_name_str);
             let struct_source = env.get_source(&target_struct_loc);
             if let Ok(struct_str) = struct_source {
                 if let Some(index) = struct_str.find(field_name_str.to_string().as_str()) {
@@ -438,7 +430,7 @@ impl Handler {
                             {
                                 continue;
                             }
-                            log::info!("lll >> atomic_field_source = {:?}", atomic_field_source);
+                            // log::info!("lll >> atomic_field_source = {:?}", atomic_field_source);
                             let field_type = field_env.get_type();
                             self.process_type(env, &atomic_field_loc, &field_type);
                         }
@@ -449,7 +441,6 @@ impl Handler {
     }
  
     fn process_spec_struct(&mut self, env: &GlobalEnv) {
-        log::info!("lll >> process_spec_struct =======================================\n\n");
         let mut found_target_spec_stct = false;
         let mut target_stct_id = StructId::new(env.symbol_pool().make("name"));
         let target_module = env.get_module(self.target_module_id);
@@ -487,7 +478,7 @@ impl Handler {
         }
 
         if !found_target_spec_stct {
-            log::info!("<< not found_target_spec_stct");
+            log::warn!("<on hover> not found_target_spec_stct");
             return;
         }
 
@@ -508,7 +499,6 @@ impl Handler {
         env: &GlobalEnv,
         exp: &move_model::ast::Exp,
     ) {
-        log::info!("\n\nlll >> process_expr -------------------------\n");
         exp.visit(&mut |e| {
             match e {
                 Value(node_id, _v) => {
@@ -521,7 +511,7 @@ impl Handler {
                         }
                         for named_const in env.get_module(self.target_module_id).get_named_constants() {
                             let spool = env.symbol_pool();
-                            log::info!("named_const.get_name() = {}", named_const.get_name().display(spool));
+                            // log::info!("named_const.get_name() = {}", named_const.get_name().display(spool));
                             let named_const_str = named_const.get_name().display(spool).to_string();
                             if value_str.contains(&named_const_str) {
                                 // format!("{}", EnvDisplay::new(&env, &named_const.get_value())); 
@@ -540,20 +530,20 @@ impl Handler {
                 },
                 LocalVar(node_id, localvar_symbol) => {
                     let localvar_loc = env.get_node_loc(*node_id);
-                    log::info!(
-                        "lll >> exp.visit localvar_loc = {:?}",
-                        env.get_location(&localvar_loc)
-                    );
-                    log::info!(
-                        "lll >> exp.visit localvar_symbol = {}",
-                        localvar_symbol.display(env.symbol_pool())
-                    );
-                    let local_source = env.get_source(&localvar_loc);
-                    log::info!("lll >> local_source = {:?}", local_source);
+                    // log::info!(
+                    //     "lll >> exp.visit localvar_loc = {:?}",
+                    //     env.get_location(&localvar_loc)
+                    // );
+                    // log::info!(
+                    //     "lll >> exp.visit localvar_symbol = {}",
+                    //     localvar_symbol.display(env.symbol_pool())
+                    // );
+                    // let local_source = env.get_source(&localvar_loc);
+                    // log::info!("lll >> local_source = {:?}", local_source);
                     if localvar_loc.span().start() > self.mouse_span.end()
                         || self.mouse_span.end() > localvar_loc.span().end()
                     {
-                        // log::info!("??? localvar return");
+                        // log::warn!("<on hover> localvar return");
                         return;
                     }
                     if let Some(node_type) = env.get_node_type_opt(*node_id) {
@@ -562,10 +552,10 @@ impl Handler {
                 },
                 Temporary(node_id, _) => {
                     let tmpvar_loc = env.get_node_loc(*node_id);
-                    log::info!(
-                        "lll >> exp.visit tmpvar_loc = {:?}",
-                        env.get_location(&tmpvar_loc)
-                    );
+                    // log::info!(
+                    //     "lll >> exp.visit tmpvar_loc = {:?}",
+                    //     env.get_location(&tmpvar_loc)
+                    // );
                     if tmpvar_loc.span().start() > self.mouse_span.end()
                         || self.mouse_span.end() > tmpvar_loc.span().end()
                     {
@@ -579,7 +569,6 @@ impl Handler {
                 _ => {},
             }
         });
-        log::info!("\nlll << process_expr ^^^^^^^^^^^^^^^^^^^^^^^^^\n");
     }
 
     fn process_call(
@@ -590,19 +579,19 @@ impl Handler {
     {
         if let Call(node_id, MoveFunction(mid, fid), _) = expdata {
             let this_call_loc = env.get_node_loc(*node_id);
-            log::info!(
-                "lll >> exp.visit this_call_loc = {:?}",
-                env.get_location(&this_call_loc)
-            );
+            // log::info!(
+            //     "<on hover> exp.visit this_call_loc = {:?}",
+            //     env.get_location(&this_call_loc)
+            // );
             if this_call_loc.span().start() < self.mouse_span.end()
                 && self.mouse_span.end() < this_call_loc.span().end()
             {
                 let called_module = env.get_module(*mid);
                 let called_fun = called_module.get_function(*fid);
-                log::info!(
-                    "lll >> get_called_functions = {:?}",
-                    called_fun.get_full_name_str()
-                );
+                // log::info!(
+                //     "<on hover> get_called_functions = {:?}",
+                //     called_fun.get_full_name_str()
+                // );
                 self.capture_items_span.push(this_call_loc.span());
                 self.result_candidates.push(called_fun.get_header_string());
             }
@@ -610,10 +599,10 @@ impl Handler {
 
         if let Call(node_id, Select(mid, sid, fid), _) = expdata {
             let this_call_loc = env.get_node_loc(*node_id);
-            log::info!(
-                "lll >> exp.visit this_call_loc = {:?}",
-                env.get_location(&this_call_loc)
-            );
+            // log::info!(
+            //     "<on hover> exp.visit this_call_loc = {:?}",
+            //     env.get_location(&this_call_loc)
+            // );
             if this_call_loc.span().start() > self.mouse_span.end()
                 || self.mouse_span.end() > this_call_loc.span().end()
             {
@@ -622,10 +611,10 @@ impl Handler {
             
             let called_module = env.get_module(*mid);
             let called_struct = called_module.get_struct(*sid);
-            log::info!(
-                "lll >> called_struct = {:?}",
-                called_struct.get_full_name_str()
-            );
+            // log::info!(
+            //     "<on hover> called_struct = {:?}",
+            //     called_struct.get_full_name_str()
+            // );
             let called_field = called_struct.get_field(*fid);
             let field_type = called_field.get_type();
             self.process_type(env, &this_call_loc, &field_type);
@@ -633,19 +622,19 @@ impl Handler {
 
         if let Call(node_id, SpecFunction(mid, fid, _), _) = expdata {
             let this_call_loc = env.get_node_loc(*node_id);
-            log::info!(
-                "lll >> exp.visit this_call_loc = {:?}",
-                env.get_file_and_location(&this_call_loc)
-            );
+            // log::info!(
+            //     "lll >> exp.visit this_call_loc = {:?}",
+            //     env.get_file_and_location(&this_call_loc)
+            // );
             if this_call_loc.span().start() < self.mouse_span.end()
                 && self.mouse_span.end() < this_call_loc.span().end()
             {
                 let called_module = env.get_module(*mid);
                 let spec_fun = called_module.get_spec_fun(*fid);
-                log::info!(
-                    "lll >> get_spec_functions = {}",
-                    spec_fun.name.display(env.symbol_pool())
-                );
+                // log::info!(
+                //     "lll >> get_spec_functions = {}",
+                //     spec_fun.name.display(env.symbol_pool())
+                // );
                 self.capture_items_span.push(this_call_loc.span());
                 self.result_candidates.push(spec_fun.name.display(env.symbol_pool()).to_string());
 
@@ -694,7 +683,7 @@ impl Handler {
                 &PathBuf::from(move_file_path)
             );
         if candidate_modules.is_empty() {
-            log::info!("<goto def>cannot get target module\n");
+            log::info!("<on hover>cannot get target module\n");
             return;
         }
         for module_env in candidate_modules.iter() {

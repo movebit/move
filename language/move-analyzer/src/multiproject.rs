@@ -93,6 +93,21 @@ impl MultiProject {
         None
     }
 
+    pub fn get_projects(&self, x: &Path) -> Vec<&Project> {
+        let (manifest, _) = match super::utils::discover_manifest_and_kind(x) {
+            Some(x) => x,
+            None => return vec![],
+        };
+        let mut ret = Vec::new();
+        for (k, v) in self.projects.iter() {
+            if k.contains(&manifest) {
+                ret.push(v);
+            }
+        }
+        ret
+    }
+
+
     fn get_projects_mut(&mut self, x: &Path) -> Vec<&mut Project> {
         let (manifest, _) = match super::utils::discover_manifest_and_kind(x) {
             Some(x) => x,

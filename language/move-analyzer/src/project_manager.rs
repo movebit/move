@@ -133,6 +133,7 @@ impl Project {
             targets: vec![],
             dependents: vec![],
             addrname_2_addrnum: Default::default(),
+            err_diags: String::default(),
         };
 
         let mut targets_paths: Vec<PathBuf> = Vec::new();
@@ -200,10 +201,10 @@ impl Project {
             &attributes,
         )
         .expect("Failed to create GlobalEnv!");
-        eprintln!("env.get_module_count() = {:?}", &new_project.global_env.get_module_count());
-        eprintln!("env.diag_count() = {:?}", &new_project.global_env.diag_count(Severity::Error));
-        let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
-
+        log::info!("env.get_module_count() = {:?}", &new_project.global_env.get_module_count());
+        // let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
+        use codespan_reporting::term::termcolor::Buffer;
+        let mut error_writer = Buffer::no_color();
 
         let mut helper = HashMap::new();
         for (addr_name, addr_num) in addrs.iter() {
@@ -212,12 +213,13 @@ impl Project {
 
         new_project.addrname_2_addrnum = helper;
         new_project.global_env.report_diag(&mut error_writer, Severity::Error);
+        new_project.err_diags = String::from_utf8_lossy(&error_writer.into_inner()).to_string();
         Ok(new_project)
     }
 
     pub fn update_defs(&mut self, file_path: &PathBuf, content: String) {
         use std::result::Result::Ok;
-        log::info!("lll >> update_defs for file:{:?}", file_path);
+        log::info!("update_defs for file:{:?}", file_path);
         let root_dir = match super::utils::discover_manifest_and_kind(&file_path) {
             Some((x, _)) => x,
             None => {
@@ -240,9 +242,10 @@ impl Project {
         self.global_env = new_project.global_env;
 
         eprintln!("env.get_module_count() = {:?}", &self.global_env.get_module_count());
-        eprintln!("env.diag_count() = {:?}", &self.global_env.diag_count(Severity::Error));
-        let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
+        use codespan_reporting::term::termcolor::Buffer;
+        let mut error_writer = Buffer::no_color();
         self.global_env.report_diag(&mut error_writer, Severity::Error);
+        self.err_diags = String::from_utf8_lossy(&error_writer.into_inner()).to_string();
     }
 
     /// Load a Move.toml project.
@@ -405,7 +408,7 @@ impl Project {
         filepath: &PathBuf,
         source_str: String
     ) {
-        log::info!("run visitor part for {} ", visitor);
+        // log::info!("run visitor part for {} ", visitor);
         visitor.handle_project_env(self, &self.global_env, &filepath, source_str);
     }
 }
