@@ -163,10 +163,6 @@ impl Project {
         // log::info!("named_address_mapping = {:?}", named_address_mapping);
         let addrs = parse_addresses_from_options(named_address_mapping.clone())?;
 
-        for (a, b) in addrs.iter() {
-            eprintln!("addr insert {} {}", a, b.to_string());
-        }
-
         let targets = vec![PackagePaths {
             name: None,
             paths: targets_paths
@@ -241,7 +237,7 @@ impl Project {
         self.dependents = new_project.dependents.clone();
         self.global_env = new_project.global_env;
 
-        eprintln!("env.get_module_count() = {:?}", &self.global_env.get_module_count());
+        log::info!("env.get_module_count() = {:?}", &self.global_env.get_module_count());
         use codespan_reporting::term::termcolor::Buffer;
         let mut error_writer = Buffer::no_color();
         self.global_env.report_diag(&mut error_writer, Severity::Error);

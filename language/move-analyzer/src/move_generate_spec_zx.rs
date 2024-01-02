@@ -581,7 +581,6 @@ impl FunSpecGenerator {
                         Ok(x) => x,
                         Err(_) => "err",
                     };
-                    eprintln!("handle pattern {}", _left_exp_str);
                     
                     let mut is_use = false;
                     for (_, var_in_pattern) in left.vars() {
@@ -593,7 +592,6 @@ impl FunSpecGenerator {
                         } 
                     }
 
-                    eprintln!("now cnuzai in used_local_var");
                     for vv in used_local_var.iter() {
                         eprint!("{} ", vv.display(env.symbol_pool()))
                     }
