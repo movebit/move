@@ -48,34 +48,64 @@
 
 use crate::{
     context::Context,
-    utils::{get_modules_by_fpath_in_target_modules}, project::Project,
+    utils::get_modules_by_fpath_in_all_modules, project::{Project, self},
 };
 use lsp_server::Request;
 use lsp_types::{DocumentSymbol, DocumentSymbolParams, SymbolKind};
 use move_model::{
-    model::{ModuleEnv, StructEnv}
+    model::{ModuleEnv, StructEnv},
+    ast::SpecBlockTarget,
 };
 
 
 /// Handles document symbol request of the language server
 #[allow(deprecated)]
-pub fn on_document_symbol_request(context: &Context, request: &Request) {
+pub fn on_document_symbol_request(context: &Context, request: &Request) -> lsp_server::Response {
+    log::info!("on_document_symbol_request");
     let parameters = serde_json::from_value::<DocumentSymbolParams>(request.params.clone())
         .expect("could not deserialize document symbol request");
 
     let fpath = parameters.text_document.uri.to_file_path().unwrap();
-    eprintln!("on_document_symbol_request: {:?}", fpath);
-    let project = match context.projects.get_project(&fpath) {
-        Some(x) => x,
-        None => {
-            log::error!("project not found:{:?}", fpath.as_path());
-            return ;
+    
+    let mut may_target_modules = Default::default();
+    let mut may_project = Default::default();
+    let projects = context.projects.get_projects(&fpath);
+    for project in projects {
+        log::info!("hhhhhhh");
+        let module_envs = get_modules_by_fpath_in_all_modules(&project.global_env, &fpath);
+        if !module_envs.is_empty() {
+            may_target_modules = Some(module_envs);
         }
-    };
+            may_project = Some(project);
+    }
+
+    let project = match may_project {
+        Some(x) => x, 
+        None => {
+            log::error!("coule not found project from file path, fpath = {:?}", fpath.as_path());
+            return lsp_server::Response {
+                id: "".to_string().into(),
+                result: Some(serde_json::json!({"msg": "coule not found project from file path"})),
+                error: None,
+            };
+        }
+    };    
+
+    let module_envs = match may_target_modules {
+        Some(x) => x, 
+        None => {
+            log::error!("coule not found module from file path, fpath = {:?}", fpath.as_path());
+            return lsp_server::Response {
+                id: "".to_string().into(),
+                result: Some(serde_json::json!({"msg": "coule not found module from file path"})),
+                error: None,
+            };
+        }
+    };    
 
     let mut result_vec_document_symbols: Vec<DocumentSymbol> = vec![];
-    for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &fpath) {
-        eprintln!("start handle module env name: {:?}", module_env.get_full_name_str());
+    for module_env in module_envs {
+        log::info!("start handle module env name: {:?}", module_env.get_full_name_str());
         let module_range = project.loc_to_range(&module_env.get_loc());
         let module_name = module_env.get_name().display(&project.global_env).to_string().clone();
         let module_detail = Some(module_name.clone());
@@ -83,6 +113,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
 
         let mut children = vec![];
 
+        handle_document_symbols_spec_function(&project, &module_env, &mut children);
         handle_document_symbols_function(&project, &module_env, &mut children);
         handle_document_symbols_const(&project, &module_env, &mut children);
         handle_document_symbols_struct(project, &module_env, &mut children);
@@ -97,22 +128,64 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
             tags: Some(vec![]),
             deprecated: Some(false),
         });
-        eprintln!("end handle module env name: {:?}", module_env.get_full_name_str());
+        log::trace!("end handle module env name: {:?}", module_env.get_full_name_str());
     }
     
     let response = lsp_server::Response::new_ok(
         request.id.clone(), 
-        result_vec_document_symbols
+        serde_json::json!(&result_vec_document_symbols)
     );
     if let Err(err) = context
         .connection
         .sender
-        .send(lsp_server::Message::Response(response))
+        .send(lsp_server::Message::Response(response.clone()))
     {
-        eprintln!("could not send use response: {:?}", err);
+        return lsp_server::Response {
+            id: "".to_string().into(),
+            result: Some(serde_json::json!({"msg": "could not send use response"})),
+            error: None,
+        };
     }
-    
+    response
 }
+
+/// Helper function to handle Spec function in the document symbols
+#[allow(deprecated)]
+fn handle_document_symbols_spec_function(project: &Project, module_env :&ModuleEnv, children: &mut Vec<DocumentSymbol>) {
+    for spec_info in module_env.get_spec_block_infos() {
+        let (spec_file_path, spec_location) = match project.global_env.get_file_and_location(&spec_info.loc) {
+            Some((x, y)) => (x, y),
+            None => {
+                log::error!("could not get file and location from spec info, spec: {:?}", spec_info);
+                continue;
+            }
+        };
+
+        let (spec_name, spec_range) = match spec_info.target  {
+            SpecBlockTarget::Function(_, fid) => {
+                let f_env = module_env.get_function(fid);
+                (f_env.get_name_str(), project.loc_to_range(&spec_info.loc))
+            },
+            SpecBlockTarget::Struct(_, sid) => {
+                let s_env = module_env.get_struct(sid);
+                (s_env.get_name().display(project.global_env.symbol_pool()).to_string(), project.loc_to_range(&spec_info.loc))
+            },
+            _ => continue,
+        };
+
+        children.push(DocumentSymbol {
+            name: spec_name,
+            detail:None,
+            kind: SymbolKind::FUNCTION,
+            range: spec_range,
+            selection_range: spec_range,
+            children: None,
+            tags: Some(vec![]),
+            deprecated: Some(false),
+        });  
+    }
+}
+
 
 /// Helper function to handle function in the document symbols
 #[allow(deprecated)]

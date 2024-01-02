@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use crate::{
     context::*,
-    utils::path_concat,
+    utils::{path_concat, get_modules_by_fpath_in_target_modules},
 };
 use lsp_server::*;
 use move_model::model::{ModuleId, GlobalEnv};
@@ -97,25 +97,28 @@ fn identifiers(buffer: &str, env: &GlobalEnv, move_file_path: &PathBuf) -> Vec<C
         }
     }
 
-    let mut target_module_id = ModuleId::new(0);
-    if crate::utils::get_target_module(env, move_file_path, &mut target_module_id) {
-        let target_module = env.get_module(target_module_id);
-        // The completion item kind "text" indicates that the item is based on simple textual matching,
-        // not any deeper semantic analysis.
-        return ids.iter()
-            .map(|label| {
-                for fun in target_module.get_functions() {
-                    let fun_name_str = fun.get_name_str();
-                    if fun_name_str.contains(label) {
-                        return completion_item(label, CompletionItemKind::FUNCTION);
-                    }
-                    // log::info!("lll >> func_start_pos = {:?}, func_end_pos = {:?}", func_start_pos, func_end_pos);
+    let mut result = vec![];
+    
+    let candidate_modules 
+        = crate::utils::get_modules_by_fpath_in_all_modules(
+            env, 
+            &PathBuf::from(move_file_path)
+        );
+    for target_module in candidate_modules {
+        for label in ids.iter() {
+            for fun in target_module.get_functions() {
+                let fun_name_str = fun.get_name_str();
+                if fun_name_str.contains(label) {
+                    result.push(completion_item(label, CompletionItemKind::FUNCTION));
                 }
-                completion_item(label, CompletionItemKind::TEXT)
-            })
-            .collect::<Vec<_>>();
+                // log::info!("lll >> func_start_pos = {:?}, func_end_pos = {:?}", func_start_pos, func_end_pos);
+            }
+            result.push(completion_item(label, CompletionItemKind::TEXT));
+        }
     }
-    vec![]
+
+    return result;
+    
 }
 
 /// Returns the token corresponding to the "trigger character" that precedes the user's cursor,
@@ -160,12 +163,6 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     let line = loc.line;
     let col = loc.character;
     let fpath = path_concat(std::env::current_dir().unwrap().as_path(), fpath.as_path());
-    eprintln!(
-        "on_completion_request, fpath:{:?} line:{} col:{}",
-        fpath.as_path(),
-        line,
-        col,
-    );
 
     let current_project = match context.projects.get_project(&fpath) {
         Some(x) => x,
@@ -204,15 +201,14 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
 
     if let Some(buffer) = &buffer {
         let identifiers = identifiers(buffer, &current_project.global_env, &fpath);
-        log::info!("identifiers = {:?}", identifiers);
+        // log::info!("identifiers = {:?}", identifiers);
         items.extend_from_slice(&identifiers);
     }
 
     let result = serde_json::to_value(items).expect("could not serialize completion response");
-    eprintln!("about to send completion response");
     let response = lsp_server::Response::new_ok(request.id.clone(), result);
     let ret_response = response.clone();
-    // log::info!("on complete------------------------------------> \n{:?}", ret_response);
+    log::info!("------------------------------------\n<on_complete>ret_response = {:?}\n\n", ret_response);
     if let Err(err) = context
         .connection
         .sender
@@ -220,6 +216,5 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     {
         eprintln!("could not send completion response: {:?}", err);
     }
-    log::info!("<------------------------------------ \n");
     return ret_response;
 }

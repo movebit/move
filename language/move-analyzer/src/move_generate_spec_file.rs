@@ -8,14 +8,14 @@ use serde::Deserialize;
 
 // ----------
 use crate::{
-    utils::get_modules_by_fpath_in_target_modules,
+    utils::{get_modules_by_fpath_in_target_modules, collect_use_decl},
     project::Project,
     context::Context,
 };
 
 use move_model::{model::{StructEnv, FunctionEnv}, exp_generator::ExpGenerator};
 
-pub fn on_generate_spec_file<'a>(context: &Context, request: &Request) 
+pub fn on_generate_spec_file<'a>(context: &Context, request: &Request, is_generate: bool)  -> Response
 where
     'a: 'static,
 {
@@ -34,32 +34,37 @@ where
     };
     if result_file_path.exists() {
         send_err(context, "file already exists.".to_string());
-        return;
+        return lsp_server::Response {
+            id: "".to_string().into(),
+            result: Some(serde_json::json!({"msg": "file already exists."})),
+            error: None,
+        };
     }
     let project = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
             log::error!("project not found:{:?}", parameters.fpath.as_str());
-            return ;
+            return lsp_server::Response {
+                id: "".to_string().into(),
+                result: Some(serde_json::json!({"msg": "project not found."})),
+                error: None,
+            };
         }
     };
     
-    let mut addr_2_addrname = HashMap::new();
-    for helper1 in project.targets.iter() {
-        for (addr_name, addr) in helper1.named_address_map.iter() {
-            addr_2_addrname.insert(addr.to_string(), addr_name.clone());
-        }
-    }
+    let mut addrname_2_addrnum = &project.addrname_2_addrnum;
     
     let mut result = ModuleSpecBuilder::new();
     for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &fpath) {
-        eprintln!("generate spec module: {}", module_env.get_full_name_str());
+        let using_module_map = collect_use_decl(&project.addrname_2_addrnum, &module_env, &project.global_env);
+
+        log::info!("generate spec module: {}", module_env.get_full_name_str());
         // find module_env's namespace
         let module_env_full_name = module_env.get_full_name_str();
         let addr_end = module_env_full_name.find("::").unwrap_or_default();
         let addr = module_env_full_name[0..addr_end].to_string();
         let addr_name_default = String::from("0x0");
-        let addr_name = addr_2_addrname.get(&addr).unwrap_or(&addr_name_default);
+        let addr_name = addrname_2_addrnum.get(&addr).unwrap_or(&addr_name_default);
         let module_name = module_env_full_name[addr_end+2..].to_string();
 
         // find all available StructEnv and FunctionEnv
@@ -91,7 +96,14 @@ where
                     genrate_struct_spec(&struct_env)
                 }
                 EnvItem { struct_env: None, function_env: Some(f_env), .. } => {
-                    generate_fun_spec_zx(project, &project.global_env, &f_env, &fpath)
+                    generate_fun_spec_zx(
+                        project, 
+                        &project.global_env, 
+                        &module_env, 
+                        &f_env, 
+                        &using_module_map, 
+                        &fpath
+                    )
                 }
                 _ => continue,
             };
@@ -104,13 +116,20 @@ where
     } // for module_env
 
     let file_content = result.to_string();
-    match std::fs::write(result_file_path.clone(), file_content) {
-        Ok(_) => {}
-        Err(err) => {
-            send_err(context, format!("write to file failed,err:{:?}", err));
-            return;
-        }
-    };
+    if is_generate {
+        match std::fs::write(result_file_path.clone(), file_content.clone()) {
+            Ok(_) => {}
+            Err(err) => {
+                send_err(context, format!("write to file failed,err:{:?}", err));
+                return lsp_server::Response {
+                    id: "".to_string().into(),
+                    result: Some(serde_json::json!({"msg": "write to file failed"})),
+                    error: None,
+                };
+            }
+        };
+    }
+    
 
     let r = Response::new_ok(
         request.id.clone(),
@@ -122,9 +141,15 @@ where
     context
         .connection
         .sender
-        .send(Message::Response(r))
+        .send(Message::Response(r.clone()))
         .unwrap();
-    
+
+    let r = Response::new_ok(
+        request.id.clone(),
+        serde_json::json!(file_content)
+        // .unwrap(),
+    );
+    r
 }
 
 #[derive(Debug, Clone)]

@@ -1,6 +1,6 @@
 [package]
 name = "aptos-move-analyzer"
-version = "0.1.0"
+version = "0.0.3"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "A language server for Move"
 repository = "https://github.com/move-language/move"
@@ -44,7 +44,6 @@ log = "0.4.14"
 stderrlog = "0.5.4"
 enum-iterator = "1.2.0"
 num-bigint = "0.4.0"
-home = "0.5.3"
 
 [target.'cfg(not(target_os= "windows"))'.dependencies]
 pprof = { version = "0.11.0" , features = ["flamegraph" , "protobuf"]}
@@ -53,3 +52,7 @@ pprof = { version = "0.11.0" , features = ["flamegraph" , "protobuf"]}
 aptos = []
 sui = []
 pprof = []
+
+[[test]]
+name = "testsuite"
+harness = false

@@ -19,7 +19,7 @@ use std::{
 };
 use walkdir::WalkDir;
 use move_model::{options::ModelBuilderOptions, run_model_builder_with_options};
-
+use std::collections::HashMap;
 use num_bigint::BigUint;
 use tempfile::tempdir;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
@@ -44,14 +44,14 @@ pub fn parse_address_number22(
     [u8; AccountAddress::LENGTH],
     move_compiler::shared::NumberFormat,
 )> {
+
     let (txt, base) = determine_num_text_and_base22(s);
-    let parsed = BigUint::parse_bytes(
-        txt.as_bytes(),
-        match base {
-            move_compiler::shared::NumberFormat::Hex => 16,
-            move_compiler::shared::NumberFormat::Decimal => 10,
-        },
-    )?;
+
+    let parsed = match base {
+        move_compiler::shared::NumberFormat::Hex => BigUint::parse_bytes(txt[2..].as_bytes(), 16),
+        move_compiler::shared::NumberFormat::Decimal => BigUint::parse_bytes(txt.as_bytes(), 10),
+    }?;
+    
     let bytes = parsed.to_bytes_be();
     if bytes.len() > AccountAddress::LENGTH {
         return None;
@@ -132,6 +132,8 @@ impl Project {
             current_modifing_file_content: Default::default(),
             targets: vec![],
             dependents: vec![],
+            addrname_2_addrnum: Default::default(),
+            err_diags: String::default(),
         };
 
         let mut targets_paths: Vec<PathBuf> = Vec::new();
@@ -161,14 +163,6 @@ impl Project {
         // log::info!("named_address_mapping = {:?}", named_address_mapping);
         let addrs = parse_addresses_from_options(named_address_mapping.clone())?;
 
-        let mut addrs_zx: BTreeMap<String, NumericalAddress> = BTreeMap::new();
-        for (index, (s, add)) in addrs.iter().enumerate() {
-            let add_key = NumericalAddress::new(
-                AccountAddress::from_hex_literal(&format!("0x{}", index)).unwrap().into_bytes(), 
-            move_compiler::shared::NumberFormat::Hex);
-            addrs_zx.insert(s.clone(), add_key);
-        }
-
         let targets = vec![PackagePaths {
             name: None,
             paths: targets_paths
@@ -176,7 +170,7 @@ impl Project {
                 .map(|p| p.to_string_lossy().to_string())
                 .collect::<Vec<_>>()
                 .clone(),
-            named_address_map: addrs_zx.clone(),
+            named_address_map: addrs.clone(),
         }];
 
         let dependents = vec![PackagePaths {
@@ -186,7 +180,7 @@ impl Project {
                 .map(|p| p.to_string_lossy().to_string())
                 .collect::<Vec<_>>()
                 .clone(),
-            named_address_map: addrs_zx,
+            named_address_map: addrs.clone(),
         }];
 
         let attributes: BTreeSet<String> = Default::default();
@@ -203,16 +197,25 @@ impl Project {
             &attributes,
         )
         .expect("Failed to create GlobalEnv!");
-        eprintln!("env.get_module_count() = {:?}", &new_project.global_env.get_module_count());
-        eprintln!("env.diag_count() = {:?}", &new_project.global_env.diag_count(Severity::Error));
-        let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
+        log::info!("env.get_module_count() = {:?}", &new_project.global_env.get_module_count());
+        // let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
+        use codespan_reporting::term::termcolor::Buffer;
+        let mut error_writer = Buffer::no_color();
+
+        let mut helper = HashMap::new();
+        for (addr_name, addr_num) in addrs.iter() {
+            helper.insert(addr_name.clone(), addr_num.to_string());
+        }
+
+        new_project.addrname_2_addrnum = helper;
         new_project.global_env.report_diag(&mut error_writer, Severity::Error);
+        new_project.err_diags = String::from_utf8_lossy(&error_writer.into_inner()).to_string();
         Ok(new_project)
     }
 
     pub fn update_defs(&mut self, file_path: &PathBuf, content: String) {
         use std::result::Result::Ok;
-        log::info!("lll >> update_defs for file:{:?}", file_path);
+        log::info!("update_defs for file:{:?}", file_path);
         let root_dir = match super::utils::discover_manifest_and_kind(&file_path) {
             Some((x, _)) => x,
             None => {
@@ -234,10 +237,11 @@ impl Project {
         self.dependents = new_project.dependents.clone();
         self.global_env = new_project.global_env;
 
-        eprintln!("env.get_module_count() = {:?}", &self.global_env.get_module_count());
-        eprintln!("env.diag_count() = {:?}", &self.global_env.diag_count(Severity::Error));
-        let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
+        log::info!("env.get_module_count() = {:?}", &self.global_env.get_module_count());
+        use codespan_reporting::term::termcolor::Buffer;
+        let mut error_writer = Buffer::no_color();
         self.global_env.report_diag(&mut error_writer, Severity::Error);
+        self.err_diags = String::from_utf8_lossy(&error_writer.into_inner()).to_string();
     }
 
     /// Load a Move.toml project.
@@ -400,7 +404,7 @@ impl Project {
         filepath: &PathBuf,
         source_str: String
     ) {
-        log::info!("run visitor part for {} ", visitor);
+        // log::info!("run visitor part for {} ", visitor);
         visitor.handle_project_env(self, &self.global_env, &filepath, source_str);
     }
 }
