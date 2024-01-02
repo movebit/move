@@ -58,7 +58,7 @@ where
     for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &fpath) {
         let using_module_map = collect_use_decl(&project.addrname_2_addrnum, &module_env, &project.global_env);
 
-        eprintln!("generate spec module: {}", module_env.get_full_name_str());
+        log::info!("generate spec module: {}", module_env.get_full_name_str());
         // find module_env's namespace
         let module_env_full_name = module_env.get_full_name_str();
         let addr_end = module_env_full_name.find("::").unwrap_or_default();
