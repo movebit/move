@@ -138,7 +138,7 @@ mod tests {
             "fpath": fpath.to_string_lossy().to_string()
         });
         let request = Request {
-            id: "generate_spec_request_003".to_string().into(),
+            id: "generate_spec_request_002".to_string().into(),
             method: String::from("move/generate/spec/sel"),
             params: params_json,
         };

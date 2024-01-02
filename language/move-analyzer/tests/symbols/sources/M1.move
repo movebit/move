@@ -1,4 +1,5 @@
 module Symbols::M1 {
+    use Symbols::M2::{Self, SomeOtherStruct, some_other_struct, multi_arg};
 
     struct SomeStruct has key, drop, store {
         some_field: u64,
@@ -22,14 +23,14 @@ module Symbols::M1 {
         ret
     }
 
-    fun other_mod_struct(): Symbols::M2::SomeOtherStruct {
-        Symbols::M2::some_other_struct(SOME_CONST)
+    fun other_mod_struct(): SomeOtherStruct {
+        some_other_struct(SOME_CONST)
     }
 
-    use Symbols::M2::{Self, SomeOtherStruct};
+    
 
     fun other_mod_struct_import(): SomeOtherStruct {
-        M2::some_other_struct(7)
+        some_other_struct(7)
     }
 
     fun acq(addr: address): u64 acquires SomeStruct {
@@ -38,7 +39,7 @@ module Symbols::M1 {
     }
 
     fun multi_arg_call(): u64 {
-        M2::multi_arg(SOME_CONST, SOME_CONST)
+        multi_arg(SOME_CONST, SOME_CONST)
     }
 
     fun vec(a:vector<SomeStruct>): vector<SomeStruct> {
