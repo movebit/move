@@ -13,7 +13,7 @@ use move_model::{
     ast::{ExpData::*, Operation::*, SpecBlockTarget},
     model::{GlobalEnv, FunctionEnv, ModuleId},
 };
-use std::path::{Path, PathBuf};
+use std::{path::{Path, PathBuf}, ops::Deref};
 
 /// Handles inlay_hints request of the language server.
 pub fn on_inlay_hints(context: &Context, request: &Request, config: InlayHintsConfig) -> lsp_server::Response {
@@ -103,8 +103,8 @@ impl Handler {
                 .unwrap();
 
             if self.range.line_start <= func_start_pos.line.0 && func_end_pos.line.0 <= self.range.line_end {
-                if let Some(exp) = fun.get_def() {
-                    self.process_expr(env, &fun, exp);
+                if let Some(exp) = fun.get_def().deref() {
+                    self.process_expr(env, &fun, &exp);
                 }
             }
         }
@@ -181,10 +181,11 @@ impl Handler {
         fun: &FunctionEnv,
         exp: &move_model::ast::Exp,
     ) {
-        exp.visit(&mut |e| {
+        exp.visit_post_order(&mut |e| {
             match e {
                 Call(..) => {
                     self.process_call(env, e);
+                    return true;
                 },
                 LocalVar(node_id, localvar_symbol) => {
                     let mut localvar_loc = env.get_node_loc(*node_id);
@@ -213,8 +214,8 @@ impl Handler {
                                         localvar_loc.span().end()));
                                 let next_char = local_var_str.chars().nth(index + localvar_symbol.display(env.symbol_pool()).to_string().len());
                                 match next_char {
-                                    Some('.') => return,
-                                    Some(':') => return,
+                                    Some('.') => return true,
+                                    Some(':') => return true,
                                     _ => {
                                         // log::info!("local_var_str[{:?}] inlay_hint_pos = {:?}", local_var_str, inlay_hint_pos);
                                         self.process_type(env, &inlay_hint_pos, &node_type);
@@ -223,6 +224,7 @@ impl Handler {
                             }
                         }
                     }
+                    return true;
                 },
                 Temporary(node_id, idx) => {
                     let mut tmpvar_loc = env.get_node_loc(*node_id);
@@ -252,8 +254,8 @@ impl Handler {
                                         tmpvar_loc.span().end()));
                                 let next_char = tmp_var_str.chars().nth(index + tmp_var_name_str.len());
                                 match next_char {
-                                    Some('.') => return,
-                                    Some(':') => return,
+                                    Some('.') => return true,
+                                    Some(':') => return true,
                                     _ => {
                                         // log::info!("tmp_var_str[{:?}] inlay_hint_pos = {:?}", tmp_var_str, inlay_hint_pos);
                                         self.process_type(env, &inlay_hint_pos, &node_type);
@@ -262,8 +264,9 @@ impl Handler {
                             }
                         }
                     }
+                    return true;
                 },
-                _ => {},
+                _ => {return true;},
             }
         });
     }

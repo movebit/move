@@ -555,24 +555,24 @@ impl FunSpecGenerator {
             match item {
                 SpecExpItem::BinOP { reason, left, right } => {
                     log::info!("handle bin op");
-                    let left_vars = left.free_vars(env);
-                    let right_vars = right.free_vars(env);
+                    let left_vars = left.free_vars();
+                    let right_vars = right.free_vars();
 
-                    left_vars.iter().for_each(|(sym, _)| { 
+                    left_vars.iter().for_each(|sym| { 
                         log::info!("bin op left insert symbol {}", sym.display(env.symbol_pool()).to_string());
                         used_local_var.insert(sym.clone()); 
                     });
-                    right_vars.iter().for_each(|(sym, _)| {
+                    right_vars.iter().for_each(|sym| {
                         log::info!("bin op right insert symbol {}", sym.display(env.symbol_pool()).to_string());
                         used_local_var.insert(sym.clone()); 
                     });
                 },
                 SpecExpItem::MarcoAbort{if_exp, abort_exp} => {
-                    let left_vars = if_exp.free_vars(env);
-                    let right_vars = abort_exp.free_vars(env);
+                    let left_vars = if_exp.free_vars();
+                    let right_vars = abort_exp.free_vars();
                     
-                    left_vars.iter().for_each(|(sym, _)| { used_local_var.insert(sym.clone()); });
-                    right_vars.iter().for_each(|(sym, _)| { used_local_var.insert(sym.clone()); });
+                    left_vars.iter().for_each(|sym| { used_local_var.insert(sym.clone()); });
+                    right_vars.iter().for_each(|sym| { used_local_var.insert(sym.clone()); });
                 },
                 SpecExpItem::PatternLet { left, right } => {
                     let _left_node_id = left.node_id();
@@ -585,8 +585,8 @@ impl FunSpecGenerator {
                     let mut is_use = false;
                     for (_, var_in_pattern) in left.vars() {
                         if used_local_var.contains(&var_in_pattern) {
-                            let right_vars = right.free_vars(env);
-                            right_vars.iter().for_each(|(sym, _)| { used_local_var.insert(sym.clone()); });
+                            let right_vars = right.free_vars();
+                            right_vars.iter().for_each(|sym| { used_local_var.insert(sym.clone()); });
                             is_use = true;
                             break;
                         } 
@@ -635,7 +635,7 @@ impl FunSpecGenerator {
                     }
 
                     let mut with_pattern = true;
-                    for (exp_sym,_) in left.free_vars(env) {
+                    for exp_sym in left.free_vars() {
                         eprintln!("left sym {}", exp_sym.display(env.symbol_pool()));
                         if !used_local_var.contains(&exp_sym) {
                             with_pattern = false;
@@ -643,7 +643,7 @@ impl FunSpecGenerator {
                         }
                     }
 
-                    for (exp_sym,_) in right.free_vars(env) {
+                    for exp_sym in right.free_vars() {
                         eprintln!("right sym {}", exp_sym.display(env.symbol_pool()));
                         if !used_local_var.contains(&exp_sym) {
                             with_pattern = false;
@@ -668,14 +668,14 @@ impl FunSpecGenerator {
                 SpecExpItem::MarcoAbort{if_exp, abort_exp} => {
 
                     let mut with_pattern = true;
-                    for (exp_sym,_) in if_exp.free_vars(env) {
+                    for exp_sym in if_exp.free_vars() {
                         if !used_local_var.contains(&exp_sym) {
                             with_pattern = false;
                             break;
                         }
                     }
 
-                    for (exp_sym,_) in abort_exp.free_vars(env) {
+                    for exp_sym in abort_exp.free_vars() {
                         if !used_local_var.contains(&exp_sym) {
                             with_pattern = false;
                             break;
@@ -698,7 +698,7 @@ impl FunSpecGenerator {
                 SpecExpItem::PatternLet { left, right } => {
                     let mut with_pattern = true;
 
-                    for (exp_sym,_) in right.free_vars(env) {
+                    for exp_sym in right.free_vars() {
                         if !used_local_var.contains(&exp_sym) {
                             with_pattern = false;
                             break;

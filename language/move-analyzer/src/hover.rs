@@ -12,7 +12,7 @@ use move_model::{
     ast::{ExpData::*, Operation::*, SpecBlockTarget},
     model::{FunId, GlobalEnv, ModuleId, StructId},
 };
-use std::path::{Path, PathBuf};
+use std::{path::{Path, PathBuf}, ops::Deref};
 
 /// Handles on_hover_request of the language server.
 pub fn on_hover_request(context: &Context, request: &Request) -> lsp_server::Response {
@@ -307,9 +307,9 @@ impl Handler {
         let target_fun = target_module.get_function(target_fun_id);
         let target_fun_loc = target_fun.get_loc();
         self.get_mouse_loc(env, &target_fun_loc);
-        if let Some(exp) = target_fun.get_def() {
-            self.process_expr(env, exp);
-        }
+        if let Some(exp) = target_fun.get_def().deref() {
+            self.process_expr(env, &exp);
+        };
     }
 
     fn process_spec_func(&mut self, env: &GlobalEnv) {
@@ -499,7 +499,7 @@ impl Handler {
         env: &GlobalEnv,
         exp: &move_model::ast::Exp,
     ) {
-        exp.visit(&mut |e| {
+        exp.visit_post_order(&mut |e| {
             match e {
                 Value(node_id, _v) => {
                     // Const variable
@@ -524,9 +524,11 @@ impl Handler {
                             }
                         }
                     }
+                    return true;
                 },
                 Call(..) => {
                     self.process_call(env, e);
+                    return true;
                 },
                 LocalVar(node_id, localvar_symbol) => {
                     let localvar_loc = env.get_node_loc(*node_id);
@@ -544,11 +546,12 @@ impl Handler {
                         || self.mouse_span.end() > localvar_loc.span().end()
                     {
                         // log::warn!("<on hover> localvar return");
-                        return;
+                        return true;
                     }
                     if let Some(node_type) = env.get_node_type_opt(*node_id) {
                         self.process_type(env, &localvar_loc, &node_type);
                     }
+                    return true;
                 },
                 Temporary(node_id, _) => {
                     let tmpvar_loc = env.get_node_loc(*node_id);
@@ -559,14 +562,15 @@ impl Handler {
                     if tmpvar_loc.span().start() > self.mouse_span.end()
                         || self.mouse_span.end() > tmpvar_loc.span().end()
                     {
-                        return;
+                        return true;
                     }
 
                     if let Some(node_type) = env.get_node_type_opt(*node_id) {
                         self.process_type(env, &tmpvar_loc, &node_type);
                     }
+                    return true;
                 },
-                _ => {},
+                _ => {return true;},
             }
         });
     }

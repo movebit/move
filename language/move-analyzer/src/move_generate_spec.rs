@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref};
 use std::path::PathBuf;
 
 // -----------------
@@ -154,7 +154,7 @@ impl FunSpecGenerator {
 
     fn generate_body_zx(&self, f: &FunctionEnv, global_env: &GlobalEnv, fpath: &PathBuf) -> String {        
         let mut statements = String::new();
-        if let Some(exp) = f.get_def() {
+        if let Some(exp) = f.get_def().deref() {
             // get_shadows(exp, global_env, &mut shadows);
             FunSpecGenerator::try_emit_exp_zx(
                 self, 

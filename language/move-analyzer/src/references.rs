@@ -12,7 +12,7 @@ use move_model::{
     ast::{ExpData::*, Operation::*, SpecBlockTarget},
     model::{FunId, GlobalEnv, ModuleEnv, ModuleId, StructId},
 };
-use std::{path::{Path, PathBuf}, collections::BTreeSet};
+use std::{path::{Path, PathBuf}, collections::BTreeSet, ops::Deref};
 
 /// Handles on_references_request of the language server.
 pub fn on_references_request(context: &Context, request: &Request) -> lsp_server::Response {
@@ -225,9 +225,9 @@ impl Handler {
         let target_fun_loc = target_fun.get_loc();
         self.get_mouse_loc(env, &target_fun_loc);
 
-        if let Some(exp) = target_fun.get_def() {
-            self.process_expr(env, exp);
-        }
+        if let Some(exp) = target_fun.get_def().deref() {
+            self.process_expr(env, &exp);
+        };
     }
     
     fn process_spec_func(&mut self, env: &GlobalEnv) {
@@ -418,12 +418,13 @@ impl Handler {
         env: &GlobalEnv,
         exp: &move_model::ast::Exp,
     ) {
-        exp.visit(&mut |e| {
+        exp.visit_post_order(&mut |e| {
             match e {
                 Call(..) => {
                     self.process_call(env, e);
+                    return true;
                 },
-                _ => {},
+                _ => {return true;},
             }
         });
     }
