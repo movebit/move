@@ -6,7 +6,7 @@ use crate::{
     context::*,
     utils::{path_concat, FileRange, collect_use_decl}, project,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref};
 use lsp_server::*;
 use lsp_types::*;
 // use move_ir_types::location::sp;
@@ -377,9 +377,10 @@ impl Handler {
         self.process_parameter();
         self.process_return_type();
 
-        if let Some(exp) = target_fun.get_def() {
-            self.process_expr(env, exp);
-        }
+        
+        if let Some(exp) =  target_fun.get_def().deref() {
+            self.process_expr(env, &exp);
+        };
     }
 
     /// MoveModel currently lacks support for obtaining the Span and Loc of function parameters and return type.
@@ -580,7 +581,7 @@ impl Handler {
         
         log::trace!("process_expr -------------------------\n");
         
-        exp.visit(&mut |e| {
+        exp.visit_post_order(&mut |e| {
             match e {
                 Value(node_id, _) => {
                     // Const variable
@@ -609,6 +610,7 @@ impl Handler {
                             }
                         }
                     }
+                    return true;
                 },
                 LocalVar(node_id, localvar_symbol) => {
                     let localvar_loc = env.get_node_loc(*node_id);
@@ -617,7 +619,7 @@ impl Handler {
                         || localvar_loc.span().end() < self.mouse_span.end() 
                     {
                         // log::info!("??? localvar return");
-                        return;
+                        return true;
                     }
                     log::trace!(
                         "target: exp.visit localvar_symbol = {}",
@@ -637,6 +639,7 @@ impl Handler {
                             self.result_candidates.push(result); 
                         }
                     }
+                    return true;
                 },
                 Temporary(node_id, _) => {
                     let tmpvar_loc = env.get_node_loc(*node_id);
@@ -647,33 +650,38 @@ impl Handler {
 
                     if tmpvar_loc.span().start() > self.mouse_span.end()  {
                         log::trace!("tmpvar_loc.span().start() > self.mouse_span.end()");
-                        return;
+                        return true;
                     }
 
                     if tmpvar_loc.span().end() < self.mouse_span.end() {
                         log::trace!("tmpvar_loc.span().end() < self.mouse_span.end()");
-                        return ;
+                        return true;
                     }
                     log::trace!("Temporary is available");
                     if let Some(node_type) = env.get_node_type_opt(*node_id) {
                         self.process_type(env, &tmpvar_loc, &node_type);
                     }
+                    return true;
                 },
                 Call(..) => {
                     log::trace!("lll >> exp.visit Call", );
                     self.process_call_spec_func(env, e);
                     self.process_call(env, e);
+                    return true;
                 },
                 Return(_, ret_exp) => {
                     self.process_expr(env, ret_exp);
+                    return true;
                 },
                 Sequence(_, exp_vec) => {
                     for seq_exp in exp_vec {
                         self.process_expr(env, seq_exp);
                     }
+                    return true;
                 },
                 SpecBlock(node_id, spec) => {
                     self.process_spec_block(env, &env.get_node_loc(*node_id), spec);
+                    return true;
                 },
                 Block(node_id,pat,left_exp, right_exp) => {
                     self.collect_local_var_in_pattern(pat);
@@ -683,9 +691,11 @@ impl Handler {
                         self.process_expr(env, l_exp);
                     }
                     self.process_expr(env, right_exp);
+                    return true;
                 },
                 _ => {
                     log::trace!("________________");
+                    return true;
                 },
             }
         });
