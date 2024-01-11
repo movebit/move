@@ -24,20 +24,20 @@ im = "15.1.0"
 lsp-server = "0.7.0"
 lsp-types = "0.94.0"
 petgraph = "0.5.1"
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0.193", features = ["derive"] }
 serde_json = "1.0.64"
 tempfile = "3.2.0"
 url = "2.2.2"
 clap = { version = "3.1.8", features = ["derive"] }
 crossbeam = "0.8"
-move-model = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-model" }
-move-command-line-common = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-command-line-common" }
-move-compiler = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-compiler" }
-move-ir-types = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-ir-types" }
-move-package = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-package" }
-move-symbol-pool = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-symbol-pool" }
-move-core-types = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-core-types" }
-move-cli = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "876bec7dd4f3366bacde4d052e8fe43809fa57ec", package = "move-cli" }
+move-model = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "0b5bb471418e36b5f5097f70b8c2cfd9e9b7767d", package = "move-model" }
+move-command-line-common = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "0b5bb471418e36b5f5097f70b8c2cfd9e9b7767d", package = "move-command-line-common" }
+move-compiler = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "0b5bb471418e36b5f5097f70b8c2cfd9e9b7767d", package = "move-compiler" }
+move-ir-types = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "0b5bb471418e36b5f5097f70b8c2cfd9e9b7767d", package = "move-ir-types" }
+move-package = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "0b5bb471418e36b5f5097f70b8c2cfd9e9b7767d", package = "move-package" }
+move-symbol-pool = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "0b5bb471418e36b5f5097f70b8c2cfd9e9b7767d", package = "move-symbol-pool" }
+move-core-types = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "0b5bb471418e36b5f5097f70b8c2cfd9e9b7767d", package = "move-core-types" }
+move-cli = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "0b5bb471418e36b5f5097f70b8c2cfd9e9b7767d", package = "move-cli" }
 itertools = "0.10.0"
 walkdir = "2"
 log = "0.4.14"
