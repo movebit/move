@@ -256,22 +256,24 @@ fn report_diag(context: &mut Context, fpath: PathBuf) {
         let mut pos = lsp_types::Position::default();
         if let Some(start_idx) = loc_str.find("/") {
             if let Some(end_idx) = loc_str.find(":") {
-                file_path = &loc_str[start_idx..end_idx];
-                // eprintln!("loc_str[end_idx..] = {:?}\n", &loc_str[end_idx..]);
-                let line = loc_str[end_idx..].split(":").nth(1).unwrap_or_default();
-                let col = loc_str[end_idx..].split(":").nth(2).unwrap_or_default();
-                let line_num = if line.parse::<u32>().unwrap() > 0 {
-                    line.parse::<u32>().unwrap() - 1
-                } else {
-                    line.parse::<u32>().unwrap()
-                };
-                let col_num = if col.parse::<u32>().unwrap() > 0 {
-                    col.parse::<u32>().unwrap() - 1
-                } else {
-                    col.parse::<u32>().unwrap()
-                };
-                pos = lsp_types::Position::new(line_num, col_num);
-                // eprintln!("file_path = {}\n, line = {:?}\n, col = {:?}\n, ", file_path, line, col);
+                if start_idx <= end_idx {
+                    file_path = &loc_str[start_idx..end_idx];
+                    // eprintln!("loc_str[end_idx..] = {:?}\n", &loc_str[end_idx..]);
+                    let line = loc_str[end_idx..].split(":").nth(1).unwrap_or_default();
+                    let col = loc_str[end_idx..].split(":").nth(2).unwrap_or_default();
+                    let line_num = if line.parse::<u32>().unwrap() > 0 {
+                        line.parse::<u32>().unwrap() - 1
+                    } else {
+                        line.parse::<u32>().unwrap()
+                    };
+                    let col_num = if col.parse::<u32>().unwrap() > 0 {
+                        col.parse::<u32>().unwrap() - 1
+                    } else {
+                        col.parse::<u32>().unwrap()
+                    };
+                    pos = lsp_types::Position::new(line_num, col_num);
+                    // eprintln!("file_path = {}\n, line = {:?}\n, col = {:?}\n, ", file_path, line, col);
+                }
             }
         }
 
