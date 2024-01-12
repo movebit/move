@@ -398,14 +398,13 @@ pub fn fpath_str_is_equal(s1: &String, s2: &String) -> bool {
     return true;
 }
 
-
 use move_model::model::ModuleEnv;
 pub fn get_modules_by_fpath_in_target_modules<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Vec<ModuleEnv<'a>> {
     log::trace!("get target module by path");
     let mut result_vec_modules: Vec<ModuleEnv> = vec![];
     for module_env in env.get_target_modules() {
         // log::trace!("match module: {}", module_env.get_name().display(env).to_string());
-        // log::info!("{}", env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string());
+        log::info!("{}", env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string());
         if !fpath_str_is_equal(
             &env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string(),
             &fpath.to_string_lossy().to_string()
@@ -420,7 +419,10 @@ pub fn get_modules_by_fpath_in_target_modules<'a>(env: &'a GlobalEnv, fpath: &Pa
 pub fn get_modules_by_fpath_in_all_modules<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Vec<ModuleEnv<'a>> {
     let mut result_vec_modules: Vec<ModuleEnv> = vec![];
     for module_env in env.get_modules() {
-        if env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string() != fpath.to_string_lossy().to_string() {
+        if !fpath_str_is_equal(
+            &env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string(),
+            &fpath.to_string_lossy().to_string()
+        ) {
             continue;
         }
         result_vec_modules.push(module_env);

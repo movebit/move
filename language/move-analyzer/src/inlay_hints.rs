@@ -104,6 +104,7 @@ impl Handler {
 
             if self.range.line_start <= func_start_pos.line.0 && func_end_pos.line.0 <= self.range.line_end {
                 if let Some(exp) = fun.get_def().deref() {
+                    log::trace!("process funcation: {}", fun.get_name_string());
                     self.process_expr(env, &fun, &exp);
                 }
             }
@@ -181,6 +182,7 @@ impl Handler {
         fun: &FunctionEnv,
         exp: &move_model::ast::Exp,
     ) {
+        let mut is_visited = vec![];
         exp.visit_post_order(&mut |e| {
             match e {
                 Call(..) => {
@@ -193,16 +195,27 @@ impl Handler {
                         localvar_loc.file_id(),
                         codespan::Span::new(
                             localvar_loc.span().start(),
-                            localvar_loc.span().end() + codespan::ByteOffset((2).try_into().unwrap())));
+                            localvar_loc.span().end() + codespan::ByteOffset((2).try_into().unwrap())
+                        )
+                    );
+                    if localvar_symbol.display(env.symbol_pool()).to_string() == "__update_iter_flag"
+                    || localvar_symbol.display(env.symbol_pool()).to_string() == "__upper_bound_value" {
+                        return true;
+                    }
 
-                    // log::info!(
-                    //     "lll >> exp.visit localvar_loc = {:?}",
-                    //     env.get_location(&localvar_loc)
-                    // );
-                    // log::info!(
-                    //     "lll >> exp.visit localvar_symbol = {}",
-                    //     localvar_symbol.display(env.symbol_pool())
-                    // );
+                    if is_visited.contains(&localvar_loc.span().start().0) {
+                        return true;
+                    }
+                    is_visited.push(localvar_loc.span().start().0);
+
+                    log::trace!(
+                        "lll >> exp.visit localvar_loc = {:?}",
+                        env.get_location(&localvar_loc)
+                    );
+                    log::trace!(
+                        "lll >> exp.visit localvar_symbol = {}",
+                        localvar_symbol.display(env.symbol_pool()).to_string()
+                    );
                     if let Some(node_type) = env.get_node_type_opt(*node_id) {
                         if let Ok(local_var_str) = env.get_source(&localvar_loc) {
                             if let Some(index) = local_var_str.find(localvar_symbol.display(env.symbol_pool()).to_string().as_str()) {
@@ -217,7 +230,7 @@ impl Handler {
                                     Some('.') => return true,
                                     Some(':') => return true,
                                     _ => {
-                                        // log::info!("local_var_str[{:?}] inlay_hint_pos = {:?}", local_var_str, inlay_hint_pos);
+                                        log::info!("local_var_str[{:?}] inlay_hint_pos = {:?}", local_var_str, inlay_hint_pos);
                                         self.process_type(env, &inlay_hint_pos, &node_type);
                                     }
                                 }
