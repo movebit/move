@@ -532,22 +532,23 @@ impl Handler {
                 },
                 LocalVar(node_id, localvar_symbol) => {
                     let localvar_loc = env.get_node_loc(*node_id);
-                    // log::info!(
-                    //     "lll >> exp.visit localvar_loc = {:?}",
-                    //     env.get_location(&localvar_loc)
-                    // );
-                    // log::info!(
-                    //     "lll >> exp.visit localvar_symbol = {}",
-                    //     localvar_symbol.display(env.symbol_pool())
-                    // );
-                    // let local_source = env.get_source(&localvar_loc);
-                    // log::info!("lll >> local_source = {:?}", local_source);
+                    
                     if localvar_loc.span().start() > self.mouse_span.end()
                         || self.mouse_span.end() > localvar_loc.span().end()
                     {
                         // log::warn!("<on hover> localvar return");
                         return true;
                     }
+
+                    // The variable names "__update_iter_flag" and "__upper_bound_value" seem to be special, 
+                    // causing hover errors in a "for (i 1..10)" loop. Handling this issue accordingly.
+                    if localvar_symbol.display(env.symbol_pool()).to_string() == "__update_iter_flag"
+                    || localvar_symbol.display(env.symbol_pool()).to_string() == "__upper_bound_value" {
+                        return true;
+                    }
+
+                    log::trace!("local val symbol: {}", localvar_symbol.display(env.symbol_pool()).to_string());
+                    
                     if let Some(node_type) = env.get_node_type_opt(*node_id) {
                         self.process_type(env, &localvar_loc, &node_type);
                     }
@@ -564,7 +565,7 @@ impl Handler {
                     {
                         return true;
                     }
-
+                    
                     if let Some(node_type) = env.get_node_type_opt(*node_id) {
                         self.process_type(env, &tmpvar_loc, &node_type);
                     }
