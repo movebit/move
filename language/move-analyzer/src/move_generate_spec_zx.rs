@@ -281,7 +281,6 @@ impl FunSpecGenerator {
                 for exp in vec_exp.iter() {
                     self.collect_spec_exp_(ret, exp, env);
                 }
-                eprintln!("hhhhhhhhhhh add");
                 ret.push(SpecExpItem::BinOP {
                         reason: BinOPReason::OverFlowADD,
                         left: vec_exp[0].clone(),
