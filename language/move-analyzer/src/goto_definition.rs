@@ -790,7 +790,7 @@ impl Handler {
             {
                 let called_module = env.get_module(*mid);
                 let called_fun = called_module.get_function(*fid);
-                log::info!(
+                log::trace!(
                     " get_called_functions = {:?}",
                     called_fun.get_full_name_str()
                 );

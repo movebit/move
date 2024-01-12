@@ -71,12 +71,13 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) -> lsp_s
     let mut may_project = Default::default();
     let projects = context.projects.get_projects(&fpath);
     for project in projects {
-        log::info!("hhhhhhh");
         let module_envs = get_modules_by_fpath_in_all_modules(&project.global_env, &fpath);
         if !module_envs.is_empty() {
             may_target_modules = Some(module_envs);
-        }
             may_project = Some(project);
+            break;
+        }
+            
     }
 
     let project = match may_project {
