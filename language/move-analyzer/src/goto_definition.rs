@@ -4,24 +4,18 @@
 use crate::{
     analyzer_handler::*,
     context::*,
-    utils::{path_concat, FileRange, collect_use_decl}, project,
+    utils::{path_concat, FileRange},
 };
 use std::{collections::HashMap, ops::Deref};
 use lsp_server::*;
 use lsp_types::*;
-// use move_ir_types::location::sp;
-// use move_model::{
-//     ast::{ExpData::*, Operation::*, Value, Value::*, Spec, SpecBlockInfo, SpecBlockTarget},
-//     model::{FunId, SpecFunId, GlobalEnv, ModuleEnv, ModuleId, FunctionEnv, StructId},
-// };
+
 use move_model::{
-    ast::{ExpData::*, Operation::*, Spec, SpecBlockTarget, Pattern as MoveModelPattern, ModuleName, Address},
-    model::{FunId, GlobalEnv ,ModuleId, StructId, NodeId, Parameter, Loc, FunctionEnv, ModuleEnv}, 
+    ast::{ExpData::*, Operation::*, Spec, SpecBlockTarget, Pattern as MoveModelPattern},
+    model::{FunId, GlobalEnv ,ModuleId, StructId, NodeId, ModuleEnv},
     symbol::Symbol,
-    ty::Type,
 };
 use std::path::{Path, PathBuf};
-// use itertools::Itertools;
 
 /// Handles go-to-def request of the language server.
 pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server::Response {
@@ -191,7 +185,6 @@ impl Handler {
                 ),
             );
             mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
-            // log::info!("lll >> loop: mouse_loc = {:?}", mouse_loc);
         }
 
         let mouse_source = env.get_source(&move_model::model::Loc::new(
@@ -202,20 +195,17 @@ impl Handler {
             ),
         ));
         log::info!("get mouse_source = {:?}", mouse_source);
-
         self.mouse_span = codespan::Span::new(mouse_line_first_col.span().start(), mouse_line_last_col.span().start());
     }
 
     fn process_use_decl(&mut self, env: &GlobalEnv) {
-
         log::trace!("process_use_decl =======================================\n\n");
-        let mut target_module = env.get_module(self.target_module_id);
+        let target_module = env.get_module(self.target_module_id);
         let spool = env.symbol_pool();
         let mut target_stct_or_fn = String::default();
         let mut found_target_stct_or_fn = false;
         let mut found_usedecl_same_line = false;
         let mut capture_items_loc = move_model::model::Loc::default();
-        let mut used_module_name = Default::default();
         let mut addrnum_with_module_name = Default::default();
         
         for use_decl in target_module.get_use_decls() {
@@ -224,7 +214,7 @@ impl Handler {
             }
             log::info!("find use decl module, line: {}", use_decl.loc.span().start());
 
-            used_module_name = use_decl.module_name.display_full(env).to_string();
+            let used_module_name = use_decl.module_name.display_full(env).to_string();
             let before_after = used_module_name.split("::").collect::<Vec<_>>();
             if before_after.len() != 2 {
                 log::error!("use decl module name len should be 2");
@@ -683,7 +673,7 @@ impl Handler {
                     self.process_spec_block(env, &env.get_node_loc(*node_id), spec);
                     return true;
                 },
-                Block(node_id,pat,left_exp, right_exp) => {
+                Block(_,pat,left_exp, right_exp) => {
                     self.collect_local_var_in_pattern(pat);
                     self.process_pattern(env, pat);
 
@@ -947,7 +937,7 @@ impl Handler {
 
     fn process_pattern(&mut self, env: &GlobalEnv, pattern: &MoveModelPattern) {
         match pattern {
-            MoveModelPattern::Struct(node_id, q_id, vec_pattern) => {
+            MoveModelPattern::Struct(node_id, q_id, _) => {
                 let this_call_loc = env.get_node_loc(*node_id);
                 log::trace!(
                     "lll >> exp.visit this_call_loc = {:?}",

@@ -8,6 +8,8 @@ use move_ir_types::location::*;
 use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;
 use std::{collections::HashMap, path::*, vec};
+use move_model::ast::ModuleName;
+use move_model::symbol::Symbol as SpecSymbol;
 
 /// Converts a location from the byte index format to the line/character (Position) format, where
 /// line/character are 0-based.
@@ -430,10 +432,6 @@ pub fn get_modules_by_fpath_in_all_modules<'a>(env: &'a GlobalEnv, fpath: &PathB
     return result_vec_modules;
 }
 
-use move_model::ast::{ModuleName, Address};
-use move_model::symbol::Symbol as SpecSymbol;
-use move_core_types::account_address::AccountAddress;
-use crate::project::Project;
 pub fn collect_use_decl(addrname_2_addrnum :&std::collections::HashMap<String, String>, module_env: &ModuleEnv, global_env: &GlobalEnv) -> HashMap<ModuleName, Vec<SpecSymbol>> {
     let mut result: HashMap<ModuleName, Vec<SpecSymbol>> = Default::default();
     for using_decl in module_env.get_use_decls() {

@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 use crate::{
     context::*,
-    utils::{path_concat, get_modules_by_fpath_in_target_modules},
+    utils::path_concat,
 };
 use lsp_server::*;
-use move_model::model::{ModuleId, GlobalEnv};
+use move_model::model::GlobalEnv;
 use std::vec;
 use lsp_server::Request;
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionParams, Position};
@@ -159,11 +159,8 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
         .uri
         .to_file_path()
         .unwrap();
-    let loc = parameters.text_document_position.position;
-    let line = loc.line;
-    let col = loc.character;
-    let fpath = path_concat(std::env::current_dir().unwrap().as_path(), fpath.as_path());
 
+    let fpath = path_concat(std::env::current_dir().unwrap().as_path(), fpath.as_path());
     let current_project = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {

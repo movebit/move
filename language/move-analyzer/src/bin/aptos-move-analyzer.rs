@@ -199,7 +199,7 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
             completion::on_completion_request(context, request);
         }
         lsp_types::request::InlayHintRequest::METHOD => {
-            inlay_hints::on_inlay_hints(context, request, *inlay_hints_config);
+            inlay_hints::on_inlay_hints(context, request);
         }
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             symbols::on_document_symbol_request(context, request);
@@ -217,7 +217,7 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
             *inlay_hints_config = parameters;
         }
         _ => {
-            eprintln!("111 handle request '{}' from client", request.method)
+            eprintln!("unsupported request: '{}' from client", request.method)
         },
     }
 }
@@ -388,7 +388,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             };
             match context.projects.get_project(&fpath) {
                 Some(_) => {
-                    if let Ok(x) = std::fs::read_to_string(fpath.as_path()) {
+                    if let Ok(_) = std::fs::read_to_string(fpath.as_path()) {
                         // update_defs_on_changed(context, fpath.clone(), x);
                     };
                     return;
@@ -460,17 +460,7 @@ fn get_package_compile_diagnostics(
             };
             Ok(Default::default())
         },
-        |compiler| {
-            // if let Some(compiler) = compiler {
-            //     let (_, compilation_result) = compiler.run::<PASS_TYPING>()?;
-            //     match compilation_result {
-            //         std::result::Result::Ok(_) => {},
-            //         std::result::Result::Err(diags) => {
-            //             eprintln!("get_package_compile_diagnostics compilate failed");
-            //             diagnostics = Some(diags);
-            //         },
-            //     };
-            // }
+        |_compiler| {
             Ok(Default::default())
         }
     )?;

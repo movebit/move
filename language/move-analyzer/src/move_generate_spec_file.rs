@@ -9,11 +9,9 @@ use serde::Deserialize;
 // ----------
 use crate::{
     utils::{get_modules_by_fpath_in_target_modules, collect_use_decl},
-    project::Project,
     context::Context,
 };
-
-use move_model::{model::{StructEnv, FunctionEnv}, exp_generator::ExpGenerator};
+use move_model::model::{StructEnv, FunctionEnv};
 
 pub fn on_generate_spec_file<'a>(context: &Context, request: &Request, is_generate: bool)  -> Response
 where
@@ -52,8 +50,7 @@ where
         }
     };
     
-    let mut addrname_2_addrnum = &project.addrname_2_addrnum;
-    
+    let addrname_2_addrnum = &project.addrname_2_addrnum;
     let mut result = ModuleSpecBuilder::new();
     for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &fpath) {
         let using_module_map = collect_use_decl(&project.addrname_2_addrnum, &module_env, &project.global_env);
@@ -97,12 +94,10 @@ where
                 }
                 EnvItem { struct_env: None, function_env: Some(f_env), .. } => {
                     generate_fun_spec_zx(
-                        project, 
                         &project.global_env, 
                         &module_env, 
                         &f_env, 
                         &using_module_map, 
-                        &fpath
                     )
                 }
                 _ => continue,
@@ -180,16 +175,6 @@ impl<'a> PartialOrd for EnvItem<'a>  {
     }
 }
 
-impl<'a> EnvItem<'a>  {
-    fn get_function_env(&self) -> Option<&FunctionEnv> {
-        self.function_env.as_ref()
-    }
-
-    fn get_struct_env(&self) -> Option<&StructEnv> {
-        self.struct_env.as_ref()
-    }
-}
-
 #[derive(Default)]
 struct ModuleSpecBuilder {
     results: HashMap<AddrAndModuleName, Vec<String>>,
@@ -246,11 +231,7 @@ impl AddrAndModuleName {
 pub struct ReqParameters {
     fpath: String,
 }
-// impl ToString for AddrAndModuleName {
-//     fn to_string(&self) -> String {
-//         format!("{}::{}", self.addr.to_string(), self.module_name.as_str())
-//     }
-// }
+
 #[derive(Clone, serde::Serialize)]
 pub struct Resp {
     fpath: String,

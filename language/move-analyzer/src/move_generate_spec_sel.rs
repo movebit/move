@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 // use lsp_server::{Request,Response};
 use lsp_server::{*, Message, Request, Response};
 use codespan::Location;
-use move_model::ast::{Address, ModuleName};
+use move_model::ast::ModuleName;
 use move_model::symbol::Symbol as SpecSymbol;
 
 pub fn on_generate_spec_sel(context: &mut Context, request: &Request) -> Response {
@@ -45,7 +45,6 @@ pub fn on_generate_spec_sel(context: &mut Context, request: &Request) -> Respons
         }
     };
 
-    let mut result = Default::default();
     let mut insert_pos: (u32, u32) = (0,0);
     let mut result_string :String = String::new();
     let mut is_find = false;
@@ -76,7 +75,7 @@ pub fn on_generate_spec_sel(context: &mut Context, request: &Request) -> Respons
         };
     }
 
-    result = Some(Resp {line: insert_pos.0, 
+    let result = Some(Resp {line: insert_pos.0, 
                         col: insert_pos.1,
                         content: result_string.clone(),
                     }
@@ -159,8 +158,6 @@ fn handle_function(
             None => return false,
         };
 
-        eprintln!("function end line = {:?}", end_location.line);
-
         let mut new_parameters = parameters.clone();
         new_parameters.line = end_location.line.0 + 1;
         new_parameters.col = 4;
@@ -168,23 +165,19 @@ fn handle_function(
         insert_pos.0 = end_location.line.0;
         insert_pos.1 = end_location.column.0;
 
-        eprintln!("insert spec function end line = {:?}, before", insert_pos.0);
         if ReqParametersPath::is_linecol_in_loc(new_parameters.line, new_parameters.col, 
                                                 &module_env.get_loc(), &project.global_env) 
         {
             insert_pos.0 = insert_pos.0 + 1;
         }
-        eprintln!("insert spec function end line = {:?}, before", insert_pos.0);
    
         result_string.push_str(
             generate_fun_spec_zx(
-                project,
                 &project.global_env, 
                 &module_env,
                 &func_env, 
                 &using_module_map,
-                &new_parameters.fpath)
-            .as_str()
+            ).as_str()
         );
         return true;
     }

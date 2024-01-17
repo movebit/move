@@ -2,6 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#[allow(unused_imports)]
 #[macro_use(sp)]
 extern crate move_ir_types;
 
@@ -47,7 +48,7 @@ pub mod inlay_hints;
 
 pub mod move_generate_spec;
 pub mod move_generate_spec_sel;
-pub mod move_generate_spec_zx;
+pub mod move_generate_spec_utils;
 pub mod move_generate_spec_file;
 pub mod symbols;
 pub mod type_display_zx;

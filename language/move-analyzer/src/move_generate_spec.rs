@@ -1,7 +1,4 @@
 use std::{collections::HashMap, ops::Deref};
-use std::path::PathBuf;
-
-// -----------------
 use move_model::{
     model::{GlobalEnv, ModuleEnv, FunctionEnv, StructEnv},
     ty::{TypeDisplayContext, Type as MoveModelType},
@@ -11,11 +8,7 @@ use move_model::{
     }, symbol::Symbol,
 };
 
-use crate::move_generate_spec_zx::{
-    SpecExpItem as SpecExpItemZX,
-    BinOPReason as BinOPReasonZX,
-};
-use crate::project::Project as ProjectZX;
+use crate::move_generate_spec_utils::{SpecExpItem, BinOPReason};
 
 #[derive(Default)]
 pub struct StructSpecGenerator {
@@ -46,15 +39,13 @@ pub struct FunSpecGenerator {
 }
 
 pub fn generate_fun_spec_zx(
-    project: &ProjectZX, 
     global_env: &GlobalEnv, 
     module_env: &ModuleEnv,
     f: &FunctionEnv, 
     using_module_map: &HashMap<ModuleName, Vec<Symbol>>,
-    fpath: &PathBuf) -> String 
-{
+) -> String {
     let mut g = FunSpecGenerator::new();
-    g.generate_zx(project, global_env, module_env, f, using_module_map, fpath);
+    g.generate_zx(global_env, module_env, f, using_module_map);
     let r = g.to_string();
     r
 }
@@ -76,12 +67,10 @@ impl FunSpecGenerator {
 
     pub(crate) fn generate_zx(
         &mut self, 
-        project: &ProjectZX, 
         global_env: &GlobalEnv, 
         module_env: &ModuleEnv,
         f: &FunctionEnv, 
         using_module_map: &HashMap<ModuleName, Vec<Symbol>>,
-        fpath: &PathBuf
     ) {
         use crate::type_display_zx::TypeDisplayZX;
         
@@ -147,21 +136,19 @@ impl FunSpecGenerator {
         self.result.push_str(return_type_string.as_str());
         self.result.push_str("{\n");
         self.result.push_str("\n");
-        let assert = Self::generate_body_zx(self, f, global_env, fpath);
+        let assert = Self::generate_body_zx(self, f, global_env);
         self.result.push_str(assert.as_str());
         self.result.push_str(format!("{}}}\n", indent(1)).as_str());
     }
 
-    fn generate_body_zx(&self, f: &FunctionEnv, global_env: &GlobalEnv, fpath: &PathBuf) -> String {        
+    fn generate_body_zx(&self, f: &FunctionEnv, global_env: &GlobalEnv) -> String {        
         let mut statements = String::new();
         if let Some(exp) = f.get_def().deref() {
-            // get_shadows(exp, global_env, &mut shadows);
             FunSpecGenerator::try_emit_exp_zx(
                 self, 
                 &mut statements,
                 &exp,
                 global_env,
-                f
             );
         } else {
             log::trace!("body is none");
@@ -173,20 +160,17 @@ impl FunSpecGenerator {
 }
 
 impl FunSpecGenerator {
-   
     fn try_emit_exp_zx(
         &self, 
         statements: &mut String,
         exp: &MoveModelExp,
         env: &GlobalEnv,
-        func_env: &FunctionEnv
     ) {
-        
-        let mut items = FunSpecGenerator::collect_spec_exp_zx(self, exp, env);        
+        let items = FunSpecGenerator::collect_spec_exp_zx(self, exp, env);        
         let display_context = &TypeDisplayContext::new(env);
         for item in items.iter() {
             match item {
-                SpecExpItemZX::BinOP { reason, left, right } => {
+                SpecExpItem::BinOP { reason, left, right } => {
                     let _left_node_id = left.as_ref().node_id();
                     let _right_node_id = right.as_ref().node_id();
                     let _left_node_loc = env.get_node_loc(_left_node_id);
@@ -195,22 +179,16 @@ impl FunSpecGenerator {
                     let _right_node_type = env.get_node_type(_right_node_id);
                     
                     let _left_exp_str = match env.get_source(&_left_node_loc) {
-                        Ok(x) => FunSpecGenerator::remove_parentheses(x, left),
+                        Ok(x) => x,
                         Err(_) => continue,
                     };
 
                     let _right_exp_str = match env.get_source(&_right_node_loc) {
-                        Ok(x) => FunSpecGenerator::remove_parentheses(x, right),
+                        Ok(x) => x,
                         Err(_) => continue,
                     };
 
-                    // eprintln!("left exp");
-                    // FunSpecGenerator::helper_exp_print(left, env,1);
-                    // // let temps = left.used_temporaries(func_env);
-                    // eprintln!("right exp");
-                    // FunSpecGenerator::helper_exp_print(right, env,1);
-
-                    if *reason != BinOPReasonZX::DivByZero 
+                    if *reason != BinOPReason::DivByZero 
                         && !FunSpecGenerator::is_support_exp(left, env) 
                     {
                             continue;
@@ -221,17 +199,17 @@ impl FunSpecGenerator {
                     }
 
                     match reason {
-                        BinOPReasonZX::OverFlowADD 
-                        | BinOPReasonZX::OverFlowMUL 
-                        | BinOPReasonZX::OverFlowSHL => {
+                        BinOPReason::OverFlowADD 
+                        | BinOPReason::OverFlowMUL 
+                        | BinOPReason::OverFlowSHL => {
                             let statements_abort_if = format!(
                                                                 "{}aborts_if {} {} {} > {};\n",
                                                                 indent(2),
                                                                 _left_exp_str,
                                                                 match reason {
-                                                                    BinOPReasonZX::OverFlowADD => "+",
-                                                                    BinOPReasonZX::OverFlowMUL => "*",
-                                                                    BinOPReasonZX::OverFlowSHL => "<<",
+                                                                    BinOPReason::OverFlowADD => "+",
+                                                                    BinOPReason::OverFlowMUL => "*",
+                                                                    BinOPReason::OverFlowSHL => "<<",
                                                                     _ => unreachable!(),
                                                                 },
                                                                 _right_exp_str,
@@ -244,7 +222,7 @@ impl FunSpecGenerator {
                                                             );
                             statements.push_str(statements_abort_if.as_str());
                         },
-                        BinOPReasonZX::DivByZero => {
+                        BinOPReason::DivByZero => {
                             statements.push_str(
                                 format!(
                                     "{}aborts_if {} == 0;\n",
@@ -254,7 +232,7 @@ impl FunSpecGenerator {
                                 .as_str(),
                             );
                         },
-                        BinOPReasonZX::UnderFlow => {
+                        BinOPReason::UnderFlow => {
                             statements.push_str(
                                 format!(
                                     "{}aborts_if {} - {} < 0;\n",
@@ -267,7 +245,7 @@ impl FunSpecGenerator {
                         },
                     };
                 },
-                SpecExpItemZX::MarcoAbort{if_exp, abort_exp} => {
+                SpecExpItem::MarcoAbort{if_exp, abort_exp} => {
                     match if_exp.as_ref() {
                         MoveModelExpData::Call(_, op, _) => match op {
                             MoveModelOperation::Eq | MoveModelOperation::Neq | 
@@ -283,7 +261,7 @@ impl FunSpecGenerator {
                         _ => {}
                     }
                 },
-                SpecExpItemZX::PatternLet { left, right } => {
+                SpecExpItem::PatternLet { left, right } => {
                     let _left_node_id = left.node_id();
                     let _left_node_loc = env.get_node_loc(_left_node_id);
                     let _left_exp_str = match env.get_source(&_left_node_loc) {
@@ -298,16 +276,16 @@ impl FunSpecGenerator {
                     let _right_node_id = right.as_ref().node_id();
                     let _right_node_loc = env.get_node_loc(_right_node_id);
                     let _right_exp_str = match env.get_source(&_right_node_loc) {
-                        Ok(x) => FunSpecGenerator::remove_parentheses(x, right),
+                        Ok(x) => x,
                         _ => continue,
                     };
-                    statements.push_str(_right_exp_str.as_str());
+                    statements.push_str(_right_exp_str);
                     statements.push_str(";\n");
                     
                 },
-                SpecExpItemZX::BorrowGlobalMut { .. } => {},
-                SpecExpItemZX::TypeName { .. } => {},
-                SpecExpItemZX::TypeOf { .. } => {}
+                SpecExpItem::BorrowGlobalMut { .. } => {},
+                SpecExpItem::TypeName { .. } => {},
+                SpecExpItem::TypeOf { .. } => {}
             }
         }
     }
@@ -328,12 +306,13 @@ impl FunSpecGenerator {
         let op2 = inverse_binop_zx(op);
                             
         let if_exp_node_id = if_exp.as_ref().node_id();
-        let mut if_exp_node_loc = env.get_node_loc(if_exp_node_id);
+        let if_exp_node_loc = env.get_node_loc(if_exp_node_id);
         let if_exp_str = match env.get_source(&if_exp_node_loc) {
-            Ok(x) => FunSpecGenerator::remove_parentheses(x, if_exp),
+            Ok(x) => x,
             Err(_) => return,
         };
         
+        #[allow(unused_assignments)]
         let mut if_exp_inverse_str = String::new();
         if let Some(_) = if_exp_str.find(op2.0.as_str()) {
             if_exp_inverse_str = if_exp_str.replace(op2.0.as_str(), op2.1.as_str());
@@ -344,7 +323,7 @@ impl FunSpecGenerator {
         let abort_exp_node_id = abort_exp.as_ref().node_id();
         let abort_exp_node_loc = env.get_node_loc(abort_exp_node_id);
         let abort_exp_str = match env.get_source(&abort_exp_node_loc) {
-            Ok(x) => FunSpecGenerator::remove_parentheses(x, abort_exp),
+            Ok(x) => x,
             Err(_) => return,
         };
 
@@ -361,16 +340,16 @@ impl FunSpecGenerator {
 
     fn handle_funcop_exp(statements: &mut String, if_exp: &MoveModelExp, abort_exp: &MoveModelExp, env: &GlobalEnv) {                  
         let if_exp_node_id = if_exp.as_ref().node_id();
-        let mut if_exp_node_loc = env.get_node_loc(if_exp_node_id);
+        let if_exp_node_loc = env.get_node_loc(if_exp_node_id);
         let if_exp_str = match env.get_source(&if_exp_node_loc) {
-            Ok(x) => FunSpecGenerator::remove_parentheses(x, if_exp),
+            Ok(x) => x,
             Err(_) => return,
         };
 
         let abort_exp_node_id = abort_exp.as_ref().node_id();
         let abort_exp_node_loc = env.get_node_loc(abort_exp_node_id);
         let abort_exp_str = match env.get_source(&abort_exp_node_loc) {
-            Ok(x) => FunSpecGenerator::remove_parentheses(x, abort_exp),
+            Ok(x) => x,
             Err(_) => return,
         };
 
@@ -384,84 +363,6 @@ impl FunSpecGenerator {
             .as_str(),
         );
     }
-
-    fn remove_parentheses(input: &str, exp: &MoveModelExp) -> String {
-        match exp.as_ref() {
-            MoveModelExpData::Call(_, op, _) => match op {
-                MoveModelOperation::Cast => return input.to_string(),
-                _ => {}
-            },
-            _ => {}
-        }
-
-        if input.starts_with('(') && input.ends_with(')') {
-            return input[1..input.len() - 1].to_string();
-        } else {
-            return input.to_string();
-        }
-        
-    }
-
-    // fn helper_exp_print(e: &MoveModelExp, env: &GlobalEnv, depth: u32) {
-    //     let display_context = &TypeDisplayContext::new(env);
-    //     let node_id = e.as_ref().node_id();
-    //     let node_loc = env.get_node_loc(node_id);
-    //     let node_type = env.get_node_type(node_id);
-    //     let exp_str = match env.get_source(&node_loc) {
-    //         Ok(x) => FunSpecGenerator::remove_parentheses(x),
-    //         Err(_) => {""},
-    //     };
-
-    //     eprintln!("{:?}{:?} {:?}",
-    //             indent(depth.try_into().unwrap()),
-    //             exp_str,
-    //             node_type.display(display_context).to_string()
-    //         );
-    //     let exp_data = e.as_ref();
-    //     match exp_data {
-    //         MoveModelExpData::Invalid(_) => {eprintln!("body is Invalid")},
-    //         MoveModelExpData::Value(_, _) => {
-    //             eprintln!("{:?}body is value", indent(depth.try_into().unwrap()));
-    //         },
-    //         MoveModelExpData::LocalVar(_, sym) => {
-    //             eprintln!("{:?}LocalVar = {:?}", indent(depth.try_into().unwrap()), sym.display(env.symbol_pool()).to_string());
-    //         },
-    //         MoveModelExpData::Temporary(_, _) => {
-    //             eprintln!("{:?}body is Temporary", indent(depth.try_into().unwrap()));
-    //         },
-    //         MoveModelExpData::Call(_, op, args) => {
-    //             eprintln!("{:?}body is Call", indent(depth.try_into().unwrap()));
-    //             // FunSpecGenerator::helper_op_print();
-    //             for a in args.iter() {
-    //                 FunSpecGenerator::helper_exp_print(a, env, depth + 1);
-    //             }
-    //         },
-    //         MoveModelExpData::Invoke(_, _, _) => {eprintln!("{:?}body is Invalid", indent(depth.try_into().unwrap()))},
-    //         MoveModelExpData::Lambda(_, _, _) => {eprintln!("{:?}body is Lambda", indent(depth.try_into().unwrap()))},
-    //         MoveModelExpData::Quant(_,_,_,_,_,_) => {eprintln!("{:?}body is Quant", indent(depth.try_into().unwrap()))},
-    //         MoveModelExpData::Block(_,p,s,exp) => {
-    //             eprintln!("{:?}body is Block", indent(depth.try_into().unwrap()));
-    //             // handle_expdata_block_parren(p, env, shadows);
-    //             if let Some(op_exp) = s {
-    //                 FunSpecGenerator::helper_exp_print(op_exp, env, depth + 1);
-    //             }
-    //             FunSpecGenerator::helper_exp_print(exp, env, depth + 1);
-    //         },
-    //         MoveModelExpData::IfElse(_,_,_,_) => {eprintln!("body is IfElse")},
-    //         MoveModelExpData::Return(_,_) => {eprintln!("body is Return")},
-    //         MoveModelExpData::Sequence(_,vec_exp) => {
-    //                 eprintln!("{:?}body is Sequence",indent(depth.try_into().unwrap()));
-    //                 for a in vec_exp.iter() {
-    //                     FunSpecGenerator::helper_exp_print(a, env, depth + 1);
-    //                 }
-    //         },
-    //         MoveModelExpData::Loop(_,_) => {eprintln!("body is Loop")},
-    //         MoveModelExpData::LoopCont(_,_) => {eprintln!("body is LoopCont")},
-    //         MoveModelExpData::Assign(_,_,_) => {eprintln!("body is Assign")},
-    //         MoveModelExpData::Mutate(_,_,_) => {eprintln!("body is Mutate")},
-    //         MoveModelExpData::SpecBlock(_,_) => {eprintln!("body is SpecBlock")},
-    //     }
-    // }
 }
 
 pub(crate) fn indent(num: usize) -> String {

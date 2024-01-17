@@ -206,36 +206,14 @@ impl Handler {
                     continue;
                 }
             }
-            // log::info!("use_decl.loc = {:?}, use_decl.loc.len = {:?}", 
-            //     use_decl.loc, use_decl.loc.span().end() - use_decl.loc.span().start());
+            log::trace!("use_decl.loc = {:?}, use_decl.loc.len = {:?}", 
+                use_decl.loc, use_decl.loc.span().end() - use_decl.loc.span().start());
 
-            let mouse_line_first_col = move_model::model::Loc::new(
-                use_decl.loc.file_id(),
-                codespan::Span::new(
-                    use_decl.loc.span().start(),
-                    use_decl.loc.span().start() + codespan::ByteOffset(1),
-                ),
-            );
-            let mouse_line_last_col = move_model::model::Loc::new(
-                use_decl.loc.file_id(),
-                codespan::Span::new(
-                    use_decl.loc.span().end(),
-                    use_decl.loc.span().end() + codespan::ByteOffset(1),
-                )
-            );
-
-            // if let Some(use_first_col) = env.get_location(&mouse_line_first_col) {
-            //     log::info!("use_first_col = {:?}", use_first_col);
-            // }
-
-            // if let Some(use_last_col) = env.get_location(&mouse_line_last_col) {
-            //     log::info!("use_last_col = {:?}", use_last_col);
-            // }
             if !use_decl.members.is_empty() {
                 for (member_loc, name, _) in use_decl.members.clone().into_iter() {
-                    // log::info!("member_loc = {:?} ---", env.get_location(&member_loc));
+                    log::trace!("member_loc = {:?} ---", env.get_location(&member_loc));
                     if self.check_move_model_loc_contains_mouse_pos(env, &member_loc) {
-                        // log::info!("find use symbol = {}", name.display(spool));
+                        log::trace!("find use symbol = {}", name.display(spool));
                         target_stct_or_fn = name.display(spool).to_string();
                         found_target_stct_or_fn = true;
                         ref_module = use_decl.module_name.display_full(env).to_string();
@@ -422,15 +400,13 @@ impl Handler {
                                 target_struct_loc.file_id(),
                                 codespan::Span::new(field_start, atomic_field_end),
                             );
-                            let atomic_field_source = env.get_source(&atomic_field_loc);
-                            // todo: should check mouse_last_col between in scope by atomic_field_loc
+
                             if atomic_field_loc.span().end() < self.mouse_span.end()
                                 || atomic_field_loc.span().start()
                                     > self.mouse_span.end()
                             {
                                 continue;
                             }
-                            // log::info!("lll >> atomic_field_source = {:?}", atomic_field_source);
                             let field_type = field_env.get_type();
                             self.process_type(env, &atomic_field_loc, &field_type);
                         }

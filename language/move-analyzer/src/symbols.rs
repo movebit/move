@@ -48,7 +48,7 @@
 
 use crate::{
     context::Context,
-    utils::get_modules_by_fpath_in_all_modules, project::{Project, self},
+    utils::get_modules_by_fpath_in_all_modules, project::Project,
 };
 use lsp_server::Request;
 use lsp_types::{DocumentSymbol, DocumentSymbolParams, SymbolKind};
@@ -136,7 +136,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) -> lsp_s
         request.id.clone(), 
         serde_json::json!(&result_vec_document_symbols)
     );
-    if let Err(err) = context
+    if let Err(_) = context
         .connection
         .sender
         .send(lsp_server::Message::Response(response.clone()))
@@ -154,8 +154,8 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) -> lsp_s
 #[allow(deprecated)]
 fn handle_document_symbols_spec_function(project: &Project, module_env :&ModuleEnv, children: &mut Vec<DocumentSymbol>) {
     for spec_info in module_env.get_spec_block_infos() {
-        let (spec_file_path, spec_location) = match project.global_env.get_file_and_location(&spec_info.loc) {
-            Some((x, y)) => (x, y),
+        match project.global_env.get_file_and_location(&spec_info.loc) {
+            Some((_, _)) => {},
             None => {
                 log::error!("could not get file and location from spec info, spec: {:?}", spec_info);
                 continue;
@@ -275,4 +275,4 @@ fn handle_document_symbols_struct_fields(
             deprecated: Some(false),
         });  
     }
-}
+} 

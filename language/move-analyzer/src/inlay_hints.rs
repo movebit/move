@@ -16,7 +16,7 @@ use move_model::{
 use std::{path::{Path, PathBuf}, ops::Deref};
 
 /// Handles inlay_hints request of the language server.
-pub fn on_inlay_hints(context: &Context, request: &Request, config: InlayHintsConfig) -> lsp_server::Response {
+pub fn on_inlay_hints(context: &Context, request: &Request) -> lsp_server::Response {
     log::info!("on_inlay_hints request = {:?}", request);
     let parameters = serde_json::from_value::<InlayHintParams>(request.params.clone())
         .expect("could not deserialize go-to-def request");
@@ -25,7 +25,7 @@ pub fn on_inlay_hints(context: &Context, request: &Request, config: InlayHintsCo
         std::env::current_dir().unwrap().as_path(),
         fpath.as_path(),
     );
-    let mut handler = Handler::new(fpath.clone(), parameters.range, config);
+    let mut handler = Handler::new(fpath.clone(), parameters.range);
     let _ = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
@@ -50,10 +50,11 @@ pub fn on_inlay_hints(context: &Context, request: &Request, config: InlayHintsCo
     ret_response
 }
 
+#[allow(unused)]
 #[derive(Clone, Copy, serde::Deserialize, Debug)]
 pub struct InlayHintsConfig {
     field_type: bool,
-    parameter: bool,
+    parameter: bool, 
     declare_var: bool,
 }
 
@@ -70,12 +71,12 @@ impl Default for InlayHintsConfig {
 struct Handler {
     range: FileRange,
     reuslts: Vec<InlayHint>,
-    config: InlayHintsConfig,
+    // config: InlayHintsConfig,
     target_module_id: ModuleId,
 }
 
 impl Handler {
-    fn new(fpath: PathBuf, range: lsp_types::Range, config: InlayHintsConfig) -> Self {
+    fn new(fpath: PathBuf, range: lsp_types::Range) -> Self {
         Self {
             range: FileRange {
                 path: fpath,
@@ -85,7 +86,7 @@ impl Handler {
                 col_end: range.end.character + 1,
             },
             reuslts: Default::default(),
-            config,
+            // config,
             target_module_id: ModuleId::new(0),
         }
     }
@@ -246,10 +247,6 @@ impl Handler {
                         codespan::Span::new(
                             tmpvar_loc.span().start(),
                             tmpvar_loc.span().end() + codespan::ByteOffset((2).try_into().unwrap())));
-                    // log::info!(
-                    //     "lll >> exp.visit tmpvar_loc = {:?}",
-                    //     env.get_location(&tmpvar_loc)
-                    // );
 
                     let mut tmp_var_name_str = "".to_string();
                     if let Some(name) = fun.get_parameters().get(*idx).map(|p| p.0)

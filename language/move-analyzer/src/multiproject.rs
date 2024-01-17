@@ -123,15 +123,15 @@ impl MultiProject {
     }
 
     pub fn update_defs(&mut self, file_path: PathBuf, content: String) {
-        let (manifest, _) = match super::utils::discover_manifest_and_kind(file_path.as_path())
+        match super::utils::discover_manifest_and_kind(file_path.as_path())
         {
-            Some(x) => x,
+            Some(_) => {},
             None => {
                 log::error!("file_path {:?} not found", file_path.as_path());
                 return;
             },
         };
-        // drop(self.asts.get_mut(&manifest).unwrap().borrow_mut());
+
         self.get_projects_mut(&file_path)
             .into_iter()
             .for_each(|x| x.update_defs(&file_path, content.clone()));
