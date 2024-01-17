@@ -27,11 +27,11 @@ The `aptos-move-analyzer` Visual Studio Code extension works via two components:
 #### A. Download the precompiled binaries for the aptos-move-analyzer language server(Recommended)
 
 ```Windows```  
-> Download `aptos-move-analyzer-win-installer-v0.1.0.msi](https://github.com/movebit/move), and proceed with the installation. This installation program will automatically add the path of `aptos-move-analyzer` to the **PATH** environment variable.
+> Download [aptos-move-analyzer-win-installer-v0.1.1.msi](https://github.com/movebit/move/releases/tag/aptos-move-analyzer-release-v0.1.1), and proceed with the installation. This installation program will automatically add the path of `aptos-move-analyzer` to the **PATH** environment variable.
 
 ```MacOS & Ubuntu```
  
- > 1.Download binary files for the corresponding platform from [aptos-move-analyzer-releases-pages](https://github.com/movebit/move).
+ > 1.Download binary files for the corresponding platform from [aptos-move-analyzer-releases-pages](https://github.com/movebit/move/releases/tag/aptos-move-analyzer-release-v0.1.1).
  >
  > 2.Rename it to `aptos-move-analyzer`. 
  > 
