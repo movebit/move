@@ -7,7 +7,7 @@ use move_model::{
         Operation as MoveModelOperation, ModuleName
     }, symbol::Symbol,
 };
-
+use crate::type_display_for_spec::TypeDisplayForSpec;
 use crate::move_generate_spec_utils::{SpecExpItem, BinOPReason};
 
 #[derive(Default)]
@@ -72,7 +72,7 @@ impl FunSpecGenerator {
         f: &FunctionEnv, 
         using_module_map: &HashMap<ModuleName, Vec<Symbol>>,
     ) {
-        use crate::type_display_zx::TypeDisplayZX;
+        
         
         let display_context = f.get_type_display_ctx();
         self.result
@@ -99,7 +99,7 @@ impl FunSpecGenerator {
             for (index, para) in f.get_parameters().iter().enumerate() {
                 self.result.push_str(para.0.display(f.symbol_pool()).to_string().as_str());
                 self.result.push_str(": ");
-                let display_context_para = TypeDisplayZX {
+                let display_context_para = TypeDisplayForSpec {
                     type_: &para.1,
                     context: &display_context,
                     module_env: module_env,
@@ -115,7 +115,7 @@ impl FunSpecGenerator {
         self.result.push_str(")");
         
         let return_type = f.get_result_type();
-        let display_context_return = TypeDisplayZX {
+        let display_context_return = TypeDisplayForSpec {
             type_: &return_type,
             context: &display_context,
             module_env: module_env,

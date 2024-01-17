@@ -3,9 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::utils::*;
-use crate::{analyzer_handler::*, multiproject::MultiProject, project::Project};
+use crate::{analyzer_handler::*, project::Project};
 use anyhow::{Ok, Result};
-use move_command_line_common::files::FileHash;
 use move_compiler::shared::{NumericalAddress, PackagePaths};
 use move_core_types::account_address::*;
 use move_package::source_package::{layout::SourcePackageLayout, manifest_parser::*};
@@ -13,7 +12,6 @@ use std::{
     cell::RefCell,
     cmp::Ordering,
     collections::{ BTreeSet, BTreeMap },
-    fs,
     path::{Path, PathBuf},
     rc::Rc,
 };
@@ -22,11 +20,10 @@ use move_model::{options::ModelBuilderOptions, run_model_builder_with_options};
 use std::collections::HashMap;
 use num_bigint::BigUint;
 use tempfile::tempdir;
-use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 use codespan_reporting::diagnostic::Severity;
 
 // Determines the base of the number literal, depending on the prefix
-pub(crate) fn determine_num_text_and_base22(
+pub(crate) fn determine_num_text_and_base(
     s: &str,
 ) -> (&str, move_compiler::shared::NumberFormat) {
     for c in s.chars() {
@@ -38,14 +35,14 @@ pub(crate) fn determine_num_text_and_base22(
 }
 
 // Parse an address from a decimal or hex encoding
-pub fn parse_address_number22(
+pub fn parse_addr_str_to_number(
     s: &str,
 ) -> Option<(
     [u8; AccountAddress::LENGTH],
     move_compiler::shared::NumberFormat,
 )> {
 
-    let (txt, base) = determine_num_text_and_base22(s);
+    let (txt, base) = determine_num_text_and_base(s);
 
     let parsed = match base {
         move_compiler::shared::NumberFormat::Hex => BigUint::parse_bytes(txt[2..].as_bytes(), 16),
@@ -61,14 +58,14 @@ pub fn parse_address_number22(
     Some((result, base))
 }
 
-pub fn parse_str22(s: &str) -> Option<NumericalAddress> {
-    match parse_address_number22(s) {
+pub fn parse_addr_str(s: &str) -> Option<NumericalAddress> {
+    match parse_addr_str_to_number(s) {
         Some((n, format)) => Some(NumericalAddress::new(n, format)),
         None => None,
     }
 }
 
-pub fn parse_named_address22(s: &str) -> anyhow::Result<(String, NumericalAddress)> {
+pub fn parse_named_address_item(s: &str) -> anyhow::Result<(String, NumericalAddress)> {
     let before_after = s.split('=').collect::<Vec<_>>();
 
     if before_after.len() != 2 {
@@ -79,7 +76,7 @@ pub fn parse_named_address22(s: &str) -> anyhow::Result<(String, NumericalAddres
         );
     }
     let name = before_after[0].parse()?;
-    if let Some(addr) = parse_str22(before_after[1]) {
+    if let Some(addr) = parse_addr_str(before_after[1]) {
         Ok((name, addr))
     } else {
         Ok((name, NumericalAddress::new(AccountAddress::from_hex_literal("0x0")
@@ -95,7 +92,7 @@ pub fn parse_addresses_from_options(
 ) -> anyhow::Result<BTreeMap<String, NumericalAddress>> {
     named_addr_strings
         .iter()
-        .map(|x| parse_named_address22(x))
+        .map(|x| parse_named_address_item(x))
         .collect()
 }
 
@@ -361,24 +358,11 @@ impl Project {
                 {
                     continue;
                 }
-                let file_content = fs::read_to_string(file.path())
-                    .unwrap_or_else(|_| panic!("'{:?}' can't read_to_string", file.path()));
                 log::debug!("load source file {:?}", file.path());
-                let file_hash = FileHash::new(file_content.as_str());
                 ret_paths.push(file.path().to_path_buf());
-                // // update hash
-                // self.hash_file
-                //     .as_ref()
-                //     .borrow_mut()
-                //     .update(file.path().to_path_buf(), file_hash);
-                // // update line mapping.
-                // self.file_line_mapping
-                //     .as_ref()
-                //     .borrow_mut()
-                //     .update(file.path().to_path_buf(), file_content);
+  
             }
         }
-        // log::info!("lll << load_layout_files_v2");
         Ok(ret_paths)
     }
 

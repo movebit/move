@@ -1,8 +1,9 @@
 //! This file primarily modifies the `TypeDisplay` structure and its `fmt::Display` trait
 //! within the `move-model`. The objective is to adjust the `struct_str` method in the
-//! `TypeDisplay` structure to print the structural information in the form
-//! "address::module_name::struct_name" instead of "module_name::struct_name" or
-//! "0x12::module_name::struct_name".
+//! `TypeDisplay` structure so that when printing a struct, it only displays `struct_name`
+//! for structs within this module. For structs from other modules, it prints in the form
+//! "module_name::struct_name" instead of displaying all structs as "module_name::struct_name".
+
 
 use move_model::{
     model:: {
@@ -10,7 +11,7 @@ use move_model::{
     },
     ty::{Type, TypeDisplayContext, ReferenceKind},
     ast::ModuleName,
-    symbol::{Symbol, SymbolPool},
+    symbol::Symbol,
 };
 
 use std::{
@@ -19,16 +20,16 @@ use std::{
 };
 
 use std::collections::HashMap;
-pub struct TypeDisplayZX<'a> {
+pub struct TypeDisplayForSpec<'a> {
     pub type_: &'a Type,
     pub context: &'a TypeDisplayContext<'a>,
     pub using_module_map:  &'a HashMap<ModuleName, Vec<Symbol>>,
     pub module_env: &'a ModuleEnv<'a>,
 }
 
-impl<'a> TypeDisplayZX<'a> {
-    fn new(&self, ty: &'a Type) -> TypeDisplayZX<'a> {
-        TypeDisplayZX {
+impl<'a> TypeDisplayForSpec<'a> {
+    fn new(&self, ty: &'a Type) -> TypeDisplayForSpec<'a> {
+        TypeDisplayForSpec {
             type_: ty,
             context: self.context,
             module_env: self.module_env,
@@ -37,7 +38,7 @@ impl<'a> TypeDisplayZX<'a> {
     }
 }  
 
-impl<'a> fmt::Display for TypeDisplayZX<'a> {
+impl<'a> fmt::Display for TypeDisplayForSpec<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         use Type::*;
         let comma_list = |f: &mut Formatter<'_>, ts: &[Type]| -> fmt::Result {
@@ -108,7 +109,7 @@ impl<'a> fmt::Display for TypeDisplayZX<'a> {
                     write!(f, "#{}", idx)
                 }
             },
-            Var(idx) => {
+            Var(_) => {
                 write!(f, "")
             },
             Error => f.write_str("*error*"),
@@ -116,7 +117,7 @@ impl<'a> fmt::Display for TypeDisplayZX<'a> {
     }
 }
 
-impl<'a> TypeDisplayZX<'a> {
+impl<'a> TypeDisplayForSpec<'a> {
     fn struct_str(&self, mid: ModuleId, sid: StructId) -> String {
         let env = self.context.env;
         if let Some(builder_table) = self.context.builder_struct_table {
@@ -146,17 +147,6 @@ impl<'a> TypeDisplayZX<'a> {
                 struct_module_env_name.display(env).to_string(),
                 struct_env_name.display(env.symbol_pool())
             );
-            
-            // let addr_end = struct_module_env_full_name.find("::").unwrap_or_default();
-            // let addr = struct_module_env_full_name[0..addr_end].to_string();
-        
-            
-            // format!(
-            //     "{}::{}::{}",
-            //     self.addrname_2_addrnum.get(&addr).unwrap_or(&String::from("0x0")),
-            //     struct_module_env.get_name().display(env).to_string(),
-            //     struct_env.get_name().display(env.symbol_pool()),
-            // )
         }
     }
 }
