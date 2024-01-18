@@ -40,7 +40,7 @@ The `aptos-move-analyzer` Visual Studio Code extension works via two components:
  After completing the above steps, **restart** VSCode.
 
  #### B. Use Cargo
-
+ 
 The `aptos-move-analyzer` language server is a Rust program, so we suggest installing it via `cargo`. If you haven't installed the Rust toolchain, you can install [Rustup](https://rustup.rs/), which will install the latest stable Rust toolchain including `cargo`.
 
 **Execute the below command to install `aptos_move_analyzer`**
@@ -93,6 +93,9 @@ bottom-right of your Visual Studio Code screen when opening a Move file, it mean
 3. If you're using it in MacOS, you may meet the error `Macos cannot verify if this app contains malicious software`, you need to add support for `aptos-move-analyzer` in the system settings Program Trust.
 
 #### [2] analyzer not work
+
+##### A.Need Move.toml
+
 Open a Move source file (a file with a .move file extension) and if the opened Move source file is located within a buildable project (a Move.toml file can be found in one of its parent directories), the following advanced features will be available:
 
   - compiler diagnostics
@@ -107,6 +110,10 @@ Open a Move source file (a file with a .move file extension) and if the opened M
 Therefore, the Move.toml file must be found in the project directory for the plug-in's functionality to take effect.
 
 In addition, if you have already opened the move project before, the installed plug-in will not take effect in time. You need to reopen the vscode window and open the move project code again before the plug-in is activated. 
+
+##### B. Need Compile Project with Move.toml
+
+When you first open a project, there will be some dependencies (configured in Move.toml) that need to be downloaded, so you need to run `aptos move compile` command first to build the project. During the build process, the dependencies will be downloaded. Once all the dependencies for the project have been downloaded, aptos-move-analyzer can properly parse the dependencies and project source code.
 
 ## Features <span id="Features">
 
@@ -129,6 +136,6 @@ Move source file (a file with a `.move` file extension) and:
 
 ## Support <span id="Support">
 
-1.If you find any issues, please report a GitHub issue to the [movebit/sui-move-analyzer-issue](https://github.com/movebit/sui-move-analyzer-issue) repository to get help.
+1.If you find any issues, please report a GitHub issue to the [movebit/move-analyzer-issue](https://github.com/movebit/move-analyzer-issue) repository to get help.
 
 2.Welcome to the developer discussion group as well: [MoveAnalyzer](https://t.me/moveanalyzer). 
