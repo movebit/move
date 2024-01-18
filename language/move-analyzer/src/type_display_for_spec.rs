@@ -28,7 +28,7 @@ pub struct TypeDisplayForSpec<'a> {
 }
 
 impl<'a> TypeDisplayForSpec<'a> {
-    fn new(&self, ty: &'a Type) -> TypeDisplayForSpec<'a> {
+    fn make(&self, ty: &'a Type) -> TypeDisplayForSpec<'a> {
         TypeDisplayForSpec {
             type_: ty,
             context: self.context,
@@ -49,7 +49,7 @@ impl<'a> fmt::Display for TypeDisplayForSpec<'a> {
                 } else {
                     f.write_str(", ")?;
                 }
-                write!(f, "{}", self.new(t))?;
+                write!(f, "{}", self.make(t))?;
             }
             Ok(())
         };
@@ -61,9 +61,9 @@ impl<'a> fmt::Display for TypeDisplayForSpec<'a> {
                 f.write_str(")")
             },
             Vector(t) => {
-                write!(f, "vector<{}>", self.new(t))
+                write!(f, "vector<{}>", self.make(t))
             },
-            TypeDomain(t) => write!(f, "domain<{}>", self.new(t)),
+            TypeDomain(t) => write!(f, "domain<{}>", self.make(t)),
             ResourceDomain(mid, sid, inst_opt) => {
                 write!(f, "resources<{}", self.struct_str(*mid, *sid))?;
                 if let Some(inst) = inst_opt {
@@ -75,9 +75,9 @@ impl<'a> fmt::Display for TypeDisplayForSpec<'a> {
             },
             Fun(a, t) => {
                 f.write_str("|")?;
-                write!(f, "{}", self.new(a))?;
+                write!(f, "{}", self.make(a))?;
                 f.write_str("|")?;
-                write!(f, "{}", self.new(t))
+                write!(f, "{}", self.make(t))
             },
             Struct(mid, sid, ts) => {
                 write!(f, "{}", self.struct_str(*mid, *sid))?;
@@ -95,7 +95,7 @@ impl<'a> fmt::Display for TypeDisplayForSpec<'a> {
                     ReferenceKind::Mutable => "mut ",
                 };
                 f.write_str(modifier)?;
-                write!(f, "{}", self.new(t))
+                write!(f, "{}", self.make(t))
             },
             TypeParameter(idx) => {
                 if let Some(names) = &self.context.type_param_names {
@@ -137,16 +137,15 @@ impl<'a> TypeDisplayForSpec<'a> {
             if let Some(members) = self.using_module_map.get(struct_module_env_name) {
                 //  let result = numbers.iter().find(|&&x| x == 3);
                 let a = members.iter().find(|&&x| x == struct_env_name);
-                match a {
-                    Some(x) => return x.display(env.symbol_pool()).to_string(),
-                    None => {},
+                if let Some(x) = a { 
+                    return x.display(env.symbol_pool()).to_string(); 
                 }
             } 
 
-            return format!("{}::{}",
-                struct_module_env_name.display(env).to_string(),
+            format!("{}::{}",
+                struct_module_env_name.display(env),
                 struct_env_name.display(env.symbol_pool())
-            );
+            )
         }
     }
 }

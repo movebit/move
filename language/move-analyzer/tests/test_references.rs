@@ -27,7 +27,7 @@ mod tests {
         };
         match context.projects.get_project(&fpath) {
             Some(_) => {
-                if let Ok(x) = std::fs::read_to_string(fpath.as_path()) {
+                if let Ok(_x) = std::fs::read_to_string(fpath.as_path()) {
                     // update_defs_on_changed(context, fpath.clone(), x);
                 };
                 return;
@@ -71,7 +71,7 @@ mod tests {
                 "character": 29
             },
             "textDocument": {
-                "uri": "file:///".to_string() + fpath.to_str().clone().unwrap()
+                "uri": "file:///".to_string() + fpath.to_str().unwrap()
             },
         });
         let request = Request {
@@ -120,7 +120,7 @@ mod tests {
             ]),
         );
 
-        let actual_r = references::on_references_request(&mut context, &request);
+        let actual_r = references::on_references_request(&context, &request);
         std::thread::sleep(Duration::new(1, 0));
         eprintln!("\n\n------------------------------");
         eprintln!("actual_r = {:?}", serde_json::to_string(&actual_r));
@@ -139,7 +139,7 @@ mod tests {
                         }
                     }
                 }
-                assert_eq!(found_same_item, true);
+                assert!(found_same_item,);
             }
         }
     }
@@ -169,7 +169,7 @@ mod tests {
                 "character": 57
             },
             "textDocument": {
-                "uri": "file:///".to_string() + fpath.to_str().clone().unwrap()
+                "uri": "file:///".to_string() + fpath.to_str().unwrap()
             },
         });
         let request = Request {
@@ -303,7 +303,7 @@ mod tests {
             ]),
         );
 
-        let actual_r = references::on_references_request(&mut context, &request);
+        let actual_r = references::on_references_request(&context, &request);
         std::thread::sleep(Duration::new(1, 0));
         eprintln!("\n\n------------------------------");
         eprintln!("actual_r = {:?}", serde_json::to_string(&actual_r));
@@ -322,7 +322,7 @@ mod tests {
                         }
                     }
                 }
-                assert_eq!(found_same_item, true);
+                assert!(found_same_item, "{}", true);
             }
         }
     }

@@ -19,16 +19,15 @@ impl StructSpecGenerator {
     pub(crate) fn new() -> Self {
         Self::default()
     }
-    pub(crate) fn to_string(self) -> String {
+    pub(crate) fn get_result_string(self) -> String {
         self.result
     }
     pub(crate) fn generate(&mut self, x: &StructEnv) {
         self.result
             .push_str(format!("{}spec {}", indent(1), 
-                                    x.get_name().display(x.symbol_pool()).to_string()).as_str()
+                                    x.get_name().display(x.symbol_pool())).as_str()
         );
         self.result.push_str("{\n");
-        self.result.push_str("\n");
         self.result.push_str(format!("{}}}\n", indent(1)).as_str())
     }
 }
@@ -46,22 +45,21 @@ pub fn generate_fun_spec_zx(
 ) -> String {
     let mut g = FunSpecGenerator::new();
     g.generate_zx(global_env, module_env, f, using_module_map);
-    let r = g.to_string();
-    r
+    g.get_result_string()
+
 }
 
 pub fn genrate_struct_spec(s: &StructEnv) -> String {
     let mut g = StructSpecGenerator::new();
     g.generate(s);
-    let r = g.to_string();
-    r
+    g.get_result_string()
 }
 
 impl FunSpecGenerator {
     pub(crate) fn new() -> Self {
         Self::default()
     }
-    pub(crate) fn to_string(self) -> String {
+    pub(crate) fn get_result_string(self) -> String {
         self.result
     }
 
@@ -92,7 +90,7 @@ impl FunSpecGenerator {
             "".to_owned()
         };
         self.result.push_str(generics.as_str());
-        self.result.push_str("(");
+        self.result.push('(');
 
         let para_len = f.get_parameter_count();
         if para_len > 0 {
@@ -102,8 +100,8 @@ impl FunSpecGenerator {
                 let display_context_para = TypeDisplayForSpec {
                     type_: &para.1,
                     context: &display_context,
-                    module_env: module_env,
-                    using_module_map: using_module_map,
+                    module_env,
+                    using_module_map,
                 };
                 let para_type_string = display_context_para.to_string();
                 self.result.push_str(para_type_string.as_str());
@@ -112,30 +110,26 @@ impl FunSpecGenerator {
                 }
             }
         }
-        self.result.push_str(")");
+        self.result.push(')');
         
         let return_type = f.get_result_type();
         let display_context_return = TypeDisplayForSpec {
             type_: &return_type,
             context: &display_context,
-            module_env: module_env,
-            using_module_map: using_module_map,
+            module_env,
+            using_module_map,
         };
         let mut return_type_string = display_context_return.to_string();
         
         return_type_string.insert_str(0, ": ");
-        match return_type {
-            MoveModelType::Tuple(_) => {
-                // ": ()" len is 4
-                if return_type_string.len() <= 4 {
-                    return_type_string = String::new();
-                }
-            },
-            _ => {}
+        if let MoveModelType::Tuple(_) = return_type {
+            // ": ()" len is 4
+            if return_type_string.len() <= 4 {
+                return_type_string = String::new();
+            }
         }
         self.result.push_str(return_type_string.as_str());
         self.result.push_str("{\n");
-        self.result.push_str("\n");
         let assert = Self::generate_body_zx(self, f, global_env);
         self.result.push_str(assert.as_str());
         self.result.push_str(format!("{}}}\n", indent(1)).as_str());
@@ -147,7 +141,7 @@ impl FunSpecGenerator {
             FunSpecGenerator::try_emit_exp_zx(
                 self, 
                 &mut statements,
-                &exp,
+                exp,
                 global_env,
             );
         } else {
@@ -155,7 +149,7 @@ impl FunSpecGenerator {
             return statements;
         }
 
-        return statements;
+        statements
     }
 }
 
@@ -202,6 +196,7 @@ impl FunSpecGenerator {
                         BinOPReason::OverFlowADD 
                         | BinOPReason::OverFlowMUL 
                         | BinOPReason::OverFlowSHL => {
+                            let over_type = format!("MAX_{}", _left_node_type.display(display_context).to_string().to_uppercase());
                             let statements_abort_if = format!(
                                                                 "{}aborts_if {} {} {} > {};\n",
                                                                 indent(2),
@@ -213,12 +208,7 @@ impl FunSpecGenerator {
                                                                     _ => unreachable!(),
                                                                 },
                                                                 _right_exp_str,
-                                                                format!(
-                                                                    "MAX_{}",
-                                                                    _left_node_type.display(display_context)
-                                                                                    .to_string()
-                                                                                    .to_uppercase(),
-                                                                ),
+                                                                over_type
                                                             );
                             statements.push_str(statements_abort_if.as_str());
                         },
@@ -246,8 +236,8 @@ impl FunSpecGenerator {
                     };
                 },
                 SpecExpItem::MarcoAbort{if_exp, abort_exp} => {
-                    match if_exp.as_ref() {
-                        MoveModelExpData::Call(_, op, _) => match op {
+                    if let MoveModelExpData::Call(_, op, _) = if_exp.as_ref() { 
+                        match op {
                             MoveModelOperation::Eq | MoveModelOperation::Neq | 
                             MoveModelOperation::Lt | MoveModelOperation::Gt | 
                             MoveModelOperation::Le | MoveModelOperation::Ge => {
@@ -257,8 +247,7 @@ impl FunSpecGenerator {
                                 FunSpecGenerator::handle_funcop_exp(statements, if_exp, abort_exp, env);
                             }
                             _ => {}
-                        },
-                        _ => {}
+                        } 
                     }
                 },
                 SpecExpItem::PatternLet { left, right } => {
@@ -314,7 +303,7 @@ impl FunSpecGenerator {
         
         #[allow(unused_assignments)]
         let mut if_exp_inverse_str = String::new();
-        if let Some(_) = if_exp_str.find(op2.0.as_str()) {
+        if if_exp_str.contains(op2.0.as_str()) {
             if_exp_inverse_str = if_exp_str.replace(op2.0.as_str(), op2.1.as_str());
         } else {
             return;

@@ -5,19 +5,13 @@
 mod tests {
 
     use aptos_move_analyzer::{
-        analyzer_handler::*,
         context::*,
-        utils::{path_concat, FileRange,discover_manifest_and_kind},
+        utils::{path_concat,discover_manifest_and_kind},
         multiproject::MultiProject,
         goto_definition::on_go_to_def_request
     };
     use lsp_server::*;
-    use lsp_types::*;
-    use move_model::{
-        ast::{ExpData::*, Operation::*, Spec, SpecBlockTarget},
-        model::{FunId, GlobalEnv, ModuleId, StructId},
-    };
-    use std::path::{Path, PathBuf};
+    use std::path::PathBuf;
     use serde_json::json;
     // use itertools::Itertools;
 
@@ -32,7 +26,7 @@ mod tests {
         };
         match context.projects.get_project(&fpath) {
             Some(_) => {
-                if let Ok(x) = std::fs::read_to_string(fpath.as_path()) {
+                if let Ok(_x) = std::fs::read_to_string(fpath.as_path()) {
                     // update_defs_on_changed(context, fpath.clone(), x);
                 };
                 return;

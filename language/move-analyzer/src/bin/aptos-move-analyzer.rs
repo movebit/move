@@ -246,7 +246,7 @@ fn report_diag(context: &mut Context, fpath: PathBuf) {
         if token.lines().count() < 3 {
            continue;
         }
-        let err_msg = token.lines().nth(0).unwrap_or_default();
+        let err_msg = token.lines().next().unwrap_or_default();
         let loc_str = match token.lines().nth(1) {
             Some(str) => str.to_string(),
             None => "".to_string()
@@ -254,13 +254,13 @@ fn report_diag(context: &mut Context, fpath: PathBuf) {
 
         let mut file_path = "";
         let mut pos = lsp_types::Position::default();
-        if let Some(start_idx) = loc_str.find("/") {
-            if let Some(end_idx) = loc_str.find(":") {
+        if let Some(start_idx) = loc_str.find('/') {
+            if let Some(end_idx) = loc_str.find(':') {
                 if start_idx <= end_idx {
                     file_path = &loc_str[start_idx..end_idx];
                     // eprintln!("loc_str[end_idx..] = {:?}\n", &loc_str[end_idx..]);
-                    let line = loc_str[end_idx..].split(":").nth(1).unwrap_or_default();
-                    let col = loc_str[end_idx..].split(":").nth(2).unwrap_or_default();
+                    let line = loc_str[end_idx..].split(':').nth(1).unwrap_or_default();
+                    let col = loc_str[end_idx..].split(':').nth(2).unwrap_or_default();
                     let line_num = if line.parse::<u32>().unwrap() > 0 {
                         line.parse::<u32>().unwrap() - 1
                     } else {
@@ -283,7 +283,7 @@ fn report_diag(context: &mut Context, fpath: PathBuf) {
 
         let mut code_str = "".to_string();
         for line_idx in 2..token.lines().count() {
-            code_str.push_str(&token.lines().nth(line_idx).unwrap());
+            code_str.push_str(token.lines().nth(line_idx).unwrap());
         }
         // eprintln!("code_str = {:?}\n", &code_str);
         let d = lsp_types::Diagnostic {
@@ -333,8 +333,8 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             .file_line_mapping
             .as_ref()
             .borrow_mut()
-            .update(fpath.clone(), content.clone());
-        report_diag(context, fpath.clone());
+            .update(fpath.clone(), content);
+        report_diag(context, fpath);
         // log::info!("update_defs_on_changed content <-------------");
     }
 
@@ -388,7 +388,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             };
             match context.projects.get_project(&fpath) {
                 Some(_) => {
-                    if let Ok(_) = std::fs::read_to_string(fpath.as_path()) {
+                    if std::fs::read_to_string(fpath.as_path()).is_ok() {
                         // update_defs_on_changed(context, fpath.clone(), x);
                     };
                     return;
@@ -407,7 +407,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
 
             context.projects.insert_project(p);
             make_diag(context, diag_sender, fpath.clone());
-            report_diag(context, fpath.clone());
+            report_diag(context, fpath);
         },
         lsp_types::notification::DidCloseTextDocument::METHOD => {
             use lsp_types::DidCloseTextDocumentParams;

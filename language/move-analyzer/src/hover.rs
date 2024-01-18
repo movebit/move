@@ -31,7 +31,7 @@ pub fn on_hover_request(context: &Context, request: &Request) -> lsp_server::Res
     let fpath = path_concat(std::env::current_dir().unwrap().as_path(), fpath.as_path());
 
     let mut handler = Handler::new(fpath.clone(), line, col);
-    let _ = match context.projects.get_project(&fpath) {
+    match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
             log::error!("project not found:{:?}", fpath.as_path());
@@ -117,7 +117,7 @@ impl Handler {
             most_clost_item_idx = item_idx;
         }
 
-        if self.result_candidates.len() > 0 && 
+        if !self.result_candidates.is_empty() && 
            most_clost_item_idx < self.result_candidates.len() {
             let ret_str = self.result_candidates[most_clost_item_idx].clone();
             self.capture_items_span.clear();
@@ -131,11 +131,11 @@ impl Handler {
         self.capture_items_span.clear();
         self.result_candidates.clear();
 
-        let hover = Hover {
+        Hover {
             contents: HoverContents::Scalar(MarkedString::String("null".to_string())),
             range: None,
-        };
-        hover
+        }
+
     }
 
     fn get_mouse_loc(&mut self, env: &GlobalEnv, target_fn_or_struct_loc: &move_model::model::Loc) {
@@ -286,7 +286,7 @@ impl Handler {
         let target_fun_loc = target_fun.get_loc();
         self.get_mouse_loc(env, &target_fun_loc);
         if let Some(exp) = target_fun.get_def().deref() {
-            self.process_expr(env, &exp);
+            self.process_expr(env, exp);
         };
     }
 
@@ -338,7 +338,7 @@ impl Handler {
         self.get_mouse_loc(env, &spec_fn_span_loc);
         for cond in target_fn_spec.conditions.clone() {
             for exp in cond.all_exps() {
-                self.process_expr(env, &exp);
+                self.process_expr(env, exp);
             }
         }
     }
@@ -461,11 +461,11 @@ impl Handler {
         let target_stct = target_module.get_struct(target_stct_id);
         let target_stct_spec = target_stct.get_spec();
         log::info!("target_stct's spec = {}",
-            env.display(&*target_stct_spec));
+            env.display(target_stct_spec));
         self.get_mouse_loc(env, &spec_stct_span_loc);
         for cond in target_stct_spec.conditions.clone() {
             for exp in cond.all_exps() {
-                self.process_expr(env, &exp);
+                self.process_expr(env, exp);
             }
         }
     }
@@ -500,11 +500,11 @@ impl Handler {
                             }
                         }
                     }
-                    return true;
+                    true
                 },
                 Call(..) => {
                     self.process_call(env, e);
-                    return true;
+                    true
                 },
                 LocalVar(node_id, localvar_symbol) => {
                     let localvar_loc = env.get_node_loc(*node_id);
@@ -528,7 +528,7 @@ impl Handler {
                     if let Some(node_type) = env.get_node_type_opt(*node_id) {
                         self.process_type(env, &localvar_loc, &node_type);
                     }
-                    return true;
+                    true
                 },
                 Temporary(node_id, _) => {
                     let tmpvar_loc = env.get_node_loc(*node_id);
@@ -545,9 +545,9 @@ impl Handler {
                     if let Some(node_type) = env.get_node_type_opt(*node_id) {
                         self.process_type(env, &tmpvar_loc, &node_type);
                     }
-                    return true;
+                    true
                 },
-                _ => {return true;},
+                _ => true,
             }
         });
     }
@@ -713,7 +713,7 @@ impl std::fmt::Display for Handler {
     }
 }
 
-pub fn find_smallest_length_index(spans: &Vec<codespan::Span>) -> Option<usize> {
+pub fn find_smallest_length_index(spans: &[codespan::Span]) -> Option<usize> {
     let mut smallest_length = i64::MAX;
     let mut smallest_index = None;
 

@@ -5,19 +5,14 @@
 mod tests {
 
     use aptos_move_analyzer::{
-        analyzer_handler::*,
         context::*,
-        utils::{path_concat, FileRange,discover_manifest_and_kind},
+        utils::{path_concat,discover_manifest_and_kind},
         multiproject::MultiProject,
         move_generate_spec_file::on_generate_spec_file
     };
     use lsp_server::*;
-    use lsp_types::*;
-    use move_model::{
-        ast::{ExpData::*, Operation::*, Spec, SpecBlockTarget},
-        model::{FunId, GlobalEnv, ModuleId, StructId},
-    };
-    use std::path::{Path, PathBuf};
+
+    use std::path::PathBuf;
     use serde_json::json;
     // use itertools::Itertools;
 
@@ -32,7 +27,7 @@ mod tests {
         };
         match context.projects.get_project(&fpath) {
             Some(_) => {
-                if let Ok(x) = std::fs::read_to_string(fpath.as_path()) {
+                if let Ok(_x) = std::fs::read_to_string(fpath.as_path()) {
                     // update_defs_on_changed(context, fpath.clone(), x);
                 };
                 return;
@@ -84,9 +79,9 @@ mod tests {
             params: params_json,
         };
 
-        let actual_r = on_generate_spec_file(&mut context, &request, false);
+        let actual_r = on_generate_spec_file(&context, &request, false);
         let ex = Some(
-            String::from("spec 0x0::LPResourceAccount {\n\n    spec module {\n        pragma verify = true;\n        pragma aborts_if_is_strict;\n    }\n    spec CapabilityStorage{\n\n    }\n    spec initialize_lp_account(admin: &signer, lp_coin_metadata_serialized: vector<u8>, lp_coin_code: vector<u8>){\n\n        aborts_if signer::address_of(admin) != @SwapDeployer with ERR_FORBIDDEN;\n    }\n    spec retrieve_signer_cap(admin: &signer): SignerCapability{\n\n        aborts_if signer::address_of(admin) != @SwapDeployer with ERR_FORBIDDEN;\n    }\n}\n\n"));
+            String::from("spec 0x0::LPResourceAccount {\n\n    spec module {\n        pragma verify = true;\n        pragma aborts_if_is_strict;\n    }\n    spec CapabilityStorage{\n    }\n    spec initialize_lp_account(admin: &signer, lp_coin_metadata_serialized: vector<u8>, lp_coin_code: vector<u8>){\n        aborts_if signer::address_of(admin) != @SwapDeployer with ERR_FORBIDDEN;\n    }\n    spec retrieve_signer_cap(admin: &signer): SignerCapability{\n        aborts_if signer::address_of(admin) != @SwapDeployer with ERR_FORBIDDEN;\n    }\n}\n\n"));
         let expect_r = Response::new_ok(
             "generate_spec_file_request_001".to_string().into(),
             serde_json::to_value(ex).unwrap(),
@@ -133,9 +128,9 @@ mod tests {
             params: params_json,
         };
 
-        let actual_r = on_generate_spec_file(&mut context, &request, false);
+        let actual_r = on_generate_spec_file(&context, &request, false);
         let ex = Some(
-            String::from("spec 0x0::M3 {\n\n    spec module {\n        pragma verify = true;\n        pragma aborts_if_is_strict;\n    }\n    spec create_u128(a: u128, b: u128): u128{\n\n        aborts_if a + b > MAX_U128;\n    }\n    spec test_may_overflow(var_u64: u64, var_u128: u128, var_u256: u256): u64{\n\n        let var_local_u64 = var_u64 + 1;\n        aborts_if var_u64 + 1 > MAX_U64;\n        let var_local_u128 = var_u128 * 2;\n        aborts_if var_u128 * 2 > MAX_U128;\n        let var_local_u256 = var_u256 << 3;\n        aborts_if var_u256 << 3 > MAX_U256;\n        aborts_if (var_local_u64 as u128) + var_local_u128 > MAX_U128;\n        aborts_if (((var_local_u64 as u128) + var_local_u128) as u256) * var_local_u256 > MAX_U256;\n        aborts_if (((var_local_u64 as u128) + var_local_u128) as u256) * var_local_u256 << 3 > MAX_U256;\n    }\n    spec test_may_underflow(var_u64: u64, var_u128: u128, var_u256: u256): u64{\n\n        aborts_if var_u64 - 1 < 0;\n        let var_local_u128 = (var_u128 * 2) - 1000;\n        aborts_if var_u128 * 2 > MAX_U128;\n        aborts_if var_u128 * 2 - 1000 < 0;\n        aborts_if var_local_u128 <= 0 with 0;\n    }\n    spec test_may_div_zero(var_u64: u64, var_u128: u128, var_u256: u256): u64{\n\n        aborts_if 100 + var_u64 > MAX_U64;\n        aborts_if var_u64 == 0;\n        aborts_if var_u256 == 0;\n        aborts_if (var_u128 as u256) / var_u256 == 0;\n    }\n}\n\n")
+            String::from("spec 0x0::M3 {\n\n    spec module {\n        pragma verify = true;\n        pragma aborts_if_is_strict;\n    }\n    spec create_u128(a: u128, b: u128): u128{\n        aborts_if a + b > MAX_U128;\n    }\n    spec test_may_overflow(var_u64: u64, var_u128: u128, var_u256: u256): u64{\n        let var_local_u64 = var_u64 + 1;\n        aborts_if var_u64 + 1 > MAX_U64;\n        let var_local_u128 = var_u128 * 2;\n        aborts_if var_u128 * 2 > MAX_U128;\n        let var_local_u256 = var_u256 << 3;\n        aborts_if var_u256 << 3 > MAX_U256;\n        aborts_if (var_local_u64 as u128) + var_local_u128 > MAX_U128;\n        aborts_if (((var_local_u64 as u128) + var_local_u128) as u256) * var_local_u256 > MAX_U256;\n        aborts_if ((((var_local_u64 as u128) + var_local_u128) as u256) * var_local_u256) << 3 > MAX_U256;\n    }\n    spec test_may_underflow(var_u64: u64, var_u128: u128, var_u256: u256): u64{\n        aborts_if var_u64 - 1 < 0;\n        let var_local_u128 = (var_u128 * 2) - 1000;\n        aborts_if var_u128 * 2 > MAX_U128;\n        aborts_if (var_u128 * 2) - 1000 < 0;\n        aborts_if var_local_u128 <= 0 with 0;\n    }\n    spec test_may_div_zero(var_u64: u64, var_u128: u128, var_u256: u256): u64{\n        aborts_if 100 + var_u64 > MAX_U64;\n        aborts_if var_u64 == 0;\n        aborts_if var_u256 == 0;\n        aborts_if ((var_u128 as u256) / var_u256) == 0;\n    }\n}\n\n")
             
         );
         let expect_r = Response::new_ok(

@@ -15,7 +15,7 @@ use move_compiler::parser::{
     keywords::{BUILTINS, CONTEXTUAL_KEYWORDS, KEYWORDS, PRIMITIVE_TYPES},
     lexer::{Lexer, Tok},
 };
-use std::{collections::HashSet, path::PathBuf};
+use std::{collections::HashSet, path::Path};
 
 /// Constructs an `lsp_types::CompletionItem` with the given `label` and `kind`.
 fn completion_item(label: &str, kind: CompletionItemKind) -> CompletionItem {
@@ -73,7 +73,7 @@ fn builtins() -> Vec<CompletionItem> {
 /// server did not initialize with a response indicating it's capable of providing completions. In
 /// the future, the server should be modified to return semantically valid completion items, not
 /// simple textual suggestions.
-fn identifiers(buffer: &str, env: &GlobalEnv, move_file_path: &PathBuf) -> Vec<CompletionItem> {
+fn identifiers(buffer: &str, env: &GlobalEnv, _move_file_path: &Path) -> Vec<CompletionItem> {
     let mut lexer = Lexer::new(buffer, FileHash::new(buffer));
     if lexer.advance().is_err() {
         return vec![];
@@ -100,12 +100,11 @@ fn identifiers(buffer: &str, env: &GlobalEnv, move_file_path: &PathBuf) -> Vec<C
     let mut result = vec![];
     
     let candidate_modules 
-        = crate::utils::get_modules_by_fpath_in_all_modules(
-            env, 
-            &PathBuf::from(move_file_path)
-        );
+        = env.get_modules();
     for target_module in candidate_modules {
+        eprintln!("module name: {}", target_module.get_full_name_str());
         for label in ids.iter() {
+            eprintln!("label: {}", label);
             for fun in target_module.get_functions() {
                 let fun_name_str = fun.get_name_str();
                 if fun_name_str.contains(label) {
@@ -117,7 +116,7 @@ fn identifiers(buffer: &str, env: &GlobalEnv, move_file_path: &PathBuf) -> Vec<C
         }
     }
 
-    return result;
+    result
     
 }
 
@@ -133,6 +132,7 @@ fn get_cursor_token(buffer: &str, position: &Position) -> Option<Tok> {
         Some(line) => line,
         None => return None, // Our buffer does not contain the line, and so must be out of date.
     };
+    eprintln!("cursor line: {}", line);
     match line.chars().nth(position.character as usize - 1) {
         Some('.') => Some(Tok::Period),
         Some(':') => {
@@ -144,7 +144,7 @@ fn get_cursor_token(buffer: &str, position: &Position) -> Option<Tok> {
                 Some(Tok::Colon)
             }
         }
-        _ => None,
+        _ => None, 
     }
 }
 
@@ -152,7 +152,7 @@ fn get_cursor_token(buffer: &str, position: &Position) -> Option<Tok> {
 pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server::Response {
     log::info!("on_completion_request request = {:?}", request);
     let parameters = serde_json::from_value::<CompletionParams>(request.params.clone())
-        .expect("could not deserialize go-to-def request");
+        .expect("could not deserialize completion request");
     let fpath = parameters
         .text_document_position
         .text_document
@@ -174,6 +174,7 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     };
    
     let buffer_str = current_project.current_modifing_file_content.as_str();
+    eprintln!("current content: {}", buffer_str);
     let buffer = Some(buffer_str);
     // The completion items we provide depend upon where the user's cursor is positioned.
     let cursor =
@@ -182,13 +183,16 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     let mut items = vec![];
     match cursor {
         Some(Tok::Colon) => {
+            eprintln!("Tok::Colon");
             items.extend_from_slice(&primitive_types());
         }
         Some(Tok::Period) | Some(Tok::ColonColon) => {
+            eprintln!("Tok::Period");
             // `.` or `::` must be followed by identifiers, which are added to the completion items
             // below.
         }
         _ => {
+            eprintln!("Tok::__");
             // If the user's cursor is positioned anywhere other than following a `.`, `:`, or `::`,
             // offer them Move's keywords, operators, and builtins as completion items.
             items.extend_from_slice(&keywords());
@@ -205,7 +209,7 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     let result = serde_json::to_value(items).expect("could not serialize completion response");
     let response = lsp_server::Response::new_ok(request.id.clone(), result);
     let ret_response = response.clone();
-    log::info!("------------------------------------\n<on_complete>ret_response = {:?}\n\n", ret_response);
+    log::trace!("------------------------------------\n<on_complete>ret_response = {:?}\n\n", ret_response);
     if let Err(err) = context
         .connection
         .sender
@@ -213,5 +217,5 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     {
         eprintln!("could not send completion response: {:?}", err);
     }
-    return ret_response;
+    ret_response
 }

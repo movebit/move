@@ -26,7 +26,7 @@ pub fn on_inlay_hints(context: &Context, request: &Request) -> lsp_server::Respo
         fpath.as_path(),
     );
     let mut handler = Handler::new(fpath.clone(), parameters.range);
-    let _ = match context.projects.get_project(&fpath) {
+    match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
             log::error!("project not found:{:?}", fpath.as_path());
@@ -38,6 +38,7 @@ pub fn on_inlay_hints(context: &Context, request: &Request) -> lsp_server::Respo
         }
     }
     .run_visitor_for_file(&mut handler, &fpath, String::default());
+
     let hints = Some(handler.reuslts);
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(hints).unwrap());
     let ret_response = r.clone();
@@ -106,7 +107,7 @@ impl Handler {
             if self.range.line_start <= func_start_pos.line.0 && func_end_pos.line.0 <= self.range.line_end {
                 if let Some(exp) = fun.get_def().deref() {
                     log::trace!("process funcation: {}", fun.get_name_string());
-                    self.process_expr(env, &fun, &exp);
+                    self.process_expr(env, &fun, exp);
                 }
             }
         }
@@ -130,7 +131,7 @@ impl Handler {
                         env.display(&*target_fn_spec));
                     for cond in target_fn_spec.conditions.clone() {
                         for exp in cond.all_exps() {
-                            self.process_expr(env, &target_fn, &exp);
+                            self.process_expr(env, &target_fn, exp);
                         }
                     }
                 }
@@ -151,7 +152,7 @@ impl Handler {
                     //     env.display(&*target_fn_spec));
                     for cond in target_fn_spec.conditions.clone() {
                         for exp in cond.all_exps() {
-                            self.process_expr(env, &target_fn, &exp);
+                            self.process_expr(env, &target_fn, exp);
                         }
                     }
                 }
@@ -188,7 +189,7 @@ impl Handler {
             match e {
                 Call(..) => {
                     self.process_call(env, e);
-                    return true;
+                    true
                 },
                 LocalVar(node_id, localvar_symbol) => {
                     let mut localvar_loc = env.get_node_loc(*node_id);
@@ -231,14 +232,14 @@ impl Handler {
                                     Some('.') => return true,
                                     Some(':') => return true,
                                     _ => {
-                                        log::info!("local_var_str[{:?}] inlay_hint_pos = {:?}", local_var_str, inlay_hint_pos);
+                                        log::trace!("local_var_str[{:?}] inlay_hint_pos = {:?}", local_var_str, inlay_hint_pos);
                                         self.process_type(env, &inlay_hint_pos, &node_type);
                                     }
                                 }
                             }
                         }
                     }
-                    return true;
+                    true
                 },
                 Temporary(node_id, idx) => {
                     let mut tmpvar_loc = env.get_node_loc(*node_id);
@@ -274,9 +275,9 @@ impl Handler {
                             }
                         }
                     }
-                    return true;
+                    true
                 },
-                _ => {return true;},
+                _ => true,
             }
         });
     }
@@ -328,9 +329,9 @@ impl Handler {
         let display_context = TypeDisplayContext::new(env);
         let type_display = ty.display(&display_context);
         let (capture_items_file, capture_items_pos) =
-            env.get_file_and_location(&capture_items_loc).unwrap();
+            env.get_file_and_location(capture_items_loc).unwrap();
         let label_pos = FileRange {
-            path: PathBuf::from(capture_items_file).clone(),
+            path: PathBuf::from(capture_items_file),
             line_start: capture_items_pos.line.0,
             col_start: capture_items_pos.column.0,
             line_end: capture_items_pos.line.0,

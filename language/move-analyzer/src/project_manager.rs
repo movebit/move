@@ -59,10 +59,7 @@ pub fn parse_addr_str_to_number(
 }
 
 pub fn parse_addr_str(s: &str) -> Option<NumericalAddress> {
-    match parse_addr_str_to_number(s) {
-        Some((n, format)) => Some(NumericalAddress::new(n, format)),
-        None => None,
-    }
+    parse_addr_str_to_number(s).map(|(n, format)| NumericalAddress::new(n, format))
 }
 
 pub fn parse_named_address_item(s: &str) -> anyhow::Result<(String, NumericalAddress)> {
@@ -157,16 +154,14 @@ impl Project {
             .extract_named_address_mapping()
             .map(|(name, addr)| format!("{}={}", name.as_str(), addr))
             .collect();
-        // log::info!("named_address_mapping = {:?}", named_address_mapping);
-        let addrs = parse_addresses_from_options(named_address_mapping.clone())?;
+        let addrs = parse_addresses_from_options(named_address_mapping)?;
 
         let targets = vec![PackagePaths {
             name: None,
             paths: targets_paths
                 .into_iter()
                 .map(|p| p.to_string_lossy().to_string())
-                .collect::<Vec<_>>()
-                .clone(),
+                .collect::<Vec<_>>(),
             named_address_map: addrs.clone(),
         }];
 
@@ -175,8 +170,7 @@ impl Project {
             paths: dependents_paths
                 .into_iter()
                 .map(|p| p.to_string_lossy().to_string())
-                .collect::<Vec<_>>()
-                .clone(),
+                .collect::<Vec<_>>(),
             named_address_map: addrs.clone(),
         }];
 
@@ -213,7 +207,7 @@ impl Project {
     pub fn update_defs(&mut self, file_path: &PathBuf, content: String) {
         use std::result::Result::Ok;
         log::info!("update_defs for file:{:?}", file_path);
-        let root_dir = match super::utils::discover_manifest_and_kind(&file_path) {
+        let root_dir = match super::utils::discover_manifest_and_kind(file_path) {
             Some((x, _)) => x,
             None => {
                 log::error!("not move project.");
@@ -252,16 +246,16 @@ impl Project {
     ) -> Result<()> {
         let manifest_path = normal_path(manifest_path);
         if self.modules.get(&manifest_path).is_some() {
-            log::info!("manifest '{:?}' loaded before skipped.", &manifest_path);
+            log::trace!("manifest '{:?}' loaded before skipped.", &manifest_path);
             return Ok(());
         }
         if self.manifest_paths.contains(&manifest_path) {
-            log::info!("manifest '{:?}' loaded before skipped.", &manifest_path);
+            log::trace!("manifest '{:?}' loaded before skipped.", &manifest_path);
             return Ok(());
         }
 
         self.manifest_paths.push(manifest_path.clone());
-        eprintln!("load manifest file at {:?}", &manifest_path);
+        log::trace!("load manifest file at {:?}", &manifest_path);
 
         let source_paths1 =
             self.load_layout_files_v2(&manifest_path, SourcePackageLayout::Sources)?;
@@ -333,11 +327,11 @@ impl Project {
 
     pub(crate) fn load_layout_files_v2(
         &mut self,
-        manifest_path: &PathBuf,
+        manifest_path: &Path,
         kind: SourcePackageLayout,
     ) -> Result<Vec<PathBuf>> {
         let mut ret_paths = Vec::new();
-        let mut p = manifest_path.clone();
+        let mut p = manifest_path.to_path_buf();
         p.push(kind.location_str());
         for item in WalkDir::new(&p) {
             let file = match item {
@@ -385,10 +379,10 @@ impl Project {
     pub fn run_visitor_for_file(
         &self,
         visitor: &mut dyn ItemOrAccessHandler,
-        filepath: &PathBuf,
+        filepath: &Path,
         source_str: String
     ) {
         // log::info!("run visitor part for {} ", visitor);
-        visitor.handle_project_env(self, &self.global_env, &filepath, source_str);
+        visitor.handle_project_env(self, &self.global_env, filepath, source_str);
     }
 }

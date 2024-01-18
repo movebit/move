@@ -52,9 +52,9 @@ pub fn on_generate_spec_sel(context: &mut Context, request: &Request) -> Respons
         log::info!("collect_use_decl");
         let using_module_map = collect_use_decl(&project.addrname_2_addrnum, &module_env, &project.global_env);
 
-        if handle_struct(&project, &module_env, &parameters, &mut insert_pos, &mut result_string) 
+        if handle_struct(project, &module_env, &parameters, &mut insert_pos, &mut result_string) 
         || handle_function(
-            &project, 
+            project, 
             &module_env,
             using_module_map,
             &parameters,
@@ -127,14 +127,14 @@ fn handle_struct(project :&Project, module_env : &ModuleEnv,
         if ReqParametersPath::is_linecol_in_loc(new_parameters.line, new_parameters.col, 
                                                 &module_env.get_loc(), &project.global_env) 
         {
-            insert_pos.0 = insert_pos.0 + 1;
+            insert_pos.0 += 1;
         }
 
         result_string.push_str(genrate_struct_spec(&struct_env).as_str());
         
         return true;
     }
-    return false;
+    false
 }
 
 fn handle_function(
@@ -168,20 +168,20 @@ fn handle_function(
         if ReqParametersPath::is_linecol_in_loc(new_parameters.line, new_parameters.col, 
                                                 &module_env.get_loc(), &project.global_env) 
         {
-            insert_pos.0 = insert_pos.0 + 1;
+            insert_pos.0 += 1;
         }
    
         result_string.push_str(
             generate_fun_spec_zx(
                 &project.global_env, 
-                &module_env,
+                module_env,
                 &func_env, 
                 &using_module_map,
             ).as_str()
         );
         return true;
     }
-    return false;
+    false
 }
 
 
@@ -246,7 +246,7 @@ impl ReqParametersPath {
             return false;
         }
 
-        return true;
+        true
     }
 
     fn get_loc_end_location(loc: &Loc, env: &GlobalEnv) -> Option<Location> {

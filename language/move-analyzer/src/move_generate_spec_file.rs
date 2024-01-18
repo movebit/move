@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, path::PathBuf, str::FromStr, path::Path};
 
 
 
@@ -110,7 +110,7 @@ where
         }
     } // for module_env
 
-    let file_content = result.to_string();
+    let file_content = result.get_result_string();
     if is_generate {
         match std::fs::write(result_file_path.clone(), file_content.clone()) {
             Ok(_) => {}
@@ -136,15 +136,14 @@ where
     context
         .connection
         .sender
-        .send(Message::Response(r.clone()))
+        .send(Message::Response(r))
         .unwrap();
 
-    let r = Response::new_ok(
+    Response::new_ok(
         request.id.clone(),
         serde_json::json!(file_content)
         // .unwrap(),
-    );
-    r
+    )
 }
 
 #[derive(Debug, Clone)]
@@ -191,7 +190,7 @@ impl ModuleSpecBuilder {
             self.results.insert(k, vec![v]);
         }
     }
-    fn to_string(self) -> String {
+    fn get_result_string(self) -> String {
         let mut ret = String::new();
         for (k, vv) in self.results.into_iter() {
             let mut x = String::default();
@@ -238,21 +237,20 @@ pub struct Resp {
 }
 
 impl Resp {
-    fn mk_result_filepath(x: &PathBuf) -> PathBuf {
-        let mut x = x.clone();
+    fn mk_result_filepath(x: &Path) -> PathBuf {
+        let mut x = x.to_path_buf();
         let b = x
             .components()
             .last()
-            .map(|x| x.as_os_str().to_str())
-            .flatten()
+            .and_then(|x| x.as_os_str().to_str())
             .unwrap()
             .to_string();
-        let index = b.as_str().rfind(".").unwrap();
+        let index = b.as_str().rfind('.').unwrap();
         x.pop();
         let mut ret = x.clone();
         ret.push(format!(
             "{}{}",
-            b.as_str()[0..index].to_string(),
+            &b.as_str()[0..index],
             ".spec.move"
         ));
         ret

@@ -5,25 +5,15 @@
 mod tests {
     use lsp_server::{Connection, Request, Response};
     use aptos_move_analyzer::{
-        analyzer_handler::ConvertLoc,
         context::{Context, FileDiags},
         multiproject::MultiProject,
-        goto_definition,
-        references,
-        hover,
-        completion,
         inlay_hints,
-        inlay_hints::*,
         utils::*,
-        symbols,
     };
-    use url::Url;
-    use move_command_line_common::files::FileHash;
-    use move_compiler::shared::*;
+
     use serde_json::json;
     use std::{
         path::PathBuf,
-        sync::{Arc, Mutex},
         time::Duration,
     };
 
@@ -38,7 +28,7 @@ mod tests {
         };
         match context.projects.get_project(&fpath) {
             Some(_) => {
-                if let Ok(x) = std::fs::read_to_string(fpath.as_path()) {
+                if let Ok(_x) = std::fs::read_to_string(fpath.as_path()) {
                     // update_defs_on_changed(context, fpath.clone(), x);
                 };
                 return;
@@ -212,7 +202,7 @@ mod tests {
             }]),
         );
 
-        let actual_r = inlay_hints::on_inlay_hints(&context, &request, InlayHintsConfig::default());
+        let actual_r = inlay_hints::on_inlay_hints(&context, &request);
         std::thread::sleep(Duration::new(1, 0));
         eprintln!("\n------------------------------\n");
         eprintln!("actual_r = {:?}", serde_json::to_string(&actual_r));
@@ -712,7 +702,7 @@ mod tests {
             ),
         );
 
-        let actual_r = inlay_hints::on_inlay_hints(&context, &request, InlayHintsConfig::default());
+        let actual_r = inlay_hints::on_inlay_hints(&context, &request);
         std::thread::sleep(Duration::new(1, 0));
         eprintln!("\n------------------------------\n");
         eprintln!("actual_r = {:?}", serde_json::to_string(&actual_r));

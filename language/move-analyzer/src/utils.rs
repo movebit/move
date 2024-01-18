@@ -111,7 +111,7 @@ impl FileLineMapping {
             if vec[index] != byte_index {
                 index -= 1;
             }
-            (index as u32, byte_index - vec[index as usize])
+            (index as u32, byte_index - vec[index])
         }
 
         let (line_start, col_start) = search(&vec[..], start_index);
@@ -389,19 +389,17 @@ pub fn fpath_str_is_equal(s1: &String, s2: &String) -> bool {
     }
     
     for (c1, c2) in s1.chars().zip(s2.chars()) {
-        if c1 == c2 {
-            continue;
-        } else if (c1 == '\\' && c2 == '/') || (c1 == '/' && c2 == '\\') {
+        if c1 == c2|| (c1 == '\\' && c2 == '/') || (c1 == '/' && c2 == '\\') {
             continue;
         } else {
             return false;
         }
     }
-    return true;
+    true
 }
 
 use move_model::model::ModuleEnv;
-pub fn get_modules_by_fpath_in_target_modules<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Vec<ModuleEnv<'a>> {
+pub fn get_modules_by_fpath_in_target_modules<'a>(env: &'a GlobalEnv, fpath: &Path) -> Vec<ModuleEnv<'a>> {
     log::trace!("get target module by path");
     let mut result_vec_modules: Vec<ModuleEnv> = vec![];
     for module_env in env.get_target_modules() {
@@ -415,10 +413,10 @@ pub fn get_modules_by_fpath_in_target_modules<'a>(env: &'a GlobalEnv, fpath: &Pa
         }
         result_vec_modules.push(module_env);
     }
-    return result_vec_modules;
+    result_vec_modules
 }
 
-pub fn get_modules_by_fpath_in_all_modules<'a>(env: &'a GlobalEnv, fpath: &PathBuf) -> Vec<ModuleEnv<'a>> {
+pub fn get_modules_by_fpath_in_all_modules<'a>(env: &'a GlobalEnv, fpath: &Path) -> Vec<ModuleEnv<'a>> {
     let mut result_vec_modules: Vec<ModuleEnv> = vec![];
     for module_env in env.get_modules() {
         if !fpath_str_is_equal(
@@ -429,7 +427,7 @@ pub fn get_modules_by_fpath_in_all_modules<'a>(env: &'a GlobalEnv, fpath: &PathB
         }
         result_vec_modules.push(module_env);
     }
-    return result_vec_modules;
+    result_vec_modules
 }
 
 pub fn collect_use_decl(addrname_2_addrnum :&std::collections::HashMap<String, String>, module_env: &ModuleEnv, global_env: &GlobalEnv) -> HashMap<ModuleName, Vec<SpecSymbol>> {
@@ -463,6 +461,5 @@ pub fn collect_use_decl(addrname_2_addrnum :&std::collections::HashMap<String, S
         }
         result.insert(addr_addrnum_with_module_name, using_decl_member);
     }
-
-    return result;
+    result
 }

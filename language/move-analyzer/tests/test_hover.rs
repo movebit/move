@@ -27,7 +27,7 @@ mod tests {
         };
         match context.projects.get_project(&fpath) {
             Some(_) => {
-                if let Ok(x) = std::fs::read_to_string(fpath.as_path()) {
+                if let Ok(_x) = std::fs::read_to_string(fpath.as_path()) {
                     // update_defs_on_changed(context, fpath.clone(), x);
                 };
                 return;

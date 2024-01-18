@@ -48,7 +48,7 @@ impl Project {
                 )
             )
         ).unwrap();
-        let range = lsp_types::Range {
+        lsp_types::Range {
                 start: lsp_types::Position {
                 line: location_start.line.0,
                 character: location_start.column.0,
@@ -57,7 +57,6 @@ impl Project {
                 line: location_end.line.0,
                 character: location_end.column.0,
             },
-        };
-        return range;
+        }
     }
 }

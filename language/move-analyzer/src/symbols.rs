@@ -114,9 +114,9 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) -> lsp_s
 
         let mut children = vec![];
 
-        handle_document_symbols_spec_function(&project, &module_env, &mut children);
-        handle_document_symbols_function(&project, &module_env, &mut children);
-        handle_document_symbols_const(&project, &module_env, &mut children);
+        handle_document_symbols_spec_function(project, &module_env, &mut children);
+        handle_document_symbols_function(project, &module_env, &mut children);
+        handle_document_symbols_const(project, &module_env, &mut children);
         handle_document_symbols_struct(project, &module_env, &mut children);
 
         result_vec_document_symbols.push( DocumentSymbol{
@@ -136,10 +136,11 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) -> lsp_s
         request.id.clone(), 
         serde_json::json!(&result_vec_document_symbols)
     );
-    if let Err(_) = context
+    if context
         .connection
         .sender
         .send(lsp_server::Message::Response(response.clone()))
+        .is_err()
     {
         return lsp_server::Response {
             id: "".to_string().into(),
@@ -217,7 +218,7 @@ fn handle_document_symbols_const(project: &Project,
         let const_range = project.loc_to_range(&const_env.get_loc());
                             
         children.push(DocumentSymbol {
-            name: const_env.get_name().display(&project.global_env.symbol_pool()).to_string(),
+            name: const_env.get_name().display(project.global_env.symbol_pool()).to_string(),
             detail:None,
             kind: SymbolKind::CONSTANT,
             range: const_range,
@@ -239,10 +240,10 @@ fn handle_document_symbols_struct(project: &Project,
         let struct_range = project.loc_to_range(&struct_env.get_loc());
         let mut fields: Vec<DocumentSymbol> = vec![];
 
-        handle_document_symbols_struct_fields(&project, &struct_env, &mut fields);
+        handle_document_symbols_struct_fields(project, &struct_env, &mut fields);
 
         children.push(DocumentSymbol {
-            name: struct_env.get_name().display(&struct_env.symbol_pool()).to_string(),
+            name: struct_env.get_name().display(struct_env.symbol_pool()).to_string(),
             detail:None,
             kind: SymbolKind::CONSTANT,
             range: struct_range,
@@ -262,10 +263,10 @@ fn handle_document_symbols_struct_fields(
     children: &mut Vec<DocumentSymbol>
 ) {
     for field_env in struct_env.get_fields() {
-        let field_range = project.loc_to_range(&field_env.get_loc());
+        let field_range = project.loc_to_range(field_env.get_loc());
 
         children.push(DocumentSymbol {
-            name: field_env.get_name().display(&struct_env.symbol_pool()).to_string(),
+            name: field_env.get_name().display(struct_env.symbol_pool()).to_string(),
             detail:None,
             kind: SymbolKind::FIELD,
             range: field_range,
