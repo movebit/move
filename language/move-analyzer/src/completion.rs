@@ -174,7 +174,6 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     };
    
     let buffer_str = current_project.current_modifing_file_content.as_str();
-    eprintln!("current content: {}", buffer_str);
     let buffer = Some(buffer_str);
     // The completion items we provide depend upon where the user's cursor is positioned.
     let cursor =
