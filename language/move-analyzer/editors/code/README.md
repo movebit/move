@@ -100,6 +100,7 @@ bottom-right of your Visual Studio Code screen when opening a Move file, it mean
 
 
 #### [2] analyzer not work
+##### A. Need Move.toml
 Open a Move source file (a file with a .move file extension) and if the opened Move source file is located within a buildable project (a Move.toml file can be found in one of its parent directories), the following advanced features will be available:
 
   - compiler diagnostics
@@ -113,6 +114,10 @@ Open a Move source file (a file with a .move file extension) and if the opened M
 Therefore, the Move.toml file must be found in the project directory for the plug-in's functionality to take effect.
 
 In addition, if you have already opened the move project before, the installed plug-in will not take effect in time. You need to reopen the vscode window and open the move project code again before the plug-in is activated. 
+
+##### B. Need Build Project with Move.toml
+When you first open a project, there will be some **dependencies** (configured in Move.toml) that need to be downloaded, so you need to run the `sui move build` command first to `build` the project. During the build process, the **dependencies** will be downloaded. Once all the **dependencies** for the project have been downloaded, sui-move-analyzer can properly `parse` the **dependencies** and project source code.
+
 
 #### [3] build failed with steps in Section 1.B
 If `cargo install --git https://github.com/movebit/move --branch sui_move_analyzer sui-move-analyzer` run failed, and meet the 
@@ -150,6 +155,6 @@ Move source file (a file with a `.move` file extension) and:
 
 ## Support <span id="Support">
 
-1.If you find any issues, please report a GitHub issue to the [movebit/sui-move-analyzer-issue](https://github.com/movebit/sui-move-analyzer-issue) repository to get help.
+1.If you find any issues, please report a GitHub issue to the [movebit/move-analyzer-issue](https://github.com/movebit/move-analyzer-issue) repository to get help.
 
 2.Welcome to the developer discussion group as well: [MoveAnalyzer](https://t.me/moveanalyzer). 
