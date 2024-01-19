@@ -277,6 +277,41 @@ impl Handler {
                     }
                     true
                 },
+                Block(_, pattern, _, _) => {
+                    for (sym_node_id, sym_symbol) in pattern.vars() {
+                        let mut sym_loc = env.get_node_loc(sym_node_id);
+                        sym_loc = move_model::model::Loc::new(
+                            sym_loc.file_id(),
+                            codespan::Span::new(
+                                sym_loc.span().start(),
+                                sym_loc.span().end() + codespan::ByteOffset((2).try_into().unwrap())
+                            )
+                        );
+
+                        if let Some(node_type) = env.get_node_type_opt(sym_node_id) {
+                            if let Ok(pattern_sym_str) = env.get_source(&sym_loc) {
+                                if let Some(index) = pattern_sym_str.find(sym_symbol.display(env.symbol_pool()).to_string().as_str()) {
+                                    let inlay_hint_pos = move_model::model::Loc::new(
+                                        sym_loc.file_id(),
+                                        codespan::Span::new(
+                                            sym_loc.span().start() + 
+                                                codespan::ByteOffset((index + sym_symbol.display(env.symbol_pool()).to_string().len()).try_into().unwrap()),
+                                                sym_loc.span().end()));
+                                    let next_char = pattern_sym_str.chars().nth(index + sym_symbol.display(env.symbol_pool()).to_string().len());
+                                    match next_char {
+                                        Some('.') => return true,
+                                        Some(':') => return true,
+                                        _ => {
+                                            log::trace!("pattern sym [{:?}] inlay_hint_pos = {:?}", pattern_sym_str, inlay_hint_pos);
+                                            self.process_type(env, &inlay_hint_pos, &node_type);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    true
+                },
                 _ => true,
             }
         });
