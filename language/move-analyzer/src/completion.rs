@@ -75,7 +75,7 @@ fn get_cursor_token(buffer: &str, position: &Position) -> Option<Tok> {
         Some(line) => line,
         None => return None, // Our buffer does not contain the line, and so must be out of date.
     };
-    eprintln!("cursor line: {}", line);
+    log::info!("cursor line: {}", line);
     match line.chars().nth(position.character as usize - 1) {
         Some('.') => Some(Tok::Period),
         Some(':') => {
@@ -209,7 +209,6 @@ fn handle_file_identifiers(cursor_tokens: &str, file_tokens_string: &mut Vec<&st
     let mut result = vec![];
     file_tokens_string.dedup();
     for &token_str in file_tokens_string.iter() {
-        eprintln!("token_str: {}", token_str);
         if token_str.contains(cursor_tokens) {
             result.push(completion_item(token_str, CompletionItemKind::TEXT));
         }
@@ -260,7 +259,7 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     }
     let cursor_line_string = cursor_line.unwrap_or("".to_string());
     let truncate_string = truncate_from_last_space(cursor_line_string);
-    eprintln!("truncate_string: {}", truncate_string);
+    log::info!("truncate_string: {}", truncate_string);
     let cursor_line_tokens = lexer_for_buffer(&truncate_string, false);
 
     if cursor_line_tokens.is_empty() {
@@ -271,7 +270,7 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
             error: None,
         };
     }
-    eprintln!("cursor tok: {:?}", cursor);
+    log::info!("cursor tok: {:?}", cursor);
     let mut items = vec![];
     match cursor {
         Some(Tok::Colon) => {
@@ -284,10 +283,9 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
             items.extend_from_slice(&module_items);
         },
         Some(Tok::Period) => {
-            eprintln!("Tok::Period");
+            log::info!("Tok::Period");
         },
         _ => {
-            eprintln!("Tok::___");
             // If the user's cursor is positioned anywhere other than following a `.`, `:`, or `::`,
             // offer them Move's keywords, operators, and builtins as completion items.
             items.extend_from_slice(&keywords());

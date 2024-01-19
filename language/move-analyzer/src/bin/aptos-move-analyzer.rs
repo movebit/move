@@ -277,7 +277,7 @@ fn report_diag(context: &mut Context, fpath: PathBuf) {
             }
         }
 
-        if file_path.contains("aptos-move/") {
+        if file_path.contains("aptos-move/") || file_path == "" {
             continue;
         }
 
@@ -300,7 +300,6 @@ fn report_diag(context: &mut Context, fpath: PathBuf) {
             ),
             ..Default::default()
         };
-
         let url = url::Url::from_file_path(PathBuf::from(file_path).as_path()).unwrap();
         result.insert(url, vec![d]);
     }
