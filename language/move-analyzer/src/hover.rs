@@ -228,7 +228,7 @@ impl Handler {
         }
 
         if !found_target_stct_or_fn {
-            log::warn!("<on hover> not found_target_stct_or_fn");
+            log::info!("<on hover> not found_target_stct_or_fn in use_decl");
             return;
         }
 
@@ -547,6 +547,22 @@ impl Handler {
                     }
                     true
                 },
+                Block(_, pattern, _, _) => {
+                    for (sym_node_id, _) in pattern.vars() {
+                        let sym_loc = env.get_node_loc(sym_node_id);
+                        if sym_loc.span().start() > self.mouse_span.end()
+                        || self.mouse_span.end() > sym_loc.span().end()
+                        {
+                            // log::warn!("<on hover> localvar return");
+                            return true;
+                        }
+
+                        if let Some(node_type) = env.get_node_type_opt(sym_node_id) {
+                            self.process_type(env, &sym_loc, &node_type);
+                        }
+                    }
+                    true
+                },
                 _ => true,
             }
         });
@@ -560,19 +576,12 @@ impl Handler {
     {
         if let Call(node_id, MoveFunction(mid, fid), _) = expdata {
             let this_call_loc = env.get_node_loc(*node_id);
-            // log::info!(
-            //     "<on hover> exp.visit this_call_loc = {:?}",
-            //     env.get_location(&this_call_loc)
-            // );
+
             if this_call_loc.span().start() < self.mouse_span.end()
                 && self.mouse_span.end() < this_call_loc.span().end()
             {
                 let called_module = env.get_module(*mid);
                 let called_fun = called_module.get_function(*fid);
-                // log::info!(
-                //     "<on hover> get_called_functions = {:?}",
-                //     called_fun.get_full_name_str()
-                // );
                 self.capture_items_span.push(this_call_loc.span());
                 self.result_candidates.push(called_fun.get_header_string());
             }
@@ -636,6 +645,18 @@ impl Handler {
                     }
                     self.process_type(env, &generic_ty_loc, inst);
                 }
+            }
+        }
+    
+        if let Call(node_id, Pack(_, _), _) = expdata {
+            let op_loc = env.get_node_loc(*node_id);
+            if op_loc.span().start() > self.mouse_span.end()
+            || self.mouse_span.end() > op_loc.span().end()
+            {
+                // log::warn!("<on hover> localvar return");
+            }
+            if let Some(node_type) = env.get_node_type_opt(*node_id) {
+                self.process_type(env, &op_loc, &node_type);
             }
         }
     }
