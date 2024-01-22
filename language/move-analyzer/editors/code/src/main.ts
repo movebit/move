@@ -80,7 +80,8 @@ export async function activate(
   const reload_inlay_hints = function(): any {
     const client = context.getClient();
     if (client !== undefined) {
-      void client.sendRequest('move/lsp/client/inlay_hints/config', configuration.inlay_hints_config());
+      const new_configuration = new Configuration();
+      void client.sendRequest('move/lsp/client/inlay_hints/config', new_configuration.inlay_hints_config());
     }
   };
   reload_inlay_hints();

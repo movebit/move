@@ -16,7 +16,7 @@ use move_model::{
 use std::{path::{Path, PathBuf}, ops::Deref};
 
 /// Handles inlay_hints request of the language server.
-pub fn on_inlay_hints(context: &Context, request: &Request) -> lsp_server::Response {
+pub fn on_inlay_hints(context: &Context, request: &Request, inlay_hints_config: &InlayHintsConfig) -> lsp_server::Response {
     log::info!("on_inlay_hints request = {:?}", request);
     let parameters = serde_json::from_value::<InlayHintParams>(request.params.clone())
         .expect("could not deserialize go-to-def request");
@@ -25,6 +25,16 @@ pub fn on_inlay_hints(context: &Context, request: &Request) -> lsp_server::Respo
         std::env::current_dir().unwrap().as_path(),
         fpath.as_path(),
     );
+
+    if !inlay_hints_config.enable {
+        log::info!("inlay-hints is not enabled.");
+        return Response {
+            id: "".to_string().into(),
+            result: Some(serde_json::json!({"msg": "Inlay-hints is not enabled."})),
+            error: None,
+        };
+    }
+
     let mut handler = Handler::new(fpath.clone(), parameters.range);
     match context.projects.get_project(&fpath) {
         Some(x) => x,
@@ -51,20 +61,15 @@ pub fn on_inlay_hints(context: &Context, request: &Request) -> lsp_server::Respo
     ret_response
 }
 
-#[allow(unused)]
 #[derive(Clone, Copy, serde::Deserialize, Debug)]
 pub struct InlayHintsConfig {
-    field_type: bool,
-    parameter: bool, 
-    declare_var: bool,
+    enable: bool,
 }
 
 impl Default for InlayHintsConfig {
     fn default() -> Self {
         Self {
-            field_type: true,
-            parameter: true,
-            declare_var: true,
+            enable: true,
         }
     }
 }
@@ -332,22 +337,15 @@ impl Handler {
 
             if let Ok(link_access_source) = env.get_source(&this_call_loc) {
                 let called_field_name = ".".to_string() + called_field.get_name().display(env.symbol_pool()).to_string().as_str();
-                // log::info!(
-                //     "lll >> called_struct = {:?}, link_access_source = {:?}, called_field_name = {:?}",
-                //     called_struct.get_full_name_str(), link_access_source, called_field_name
-                // );
 
                 if let Some(index) = link_access_source.find(called_field_name.as_str()) {
                     let dis = index + called_field_name.len();
-                    // log::info!("lll >> index = {:?}, dis = {:?}", index, dis);  
                     let inlay_hint_pos = move_model::model::Loc::new(
                         this_call_loc.file_id(),
                         codespan::Span::new(
                             this_call_loc.span().start() + codespan::ByteOffset((dis).try_into().unwrap()),
                             this_call_loc.span().end()
                         ));
-                    // log::info!("lll >> exp.visit this_call_loc = {:?}", this_call_loc);
-                    // log::info!("lll >> called_struct inlay_hint_pos = {:?}", inlay_hint_pos);
                     self.process_type(env, &inlay_hint_pos, &field_type);        
                 }
             }
@@ -385,7 +383,7 @@ impl Handler {
             _ => {} 
         }
         
-        if let move_model::ty::Type::Struct(mid, sid, _) = unpack_ty.clone() {
+        if let move_model::ty::Type::Struct(mid, sid, _) = unpack_ty {
             let module_env = env.get_module(mid);
             let struct_env = module_env.get_struct(sid);
             let struct_loc = struct_env.get_loc();

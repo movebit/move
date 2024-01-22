@@ -199,7 +199,7 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
             completion::on_completion_request(context, request);
         }
         lsp_types::request::InlayHintRequest::METHOD => {
-            inlay_hints::on_inlay_hints(context, request);
+            inlay_hints::on_inlay_hints(context, request, inlay_hints_config);
         }
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             symbols::on_document_symbol_request(context, request);
@@ -277,7 +277,7 @@ fn report_diag(context: &mut Context, fpath: PathBuf) {
             }
         }
 
-        if file_path.contains("aptos-move/") || file_path == "" {
+        if file_path.contains("aptos-move/") || file_path.is_empty() {
             continue;
         }
 

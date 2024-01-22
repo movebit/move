@@ -7,18 +7,9 @@ import * as vscode from 'vscode';
 import * as Path from 'path';
 
 class InlayHintsConfig {
-    field_type: boolean;
-
-    parameter: boolean;
-
-    declare_var: boolean;
-
-    constructor(fieldType: boolean,
-        parameter: boolean,
-        declareVar: boolean) {
-        this.field_type = fieldType;
-        this.parameter = parameter;
-        this.declare_var = declareVar;
+    enable: boolean;
+    constructor(enable: boolean) {
+        this.enable = enable;
     }
 }
 
@@ -70,13 +61,9 @@ class Configuration {
     }
 
     inlay_hints_config(): InlayHintsConfig {
-        const ft = this.configuration.get<boolean>('inlay.hints.field.type');
+        const enable = this.configuration.get<boolean>('inlay.hints.enable');
 
-        const p = this.configuration.get<boolean>('inlay.hints.parameter');
-
-        const dv = this.configuration.get<boolean>('inlay.hints.declare.var');
-
-        return new InlayHintsConfig(ft === true ? ft : false, p === true ? p : false, dv === true ? dv : false);
+        return new InlayHintsConfig(enable === true);
     }
 }
 

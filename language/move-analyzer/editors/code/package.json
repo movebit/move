@@ -96,20 +96,10 @@
 					"default": "aptos-move-analyzer",
 					"markdownDescription": "Path and filename of the aptos-move-analyzer executable, e.g. `/usr/bin/aptos-move-analyzer`."
 				},
-				"aptos-move-analyzer.inlay.hints.parameter": {
+				"aptos-move-analyzer.inlay.hints.enable": {
 					"type": "boolean",
 					"default": true,
-					"markdownDescription": "inlay hints on parameter."
-				},
-				"aptos-move-analyzer.inlay.hints.field.type": {
-					"type": "boolean",
-					"default": true,
-					"markdownDescription": "inlay hints on field type."
-				},
-				"aptos-move-analyzer.inlay.hints.declare.var": {
-					"type": "boolean",
-					"default": true,
-					"markdownDescription": "inlay hints on declare var."
+					"markdownDescription": "inlay hints is enabled."
 				},
 				"aptos-move-analyzer.trace.server": {
 					"type": "string",
