@@ -436,8 +436,75 @@ module publisher::my_module {
                 void vscode.window.showErrorMessage('generate failed: ' + (err as string));
             });
         });
+
+        context.registerCommand('goto_definition', async (_context, ...args) => {
+            const loc = args[0] as { range: vscode.Range; fpath: string };
+ 
+            const client = context.getClient();
+            if (client === undefined) {
+                return;
+            }
+            
+            if (loc.range.start.line == 0 && loc.range.end.line == 0 &&
+                loc.range.start.character == 0 && loc.range.end.character == 0) {
+                    void vscode.window.showWarningMessage(
+                        "Sorry, for goto-to-definition of Inlay-Hints, Aptos Move Analyzer only supports structs temporarily ."
+                    );
+            } else {
+                try {
+                    const document = await vscode.workspace.openTextDocument(loc.fpath);
+                    await vscode.window.showTextDocument(document, { selection: loc.range, preserveFocus: false });
+                } catch (error) {
+                    // 处理错误
+                    console.error('Error opening file:', error);
+                }
+               
+            }
+        });
     },
 
 };
 
 export { Reg, WorkingDir };
+// X const t = await vscode.workspace.openTextDocument(loc.fpath);
+// X await vscode.window.showTextDocument(t, { selection: loc.range, preserveFocus: false });
+
+// interface Result {
+            //     content: string;
+            //     line: number;
+            //     col: number;
+            // }
+
+            // if (loc.range.start.line == 0 && loc.range.end.line == 0 &&
+            //     loc.range.start.character == 0 && loc.range.end.character == 0) {
+            //         void vscode.window.showWarningMessage(
+            //             "Sorry, for goto-to-definition of Inlay-Hints, Aptos Move Analyzer only supports structs temporarily ."
+            //         );
+            // } else {
+            //     vscode.workspace.openTextDocument(loc.fpath).then(document => {
+            //         // 显示文档
+            //         vscode.window.showTextDocument(document, { 
+            //             selection: new vscode.Range(
+            //                 loc.range.start.line, 
+            //                 loc.range.start.character, 
+            //                 loc.range.start.line, 
+            //                 loc.range.start.character
+            //             ) 
+            //         });
+            //     });
+            // }
+
+            
+            // void vscode.window.showErrorMessage(loc.fpath);
+            // // void vscode.window.showErrorMessage(loc.range.start.line as string);
+            // client.sendRequest<Result>('move/goto_definition', { 'fpath': loc.fpath, selection: loc.range }).then(
+                
+            //     (result) => {
+            //         console.warn(result);
+            //         vscode.window.activeTextEditor?.edit((e) => {
+            //             e.insert(new vscode.Position(result.line, result.col), result.content);
+            //         });
+            //     },
+            // ).catch((err) => {
+            //     void vscode.window.showErrorMessage('generate failed: ' + (err as string));
+            // });

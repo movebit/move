@@ -365,20 +365,45 @@ impl Handler {
         let type_display = ty.display(&display_context);
         let (capture_items_file, capture_items_pos) =
             env.get_file_and_location(capture_items_loc).unwrap();
-        let label_pos = FileRange {
+
+        let mut definition_pos = FileRange {
             path: PathBuf::from(capture_items_file),
-            line_start: capture_items_pos.line.0,
-            col_start: capture_items_pos.column.0,
-            line_end: capture_items_pos.line.0,
-            col_end: capture_items_pos.column.0,
+            line_start: 0,
+            col_start: 0,
+            line_end: 0,
+            col_end: 0,
         };
+
+        let mut unpack_ty = ty.clone();
+        match unpack_ty {
+            move_model::ty::Type::Reference(_, _) => {
+                unpack_ty = ty.skip_reference().clone();
+            }
+            move_model::ty::Type::Vector(_) => {
+                unpack_ty = ty.get_vector_element_type().unwrap();
+            } 
+            _ => {} 
+        }
         
+        if let move_model::ty::Type::Struct(mid, sid, _) = unpack_ty.clone() {
+            let module_env = env.get_module(mid);
+            let struct_env = module_env.get_struct(sid);
+            let struct_loc = struct_env.get_loc();
+            if let Some((def_file, def_loc)) = env.get_file_and_location(&struct_loc) {
+                definition_pos.path = PathBuf::from(def_file);
+                definition_pos.line_start = def_loc.line.0;
+                definition_pos.col_start = def_loc.column.0;
+                definition_pos.line_end = def_loc.line.0;
+                definition_pos.col_end = def_loc.column.0;
+            }
+        } 
+
         self.reuslts.push(mk_inlay_hits(
             Position {
-                line: label_pos.line_start,
-                character: label_pos.col_end,
+                line: capture_items_pos.line.0,
+                character: capture_items_pos.column.0,
             },
-            para_inlay_hints_parts(&type_display.to_string(), label_pos),
+            para_inlay_hints_parts(&type_display.to_string(), definition_pos),
             // ty_inlay_hints_label_parts(ty, label_pos),
             // InlayHintKind::PARAMETER,
             InlayHintKind::TYPE,
