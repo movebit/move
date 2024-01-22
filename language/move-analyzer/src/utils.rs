@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use codespan_reporting::files::{Files, SimpleFiles};
+use codespan::FileId;
 use lsp_types::{Command, Location, Position};
 use move_command_line_common::files::FileHash;
 use move_ir_types::location::*;
@@ -430,6 +431,21 @@ pub fn get_modules_by_fpath_in_all_modules<'a>(env: &'a GlobalEnv, fpath: &Path)
     result_vec_modules
 }
 
+pub fn get_file_id_by_fpath_in_all_modules<'a>(env: &'a GlobalEnv, fpath: &Path) -> Option<FileId> {
+    let mut result_file_id = Default::default();
+    for module_env in env.get_modules() {
+        if fpath_str_is_equal(
+            &env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string(),
+            &fpath.to_string_lossy().to_string()
+        ) {
+            result_file_id = Some(module_env.get_loc().file_id());
+        }
+
+    }
+    result_file_id
+}
+
+
 pub fn collect_use_decl(addrname_2_addrnum :&std::collections::HashMap<String, String>, module_env: &ModuleEnv, global_env: &GlobalEnv) -> HashMap<ModuleName, Vec<SpecSymbol>> {
     let mut result: HashMap<ModuleName, Vec<SpecSymbol>> = Default::default();
     for using_decl in module_env.get_use_decls() {
@@ -463,3 +479,4 @@ pub fn collect_use_decl(addrname_2_addrnum :&std::collections::HashMap<String, S
     }
     result
 }
+

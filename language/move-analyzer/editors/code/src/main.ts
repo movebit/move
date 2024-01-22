@@ -7,7 +7,7 @@ import { Context } from './context';
 import { Extension } from './extension';
 import { log } from './log';
 import { Reg } from './reg';
-import * as commands from './commands';
+// import * as commands from './commands';
 
 import * as vscode from 'vscode';
 
@@ -47,9 +47,9 @@ export async function activate(
   }
 
   // context.registerCommand('textDocumentDocumentSymbol', commands.textDocumentDocumentSymbol);
-  context.registerCommand('textDocumentHover', commands.textDocumentHover);
-  context.registerCommand('textDocumentCompletion', commands.textDocumentCompletion);
-  context.registerCommand('textDocumentDefinition', commands.textDocumentDefinition);
+  // context.registerCommand('textDocumentHover', commands.textDocumentHover);
+  // context.registerCommand('textDocumentCompletion', commands.textDocumentCompletion);
+  // context.registerCommand('textDocumentDefinition', commands.textDocumentDefinition);
 
   const d = vscode.languages.registerInlayHintsProvider(
     { scheme: 'file', language: 'move' },

@@ -221,7 +221,7 @@ impl GetPosition for ReqParametersPath {
 }
 
 impl ReqParametersPath {
-    fn is_linecol_in_loc(line :u32, col :u32, loc : &Loc, env:&GlobalEnv) -> bool {
+    pub fn is_linecol_in_loc(line :u32, col :u32, loc : &Loc, env:&GlobalEnv) -> bool {
         let start_location = match env.get_location(loc) {
             Some(x) => x,
             None => return false,

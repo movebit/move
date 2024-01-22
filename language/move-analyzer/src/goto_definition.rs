@@ -48,7 +48,11 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server:
     handler.addrname_2_addrnum = project.addrname_2_addrnum.clone();
     // handler.addrname_2_addrnum = project.addrname_2_addrnum.clone();
     project.run_visitor_for_file(&mut handler, &fpath, String::default());
+    
+    handler.remove_not_in_loc(&project.global_env);
+
     let locations = handler.convert_to_locations();
+
     let r = Response::new_ok(
         request.id.clone(),
         serde_json::to_value(GotoDefinitionResponse::Array(locations)).unwrap(),
@@ -196,6 +200,43 @@ impl Handler {
         ));
         log::info!("get mouse_source = {:?}", mouse_source);
         self.mouse_span = codespan::Span::new(mouse_line_first_col.span().start(), mouse_line_last_col.span().start());
+    }
+
+    fn remove_not_in_loc(&mut self, env: &GlobalEnv) {
+        let mut res_capture_items_span = vec![];
+        let mut res_result_candidates = vec![];
+        let mut indexes_to_retain = vec![];
+        for index in 0..self.capture_items_span.len() {
+            if let Some(file_id) = crate::utils::get_file_id_by_fpath_in_all_modules(env, &self.filepath) {
+                let capture_span = self.capture_items_span.get(index).unwrap();
+                let span_loc = move_model::model::Loc::new(
+                    file_id,
+                    codespan::Span::new(
+                        capture_span.start(),
+                        capture_span.end(),
+                    ),
+                );
+                if crate::move_generate_spec_sel::ReqParametersPath::is_linecol_in_loc(
+                    self.line, self.col, &span_loc, env
+                ) {
+                    indexes_to_retain.push(index)
+                }
+            }
+        }
+
+        for (index, span) in self.capture_items_span.iter().enumerate() {
+            if indexes_to_retain.contains(&index) {
+                res_capture_items_span.push(*span);
+            }
+        }
+        self.capture_items_span = res_capture_items_span;
+
+        for (index, file_range) in self.result_candidates.iter().enumerate() {
+            if indexes_to_retain.contains(&index) {
+                res_result_candidates.push(file_range.clone());
+            }
+        }
+        self.result_candidates = res_result_candidates;
     }
 
     fn process_use_decl(&mut self, env: &GlobalEnv) {
@@ -979,23 +1020,7 @@ impl Handler {
         _speck_block: &Spec,
     ) {
         log::trace!("\n\n");
-        // let target_module = env.get_module(self.target_module_id);
-        // for spec_block_info in target_module.get_spec_block_infos() {
-            // log::info!("lll >> process_spec_block loc = {:?}", env.get_location(capture_items_loc));
-            // log::info!("lll >> spec_block_info.loc = {:?}", env.get_location(&spec_block_info.loc));
-            // if spec_block_info.loc == *capture_items_loc {
-            //     self.print_spec_block_info(spec_block_info);
-            // }
-            // if let SpecBlockTarget::Function(..) = spec_block_info.target {
-            //     let mut spec_source = env.get_source(capture_items_loc);
-            //     log::info!("lll >> capture_items_loc spec_source = {:?}", spec_source);
-
-            //     spec_source = env.get_source(&spec_block_info.loc);
-            //     log::info!("lll >> spec_block_info spec_source = {:?}", spec_source);
-            //     // self.print_spec_block_info(spec_block_info);
-            // }
-        //     log::info!("lll >> spec_block_info    loc = {:?}", env.get_file_and_location(&spec_block_info.loc));
-        // }
+        
         log::trace!("lll >> process_spec_block loc = {:?}", env.get_file_and_location(capture_items_loc));
         log::trace!("lll << process_spec_block loc");
     }
@@ -1171,7 +1196,7 @@ impl std::fmt::Display for Handler {
 pub fn find_smallest_length_index(spans: &[codespan::Span]) -> Option<usize> {
     let mut smallest_length = i64::MAX;
     let mut smallest_index = None;
-
+    
     for (index, span) in spans.iter().enumerate() {
         let length = span.end() - span.start();
         if length.0 < smallest_length {
