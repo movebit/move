@@ -61,7 +61,7 @@ pub fn on_inlay_hints(context: &Context, request: &Request, inlay_hints_config: 
 
 #[derive(Clone, Copy, serde::Deserialize, Debug)]
 pub struct InlayHintsConfig {
-    enable: bool,
+    pub enable: bool,
 }
 
 impl Default for InlayHintsConfig {

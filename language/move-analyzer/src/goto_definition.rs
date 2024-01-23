@@ -213,6 +213,7 @@ impl Handler {
                         capture_span.end(),
                     ),
                 );
+
                 if crate::move_generate_spec_sel::ReqParametersPath::is_linecol_in_loc(
                     self.line, self.col, &span_loc, env
                 ) {
@@ -655,7 +656,7 @@ impl Handler {
                                 line_end: def_location.line.0,
                                 col_end: def_location.column.0,
                             };
-                            self.capture_items_span.push(pattern_loc.span());
+                            self.capture_items_span.push(localvar_loc.span());
                             self.result_candidates.push(result); 
                         }
                     }
@@ -1146,6 +1147,15 @@ impl Handler {
                 }
             }
         }
+    }
+
+    #[allow(unused)]
+    fn print_capture_loc_and_source(&mut self, env: &GlobalEnv, span_loc: &move_model::model::Loc) {
+        let capture_loc = env.get_location(span_loc).unwrap();
+        let a = env.get_source(span_loc).unwrap();
+        eprintln!("capture str: {}", a);
+        eprintln!("capture loc: {}, {}", capture_loc.line.0,  capture_loc.column.0);
+        eprintln!("moutse loc: {}, {}", self.line, self.col);
     }
 }
 
