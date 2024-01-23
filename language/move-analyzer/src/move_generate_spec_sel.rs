@@ -1,4 +1,5 @@
-// use super::context_ori::*;
+// Copyright (c) The BitsLab.MoveBit Contributors
+// SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     utils::{GetPosition, get_modules_by_fpath_in_target_modules, collect_use_decl},
@@ -10,7 +11,6 @@ use crate::{
 use move_model::model::{ModuleEnv, GlobalEnv, Loc};
 use std::{path::PathBuf, str::FromStr, collections::HashMap};
 use serde::{Deserialize, Serialize};
-// use lsp_server::{Request,Response};
 use lsp_server::{*, Message, Request, Response};
 use codespan::Location;
 use move_model::ast::ModuleName;

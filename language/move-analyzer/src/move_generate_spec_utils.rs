@@ -1,5 +1,7 @@
-use std::collections::HashMap;
+// Copyright (c) The BitsLab.MoveBit Contributors
+// SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
 use im::HashSet;
 use move_model::{
     symbol::Symbol,
@@ -434,7 +436,6 @@ impl FunSpecGenerator {
 
     pub(crate) fn collect_spec_exp_zx(&self, exp: &MoveModelExp, env: &GlobalEnv) -> Vec<SpecExpItem> {
         let mut ret: Vec<SpecExpItem> = Vec::new();
-        // let mut result: Vec<SpecExpItem> = Vec::new();
         self.collect_spec_exp_(&mut ret, exp, env);
         let (ret_after, _) = FunSpecGenerator::handle_unused_pattern(&ret, env);
         ret_after

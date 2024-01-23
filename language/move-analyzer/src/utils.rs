@@ -1,4 +1,4 @@
-// Copyright (c) The Move Contributors
+// Copyright (c) The BitsLab.MoveBit Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use codespan_reporting::files::{Files, SimpleFiles};
@@ -371,7 +371,7 @@ pub fn get_target_module(env: &GlobalEnv, move_file_path: &Path, target_module_i
                 }
             } else {
                 move_file_str = file_stem_str;
-                eprintln!("move_file_str = {:?}", move_file_str)
+                log::info!("move_file_str = {:?}", move_file_str)
             }
         }
     }
@@ -404,7 +404,7 @@ pub fn get_modules_by_fpath_in_target_modules<'a>(env: &'a GlobalEnv, fpath: &Pa
     log::trace!("get target module by path");
     let mut result_vec_modules: Vec<ModuleEnv> = vec![];
     for module_env in env.get_target_modules() {
-        // log::trace!("match module: {}", module_env.get_name().display(env).to_string());
+
         log::info!("{}", env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string());
         if !fpath_str_is_equal(
             &env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string(),
@@ -431,7 +431,7 @@ pub fn get_modules_by_fpath_in_all_modules<'a>(env: &'a GlobalEnv, fpath: &Path)
     result_vec_modules
 }
 
-pub fn get_file_id_by_fpath_in_all_modules<'a>(env: &'a GlobalEnv, fpath: &Path) -> Option<FileId> {
+pub fn get_file_id_by_fpath_in_all_modules(env: &GlobalEnv, fpath: &Path) -> Option<FileId> {
     let mut result_file_id = Default::default();
     for module_env in env.get_modules() {
         if fpath_str_is_equal(

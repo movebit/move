@@ -1,4 +1,4 @@
-// Copyright (c) The Move Contributors
+// Copyright (c) The BitsLab.Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -46,7 +46,6 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server:
     };
     let mut handler = Handler::new(fpath.clone(), line, col);
     handler.addrname_2_addrnum = project.addrname_2_addrnum.clone();
-    // handler.addrname_2_addrnum = project.addrname_2_addrnum.clone();
     project.run_visitor_for_file(&mut handler, &fpath, String::default());
     
     handler.remove_not_in_loc(&project.global_env);
@@ -128,8 +127,6 @@ impl Handler {
     }
 
     fn convert_to_locations(&mut self) -> Vec<Location> {
-        // log::info!("result --> self.capture_items_span = {:?}", self.capture_items_span);
-        // log::info!("result --> self.result_candidates = {:?}\n\n", self.result_candidates);
         if let Some(most_clost_item_idx) = find_smallest_length_index(&self.capture_items_span) {
             if most_clost_item_idx < self.result_candidates.len() {
                 self.result = Some(self.result_candidates[most_clost_item_idx].clone());
@@ -427,7 +424,6 @@ impl Handler {
 
         for spec_block_info in target_module.get_spec_block_infos() {
             if let SpecBlockTarget::Function(_, fun_id) = spec_block_info.target {
-                // log::info!("lll >> spec_block_info spec_source = {:?}", env.get_source(&spec_block_info.loc));
                 let span_first_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
@@ -492,7 +488,6 @@ impl Handler {
                 found_target_struct = true;
                 break;
             }
-            // log::info!("lll >> struct_start_pos = {:?}, struct_end_pos = {:?}", struct_start_pos, struct_end_pos);
         }
         if !found_target_struct {
             return;
@@ -520,7 +515,6 @@ impl Handler {
                         codespan::Span::new(field_start, field_end),
                     );
                     let field_source = env.get_source(&field_loc);
-                    // log::info!("lll >> field_source = {:?}", field_source);
                     if let Ok(atomic_field_str) = field_source {
                         if let Some(index) = atomic_field_str.find("\n".to_string().as_str()) {
                             let atomic_field_end =
@@ -530,7 +524,6 @@ impl Handler {
                                 codespan::Span::new(field_start, atomic_field_end),
                             );
                             let atomic_field_source = env.get_source(&atomic_field_loc);
-                            // todo: should check mouse_last_col between in scope by atomic_field_loc
                             if atomic_field_loc.span().end() < self.mouse_span.end()
                                 || atomic_field_loc.span().start()
                                     > self.mouse_span.end()
@@ -556,7 +549,6 @@ impl Handler {
 
         for spec_block_info in target_module.get_spec_block_infos() {
             if let SpecBlockTarget::Struct(_, stct_id) = spec_block_info.target {
-                // log::info!("lll >> spec_block_info spec_source = {:?}", env.get_source(&spec_block_info.loc));
                 let span_first_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
@@ -647,7 +639,6 @@ impl Handler {
                     if localvar_loc.span().start() > self.mouse_span.end()
                         || localvar_loc.span().end() < self.mouse_span.end() 
                     {
-                        // log::info!("??? localvar return");
                         return true;
                     }
                     log::trace!(
@@ -1063,7 +1054,6 @@ impl Handler {
                 self.capture_items_span.push((*capture_items_loc).span());
                 self.result_candidates.push(result);
 
-                // 20230907: add generic type parameter parse
                 for ty in ty_vec {
                     if let Some(generic_struct_ty) = ty.get_struct(env) {
                         let generic_struct_ty_symbol = generic_struct_ty.0.get_name();
@@ -1134,10 +1124,6 @@ impl Handler {
         env: &GlobalEnv,
         move_file_path: &Path
     ) {
-        // if !crate::utils::get_target_module(env, move_file_path, &mut self.target_module_id) {
-        //     log::info!("<goto def>cannot get target module\n");
-        //     return;
-        // }
         let candidate_modules 
             = crate::utils::get_modules_by_fpath_in_all_modules(
                 env, 

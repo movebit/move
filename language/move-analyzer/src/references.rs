@@ -1,4 +1,4 @@
-// Copyright (c) The Move Contributors
+// Copyright (c) The BitsLab.MoveBit Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
@@ -63,7 +63,6 @@ pub(crate) struct Handler {
     pub(crate) filepath: PathBuf,
     pub(crate) line: u32,
     pub(crate) col: u32,
-    // pub(crate) result: Option<FileRange>,
 
     pub(crate) mouse_span: codespan::Span,
     pub(crate) capture_items_span: Vec<codespan::Span>,
@@ -78,7 +77,6 @@ impl Handler {
             filepath: filepath.into(),
             line,
             col,
-            // result: None,
             mouse_span: Default::default(),
             capture_items_span: vec![],
             result_candidates: vec![],
@@ -150,7 +148,6 @@ impl Handler {
                 ),
             );
             mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
-            // log::info!("lll >> loop: mouse_loc = {:?}", mouse_loc);
         }
     
         let mouse_source = env.get_source(&move_model::model::Loc::new(
@@ -212,7 +209,6 @@ impl Handler {
                 found_target_fun = true;
                 break;
             }
-            // log::info!("lll >> func_start_pos = {:?}, func_end_pos = {:?}", func_start_pos, func_end_pos);
         }
 
         if !found_target_fun {
@@ -238,7 +234,6 @@ impl Handler {
 
         for spec_block_info in target_module.get_spec_block_infos() {
             if let SpecBlockTarget::Function(_, fun_id) = spec_block_info.target {
-                // log::info!("lll >> spec_block_info spec_source = {:?}", env.get_source(&spec_block_info.loc));
                 let span_first_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
@@ -302,7 +297,6 @@ impl Handler {
                 found_target_struct = true;
                 break;
             }
-            // log::info!("lll >> struct_start_pos = {:?}, struct_end_pos = {:?}", struct_start_pos, struct_end_pos);
         }
     
         if !found_target_struct {
@@ -332,7 +326,6 @@ impl Handler {
                         codespan::Span::new(field_start, field_end),
                     );
                     let field_source = env.get_source(&field_loc);
-                    // log::info!("lll >> field_source = {:?}", field_source);
                     if let Ok(atomic_field_str) = field_source {
                         if let Some(index) = atomic_field_str.find("\n".to_string().as_str()) {
                             let atomic_field_end =
@@ -367,7 +360,6 @@ impl Handler {
 
         for spec_block_info in target_module.get_spec_block_infos() {
             if let SpecBlockTarget::Struct(_, stct_id) = spec_block_info.target {
-                // log::info!("lll >> spec_block_info spec_source = {:?}", env.get_source(&spec_block_info.loc));
                 let span_first_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
@@ -437,10 +429,6 @@ impl Handler {
     {
         if let Call(node_id, MoveFunction(mid, fid), _) = expdata {
             let this_call_loc = env.get_node_loc(*node_id);
-            // log::info!(
-            //     "lll >> exp.visit this_call_loc = {:?}",
-            //     env.get_location(&this_call_loc)
-            // );
             if this_call_loc.span().start() < self.mouse_span.end()
                 && self.mouse_span.end() < this_call_loc.span().end()
             {
@@ -455,10 +443,6 @@ impl Handler {
                     let mut result_candidates: Vec<FileRange> = Vec::new();
                     for caller in calling_fns {
                         let f = env.get_function(caller);
-                        // log::info!(
-                        //     "lll >> caller f = {:?}",
-                        //     f.get_full_name_str()
-                        // );
                         let mut caller_fun_loc = f.get_loc();
                         // need locate called_fun.get_full_name_str() in f's body source
                         let f_source = env.get_source(&caller_fun_loc);
@@ -492,10 +476,6 @@ impl Handler {
         }
         if let Call(node_id, SpecFunction(mid, fid, _), _) = expdata {
             let this_call_loc = env.get_node_loc(*node_id);
-            // log::info!(
-            //     "lll >> exp.visit this_call_loc = {:?}",
-            //     env.get_file_and_location(&this_call_loc)
-            // );
             if this_call_loc.span().start() < self.mouse_span.end()
                 && self.mouse_span.end() < this_call_loc.span().end()
             {
@@ -505,7 +485,6 @@ impl Handler {
                     "<on_references> -- process_call -- get_spec_functions = {}",
                     spec_fun.name.display(env.symbol_pool())
                 );
-                // let spec_fun_loc = spec_fun.loc.clone();
                 let mut result_candidates: Vec<FileRange> = Vec::new();
                 for callee in spec_fun.callees.clone() {
                     let module = env.get_module(callee.module_id);
@@ -546,9 +525,7 @@ impl Handler {
             let mut result_candidates: Vec<FileRange> = Vec::new();
             for reference_module_id in self.get_which_modules_used_target_module(env, &stc_def_module) {
                 let stc_ref_module = env.get_module(reference_module_id);
-                // log::info!("lll >> stc_ref_module = {:?}", stc_ref_module.get_full_name_str());
                 for stc_ref_fn in stc_ref_module.get_functions() {
-                    // log::info!("lll >> stc_ref_fn = {:?}", stc_ref_fn.get_name_str());
                     let mut stc_ref_fn_loc = stc_ref_fn.get_loc();
                     while let Ok(stc_ref_fn_source) = env.get_source(&stc_ref_fn_loc) {
                         if let Some(index) = stc_ref_fn_source.find(mouse_capture_ty_symbol_str.as_str()) {
@@ -557,8 +534,8 @@ impl Handler {
 
                             let result_loc = move_model::model::Loc::new(
                                 stc_ref_fn_loc.file_id(),
-                                codespan::Span::new(capture_ref_ty_start, capture_ref_ty_end));
-                            // log::info!("ref ty result str = {:?}", env.get_source(&result_loc));
+                                codespan::Span::new(capture_ref_ty_start, capture_ref_ty_end)
+                            );
 
                             let (ref_ty_file, ref_ty_pos) =
                                 env.get_file_and_location(&result_loc).unwrap();

@@ -1,3 +1,6 @@
+// Copyright (c) The BitsLab.MoveBit Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //! This file primarily modifies the `TypeDisplay` structure and its `fmt::Display` trait
 //! within the `move-model`. The objective is to adjust the `struct_str` method in the
 //! `TypeDisplay` structure so that when printing a struct, it only displays `struct_name`
@@ -135,7 +138,6 @@ impl<'a> TypeDisplayForSpec<'a> {
             }
 
             if let Some(members) = self.using_module_map.get(struct_module_env_name) {
-                //  let result = numbers.iter().find(|&&x| x == 3);
                 let a = members.iter().find(|&&x| x == struct_env_name);
                 if let Some(x) = a { 
                     return x.display(env.symbol_pool()).to_string(); 

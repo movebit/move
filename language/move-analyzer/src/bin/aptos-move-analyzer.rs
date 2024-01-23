@@ -1,5 +1,4 @@
-// Copyright (c) The Diem Core Contributors
-// Copyright (c) The Move Contributors
+// Copyright (c) The BitsLab.MoveBit Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
@@ -73,7 +72,7 @@ fn main() {
         .unwrap()
         .to_string_lossy()
         .to_string();
-    eprintln!(
+    log::info!(
         "Starting language server '{}' communicating via stdio...",
         exe
     );
@@ -173,18 +172,17 @@ fn main() {
                             _ => on_notification(&mut context, &notification, diag_sender.clone()),
                         }
                     }
-                    Err(error) => eprintln!("IDE message error: {:?}", error),
+                    Err(error) => log::error!("IDE message error: {:?}", error),
                 }
             }
         };
     }
 
     io_threads.join().expect("I/O threads could not finish");
-    eprintln!("Shut down language server '{}'.", exe);
+    log::error!("Shut down language server '{}'.", exe);
 }
 
 fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut InlayHintsConfig) {
-    // log::info!("aptos receive method:{}", request.method.as_str());
     match request.method.as_str() {
         lsp_types::request::GotoDefinition::METHOD => {
             goto_definition::on_go_to_def_request(context, request);
@@ -213,17 +211,17 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
         "move/lsp/client/inlay_hints/config" => {
             let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
                 .expect("could not deserialize inlay hints request");
-            eprintln!("call inlay_hints config {:?}", parameters);
+            log::info!("call inlay_hints config {:?}", parameters);
             *inlay_hints_config = parameters;
         }
         _ => {
-            eprintln!("unsupported request: '{}' from client", request.method)
+            log::error!("unsupported request: '{}' from client", request.method)
         },
     }
 }
 
 fn on_response(_context: &Context, _response: &Response) {
-    eprintln!("handle response from client");
+    log::info!("handle response from client");
 }
 
 type DiagSender = Arc<Mutex<Sender<(PathBuf, Diagnostics)>>>;
@@ -242,7 +240,6 @@ fn report_diag(context: &mut Context, fpath: PathBuf) {
     let diag_err = proj.err_diags.clone();
     let tokens: Vec<&str> = diag_err.as_str().split("error").collect();
     for token in tokens {  
-        // eprintln!("diag_line token = \n{}", token);
         if token.lines().count() < 3 {
            continue;
         }
@@ -258,7 +255,6 @@ fn report_diag(context: &mut Context, fpath: PathBuf) {
             if let Some(end_idx) = loc_str.find(':') {
                 if start_idx <= end_idx {
                     file_path = &loc_str[start_idx..end_idx];
-                    // eprintln!("loc_str[end_idx..] = {:?}\n", &loc_str[end_idx..]);
                     let line = loc_str[end_idx..].split(':').nth(1).unwrap_or_default();
                     let col = loc_str[end_idx..].split(':').nth(2).unwrap_or_default();
                     let line_num = if line.parse::<u32>().unwrap() > 0 {
@@ -272,7 +268,6 @@ fn report_diag(context: &mut Context, fpath: PathBuf) {
                         col.parse::<u32>().unwrap()
                     };
                     pos = lsp_types::Position::new(line_num, col_num);
-                    // eprintln!("file_path = {}\n, line = {:?}\n, col = {:?}\n, ", file_path, line, col);
                 }
             }
         }
@@ -285,7 +280,6 @@ fn report_diag(context: &mut Context, fpath: PathBuf) {
         for line_idx in 2..token.lines().count() {
             code_str.push_str(token.lines().nth(line_idx).unwrap());
         }
-        // eprintln!("code_str = {:?}\n", &code_str);
         let d = lsp_types::Diagnostic {
             range: lsp_types::Range {
                 start: pos,
@@ -318,7 +312,6 @@ fn report_diag(context: &mut Context, fpath: PathBuf) {
 
 fn on_notification(context: &mut Context, notification: &Notification, diag_sender: DiagSender) {
     fn update_defs_on_changed(context: &mut Context, fpath: PathBuf, content: String) {
-        // log::info!("update_defs_on_changed content ------------->\n{:?}", content);
         let file_hash = FileHash::new(content.as_str());
         context.projects.update_defs(fpath.clone(), content.clone());
         context
@@ -334,7 +327,6 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             .borrow_mut()
             .update(fpath.clone(), content);
         report_diag(context, fpath);
-        // log::info!("update_defs_on_changed content <-------------");
     }
 
     match notification.method.as_str() {
@@ -393,7 +385,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                     return;
                 },
                 None => {
-                    eprintln!("project '{:?}' not found try load.", fpath.as_path());
+                    log::error!("project '{:?}' not found try load.", fpath.as_path());
                 },
             };
             let p = match context.projects.load_projects(&context.connection, &mani) {
@@ -453,7 +445,7 @@ fn get_package_compile_diagnostics(
             match compilation_result {
                 std::result::Result::Ok(_) => {},
                 std::result::Result::Err(diags) => {
-                    eprintln!("get_package_compile_diagnostics compilate failed");
+                    log::error!("get_package_compile_diagnostics compilate failed");
                     diagnostics = Some(diags);
                 },
             };
@@ -537,7 +529,6 @@ fn send_not_project_file_error(context: &mut Context, fpath: PathBuf, is_open: b
 }
 
 fn send_diag(context: &mut Context, mani: PathBuf, x: Diagnostics) {
-    eprintln!("send_diag ~~~~~~~");
     let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
     for x in x.into_codespan_format() {
         let (s, msg, (loc, m), _, notes) = x;

@@ -1,5 +1,4 @@
-// Copyright (c) The Diem Core Contributors
-// Copyright (c) The Move Contributors
+// Copyright (c) The BitsLab.MoveBit Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use super::utils::*;
@@ -12,7 +11,7 @@ use std::{
     time::SystemTime,
 };
 use move_compiler::shared::PackagePaths;
-// use move_model::model::Loc;
+
 /// Project
 pub struct Project {
     pub(crate) modules: HashMap<
@@ -33,8 +32,6 @@ pub struct Project {
     pub(crate) addrname_2_addrnum: std::collections::HashMap<String, String>,
     pub        err_diags: String,
 }
-
-// impl_convert_loc!(Project);
 
 impl Project {
     pub fn loc_to_range(&self, loc: &move_model::model::Loc) -> lsp_types::Range {

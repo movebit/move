@@ -1,5 +1,4 @@
-// Copyright (c) The Diem Core Contributors
-// Copyright (c) The Move Contributors
+// Copyright (c) The BitsLab.MoveBit Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{analyzer_handler::*, project::*, utils::*};
@@ -22,7 +21,6 @@ pub struct MultiProject {
     pub projects: HashMap<HashSet<PathBuf>, Project>,
     pub hash_file: Rc<RefCell<PathBufHashMap>>,
     pub file_line_mapping: Rc<RefCell<FileLineMapping>>,
-    // pub asts: HashMap<PathBuf, Rc<RefCell<SourceDefs>>>,
 }
 
 impl MultiProject {
@@ -174,7 +172,7 @@ impl MultiProject {
             if !exists_now {
                 continue;
             }
-            eprintln!("reload  {:?}", root_manifest.as_path());
+            log::info!("reload  {:?}", root_manifest.as_path());
             let x = match Project::new(root_manifest, |msg| {
                 send_show_message(connection, MessageType::ERROR, msg)
             }) {

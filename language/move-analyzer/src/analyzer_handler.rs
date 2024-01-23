@@ -1,5 +1,4 @@
-// Copyright (c) The Diem Core Contributors
-// Copyright (c) The Move Contributors
+// Copyright (c) The BitsLab.MoveBit Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{project::Project, utils::*};
@@ -13,13 +12,11 @@ use std::{
     path::{Path, PathBuf},
     time::SystemTime,
 };
-// ======================================================================================
+
 // static and const var
 pub static ERR_ADDRESS: once_cell::sync::Lazy<AccountAddress> =
     once_cell::sync::Lazy::new(AccountAddress::random);
 
-
-// ======================================================================================
 // enum and struct
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum AddressSpace {
@@ -45,8 +42,6 @@ pub struct SourceDefs {
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct DummyHandler;
 
-
-// ======================================================================================
 // pub func
 pub(crate) fn file_modify_time(x: &Path) -> Option<SystemTime> {
     match x.metadata() {
@@ -58,8 +53,6 @@ pub(crate) fn file_modify_time(x: &Path) -> Option<SystemTime> {
     }
 }
 
-
-// ======================================================================================
 // Handler a `ItemOrAccess` producced By `Project`.
 pub trait ItemOrAccessHandler: std::fmt::Display {
     fn visit_fun_or_spec_body(&self) -> bool;
@@ -112,7 +105,6 @@ impl std::fmt::Display for DummyHandler {
     }
 }
 
-// ======================================================================================
 // three trait
 pub trait HandleItemService: ConvertLoc {}
 impl HandleItemService for Project {}

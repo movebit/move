@@ -1,3 +1,6 @@
+// Copyright (c) The BitsLab.MoveBit Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use std::{collections::HashMap, ops::Deref};
 use move_model::{
     model::{GlobalEnv, ModuleEnv, FunctionEnv, StructEnv},

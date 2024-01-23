@@ -1,5 +1,4 @@
-// Copyright (c) The Diem Core Contributors
-// Copyright (c) The Move Contributors
+// Copyright (c) The BitsLab.MoveBit Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use super::utils::*;
@@ -189,7 +188,6 @@ impl Project {
         )
         .expect("Failed to create GlobalEnv!");
         log::info!("env.get_module_count() = {:?}", &new_project.global_env.get_module_count());
-        // let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
         use codespan_reporting::term::termcolor::Buffer;
         let mut error_writer = Buffer::no_color();
 
@@ -215,7 +213,7 @@ impl Project {
             }
         };
 
-        let new_project = match Project::new(root_dir, |msg| {eprintln!("{}", msg)}) {
+        let new_project = match Project::new(root_dir, |msg| {log::info!("{}", msg)}) {
             Ok(x) => x,
             Err(_) => {
                 log::error!("reload project failed");
@@ -320,7 +318,6 @@ impl Project {
                 targets_paths,
                 dependents_paths,
             )?;
-            // log::info!("dependency = '{:?}'", de);
         }
         Ok(())
     }
@@ -363,7 +360,7 @@ impl Project {
     pub(crate) fn manifest_beed_modified(&self) -> bool {
         self.manifest_mod_time.iter().any(|(k, v)| {
             if file_modify_time(k.as_path()).cmp(v) != Ordering::Equal {
-                eprintln!(
+                log::info!(
                     "going to reload project becasue of modify of '{:?}' {:?} {:?}",
                     k.as_path(),
                     file_modify_time(k.as_path()),
@@ -382,7 +379,6 @@ impl Project {
         filepath: &Path,
         source_str: String
     ) {
-        // log::info!("run visitor part for {} ", visitor);
         visitor.handle_project_env(self, &self.global_env, filepath, source_str);
     }
 }

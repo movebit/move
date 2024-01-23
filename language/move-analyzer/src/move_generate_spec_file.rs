@@ -1,12 +1,11 @@
+// Copyright (c) The BitsLab.MoveBit Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use std::{collections::HashMap, path::PathBuf, str::FromStr, path::Path};
-
-
-
 use super::move_generate_spec::*;
 use lsp_server::*;
 use serde::Deserialize;
 
-// ----------
 use crate::{
     utils::{get_modules_by_fpath_in_target_modules, collect_use_decl},
     context::Context,
@@ -142,7 +141,6 @@ where
     Response::new_ok(
         request.id.clone(),
         serde_json::json!(file_content)
-        // .unwrap(),
     )
 }
 

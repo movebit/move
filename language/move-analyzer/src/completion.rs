@@ -1,5 +1,4 @@
-// Copyright (c) The Diem Core Contributors
-// Copyright (c) The Move Contributors
+// Copyright (c) The BitsLab.MoveBit Contributors
 // SPDX-License-Identifier: Apache-2.0
 use crate::{
     context::*,
@@ -329,7 +328,7 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
         .sender
         .send(lsp_server::Message::Response(response))
     {
-        eprintln!("could not send completion response: {:?}", err);
+        log::error!("could not send completion response: {:?}", err);
     }
     ret_response
 }

@@ -1,11 +1,11 @@
-// Copyright (c) The Move Contributors
+// Copyright (c) The BitsLab.MoveBit Contributors
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
     analyzer_handler::*,
     context::*,
     utils::path_concat,
-};
+};  
 use lsp_server::*;
 use lsp_types::*;
 use move_model::{
@@ -60,7 +60,6 @@ pub(crate) struct Handler {
     pub(crate) filepath: PathBuf,
     pub(crate) line: u32,
     pub(crate) col: u32,
-    // pub(crate) result: Option<FileRange>,
 
     pub(crate) mouse_span: codespan::Span,
     pub(crate) capture_items_span: Vec<codespan::Span>,
@@ -74,7 +73,6 @@ impl Handler {
             filepath: filepath.into(),
             line,
             col,
-            // result: None,
             mouse_span: Default::default(),
             capture_items_span: vec![],
             result_candidates: vec![],
@@ -178,7 +176,6 @@ impl Handler {
                 ),
             );
             mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
-            // log::info!("lll >> loop: mouse_loc = {:?}", mouse_loc);
         }
     
         let mouse_source = env.get_source(&move_model::model::Loc::new(
@@ -274,7 +271,6 @@ impl Handler {
                 found_target_fun = true;
                 break;
             }
-            // log::info!("lll >> func_start_pos = {:?}, func_end_pos = {:?}", func_start_pos, func_end_pos);
         }
         if !found_target_fun {
             log::warn!("<on hover> not found_target_fun");
@@ -298,7 +294,6 @@ impl Handler {
 
         for spec_block_info in target_module.get_spec_block_infos() {
             if let SpecBlockTarget::Function(_, fun_id) = spec_block_info.target {
-                // log::info!("lll >> spec_block_info spec_source = {:?}", env.get_source(&spec_block_info.loc));
                 let span_first_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
@@ -361,7 +356,6 @@ impl Handler {
                 found_target_struct = true;
                 break;
             }
-            // log::info!("lll >> struct_start_pos = {:?}, struct_end_pos = {:?}", struct_start_pos, struct_end_pos);
         }
     
         if !found_target_struct {
@@ -377,7 +371,6 @@ impl Handler {
         for field_env in target_struct.get_fields() {
             let field_name = field_env.get_name();
             let field_name_str = field_name.display(env.symbol_pool());
-            // log::info!("lll >> field_name = {}", field_name_str);
             let struct_source = env.get_source(&target_struct_loc);
             if let Ok(struct_str) = struct_source {
                 if let Some(index) = struct_str.find(field_name_str.to_string().as_str()) {
@@ -391,7 +384,6 @@ impl Handler {
                         codespan::Span::new(field_start, field_end),
                     );
                     let field_source = env.get_source(&field_loc);
-                    // log::info!("lll >> field_source = {:?}", field_source);
                     if let Ok(atomic_field_str) = field_source {
                         if let Some(index) = atomic_field_str.find("\n".to_string().as_str()) {
                             let atomic_field_end =
@@ -424,7 +416,6 @@ impl Handler {
 
         for spec_block_info in target_module.get_spec_block_infos() {
             if let SpecBlockTarget::Struct(_, stct_id) = spec_block_info.target {
-                // log::info!("lll >> spec_block_info spec_source = {:?}", env.get_source(&spec_block_info.loc));
                 let span_first_col = move_model::model::Loc::new(
                     spec_block_info.loc.file_id(),
                     codespan::Span::new(
@@ -487,16 +478,10 @@ impl Handler {
                         }
                         for named_const in env.get_module(self.target_module_id).get_named_constants() {
                             let spool = env.symbol_pool();
-                            // log::info!("named_const.get_name() = {}", named_const.get_name().display(spool));
                             let named_const_str = named_const.get_name().display(spool).to_string();
                             if value_str.contains(&named_const_str) {
-                                // format!("{}", EnvDisplay::new(&env, &named_const.get_value())); 
-                                // use move_model::ty::TypeDisplayContext;
-                                // let display_context = TypeDisplayContext::new(env);
-                                // let type_display = ty.display(&display_context);
                                 self.capture_items_span.push(value_loc.span());
                                 self.result_candidates.push(env.display(&named_const.get_value()).to_string());
-                                // self.result_candidates.push(format!("{}", move_model::model::EnvDisplay::new(&env, &named_const.get_value())));
                             }
                         }
                     }
@@ -512,7 +497,6 @@ impl Handler {
                     if localvar_loc.span().start() > self.mouse_span.end()
                         || self.mouse_span.end() > localvar_loc.span().end()
                     {
-                        // log::warn!("<on hover> localvar return");
                         return true;
                     }
 
@@ -532,10 +516,6 @@ impl Handler {
                 },
                 Temporary(node_id, _) => {
                     let tmpvar_loc = env.get_node_loc(*node_id);
-                    // log::info!(
-                    //     "lll >> exp.visit tmpvar_loc = {:?}",
-                    //     env.get_location(&tmpvar_loc)
-                    // );
                     if tmpvar_loc.span().start() > self.mouse_span.end()
                         || self.mouse_span.end() > tmpvar_loc.span().end()
                     {
@@ -553,7 +533,6 @@ impl Handler {
                         if sym_loc.span().start() > self.mouse_span.end()
                         || self.mouse_span.end() > sym_loc.span().end()
                         {
-                            // log::warn!("<on hover> localvar return");
                             return true;
                         }
 
@@ -589,10 +568,6 @@ impl Handler {
 
         if let Call(node_id, Select(mid, sid, fid), _) = expdata {
             let this_call_loc = env.get_node_loc(*node_id);
-            // log::info!(
-            //     "<on hover> exp.visit this_call_loc = {:?}",
-            //     env.get_location(&this_call_loc)
-            // );
             if this_call_loc.span().start() > self.mouse_span.end()
                 || self.mouse_span.end() > this_call_loc.span().end()
             {
@@ -601,10 +576,6 @@ impl Handler {
             
             let called_module = env.get_module(*mid);
             let called_struct = called_module.get_struct(*sid);
-            // log::info!(
-            //     "<on hover> called_struct = {:?}",
-            //     called_struct.get_full_name_str()
-            // );
             let called_field = called_struct.get_field(*fid);
             let field_type = called_field.get_type();
             self.process_type(env, &this_call_loc, &field_type);
@@ -612,19 +583,11 @@ impl Handler {
 
         if let Call(node_id, SpecFunction(mid, fid, _), _) = expdata {
             let this_call_loc = env.get_node_loc(*node_id);
-            // log::info!(
-            //     "lll >> exp.visit this_call_loc = {:?}",
-            //     env.get_file_and_location(&this_call_loc)
-            // );
             if this_call_loc.span().start() < self.mouse_span.end()
                 && self.mouse_span.end() < this_call_loc.span().end()
             {
                 let called_module = env.get_module(*mid);
                 let spec_fun = called_module.get_spec_fun(*fid);
-                // log::info!(
-                //     "lll >> get_spec_functions = {}",
-                //     spec_fun.name.display(env.symbol_pool())
-                // );
                 self.capture_items_span.push(this_call_loc.span());
                 self.result_candidates.push(spec_fun.name.display(env.symbol_pool()).to_string());
 
@@ -650,13 +613,12 @@ impl Handler {
     
         if let Call(node_id, Pack(_, _), _) = expdata {
             let op_loc = env.get_node_loc(*node_id);
-            if op_loc.span().start() > self.mouse_span.end()
-            || self.mouse_span.end() > op_loc.span().end()
+            if op_loc.span().start() < self.mouse_span.end()
+            && self.mouse_span.end() < op_loc.span().end()
             {
-                // log::warn!("<on hover> localvar return");
-            }
-            if let Some(node_type) = env.get_node_type_opt(*node_id) {
-                self.process_type(env, &op_loc, &node_type);
+                if let Some(node_type) = env.get_node_type_opt(*node_id) {
+                    self.process_type(env, &op_loc, &node_type);
+                }
             }
         }
     }
