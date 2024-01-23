@@ -85,7 +85,7 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
         _services: &dyn HandleItemService,
         _: &GlobalEnv,
         _: &Path,
-        _: String
+        _: String,
     ) {
     }
 }
@@ -94,6 +94,7 @@ impl ItemOrAccessHandler for DummyHandler {
     fn finished(&self) -> bool {
         false
     }
+
     fn visit_fun_or_spec_body(&self) -> bool {
         false
     }

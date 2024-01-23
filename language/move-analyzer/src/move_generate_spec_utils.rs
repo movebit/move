@@ -1,18 +1,18 @@
 // Copyright (c) The BitsLab.MoveBit Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
+use super::move_generate_spec::FunSpecGenerator;
 use im::HashSet;
 use move_model::{
+    ast::{
+        Address as MoveModelAddress, Exp as MoveModelExp, ExpData as MoveModelExpData, ModuleName,
+        Operation, Pattern as MoveModelPattern, Value as MoveModelValue,
+    },
+    model::{FunctionEnv, GlobalEnv, NodeId},
     symbol::Symbol,
-    ast::{ModuleName, Operation},
-    model::{GlobalEnv, NodeId, FunctionEnv},
-    ast::{Exp as MoveModelExp, ExpData as MoveModelExpData, Value as MoveModelValue,
-        Address as MoveModelAddress, Pattern as MoveModelPattern},
     ty::Type as MoveModelType,
 };
-
-use super::move_generate_spec::FunSpecGenerator;
+use std::collections::HashMap;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ShadowItemUseItem {
@@ -37,7 +37,6 @@ pub enum ShadowItemUse {
 pub struct ShadowItemLocal {
     pub index: NodeId,
 }
-
 
 pub enum ShadowItem {
     Use(ShadowItemUse),
@@ -86,31 +85,30 @@ pub fn get_shadows(exp: &MoveModelExp, env: &GlobalEnv, shadows: &mut ShadowItem
         },
         MoveModelExpData::Invoke(_, _, _) => {},
         MoveModelExpData::Lambda(_, _, _) => {},
-        MoveModelExpData::Quant(_,_,_,_,_,_) => {},
-        MoveModelExpData::Block(_,p,s,exp) => {
+        MoveModelExpData::Quant(_, _, _, _, _, _) => {},
+        MoveModelExpData::Block(_, p, s, exp) => {
             handle_expdata_block_parren(p, shadows);
             if let Some(op_exp) = s {
                 get_shadows(op_exp, env, shadows);
             }
             get_shadows(exp, env, shadows)
         },
-        MoveModelExpData::IfElse(_,if_exp,if_do_exp,else_do_exp) => {
+        MoveModelExpData::IfElse(_, if_exp, if_do_exp, else_do_exp) => {
             get_shadows(if_exp, env, shadows);
             get_shadows(if_do_exp, env, shadows);
             get_shadows(else_do_exp, env, shadows);
         },
-        MoveModelExpData::Return(_,_) => {},
-        MoveModelExpData::Sequence(_,vec_exp) => {
-            
+        MoveModelExpData::Return(_, _) => {},
+        MoveModelExpData::Sequence(_, vec_exp) => {
             for exp in vec_exp.iter() {
                 get_shadows(exp, env, shadows);
             }
         },
-        MoveModelExpData::Loop(_,_) => {},
-        MoveModelExpData::LoopCont(_,_) => {},
-        MoveModelExpData::Assign(_,_,_) => {},
-        MoveModelExpData::Mutate(_,_,_) => {},
-        MoveModelExpData::SpecBlock(_,_) => {},
+        MoveModelExpData::Loop(_, _) => {},
+        MoveModelExpData::LoopCont(_, _) => {},
+        MoveModelExpData::Assign(_, _, _) => {},
+        MoveModelExpData::Mutate(_, _, _) => {},
+        MoveModelExpData::SpecBlock(_, _) => {},
     }
 }
 
@@ -138,23 +136,15 @@ pub fn handle_expdata_value(v: &MoveModelValue, env: &GlobalEnv) {
 #[allow(unused_variables)]
 pub fn handle_expdata_value_address(addr: &MoveModelAddress, env: &GlobalEnv) {
     match addr {
-        MoveModelAddress::Numerical(_) => {
-        },
-        MoveModelAddress::Symbolic(_) => {
-        },
+        MoveModelAddress::Numerical(_) => {},
+        MoveModelAddress::Symbolic(_) => {},
     }
 }
 
-pub fn handle_expdata_block_parren(
-    p: &MoveModelPattern, 
-    shadows: &mut ShadowItems
-) {
+pub fn handle_expdata_block_parren(p: &MoveModelPattern, shadows: &mut ShadowItems) {
     let vec_sym = p.vars();
     for (node_id, sym) in vec_sym.iter() {
-        shadows.insert(
-            *sym, 
-            ShadowItem::Local(ShadowItemLocal { index:*node_id })
-        );
+        shadows.insert(*sym, ShadowItem::Local(ShadowItemLocal { index: *node_id }));
     }
 }
 
@@ -181,11 +171,10 @@ pub(crate) enum SpecExpItem {
         right: MoveModelExp,
     },
     MarcoAbort {
-        if_exp:MoveModelExp,
+        if_exp: MoveModelExp,
         abort_exp: MoveModelExp,
-    }
+    },
 }
-
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum BinOPReason {
@@ -198,9 +187,9 @@ pub(crate) enum BinOPReason {
 
 impl FunSpecGenerator {
     fn collect_spec_exp_op_movefunc(
-        &self, 
+        &self,
         ret: &mut Vec<SpecExpItem>,
-        func_env: &FunctionEnv, 
+        func_env: &FunctionEnv,
         vec_exp: &Vec<MoveModelExp>,
     ) {
         const TYPE_OF: &str = "type_of";
@@ -209,33 +198,26 @@ impl FunSpecGenerator {
         match func_env.get_name_str().as_str() {
             "borrow_global_mut" if !para.is_empty() && !vec_exp.is_empty() => {
                 ret.push(SpecExpItem::BorrowGlobalMut {
-                        ty: para.get(0).unwrap().1.clone(),
-                        addr: vec_exp.get(0).unwrap().clone(),
-                    }
-                )
+                    ty: para.get(0).unwrap().1.clone(),
+                    addr: vec_exp.get(0).unwrap().clone(),
+                })
             },
-            TYPE_OF if !para.is_empty() => {
-                ret.push(SpecExpItem::TypeOf {
-                        ty: para.get(0).unwrap().1.clone(),
-                    }
-                )
-            },
-            TYPE_NAME if !para.is_empty() => {
-                ret.push(SpecExpItem::TypeName {
-                        ty: para.get(0).unwrap().1.clone(),
-                }
-            )
-            },
-            _ => {}
+            TYPE_OF if !para.is_empty() => ret.push(SpecExpItem::TypeOf {
+                ty: para.get(0).unwrap().1.clone(),
+            }),
+            TYPE_NAME if !para.is_empty() => ret.push(SpecExpItem::TypeName {
+                ty: para.get(0).unwrap().1.clone(),
+            }),
+            _ => {},
         }
     }
 
     fn collect_spec_exp_op(
-        &self, 
-        ret: &mut Vec<SpecExpItem>, 
+        &self,
+        ret: &mut Vec<SpecExpItem>,
         op: &Operation,
         vec_exp: &Vec<MoveModelExp>,
-        env: &GlobalEnv
+        env: &GlobalEnv,
     ) {
         match op {
             Operation::Add => {
@@ -243,66 +225,60 @@ impl FunSpecGenerator {
                     self.collect_spec_exp_(ret, exp, env);
                 }
                 ret.push(SpecExpItem::BinOP {
-                        reason: BinOPReason::OverFlowADD,
-                        left: vec_exp[0].clone(),
-                        right: vec_exp[1].clone(),
-                    }
-                );
+                    reason: BinOPReason::OverFlowADD,
+                    left: vec_exp[0].clone(),
+                    right: vec_exp[1].clone(),
+                });
             },
             Operation::Sub => {
                 for exp in vec_exp.iter() {
                     self.collect_spec_exp_(ret, exp, env);
                 }
                 ret.push(SpecExpItem::BinOP {
-                        reason: BinOPReason::UnderFlow,
-                        left: vec_exp[0].clone(),
-                        right: vec_exp[1].clone(),
-                    }
-                );
+                    reason: BinOPReason::UnderFlow,
+                    left: vec_exp[0].clone(),
+                    right: vec_exp[1].clone(),
+                });
             },
             Operation::Mul => {
                 for exp in vec_exp.iter() {
                     self.collect_spec_exp_(ret, exp, env);
                 }
                 ret.push(SpecExpItem::BinOP {
-                        reason: BinOPReason::OverFlowMUL,
-                        left: vec_exp[0].clone(),
-                        right: vec_exp[1].clone(),
-                    }
-                );
+                    reason: BinOPReason::OverFlowMUL,
+                    left: vec_exp[0].clone(),
+                    right: vec_exp[1].clone(),
+                });
             },
             Operation::Mod => {
                 for exp in vec_exp.iter() {
                     self.collect_spec_exp_(ret, exp, env);
                 }
                 ret.push(SpecExpItem::BinOP {
-                        reason: BinOPReason::DivByZero,
-                        left:vec_exp[0].clone(),
-                        right: vec_exp[1].clone(),
-                    }
-                );
+                    reason: BinOPReason::DivByZero,
+                    left: vec_exp[0].clone(),
+                    right: vec_exp[1].clone(),
+                });
             },
             Operation::Div => {
                 for exp in vec_exp.iter() {
                     self.collect_spec_exp_(ret, exp, env);
                 }
                 ret.push(SpecExpItem::BinOP {
-                        reason: BinOPReason::DivByZero,
-                        left:vec_exp[0].clone(),
-                        right: vec_exp[1].clone(),
-                    }
-                );
+                    reason: BinOPReason::DivByZero,
+                    left: vec_exp[0].clone(),
+                    right: vec_exp[1].clone(),
+                });
             },
             Operation::Shl => {
                 for exp in vec_exp.iter() {
                     self.collect_spec_exp_(ret, exp, env);
                 }
                 ret.push(SpecExpItem::BinOP {
-                        reason: BinOPReason::OverFlowSHL,
-                        left: vec_exp[0].clone(),
-                        right: vec_exp[1].clone(),
-                    }
-                );
+                    reason: BinOPReason::OverFlowSHL,
+                    left: vec_exp[0].clone(),
+                    right: vec_exp[1].clone(),
+                });
             },
             Operation::Cast => {
                 for exp in vec_exp.iter() {
@@ -313,12 +289,12 @@ impl FunSpecGenerator {
                 for exp in vec_exp.iter() {
                     self.collect_spec_exp_(ret, exp, env);
                 }
-            }
+            },
             Operation::Pack(_, _) => {
                 for exp in vec_exp.iter() {
                     self.collect_spec_exp_(ret, exp, env);
                 }
-            }
+            },
             Operation::Vector => {
                 for exp in vec_exp.iter() {
                     self.collect_spec_exp_(ret, exp, env);
@@ -344,53 +320,51 @@ impl FunSpecGenerator {
                     self.collect_spec_exp_(ret, exp, env);
                 }
             },
-            Operation::MoveFunction(module_id, func_id) => {        
+            Operation::MoveFunction(module_id, func_id) => {
                 self.collect_spec_exp_op_movefunc(
-                    ret, 
+                    ret,
                     &env.get_function(module_id.qualified(*func_id)),
-                    vec_exp
+                    vec_exp,
                 );
-            }
+            },
             Operation::Tuple => {
                 for exp in vec_exp.iter() {
                     self.collect_spec_exp_(ret, exp, env);
-                } 
-            }
+                }
+            },
             _ => {},
         }
     }
 
     fn collect_spec_exp_(&self, ret: &mut Vec<SpecExpItem>, e: &MoveModelExp, env: &GlobalEnv) {
-        // The issue of multiple accesses exists in the current version with the "for (i in 0.. n) {}" syntax. 
+        // The issue of multiple accesses exists in the current version with the "for (i in 0.. n) {}" syntax.
         // Filter the for syntax through specific keywords.
         let exp_source = e.display(env).to_string();
         if exp_source.contains("__upper_bound_value") {
-            return ;
-        } 
+            return;
+        }
         if exp_source.contains("__update_iter_flag") {
-            return ;
-        } 
-        
+            return;
+        }
+
         match e.as_ref() {
             MoveModelExpData::Block(_, p, assign_exp, exp) => {
-                if let MoveModelPattern::Var(_, _) = p { 
+                if let MoveModelPattern::Var(_, _) = p {
                     match assign_exp {
                         Some(x) => {
                             if FunSpecGenerator::is_support_exp(x, env) {
-                                ret.push(
-                                    SpecExpItem::PatternLet {
-                                        left: p.clone(),
-                                        right: assign_exp.clone().unwrap(),
-                                    }
-                                );
+                                ret.push(SpecExpItem::PatternLet {
+                                    left: p.clone(),
+                                    right: assign_exp.clone().unwrap(),
+                                });
                             }
                         },
-                        None => {}
-                    } 
+                        None => {},
+                    }
                 }
                 match assign_exp {
                     Some(x) => self.collect_spec_exp_(ret, x, env),
-                    None => {}
+                    None => {},
                 }
                 self.collect_spec_exp_(ret, exp, env);
             },
@@ -412,29 +386,39 @@ impl FunSpecGenerator {
             MoveModelExpData::IfElse(_, if_exp, if_do_exp, else_do_exp) => {
                 // if if_do_exp is null and else_do_exp is abort, the source code is assert!()
                 if let MoveModelExpData::Call(_, _, if_do_args) = if_do_exp.as_ref() {
-                    if !if_do_args.is_empty() {return ;}
+                    if !if_do_args.is_empty() {
+                        return;
+                    }
                     if let MoveModelExpData::Call(_, oper, abort_exp) = else_do_exp.as_ref() {
                         if oper == &Operation::Abort {
-                            if abort_exp.len() != 1 {return ;}
-                            if !FunSpecGenerator::is_support_exp(if_exp, env) {return ;}
-                            for ve_exp in abort_exp {
-                                if !FunSpecGenerator::is_support_exp(ve_exp, env) {return ;}
+                            if abort_exp.len() != 1 {
+                                return;
                             }
-                            ret.push(
-                                SpecExpItem::MarcoAbort  {
-                                    if_exp: if_exp.clone(),
-                                    abort_exp: abort_exp.get(0).unwrap().clone(),
+                            if !FunSpecGenerator::is_support_exp(if_exp, env) {
+                                return;
+                            }
+                            for ve_exp in abort_exp {
+                                if !FunSpecGenerator::is_support_exp(ve_exp, env) {
+                                    return;
                                 }
-                            );
+                            }
+                            ret.push(SpecExpItem::MarcoAbort {
+                                if_exp: if_exp.clone(),
+                                abort_exp: abort_exp.get(0).unwrap().clone(),
+                            });
                         }
                     }
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 
-    pub(crate) fn collect_spec_exp_zx(&self, exp: &MoveModelExp, env: &GlobalEnv) -> Vec<SpecExpItem> {
+    pub(crate) fn collect_spec_exp_zx(
+        &self,
+        exp: &MoveModelExp,
+        env: &GlobalEnv,
+    ) -> Vec<SpecExpItem> {
         let mut ret: Vec<SpecExpItem> = Vec::new();
         self.collect_spec_exp_(&mut ret, exp, env);
         let (ret_after, _) = FunSpecGenerator::handle_unused_pattern(&ret, env);
@@ -444,7 +428,7 @@ impl FunSpecGenerator {
     pub fn is_support_exp(e: &MoveModelExp, _env: &GlobalEnv) -> bool {
         let exp_data = e.as_ref();
         match exp_data {
-            MoveModelExpData::Invalid(_) => {return false},
+            MoveModelExpData::Invalid(_) => return false,
             MoveModelExpData::Call(_, op, args) => {
                 if !FunSpecGenerator::is_support_operation(op) {
                     return false;
@@ -455,7 +439,7 @@ impl FunSpecGenerator {
                     }
                 }
             },
-            MoveModelExpData::Block(_, _, s,exp) => {
+            MoveModelExpData::Block(_, _, s, exp) => {
                 if let Some(op_exp) = s {
                     if !FunSpecGenerator::is_support_exp(op_exp, _env) {
                         return false;
@@ -464,77 +448,86 @@ impl FunSpecGenerator {
                 if !FunSpecGenerator::is_support_exp(exp, _env) {
                     return false;
                 }
-                
             },
-            MoveModelExpData::IfElse(_,_,_,_) => {},
-            MoveModelExpData::Return(_,_) => {},
-            MoveModelExpData::Sequence(_,vec_exp) => {
-                    for a in vec_exp.iter() {
-                        if !FunSpecGenerator::is_support_exp(a, _env) {
-                            return false;
-                        }
+            MoveModelExpData::IfElse(_, _, _, _) => {},
+            MoveModelExpData::Return(_, _) => {},
+            MoveModelExpData::Sequence(_, vec_exp) => {
+                for a in vec_exp.iter() {
+                    if !FunSpecGenerator::is_support_exp(a, _env) {
+                        return false;
                     }
+                }
             },
-            _ => {}
+            _ => {},
         }
         true
     }
 
-    fn handle_unused_pattern(items: &[SpecExpItem], env: &GlobalEnv) -> (Vec<SpecExpItem>, bool){
+    fn handle_unused_pattern(items: &[SpecExpItem], env: &GlobalEnv) -> (Vec<SpecExpItem>, bool) {
         log::info!("handle unused pattern");
         let mut is_change = false;
         let mut ret = items.to_owned();
-        let mut used_local_var:HashSet<Symbol> = HashSet::new();
+        let mut used_local_var: HashSet<Symbol> = HashSet::new();
         for item in items.iter().rev() {
             match item {
-                SpecExpItem::BinOP {reason:_, left, right } => {
+                SpecExpItem::BinOP {
+                    reason: _,
+                    left,
+                    right,
+                } => {
                     let left_vars = left.free_vars();
                     let right_vars = right.free_vars();
-                    left_vars.iter().for_each(|sym| { 
-                        used_local_var.insert(*sym); 
+                    left_vars.iter().for_each(|sym| {
+                        used_local_var.insert(*sym);
                     });
                     right_vars.iter().for_each(|sym| {
-    
-                        used_local_var.insert(*sym); 
+                        used_local_var.insert(*sym);
                     });
                 },
-                SpecExpItem::MarcoAbort{if_exp, abort_exp} => {
+                SpecExpItem::MarcoAbort { if_exp, abort_exp } => {
                     let left_vars = if_exp.free_vars();
                     let right_vars = abort_exp.free_vars();
-                    
-                    left_vars.iter().for_each(|sym| { used_local_var.insert(*sym); });
-                    right_vars.iter().for_each(|sym| { used_local_var.insert(*sym); });
+
+                    left_vars.iter().for_each(|sym| {
+                        used_local_var.insert(*sym);
+                    });
+                    right_vars.iter().for_each(|sym| {
+                        used_local_var.insert(*sym);
+                    });
                 },
                 SpecExpItem::PatternLet { left, right } => {
                     let _left_node_id = left.node_id();
                     let _left_node_loc = env.get_node_loc(_left_node_id);
                     let _left_exp_str = env.get_source(&_left_node_loc).unwrap_or("err");
-                    
+
                     let mut is_use = false;
                     for (_, var_in_pattern) in left.vars() {
                         if used_local_var.contains(&var_in_pattern) {
                             let right_vars = right.free_vars();
-                            right_vars.iter().for_each(|sym| { used_local_var.insert(*sym); });
+                            right_vars.iter().for_each(|sym| {
+                                used_local_var.insert(*sym);
+                            });
                             is_use = true;
                             break;
-                        } 
+                        }
                     }
-                    
+
                     if is_use {
                         continue;
                     }
                     let _left_node_id = left.node_id();
                     let _left_node_loc = env.get_node_loc(_left_node_id);
                     let _left_exp_str = env.get_source(&_left_node_loc).unwrap_or("err");
-                    ret.retain(|x| {
-                        match x {
-                            SpecExpItem::PatternLet { left: l_iter, right: _ } => left.node_id() != l_iter.node_id(),
-                            _ => true,
-                        }
+                    ret.retain(|x| match x {
+                        SpecExpItem::PatternLet {
+                            left: l_iter,
+                            right: _,
+                        } => left.node_id() != l_iter.node_id(),
+                        _ => true,
                     });
                     is_change = true;
                 },
-                _ => {}
+                _ => {},
             }
         }
 
@@ -542,13 +535,20 @@ impl FunSpecGenerator {
     }
 
     #[allow(unused)]
-    fn handle_exp_without_pattern(items: &[SpecExpItem], env: &GlobalEnv) -> (Vec<SpecExpItem>, bool){
+    fn handle_exp_without_pattern(
+        items: &[SpecExpItem],
+        env: &GlobalEnv,
+    ) -> (Vec<SpecExpItem>, bool) {
         let mut is_change = false;
         let mut ret = items.to_owned();
-        let mut used_local_var:HashSet<Symbol> = HashSet::new();
+        let mut used_local_var: HashSet<Symbol> = HashSet::new();
         for item in items.iter() {
             match item {
-                SpecExpItem::BinOP { reason, left, right } => {
+                SpecExpItem::BinOP {
+                    reason,
+                    left,
+                    right,
+                } => {
                     let mut with_pattern = true;
                     for exp_sym in left.free_vars() {
                         if !used_local_var.contains(&exp_sym) {
@@ -563,23 +563,25 @@ impl FunSpecGenerator {
                             break;
                         }
                     }
-                    
+
                     if with_pattern {
                         continue;
                     }
 
-                    ret.retain(|x| {
-                        match x {
-                            SpecExpItem::BinOP { reason:_, left: l_iter, right: r_iter } =>{
-                                !(left.node_id() == l_iter.node_id() || right.node_id() == r_iter.node_id())
-                            }
-                            _ => true,
-                        } 
+                    ret.retain(|x| match x {
+                        SpecExpItem::BinOP {
+                            reason: _,
+                            left: l_iter,
+                            right: r_iter,
+                        } => {
+                            !(left.node_id() == l_iter.node_id()
+                                || right.node_id() == r_iter.node_id())
+                        },
+                        _ => true,
                     });
                     is_change = true;
                 },
-                SpecExpItem::MarcoAbort{if_exp, abort_exp} => {
-
+                SpecExpItem::MarcoAbort { if_exp, abort_exp } => {
                     let mut with_pattern = true;
                     for exp_sym in if_exp.free_vars() {
                         if !used_local_var.contains(&exp_sym) {
@@ -594,17 +596,20 @@ impl FunSpecGenerator {
                             break;
                         }
                     }
-                    
+
                     if with_pattern {
                         continue;
                     }
-                    
-                    ret.retain(|x| {
-                        match x {
-                            SpecExpItem::MarcoAbort { if_exp: l_iter, abort_exp: r_iter } =>
-                                !(if_exp.node_id() == l_iter.node_id() && abort_exp.node_id() == r_iter.node_id()),
-                            _ => true,
-                        }
+
+                    ret.retain(|x| match x {
+                        SpecExpItem::MarcoAbort {
+                            if_exp: l_iter,
+                            abort_exp: r_iter,
+                        } => {
+                            !(if_exp.node_id() == l_iter.node_id()
+                                && abort_exp.node_id() == r_iter.node_id())
+                        },
+                        _ => true,
                     });
                     is_change = true;
                 },
@@ -619,11 +624,12 @@ impl FunSpecGenerator {
                     }
 
                     if !with_pattern {
-                        ret.retain(|x| {
-                            match x {
-                                SpecExpItem::PatternLet { left: l_iter, right: _ } => left.node_id() != l_iter.node_id(),
-                                _ => true,
-                            }
+                        ret.retain(|x| match x {
+                            SpecExpItem::PatternLet {
+                                left: l_iter,
+                                right: _,
+                            } => left.node_id() != l_iter.node_id(),
+                            _ => true,
                         });
                         is_change = true;
                         continue;
@@ -635,23 +641,23 @@ impl FunSpecGenerator {
                     };
                     used_local_var.insert(*pat_sym);
                 },
-                _ => {}
+                _ => {},
             }
         }
 
         (ret, is_change)
     }
 
-    fn is_support_operation(op:&Operation) -> bool {
-        !matches!(op, Operation::BorrowGlobal(_)
-            | Operation::Borrow(_)
-            | Operation::Deref
-            | Operation::MoveTo
-            | Operation::MoveFrom
-            | Operation::Freeze
-            | Operation::Vector
+    fn is_support_operation(op: &Operation) -> bool {
+        !matches!(
+            op,
+            Operation::BorrowGlobal(_)
+                | Operation::Borrow(_)
+                | Operation::Deref
+                | Operation::MoveTo
+                | Operation::MoveFrom
+                | Operation::Freeze
+                | Operation::Vector
         )
     }
 }
-
-

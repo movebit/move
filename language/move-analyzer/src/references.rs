@@ -12,7 +12,11 @@ use move_model::{
     ast::{ExpData::*, Operation::*, SpecBlockTarget},
     model::{FunId, GlobalEnv, ModuleEnv, ModuleId, StructId},
 };
-use std::{path::{Path, PathBuf}, collections::BTreeSet, ops::Deref};
+use std::{
+    collections::BTreeSet,
+    ops::Deref,
+    path::{Path, PathBuf},
+};
 
 /// Handles on_references_request of the language server.
 pub fn on_references_request(context: &Context, request: &Request) -> lsp_server::Response {
@@ -49,7 +53,10 @@ pub fn on_references_request(context: &Context, request: &Request) -> lsp_server
         serde_json::to_value(GotoDefinitionResponse::Array(locations)).unwrap(),
     );
     let ret_response = r.clone();
-    log::info!("------------------------------------\n<on_references_request>ret_response = \n{:?}\n\n", ret_response);
+    log::info!(
+        "------------------------------------\n<on_references_request>ret_response = \n{:?}\n\n",
+        ret_response
+    );
     context
         .connection
         .sender
@@ -91,8 +98,9 @@ impl Handler {
             most_clost_item_idx = item_idx;
         }
 
-        if !self.result_ref_candidates.is_empty() && 
-           most_clost_item_idx < self.result_ref_candidates.len() {
+        if !self.result_ref_candidates.is_empty()
+            && most_clost_item_idx < self.result_ref_candidates.len()
+        {
             let mut ret = Vec::with_capacity(self.result_ref_candidates.len());
             for item in &self.result_ref_candidates[most_clost_item_idx] {
                 ret.push(item.mk_location());
@@ -136,7 +144,7 @@ impl Handler {
                 mouse_line_first_col.span().start() + codespan::ByteOffset(2),
             ),
         );
-    
+
         mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
         // locate to self.line first column
         while mouse_loc.column.0 < self.col && mouse_loc.line.0 == self.line {
@@ -149,7 +157,7 @@ impl Handler {
             );
             mouse_loc = env.get_location(&mouse_line_last_col).unwrap();
         }
-    
+
         let mouse_source = env.get_source(&move_model::model::Loc::new(
             target_fn_or_struct_loc.file_id(),
             codespan::Span::new(
@@ -158,12 +166,20 @@ impl Handler {
             ),
         ));
         log::info!("<on_references> -- mouse_source = {:?}", mouse_source);
-    
-        self.mouse_span = codespan::Span::new(mouse_line_first_col.span().start(), mouse_line_last_col.span().start());
+
+        self.mouse_span = codespan::Span::new(
+            mouse_line_first_col.span().start(),
+            mouse_line_last_col.span().start(),
+        );
     }
-    
-    fn get_which_modules_used_target_module(&mut self, env: &GlobalEnv, target_module: &ModuleEnv) -> BTreeSet<ModuleId> {
-        env.get_modules().filter_map(|module_env| {
+
+    fn get_which_modules_used_target_module(
+        &mut self,
+        env: &GlobalEnv,
+        target_module: &ModuleEnv,
+    ) -> BTreeSet<ModuleId> {
+        env.get_modules()
+            .filter_map(|module_env| {
                 let target_module_name_symbol = target_module.get_name().name();
                 let target_module_name_dis = target_module_name_symbol.display(env.symbol_pool());
                 let target_module_name_str = target_module_name_dis.to_string();
@@ -225,7 +241,7 @@ impl Handler {
             self.process_expr(env, exp);
         };
     }
-    
+
     fn process_spec_func(&mut self, env: &GlobalEnv) {
         let mut found_target_fun = false;
         let mut target_fun_id = FunId::new(env.symbol_pool().make("name"));
@@ -246,12 +262,13 @@ impl Handler {
                     codespan::Span::new(
                         spec_block_info.loc.span().end(),
                         spec_block_info.loc.span().end() + codespan::ByteOffset(1),
-                    )
+                    ),
                 );
-    
+
                 if let Some(s_loc) = env.get_location(&span_first_col) {
                     if let Some(e_loc) = env.get_location(&span_last_col) {
-                        if u32::from(s_loc.line) <= self.line && self.line <= u32::from(e_loc.line) {
+                        if u32::from(s_loc.line) <= self.line && self.line <= u32::from(e_loc.line)
+                        {
                             target_fun_id = fun_id;
                             found_target_fun = true;
                             spec_fn_span_loc = spec_block_info.loc.clone();
@@ -269,8 +286,7 @@ impl Handler {
 
         let target_fn = target_module.get_function(target_fun_id);
         let target_fn_spec = target_fn.get_spec();
-        log::info!("target_fun's spec = {}",
-            env.display(&*target_fn_spec));
+        log::info!("target_fun's spec = {}", env.display(&*target_fn_spec));
         self.get_mouse_loc(env, &spec_fn_span_loc);
         for cond in target_fn_spec.conditions.clone() {
             for exp in cond.all_exps() {
@@ -298,7 +314,7 @@ impl Handler {
                 break;
             }
         }
-    
+
         if !found_target_struct {
             log::info!("<on_references> -- not in struct!\n");
             return;
@@ -308,7 +324,7 @@ impl Handler {
         let target_struct = target_module.get_struct(target_struct_id);
         let target_struct_loc = target_struct.get_loc();
         self.get_mouse_loc(env, &target_struct_loc);
-    
+
         for field_env in target_struct.get_fields() {
             let field_name = field_env.get_name();
             let field_name_str = field_name.display(env.symbol_pool());
@@ -337,8 +353,7 @@ impl Handler {
                             let atomic_field_source = env.get_source(&atomic_field_loc);
                             // todo: should check mouse_last_col between in scope by atomic_field_loc
                             if atomic_field_loc.span().end() < self.mouse_span.end()
-                                || atomic_field_loc.span().start()
-                                    > self.mouse_span.end()
+                                || atomic_field_loc.span().start() > self.mouse_span.end()
                             {
                                 continue;
                             }
@@ -351,7 +366,7 @@ impl Handler {
             }
         }
     }
-    
+
     fn process_spec_struct(&mut self, env: &GlobalEnv) {
         let mut found_target_spec_stct = false;
         let mut target_stct_id = StructId::new(env.symbol_pool().make("name"));
@@ -372,12 +387,13 @@ impl Handler {
                     codespan::Span::new(
                         spec_block_info.loc.span().end(),
                         spec_block_info.loc.span().end() + codespan::ByteOffset(1),
-                    )
+                    ),
                 );
-    
+
                 if let Some(s_loc) = env.get_location(&span_first_col) {
                     if let Some(e_loc) = env.get_location(&span_last_col) {
-                        if u32::from(s_loc.line) <= self.line && self.line <= u32::from(e_loc.line) {
+                        if u32::from(s_loc.line) <= self.line && self.line <= u32::from(e_loc.line)
+                        {
                             target_stct_id = stct_id;
                             found_target_spec_stct = true;
                             spec_stct_span_loc = spec_block_info.loc.clone();
@@ -395,8 +411,7 @@ impl Handler {
 
         let target_stct = target_module.get_struct(target_stct_id);
         let target_stct_spec = target_stct.get_spec();
-        log::info!("target_stct's spec = {}",
-            env.display(target_stct_spec));
+        log::info!("target_stct's spec = {}", env.display(target_stct_spec));
         self.get_mouse_loc(env, &spec_stct_span_loc);
         for cond in target_stct_spec.conditions.clone() {
             for exp in cond.all_exps() {
@@ -404,29 +419,18 @@ impl Handler {
             }
         }
     }
-  
-    fn process_expr(
-        &mut self,
-        env: &GlobalEnv,
-        exp: &move_model::ast::Exp,
-    ) {
-        exp.visit_post_order(&mut |e| {
-            match e {
-                Call(..) => {
-                    self.process_call(env, e);
-                    true
-                },
-                _ => true,
-            }
+
+    fn process_expr(&mut self, env: &GlobalEnv, exp: &move_model::ast::Exp) {
+        exp.visit_post_order(&mut |e| match e {
+            Call(..) => {
+                self.process_call(env, e);
+                true
+            },
+            _ => true,
         });
     }
 
-    fn process_call(
-        &mut self,
-        env: &GlobalEnv,
-        expdata: &move_model::ast::ExpData,
-    )
-    {
+    fn process_call(&mut self, env: &GlobalEnv, expdata: &move_model::ast::ExpData) {
         if let Call(node_id, MoveFunction(mid, fid), _) = expdata {
             let this_call_loc = env.get_node_loc(*node_id);
             if this_call_loc.span().start() < self.mouse_span.end()
@@ -447,13 +451,18 @@ impl Handler {
                         // need locate called_fun.get_full_name_str() in f's body source
                         let f_source = env.get_source(&caller_fun_loc);
                         if let Ok(f_source_str) = f_source {
-                            if let Some(index) = f_source_str.find(called_fun.get_name_str().as_str()) {
+                            if let Some(index) =
+                                f_source_str.find(called_fun.get_name_str().as_str())
+                            {
                                 let target_len: usize = called_fun.get_name_str().len();
                                 let start = caller_fun_loc.span().start()
                                     + codespan::ByteOffset(index.try_into().unwrap());
-                                let end = start + codespan::ByteOffset((target_len).try_into().unwrap());
+                                let end =
+                                    start + codespan::ByteOffset((target_len).try_into().unwrap());
                                 caller_fun_loc = move_model::model::Loc::new(
-                                    caller_fun_loc.file_id(), codespan::Span::new(start, end));
+                                    caller_fun_loc.file_id(),
+                                    codespan::Span::new(start, end),
+                                );
                             }
                         }
                         let (caller_fun_file, caller_fun_line) =
@@ -514,7 +523,7 @@ impl Handler {
         ty: &move_model::ty::Type,
     ) {
         use move_model::ty::Type::*;
-       
+
         if let Struct(mid, stid, _) = ty {
             let stc_def_module = env.get_module(*mid);
             let type_struct = stc_def_module.get_struct(*stid);
@@ -523,18 +532,26 @@ impl Handler {
             let mouse_capture_ty_symbol_str = mouse_capture_ty_symbol_dis.to_string();
 
             let mut result_candidates: Vec<FileRange> = Vec::new();
-            for reference_module_id in self.get_which_modules_used_target_module(env, &stc_def_module) {
+            for reference_module_id in
+                self.get_which_modules_used_target_module(env, &stc_def_module)
+            {
                 let stc_ref_module = env.get_module(reference_module_id);
                 for stc_ref_fn in stc_ref_module.get_functions() {
                     let mut stc_ref_fn_loc = stc_ref_fn.get_loc();
                     while let Ok(stc_ref_fn_source) = env.get_source(&stc_ref_fn_loc) {
-                        if let Some(index) = stc_ref_fn_source.find(mouse_capture_ty_symbol_str.as_str()) {
-                            let capture_ref_ty_start = stc_ref_fn_loc.span().start() + codespan::ByteOffset(index.try_into().unwrap());
-                            let capture_ref_ty_end = capture_ref_ty_start + codespan::ByteOffset((mouse_capture_ty_symbol_str.len()).try_into().unwrap());
+                        if let Some(index) =
+                            stc_ref_fn_source.find(mouse_capture_ty_symbol_str.as_str())
+                        {
+                            let capture_ref_ty_start = stc_ref_fn_loc.span().start()
+                                + codespan::ByteOffset(index.try_into().unwrap());
+                            let capture_ref_ty_end = capture_ref_ty_start
+                                + codespan::ByteOffset(
+                                    (mouse_capture_ty_symbol_str.len()).try_into().unwrap(),
+                                );
 
                             let result_loc = move_model::model::Loc::new(
                                 stc_ref_fn_loc.file_id(),
-                                codespan::Span::new(capture_ref_ty_start, capture_ref_ty_end)
+                                codespan::Span::new(capture_ref_ty_start, capture_ref_ty_end),
                             );
 
                             let (ref_ty_file, ref_ty_pos) =
@@ -551,7 +568,11 @@ impl Handler {
 
                             stc_ref_fn_loc = move_model::model::Loc::new(
                                 stc_ref_fn_loc.file_id(),
-                                codespan::Span::new(capture_ref_ty_end, stc_ref_fn_loc.span().end()));
+                                codespan::Span::new(
+                                    capture_ref_ty_end,
+                                    stc_ref_fn_loc.span().end(),
+                                ),
+                            );
                         } else {
                             break;
                         }
@@ -563,16 +584,9 @@ impl Handler {
         }
     }
 
-    fn run_move_model_visitor_internal(
-        &mut self,
-        env: &GlobalEnv,
-        move_file_path: &Path
-    ) {
-        let candidate_modules 
-            = crate::utils::get_modules_by_fpath_in_all_modules(
-                env, 
-                &PathBuf::from(move_file_path)
-            );
+    fn run_move_model_visitor_internal(&mut self, env: &GlobalEnv, move_file_path: &Path) {
+        let candidate_modules =
+            crate::utils::get_modules_by_fpath_in_all_modules(env, &PathBuf::from(move_file_path));
         if candidate_modules.is_empty() {
             log::info!("<on_references>cannot get target module\n");
             return;
@@ -585,7 +599,7 @@ impl Handler {
                     self.process_spec_struct(env);
                 } else {
                     self.process_func(env);
-                    self.process_struct(env);    
+                    self.process_struct(env);
                 }
             }
         }
@@ -606,7 +620,7 @@ impl ItemOrAccessHandler for Handler {
         _services: &dyn HandleItemService,
         env: &GlobalEnv,
         move_file_path: &Path,
-        _: String
+        _: String,
     ) {
         self.run_move_model_visitor_internal(env, move_file_path);
     }

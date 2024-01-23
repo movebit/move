@@ -3,18 +3,15 @@
 
 #[cfg(test)]
 mod tests {
-    use lsp_server::{Connection, Request, Response};
     use aptos_move_analyzer::{
         context::{Context, FileDiags},
         multiproject::MultiProject,
         references,
         utils::*,
     };
+    use lsp_server::{Connection, Request, Response};
     use serde_json::json;
-    use std::{
-        path::PathBuf,
-        time::Duration,
-    };
+    use std::{path::PathBuf, time::Duration};
 
     fn prepare_project(context: &mut Context, fpath: PathBuf) {
         eprintln!("<UT> -- prepare_project -- fpath = {:?}", fpath.to_str());
@@ -132,8 +129,14 @@ mod tests {
                 if let Some(serde_json::Value::Array(expect_r_result)) = expect_r.result.clone() {
                     for expect_r_value in expect_r_result {
                         if actual_r_value.eq(&expect_r_value) {
-                            eprintln!("actual_r_value = {:?}", serde_json::to_string(&actual_r_value));
-                            eprintln!("expect_r_value = {:?}", serde_json::to_string(&expect_r_value));
+                            eprintln!(
+                                "actual_r_value = {:?}",
+                                serde_json::to_string(&actual_r_value)
+                            );
+                            eprintln!(
+                                "expect_r_value = {:?}",
+                                serde_json::to_string(&expect_r_value)
+                            );
                             found_same_item = true;
                             break;
                         }
@@ -315,8 +318,14 @@ mod tests {
                 if let Some(serde_json::Value::Array(expect_r_result)) = expect_r.result.clone() {
                     for expect_r_value in expect_r_result {
                         if actual_r_value.eq(&expect_r_value) {
-                            eprintln!("actual_r_value = {:?}", serde_json::to_string(&actual_r_value));
-                            eprintln!("expect_r_value = {:?}", serde_json::to_string(&expect_r_value));
+                            eprintln!(
+                                "actual_r_value = {:?}",
+                                serde_json::to_string(&actual_r_value)
+                            );
+                            eprintln!(
+                                "expect_r_value = {:?}",
+                                serde_json::to_string(&expect_r_value)
+                            );
                             found_same_item = true;
                             break;
                         }
@@ -326,5 +335,4 @@ mod tests {
             }
         }
     }
-
 }

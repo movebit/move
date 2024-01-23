@@ -3,18 +3,15 @@
 
 #[cfg(test)]
 mod tests {
-    use lsp_server::{Connection, Request, Response};
     use aptos_move_analyzer::{
         context::{Context, FileDiags},
-        multiproject::MultiProject,
         hover,
+        multiproject::MultiProject,
         utils::*,
     };
+    use lsp_server::{Connection, Request, Response};
     use serde_json::json;
-    use std::{
-        path::PathBuf,
-        time::Duration,
-    };
+    use std::{path::PathBuf, time::Duration};
 
     fn prepare_project(context: &mut Context, fpath: PathBuf) {
         eprintln!("<UT> -- prepare_project -- fpath = {:?}", fpath.to_str());
@@ -345,6 +342,4 @@ mod tests {
         eprintln!("\n------------------------------\n");
         assert_eq!(actual_r.result, expect_r.result);
     }
-
-
 }

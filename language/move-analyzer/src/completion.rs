@@ -1,19 +1,15 @@
 // Copyright (c) The BitsLab.MoveBit Contributors
 // SPDX-License-Identifier: Apache-2.0
-use crate::{
-    context::*,
-    utils::path_concat,
-};
-use lsp_server::*;
-use move_model::model::GlobalEnv;
-use std::vec;
-use lsp_server::Request;
+use crate::{context::*, utils::path_concat};
+use lsp_server::{Request, *};
 use lsp_types::{CompletionItem, CompletionItemKind, CompletionParams, Position};
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::{
     keywords::{BUILTINS, CONTEXTUAL_KEYWORDS, KEYWORDS, PRIMITIVE_TYPES},
     lexer::{Lexer, Tok},
 };
+use move_model::model::GlobalEnv;
+use std::vec;
 
 /// Constructs an `lsp_types::CompletionItem` with the given `label` and `kind`.
 fn completion_item(label: &str, kind: CompletionItemKind) -> CompletionItem {
@@ -85,8 +81,8 @@ fn get_cursor_token(buffer: &str, position: &Position) -> Option<Tok> {
             } else {
                 Some(Tok::Colon)
             }
-        }
-        _ => None, 
+        },
+        _ => None,
     }
 }
 
@@ -122,7 +118,7 @@ fn lexer_for_buffer(buffer: &str, is_dedup: bool) -> Vec<&str> {
     if lexer.advance().is_err() {
         return ids;
     }
-    
+
     while lexer.peek() != Tok::EOF {
         // Some tokens, such as "phantom", are contextual keywords that are only reserved in
         // certain contexts. Since for now this language server doesn't analyze semantic context,
@@ -130,8 +126,10 @@ fn lexer_for_buffer(buffer: &str, is_dedup: bool) -> Vec<&str> {
         // these keywords to the user twice in the case that the token "phantom" is present in the
         // source program (once as a keyword, and once as an identifier), we filter out any
         // identifier token that has the same text as a keyword.
-        if (lexer.peek() == Tok::Identifier && !KEYWORDS.contains(&lexer.content())) 
-        || lexer.peek() == Tok::ColonColon || lexer.peek() == Tok::Period  {
+        if (lexer.peek() == Tok::Identifier && !KEYWORDS.contains(&lexer.content()))
+            || lexer.peek() == Tok::ColonColon
+            || lexer.peek() == Tok::Period
+        {
             // The completion item kind "text" indicates the item is not based on any semantic
             // context of the request cursor's position.
             if !(is_dedup && ids.contains(&lexer.content())) {
@@ -145,57 +143,73 @@ fn lexer_for_buffer(buffer: &str, is_dedup: bool) -> Vec<&str> {
     ids
 }
 
-fn handle_identifiers_for_coloncolon(string_tokens: &Vec<&str>, env: &GlobalEnv) -> Vec<CompletionItem> {
+fn handle_identifiers_for_coloncolon(
+    string_tokens: &Vec<&str>,
+    env: &GlobalEnv,
+) -> Vec<CompletionItem> {
     let mut result = vec![];
     if string_tokens.len() <= 1 {
         return result;
     }
-    let prefix_token_string = string_tokens.get(string_tokens.len() - 2).unwrap().to_string();
+    let prefix_token_string = string_tokens
+        .get(string_tokens.len() - 2)
+        .unwrap()
+        .to_string();
     for module_env in env.get_modules() {
         if prefix_token_string == module_env.get_name().display(env).to_string() {
             for func_env in module_env.get_functions() {
-                result.push(completion_item(func_env.get_name_str().as_str(), CompletionItemKind::FUNCTION));
+                result.push(completion_item(
+                    func_env.get_name_str().as_str(),
+                    CompletionItemKind::FUNCTION,
+                ));
             }
 
             for struct_env in module_env.get_structs() {
-                result.push(completion_item(&struct_env.get_name().display(env.symbol_pool()).to_string(), CompletionItemKind::STRUCT));
+                result.push(completion_item(
+                    &struct_env.get_name().display(env.symbol_pool()).to_string(),
+                    CompletionItemKind::STRUCT,
+                ));
             }
         }
     }
     result
 }
 
-fn handle_identifiers_for_coloncolon_item(string_tokens: &Vec<&str>, env: &GlobalEnv) -> Vec<CompletionItem> {
+fn handle_identifiers_for_coloncolon_item(
+    string_tokens: &Vec<&str>,
+    env: &GlobalEnv,
+) -> Vec<CompletionItem> {
     let mut result = vec![];
     if string_tokens.len() <= 2 {
         return result;
     }
-    let prefix_token_string = string_tokens.get(string_tokens.len() - 3).unwrap().to_string();
+    let prefix_token_string = string_tokens
+        .get(string_tokens.len() - 3)
+        .unwrap()
+        .to_string();
     let wanted_token_string = string_tokens.last().unwrap();
     for module_env in env.get_modules() {
         if prefix_token_string == module_env.get_name().display(env).to_string() {
             for func_env in module_env.get_functions() {
                 if func_env.get_name_str().contains(wanted_token_string) {
-                    result.push(
-                        completion_item(
+                    result.push(completion_item(
                         func_env.get_name_str().as_str(),
-                        CompletionItemKind::FUNCTION)
-                    );
+                        CompletionItemKind::FUNCTION,
+                    ));
                 }
             }
-            
+
             for struct_env in module_env.get_structs() {
                 if struct_env
                     .get_name()
                     .display(env.symbol_pool())
                     .to_string()
-                    .contains(wanted_token_string) 
+                    .contains(wanted_token_string)
                 {
-                    result.push(
-                        completion_item(
+                    result.push(completion_item(
                         &struct_env.get_name().display(env.symbol_pool()).to_string(),
-                        CompletionItemKind::STRUCT)
-                    );
+                        CompletionItemKind::STRUCT,
+                    ));
                 }
             }
         }
@@ -203,8 +217,10 @@ fn handle_identifiers_for_coloncolon_item(string_tokens: &Vec<&str>, env: &Globa
     result
 }
 
-
-fn handle_file_identifiers(cursor_tokens: &str, file_tokens_string: &mut Vec<&str>) -> Vec<CompletionItem> {
+fn handle_file_identifiers(
+    cursor_tokens: &str,
+    file_tokens_string: &mut Vec<&str>,
+) -> Vec<CompletionItem> {
     let mut result = vec![];
     file_tokens_string.dedup();
     for &token_str in file_tokens_string.iter() {
@@ -239,20 +255,22 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
             };
         },
     };
-   
+
     let file_buffer_str = current_project.current_modifing_file_content.as_str();
     let buffer = Some(file_buffer_str);
     // The completion items we provide depend upon where the user's cursor is positioned.
     let cursor =
         buffer.and_then(|buf| get_cursor_token(buf, &parameters.text_document_position.position));
-    let cursor_line = 
+    let cursor_line =
         buffer.and_then(|buf| get_cursor_line(buf, &parameters.text_document_position.position));
 
     if cursor_line.is_none() {
         log::error!("could not found code string from cursor line");
         return Response {
             id: "".to_string().into(),
-            result: Some(serde_json::json!({"msg": "Could not found code string from cursor line"})),
+            result: Some(
+                serde_json::json!({"msg": "Could not found code string from cursor line"}),
+            ),
             error: None,
         };
     }
@@ -265,7 +283,9 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
         log::error!("could not found code string from cursor line");
         return Response {
             id: "".to_string().into(),
-            result: Some(serde_json::json!({"msg": "Could not found code string from cursor line"})),
+            result: Some(
+                serde_json::json!({"msg": "Could not found code string from cursor line"}),
+            ),
             error: None,
         };
     }
@@ -274,11 +294,11 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     match cursor {
         Some(Tok::Colon) => {
             items.extend_from_slice(&primitive_types());
-        }
+        },
         Some(Tok::ColonColon) => {
             // `.` or `::` must be followed by identifiers, which are added to the completion items.
-            let module_items 
-                = handle_identifiers_for_coloncolon(&cursor_line_tokens, &current_project.global_env);
+            let module_items =
+                handle_identifiers_for_coloncolon(&cursor_line_tokens, &current_project.global_env);
             items.extend_from_slice(&module_items);
         },
         Some(Tok::Period) => {
@@ -293,25 +313,24 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
             let &cursor_token_str = cursor_line_tokens.last().unwrap();
             let mut may_coloncolon = "";
             if cursor_line_tokens.len() > 1 {
-                may_coloncolon = cursor_line_tokens.get(cursor_line_tokens.len() - 2).unwrap();
+                may_coloncolon = cursor_line_tokens
+                    .get(cursor_line_tokens.len() - 2)
+                    .unwrap();
             }
 
             if may_coloncolon == "::" {
-                let module_items 
-                    = handle_identifiers_for_coloncolon_item(&cursor_line_tokens, &current_project.global_env);
+                let module_items = handle_identifiers_for_coloncolon_item(
+                    &cursor_line_tokens,
+                    &current_project.global_env,
+                );
                 items.extend_from_slice(&module_items);
             } else {
                 let mut token_str_in_file = lexer_for_buffer(file_buffer_str, true);
-                let file_items 
-                    = handle_file_identifiers(cursor_token_str, &mut token_str_in_file);
+                let file_items = handle_file_identifiers(cursor_token_str, &mut token_str_in_file);
                 items.extend_from_slice(&file_items);
             }
-        }
+        },
     }
-
-    
-
-    
 
     // if let Some(cursor_line_buffer) = &cursor_line {
     //     let identifiers = identifiers(cursor_line_buffer.as_str(), &current_project.global_env, &fpath);
@@ -322,7 +341,10 @@ pub fn on_completion_request(context: &Context, request: &Request) -> lsp_server
     let result = serde_json::to_value(items).expect("could not serialize completion response");
     let response = lsp_server::Response::new_ok(request.id.clone(), result);
     let ret_response = response.clone();
-    log::trace!("------------------------------------\n<on_complete>ret_response = {:?}\n\n", ret_response);
+    log::trace!(
+        "------------------------------------\n<on_complete>ret_response = {:?}\n\n",
+        ret_response
+    );
     if let Err(err) = context
         .connection
         .sender

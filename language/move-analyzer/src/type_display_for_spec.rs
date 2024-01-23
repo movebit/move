@@ -7,26 +7,17 @@
 //! for structs within this module. For structs from other modules, it prints in the form
 //! "module_name::struct_name" instead of displaying all structs as "module_name::struct_name".
 
-
 use move_model::{
-    model:: {
-        StructId, ModuleId, ModuleEnv
-    },
-    ty::{Type, TypeDisplayContext, ReferenceKind},
     ast::ModuleName,
+    model::{ModuleEnv, ModuleId, StructId},
     symbol::Symbol,
+    ty::{ReferenceKind, Type, TypeDisplayContext},
 };
-
-use std::{
-    fmt,
-    fmt::Formatter,
-};
-
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt, fmt::Formatter};
 pub struct TypeDisplayForSpec<'a> {
     pub type_: &'a Type,
     pub context: &'a TypeDisplayContext<'a>,
-    pub using_module_map:  &'a HashMap<ModuleName, Vec<Symbol>>,
+    pub using_module_map: &'a HashMap<ModuleName, Vec<Symbol>>,
     pub module_env: &'a ModuleEnv<'a>,
 }
 
@@ -39,7 +30,7 @@ impl<'a> TypeDisplayForSpec<'a> {
             using_module_map: self.using_module_map,
         }
     }
-}  
+}
 
 impl<'a> fmt::Display for TypeDisplayForSpec<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -139,16 +130,16 @@ impl<'a> TypeDisplayForSpec<'a> {
 
             if let Some(members) = self.using_module_map.get(struct_module_env_name) {
                 let a = members.iter().find(|&&x| x == struct_env_name);
-                if let Some(x) = a { 
-                    return x.display(env.symbol_pool()).to_string(); 
+                if let Some(x) = a {
+                    return x.display(env.symbol_pool()).to_string();
                 }
-            } 
+            }
 
-            format!("{}::{}",
+            format!(
+                "{}::{}",
                 struct_module_env_name.display(env),
                 struct_env_name.display(env.symbol_pool())
             )
         }
     }
 }
-

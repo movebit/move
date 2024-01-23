@@ -2,6 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
+use aptos_move_analyzer::{
+    analyzer_handler::ConvertLoc,
+    completion,
+    context::{Context, FileDiags},
+    goto_definition, hover, inlay_hints,
+    inlay_hints::*,
+    move_generate_spec_file::on_generate_spec_file,
+    move_generate_spec_sel::on_generate_spec_sel,
+    multiproject::MultiProject,
+    references, symbols,
+    utils::*,
+};
 use clap::Parser;
 use crossbeam::channel::{bounded, select, Sender};
 use log::{Level, Metadata, Record};
@@ -18,22 +30,6 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
-
-use aptos_move_analyzer::{
-    analyzer_handler::ConvertLoc,
-    context::{Context, FileDiags},
-    multiproject::MultiProject,
-    goto_definition,
-    references,
-    hover,
-    completion,
-    inlay_hints,
-    inlay_hints::*,
-    utils::*,
-    symbols,
-    move_generate_spec_file::on_generate_spec_file,
-    move_generate_spec_sel::on_generate_spec_sel,
-};
 use url::Url;
 
 struct SimpleLogger;
@@ -41,11 +37,13 @@ impl log::Log for SimpleLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         metadata.level() <= Level::Info
     }
+
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
             eprintln!("{} - {}", record.level(), record.args());
         }
     }
+
     fn flush(&self) {}
 }
 const LOGGER: SimpleLogger = SimpleLogger;
@@ -189,31 +187,31 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
         },
         lsp_types::request::References::METHOD => {
             references::on_references_request(context, request);
-        }
+        },
         lsp_types::request::HoverRequest::METHOD => {
             hover::on_hover_request(context, request);
-        }
+        },
         lsp_types::request::Completion::METHOD => {
             completion::on_completion_request(context, request);
-        }
+        },
         lsp_types::request::InlayHintRequest::METHOD => {
             inlay_hints::on_inlay_hints(context, request, inlay_hints_config);
-        }
+        },
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             symbols::on_document_symbol_request(context, request);
-        }
+        },
         "move/generate/spec/file" => {
             on_generate_spec_file(context, request, true);
-        }
+        },
         "move/generate/spec/sel" => {
             on_generate_spec_sel(context, request);
-        }
+        },
         "move/lsp/client/inlay_hints/config" => {
             let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
                 .expect("could not deserialize inlay hints request");
             log::info!("call inlay_hints config {:?}", parameters);
             *inlay_hints_config = parameters;
-        }
+        },
         _ => {
             log::error!("unsupported request: '{}' from client", request.method)
         },
@@ -239,14 +237,14 @@ fn report_diag(context: &mut Context, fpath: PathBuf) {
     let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
     let diag_err = proj.err_diags.clone();
     let tokens: Vec<&str> = diag_err.as_str().split("error").collect();
-    for token in tokens {  
+    for token in tokens {
         if token.lines().count() < 3 {
-           continue;
+            continue;
         }
         let err_msg = token.lines().next().unwrap_or_default();
         let loc_str = match token.lines().nth(1) {
             Some(str) => str.to_string(),
-            None => "".to_string()
+            None => "".to_string(),
         };
 
         let mut file_path = "";
@@ -286,12 +284,7 @@ fn report_diag(context: &mut Context, fpath: PathBuf) {
                 end: pos,
             },
             severity: Some(lsp_types::DiagnosticSeverity::ERROR),
-            message: format!(
-                "{}\n{}{:?}",
-                err_msg,
-                code_str,
-                "".to_string()
-            ),
+            message: format!("{}\n{}{:?}", err_msg, code_str, "".to_string()),
             ..Default::default()
         };
         let url = url::Url::from_file_path(PathBuf::from(file_path).as_path()).unwrap();
@@ -421,9 +414,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
     }
 }
 
-fn get_package_compile_diagnostics(
-    pkg_path: &Path,
-) -> Result<Diagnostics> {
+fn get_package_compile_diagnostics(pkg_path: &Path) -> Result<Diagnostics> {
     use anyhow::*;
     use move_package::compilation::build_plan::BuildPlan;
     use tempfile::tempdir;
@@ -439,8 +430,10 @@ fn get_package_compile_diagnostics(
     let build_plan = BuildPlan::create(resolution_graph)?;
     let mut diagnostics = None;
     let compile_cfg: move_package::CompilerConfig = Default::default();
-    build_plan.compile_with_driver(&mut std::io::sink(), &compile_cfg,
-        |compiler| { 
+    build_plan.compile_with_driver(
+        &mut std::io::sink(),
+        &compile_cfg,
+        |compiler| {
             let (_, compilation_result) = compiler.run::<PASS_TYPING>()?;
             match compilation_result {
                 std::result::Result::Ok(_) => {},
@@ -451,9 +444,7 @@ fn get_package_compile_diagnostics(
             };
             Ok(Default::default())
         },
-        |_compiler| {
-            Ok(Default::default())
-        }
+        |_compiler| Ok(Default::default()),
     )?;
     match diagnostics {
         Some(x) => Ok(x),

@@ -4,27 +4,24 @@
 use super::utils::*;
 use crate::{analyzer_handler::*, project::Project};
 use anyhow::{Ok, Result};
+use codespan_reporting::diagnostic::Severity;
 use move_compiler::shared::{NumericalAddress, PackagePaths};
 use move_core_types::account_address::*;
+use move_model::{options::ModelBuilderOptions, run_model_builder_with_options};
 use move_package::source_package::{layout::SourcePackageLayout, manifest_parser::*};
+use num_bigint::BigUint;
 use std::{
     cell::RefCell,
     cmp::Ordering,
-    collections::{ BTreeSet, BTreeMap },
+    collections::{BTreeMap, BTreeSet, HashMap},
     path::{Path, PathBuf},
     rc::Rc,
 };
-use walkdir::WalkDir;
-use move_model::{options::ModelBuilderOptions, run_model_builder_with_options};
-use std::collections::HashMap;
-use num_bigint::BigUint;
 use tempfile::tempdir;
-use codespan_reporting::diagnostic::Severity;
+use walkdir::WalkDir;
 
 // Determines the base of the number literal, depending on the prefix
-pub(crate) fn determine_num_text_and_base(
-    s: &str,
-) -> (&str, move_compiler::shared::NumberFormat) {
+pub(crate) fn determine_num_text_and_base(s: &str) -> (&str, move_compiler::shared::NumberFormat) {
     for c in s.chars() {
         if c.is_alphabetic() {
             return (s, move_compiler::shared::NumberFormat::Hex);
@@ -40,14 +37,13 @@ pub fn parse_addr_str_to_number(
     [u8; AccountAddress::LENGTH],
     move_compiler::shared::NumberFormat,
 )> {
-
     let (txt, base) = determine_num_text_and_base(s);
 
     let parsed = match base {
         move_compiler::shared::NumberFormat::Hex => BigUint::parse_bytes(txt[2..].as_bytes(), 16),
         move_compiler::shared::NumberFormat::Decimal => BigUint::parse_bytes(txt.as_bytes(), 10),
     }?;
-    
+
     let bytes = parsed.to_bytes_be();
     if bytes.len() > AccountAddress::LENGTH {
         return None;
@@ -75,11 +71,15 @@ pub fn parse_named_address_item(s: &str) -> anyhow::Result<(String, NumericalAdd
     if let Some(addr) = parse_addr_str(before_after[1]) {
         Ok((name, addr))
     } else {
-        Ok((name, NumericalAddress::new(AccountAddress::from_hex_literal("0x0")
-            .unwrap()
-            .into_bytes(), 
-            move_compiler::shared::NumberFormat::Hex))
-        )
+        Ok((
+            name,
+            NumericalAddress::new(
+                AccountAddress::from_hex_literal("0x0")
+                    .unwrap()
+                    .into_bytes(),
+                move_compiler::shared::NumberFormat::Hex,
+            ),
+        ))
     }
 }
 
@@ -187,7 +187,10 @@ impl Project {
             &attributes,
         )
         .expect("Failed to create GlobalEnv!");
-        log::info!("env.get_module_count() = {:?}", &new_project.global_env.get_module_count());
+        log::info!(
+            "env.get_module_count() = {:?}",
+            &new_project.global_env.get_module_count()
+        );
         use codespan_reporting::term::termcolor::Buffer;
         let mut error_writer = Buffer::no_color();
 
@@ -197,7 +200,9 @@ impl Project {
         }
 
         new_project.addrname_2_addrnum = helper;
-        new_project.global_env.report_diag(&mut error_writer, Severity::Error);
+        new_project
+            .global_env
+            .report_diag(&mut error_writer, Severity::Error);
         new_project.err_diags = String::from_utf8_lossy(&error_writer.into_inner()).to_string();
         Ok(new_project)
     }
@@ -210,10 +215,10 @@ impl Project {
             None => {
                 log::error!("not move project.");
                 return;
-            }
+            },
         };
 
-        let new_project = match Project::new(root_dir, |msg| {log::info!("{}", msg)}) {
+        let new_project = match Project::new(root_dir, |msg| log::info!("{}", msg)) {
             Ok(x) => x,
             Err(_) => {
                 log::error!("reload project failed");
@@ -226,10 +231,14 @@ impl Project {
         self.dependents = new_project.dependents.clone();
         self.global_env = new_project.global_env;
 
-        log::info!("env.get_module_count() = {:?}", &self.global_env.get_module_count());
+        log::info!(
+            "env.get_module_count() = {:?}",
+            &self.global_env.get_module_count()
+        );
         use codespan_reporting::term::termcolor::Buffer;
         let mut error_writer = Buffer::no_color();
-        self.global_env.report_diag(&mut error_writer, Severity::Error);
+        self.global_env
+            .report_diag(&mut error_writer, Severity::Error);
         self.err_diags = String::from_utf8_lossy(&error_writer.into_inner()).to_string();
     }
 
@@ -351,7 +360,6 @@ impl Project {
                 }
                 log::debug!("load source file {:?}", file.path());
                 ret_paths.push(file.path().to_path_buf());
-  
             }
         }
         Ok(ret_paths)
@@ -377,7 +385,7 @@ impl Project {
         &self,
         visitor: &mut dyn ItemOrAccessHandler,
         filepath: &Path,
-        source_str: String
+        source_str: String,
     ) {
         visitor.handle_project_env(self, &self.global_env, filepath, source_str);
     }

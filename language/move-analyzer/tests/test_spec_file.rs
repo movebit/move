@@ -6,14 +6,13 @@ mod tests {
 
     use aptos_move_analyzer::{
         context::*,
-        utils::{path_concat,discover_manifest_and_kind},
+        move_generate_spec_file::on_generate_spec_file,
         multiproject::MultiProject,
-        move_generate_spec_file::on_generate_spec_file
+        utils::{discover_manifest_and_kind, path_concat},
     };
     use lsp_server::*;
-
-    use std::path::PathBuf;
     use serde_json::json;
+    use std::path::PathBuf;
     // use itertools::Itertools;
 
     fn prepare_project(context: &mut Context, fpath: PathBuf) {
@@ -67,7 +66,7 @@ mod tests {
             None => {
                 log::error!("project '{:?}' not found.", fpath.as_path());
                 return;
-            }
+            },
         };
 
         let params_json = json!({
@@ -116,7 +115,7 @@ mod tests {
             None => {
                 log::error!("project '{:?}' not found.", fpath.as_path());
                 return;
-            }
+            },
         };
 
         let params_json = json!({
@@ -131,7 +130,6 @@ mod tests {
         let actual_r = on_generate_spec_file(&context, &request, false);
         let ex = Some(
             String::from("spec 0x0::M3 {\n\n    spec module {\n        pragma verify = true;\n        pragma aborts_if_is_strict;\n    }\n    spec create_u128(a: u128, b: u128): u128{\n        aborts_if a + b > MAX_U128;\n    }\n    spec test_may_overflow(var_u64: u64, var_u128: u128, var_u256: u256): u64{\n        let var_local_u64 = var_u64 + 1;\n        aborts_if var_u64 + 1 > MAX_U64;\n        let var_local_u128 = var_u128 * 2;\n        aborts_if var_u128 * 2 > MAX_U128;\n        let var_local_u256 = var_u256 << 3;\n        aborts_if var_u256 << 3 > MAX_U256;\n        aborts_if (var_local_u64 as u128) + var_local_u128 > MAX_U128;\n        aborts_if (((var_local_u64 as u128) + var_local_u128) as u256) * var_local_u256 > MAX_U256;\n        aborts_if ((((var_local_u64 as u128) + var_local_u128) as u256) * var_local_u256) << 3 > MAX_U256;\n    }\n    spec test_may_underflow(var_u64: u64, var_u128: u128, var_u256: u256): u64{\n        aborts_if var_u64 - 1 < 0;\n        let var_local_u128 = (var_u128 * 2) - 1000;\n        aborts_if var_u128 * 2 > MAX_U128;\n        aborts_if (var_u128 * 2) - 1000 < 0;\n        aborts_if var_local_u128 <= 0 with 0;\n    }\n    spec test_may_div_zero(var_u64: u64, var_u128: u128, var_u256: u256): u64{\n        aborts_if 100 + var_u64 > MAX_U64;\n        aborts_if var_u64 == 0;\n        aborts_if var_u256 == 0;\n        aborts_if ((var_u128 as u256) / var_u256) == 0;\n    }\n}\n\n")
-            
         );
         let expect_r = Response::new_ok(
             "generate_spec_file_request_002".to_string().into(),
@@ -145,7 +143,4 @@ mod tests {
         log::info!("\n------------------------------\n");
         assert_eq!(actual_r.result, expect_r.result);
     }
-
-    
- 
 }

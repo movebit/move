@@ -46,17 +46,13 @@
 //! definitions, the symbolicator builds a scope stack, entering encountered definitions and
 //! matching uses to a definition in the innermost scope.
 
-use crate::{
-    context::Context,
-    utils::get_modules_by_fpath_in_all_modules, project::Project,
-};
+use crate::{context::Context, project::Project, utils::get_modules_by_fpath_in_all_modules};
 use lsp_server::Request;
 use lsp_types::{DocumentSymbol, DocumentSymbolParams, SymbolKind};
 use move_model::{
-    model::{ModuleEnv, StructEnv},
     ast::SpecBlockTarget,
+    model::{ModuleEnv, StructEnv},
 };
-
 
 /// Handles document symbol request of the language server
 #[allow(deprecated)]
@@ -66,7 +62,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) -> lsp_s
         .expect("could not deserialize document symbol request");
 
     let fpath = parameters.text_document.uri.to_file_path().unwrap();
-    
+
     let mut may_target_modules = Default::default();
     let mut may_project = Default::default();
     let projects = context.projects.get_projects(&fpath);
@@ -77,38 +73,50 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) -> lsp_s
             may_project = Some(project);
             break;
         }
-            
     }
 
     let project = match may_project {
-        Some(x) => x, 
+        Some(x) => x,
         None => {
-            log::error!("coule not found project from file path, fpath = {:?}", fpath.as_path());
+            log::error!(
+                "coule not found project from file path, fpath = {:?}",
+                fpath.as_path()
+            );
             return lsp_server::Response {
                 id: "".to_string().into(),
                 result: Some(serde_json::json!({"msg": "coule not found project from file path"})),
                 error: None,
             };
-        }
-    };    
+        },
+    };
 
     let module_envs = match may_target_modules {
-        Some(x) => x, 
+        Some(x) => x,
         None => {
-            log::error!("coule not found module from file path, fpath = {:?}", fpath.as_path());
+            log::error!(
+                "coule not found module from file path, fpath = {:?}",
+                fpath.as_path()
+            );
             return lsp_server::Response {
                 id: "".to_string().into(),
                 result: Some(serde_json::json!({"msg": "coule not found module from file path"})),
                 error: None,
             };
-        }
-    };    
+        },
+    };
 
     let mut result_vec_document_symbols: Vec<DocumentSymbol> = vec![];
     for module_env in module_envs {
-        log::info!("start handle module env name: {:?}", module_env.get_full_name_str());
+        log::info!(
+            "start handle module env name: {:?}",
+            module_env.get_full_name_str()
+        );
         let module_range = project.loc_to_range(&module_env.get_loc());
-        let module_name = module_env.get_name().display(&project.global_env).to_string().clone();
+        let module_name = module_env
+            .get_name()
+            .display(&project.global_env)
+            .to_string()
+            .clone();
         let module_detail = Some(module_name.clone());
         let module_kind = SymbolKind::MODULE;
 
@@ -119,7 +127,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) -> lsp_s
         handle_document_symbols_const(project, &module_env, &mut children);
         handle_document_symbols_struct(project, &module_env, &mut children);
 
-        result_vec_document_symbols.push( DocumentSymbol{
+        result_vec_document_symbols.push(DocumentSymbol {
             name: module_name,
             detail: module_detail,
             kind: module_kind,
@@ -129,12 +137,15 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) -> lsp_s
             tags: Some(vec![]),
             deprecated: Some(false),
         });
-        log::trace!("end handle module env name: {:?}", module_env.get_full_name_str());
+        log::trace!(
+            "end handle module env name: {:?}",
+            module_env.get_full_name_str()
+        );
     }
-    
+
     let response = lsp_server::Response::new_ok(
-        request.id.clone(), 
-        serde_json::json!(&result_vec_document_symbols)
+        request.id.clone(),
+        serde_json::json!(&result_vec_document_symbols),
     );
     if context
         .connection
@@ -153,88 +164,109 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) -> lsp_s
 
 /// Helper function to handle Spec function in the document symbols
 #[allow(deprecated)]
-fn handle_document_symbols_spec_function(project: &Project, module_env :&ModuleEnv, children: &mut Vec<DocumentSymbol>) {
+fn handle_document_symbols_spec_function(
+    project: &Project,
+    module_env: &ModuleEnv,
+    children: &mut Vec<DocumentSymbol>,
+) {
     for spec_info in module_env.get_spec_block_infos() {
         match project.global_env.get_file_and_location(&spec_info.loc) {
             Some((_, _)) => {},
             None => {
-                log::error!("could not get file and location from spec info, spec: {:?}", spec_info);
+                log::error!(
+                    "could not get file and location from spec info, spec: {:?}",
+                    spec_info
+                );
                 continue;
-            }
+            },
         };
 
-        let (spec_name, spec_range) = match spec_info.target  {
+        let (spec_name, spec_range) = match spec_info.target {
             SpecBlockTarget::Function(_, fid) => {
                 let f_env = module_env.get_function(fid);
                 (f_env.get_name_str(), project.loc_to_range(&spec_info.loc))
             },
             SpecBlockTarget::Struct(_, sid) => {
                 let s_env = module_env.get_struct(sid);
-                (s_env.get_name().display(project.global_env.symbol_pool()).to_string(), project.loc_to_range(&spec_info.loc))
+                (
+                    s_env
+                        .get_name()
+                        .display(project.global_env.symbol_pool())
+                        .to_string(),
+                    project.loc_to_range(&spec_info.loc),
+                )
             },
             _ => continue,
         };
 
         children.push(DocumentSymbol {
             name: spec_name,
-            detail:None,
+            detail: None,
             kind: SymbolKind::FUNCTION,
             range: spec_range,
             selection_range: spec_range,
             children: None,
             tags: Some(vec![]),
             deprecated: Some(false),
-        });  
+        });
     }
 }
 
-
 /// Helper function to handle function in the document symbols
 #[allow(deprecated)]
-fn handle_document_symbols_function(project: &Project, module_env :&ModuleEnv, children: &mut Vec<DocumentSymbol>) {
+fn handle_document_symbols_function(
+    project: &Project,
+    module_env: &ModuleEnv,
+    children: &mut Vec<DocumentSymbol>,
+) {
     for function_env in module_env.get_functions() {
         let func_range = project.loc_to_range(&function_env.get_loc());
-                            
+
         children.push(DocumentSymbol {
             name: function_env.get_name_str().to_string(),
-            detail:None,
+            detail: None,
             kind: SymbolKind::FUNCTION,
             range: func_range,
             selection_range: func_range,
             children: None,
             tags: Some(vec![]),
             deprecated: Some(false),
-        });  
+        });
     }
 }
 
 /// Helper function to handle constants in the document symbols
 #[allow(deprecated)]
-fn handle_document_symbols_const(project: &Project, 
-    module_env :&ModuleEnv, 
-    children: &mut Vec<DocumentSymbol>
+fn handle_document_symbols_const(
+    project: &Project,
+    module_env: &ModuleEnv,
+    children: &mut Vec<DocumentSymbol>,
 ) {
     for const_env in module_env.get_named_constants() {
         let const_range = project.loc_to_range(&const_env.get_loc());
-                            
+
         children.push(DocumentSymbol {
-            name: const_env.get_name().display(project.global_env.symbol_pool()).to_string(),
-            detail:None,
+            name: const_env
+                .get_name()
+                .display(project.global_env.symbol_pool())
+                .to_string(),
+            detail: None,
             kind: SymbolKind::CONSTANT,
             range: const_range,
             selection_range: const_range,
             children: None,
             tags: Some(vec![]),
             deprecated: Some(false),
-        });  
+        });
     }
 }
 
 /// Helper function to handle sturct in the document symbols
 #[allow(deprecated)]
-fn handle_document_symbols_struct(project: &Project, 
-    module_env :&ModuleEnv, 
-    children: &mut Vec<DocumentSymbol>
+fn handle_document_symbols_struct(
+    project: &Project,
+    module_env: &ModuleEnv,
+    children: &mut Vec<DocumentSymbol>,
 ) {
     for struct_env in module_env.get_structs() {
         let struct_range = project.loc_to_range(&struct_env.get_loc());
@@ -243,15 +275,18 @@ fn handle_document_symbols_struct(project: &Project,
         handle_document_symbols_struct_fields(project, &struct_env, &mut fields);
 
         children.push(DocumentSymbol {
-            name: struct_env.get_name().display(struct_env.symbol_pool()).to_string(),
-            detail:None,
+            name: struct_env
+                .get_name()
+                .display(struct_env.symbol_pool())
+                .to_string(),
+            detail: None,
             kind: SymbolKind::CONSTANT,
             range: struct_range,
             selection_range: struct_range,
             children: Some(fields),
             tags: Some(vec![]),
             deprecated: Some(false),
-        });  
+        });
     }
 }
 
@@ -259,21 +294,24 @@ fn handle_document_symbols_struct(project: &Project,
 #[allow(deprecated)]
 fn handle_document_symbols_struct_fields(
     project: &Project,
-    struct_env :&StructEnv, 
-    children: &mut Vec<DocumentSymbol>
+    struct_env: &StructEnv,
+    children: &mut Vec<DocumentSymbol>,
 ) {
     for field_env in struct_env.get_fields() {
         let field_range = project.loc_to_range(field_env.get_loc());
 
         children.push(DocumentSymbol {
-            name: field_env.get_name().display(struct_env.symbol_pool()).to_string(),
-            detail:None,
+            name: field_env
+                .get_name()
+                .display(struct_env.symbol_pool())
+                .to_string(),
+            detail: None,
             kind: SymbolKind::FIELD,
             range: field_range,
             selection_range: field_range,
             children: None,
             tags: Some(vec![]),
             deprecated: Some(false),
-        });  
+        });
     }
-} 
+}

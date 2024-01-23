@@ -3,8 +3,7 @@
 use enum_iterator::Sequence;
 
 #[derive(Clone)]
-pub struct ItemStruct {
-}
+pub struct ItemStruct {}
 
 impl std::fmt::Display for ItemStruct {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -45,17 +44,13 @@ pub struct ItemUseItem {
 }
 
 #[derive(Clone)]
-pub struct ItemModuleName {
-}
+pub struct ItemModuleName {}
 
 #[derive(Clone)]
-pub struct ItemStructNameRef {
-   
-}
+pub struct ItemStructNameRef {}
 
 #[derive(Clone)]
-pub struct ItemFun {
-}
+pub struct ItemFun {}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum AttrTest {
@@ -71,8 +66,7 @@ impl Default for Item {
 }
 
 #[derive(Clone)]
-pub struct ItemConst {
-}
+pub struct ItemConst {}
 
 #[derive(Clone)]
 pub enum Access {
@@ -81,9 +75,7 @@ pub enum Access {
 }
 
 #[derive(Clone)]
-pub struct AccessFiled {
-
-}
+pub struct AccessFiled {}
 
 #[derive(Clone)]
 pub enum ItemOrAccess {

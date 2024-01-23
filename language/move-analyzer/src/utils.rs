@@ -1,16 +1,15 @@
 // Copyright (c) The BitsLab.MoveBit Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use codespan_reporting::files::{Files, SimpleFiles};
 use codespan::FileId;
+use codespan_reporting::files::{Files, SimpleFiles};
 use lsp_types::{Command, Location, Position};
 use move_command_line_common::files::FileHash;
 use move_ir_types::location::*;
+use move_model::{ast::ModuleName, symbol::Symbol as SpecSymbol};
 use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;
 use std::{collections::HashMap, path::*, vec};
-use move_model::ast::ModuleName;
-use move_model::symbol::Symbol as SpecSymbol;
 
 /// Converts a location from the byte index format to the line/character (Position) format, where
 /// line/character are 0-based.
@@ -56,6 +55,7 @@ impl PathBufHashMap {
         self.path_2_hash.insert(path.clone(), hash);
         self.hash_2_path.insert(hash, path);
     }
+
     pub(crate) fn get_path(&self, hash: &FileHash) -> Option<&'_ PathBuf> {
         self.hash_2_path.get(hash)
     }
@@ -68,9 +68,7 @@ pub struct FileLineMapping {
 
 impl FileLineMapping {
     pub fn new() -> FileLineMapping {
-        Self {
-            m: HashMap::new()
-        }
+        Self { m: HashMap::new() }
     }
 
     pub fn update(&mut self, filepath: PathBuf, content: String) {
@@ -188,14 +186,16 @@ pub fn path_concat(p1: &Path, p2: &Path) -> PathBuf {
         Component::RootDir | Component::Prefix(_)
     );
     let mut p1: Vec<_> = p1.components().collect();
-    normal_path_components(if is_abs {
-        &p2
-    } else {
-        {
-            p1.extend(p2);
-            &p1
-        }
-    })
+    normal_path_components(
+        if is_abs {
+            &p2
+        } else {
+            {
+                p1.extend(p2);
+                &p1
+            }
+        },
+    )
 }
 
 /// concat Move.toml file.
@@ -361,7 +361,11 @@ impl From<&Location> for PathAndRange {
 pub const PROJECT_FILE_NAME: &str = "Move.toml";
 
 use move_model::model::{GlobalEnv, ModuleId};
-pub fn get_target_module(env: &GlobalEnv, move_file_path: &Path, target_module_id: &mut ModuleId) -> bool {
+pub fn get_target_module(
+    env: &GlobalEnv,
+    move_file_path: &Path,
+    target_module_id: &mut ModuleId,
+) -> bool {
     let mut move_file_str: &str = "null_move_file";
     if let Some(file_stem) = move_file_path.file_stem() {
         if let Some(file_stem_str) = file_stem.to_str() {
@@ -388,9 +392,9 @@ pub fn fpath_str_is_equal(s1: &String, s2: &String) -> bool {
     if s1.len() != s2.len() {
         return false;
     }
-    
+
     for (c1, c2) in s1.chars().zip(s2.chars()) {
-        if c1 == c2|| (c1 == '\\' && c2 == '/') || (c1 == '/' && c2 == '\\') {
+        if c1 == c2 || (c1 == '\\' && c2 == '/') || (c1 == '/' && c2 == '\\') {
             continue;
         } else {
             return false;
@@ -400,15 +404,24 @@ pub fn fpath_str_is_equal(s1: &String, s2: &String) -> bool {
 }
 
 use move_model::model::ModuleEnv;
-pub fn get_modules_by_fpath_in_target_modules<'a>(env: &'a GlobalEnv, fpath: &Path) -> Vec<ModuleEnv<'a>> {
+pub fn get_modules_by_fpath_in_target_modules<'a>(
+    env: &'a GlobalEnv,
+    fpath: &Path,
+) -> Vec<ModuleEnv<'a>> {
     log::trace!("get target module by path");
     let mut result_vec_modules: Vec<ModuleEnv> = vec![];
     for module_env in env.get_target_modules() {
-
-        log::info!("{}", env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string());
+        log::info!(
+            "{}",
+            env.get_file(module_env.get_loc().file_id())
+                .to_string_lossy()
+                .to_string()
+        );
         if !fpath_str_is_equal(
-            &env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string(),
-            &fpath.to_string_lossy().to_string()
+            &env.get_file(module_env.get_loc().file_id())
+                .to_string_lossy()
+                .to_string(),
+            &fpath.to_string_lossy().to_string(),
         ) {
             continue;
         }
@@ -417,12 +430,17 @@ pub fn get_modules_by_fpath_in_target_modules<'a>(env: &'a GlobalEnv, fpath: &Pa
     result_vec_modules
 }
 
-pub fn get_modules_by_fpath_in_all_modules<'a>(env: &'a GlobalEnv, fpath: &Path) -> Vec<ModuleEnv<'a>> {
+pub fn get_modules_by_fpath_in_all_modules<'a>(
+    env: &'a GlobalEnv,
+    fpath: &Path,
+) -> Vec<ModuleEnv<'a>> {
     let mut result_vec_modules: Vec<ModuleEnv> = vec![];
     for module_env in env.get_modules() {
         if !fpath_str_is_equal(
-            &env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string(),
-            &fpath.to_string_lossy().to_string()
+            &env.get_file(module_env.get_loc().file_id())
+                .to_string_lossy()
+                .to_string(),
+            &fpath.to_string_lossy().to_string(),
         ) {
             continue;
         }
@@ -435,22 +453,26 @@ pub fn get_file_id_by_fpath_in_all_modules(env: &GlobalEnv, fpath: &Path) -> Opt
     let mut result_file_id = Default::default();
     for module_env in env.get_modules() {
         if fpath_str_is_equal(
-            &env.get_file(module_env.get_loc().file_id()).to_string_lossy().to_string(),
-            &fpath.to_string_lossy().to_string()
+            &env.get_file(module_env.get_loc().file_id())
+                .to_string_lossy()
+                .to_string(),
+            &fpath.to_string_lossy().to_string(),
         ) {
             result_file_id = Some(module_env.get_loc().file_id());
         }
-
     }
     result_file_id
 }
 
-
-pub fn collect_use_decl(addrname_2_addrnum :&std::collections::HashMap<String, String>, module_env: &ModuleEnv, global_env: &GlobalEnv) -> HashMap<ModuleName, Vec<SpecSymbol>> {
+pub fn collect_use_decl(
+    addrname_2_addrnum: &std::collections::HashMap<String, String>,
+    module_env: &ModuleEnv,
+    global_env: &GlobalEnv,
+) -> HashMap<ModuleName, Vec<SpecSymbol>> {
     let mut result: HashMap<ModuleName, Vec<SpecSymbol>> = Default::default();
     for using_decl in module_env.get_use_decls() {
         let using_decl_name = using_decl.module_name.display_full(global_env).to_string();
-        
+
         let before_after = using_decl_name.split("::").collect::<Vec<_>>();
         if before_after.len() != 2 {
             log::error!("use decl module name len should be 2");
@@ -467,16 +489,16 @@ pub fn collect_use_decl(addrname_2_addrnum :&std::collections::HashMap<String, S
             },
         };
 
-        let addr_addrnum_with_module_name = ModuleName::from_str(addr_num, using_decl.module_name.name());
+        let addr_addrnum_with_module_name =
+            ModuleName::from_str(addr_num, using_decl.module_name.name());
         let mut using_decl_member: Vec<SpecSymbol> = vec![];
         for (_, acc_symbol, may_sym) in using_decl.members.clone().into_iter() {
             match may_sym {
                 Some(x) => using_decl_member.push(x),
-                None =>  using_decl_member.push(acc_symbol),
+                None => using_decl_member.push(acc_symbol),
             }
         }
         result.insert(addr_addrnum_with_module_name, using_decl_member);
     }
     result
 }
-

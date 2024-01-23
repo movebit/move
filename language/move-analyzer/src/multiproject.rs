@@ -105,7 +105,6 @@ impl MultiProject {
         ret
     }
 
-
     fn get_projects_mut(&mut self, x: &Path) -> Vec<&mut Project> {
         let (manifest, _) = match super::utils::discover_manifest_and_kind(x) {
             Some(x) => x,
@@ -121,8 +120,7 @@ impl MultiProject {
     }
 
     pub fn update_defs(&mut self, file_path: PathBuf, content: String) {
-        match super::utils::discover_manifest_and_kind(file_path.as_path())
-        {
+        match super::utils::discover_manifest_and_kind(file_path.as_path()) {
             Some(_) => {},
             None => {
                 log::error!("file_path {:?} not found", file_path.as_path());

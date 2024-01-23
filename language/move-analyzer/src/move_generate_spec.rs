@@ -1,17 +1,20 @@
 // Copyright (c) The BitsLab.MoveBit Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{collections::HashMap, ops::Deref};
-use move_model::{
-    model::{GlobalEnv, ModuleEnv, FunctionEnv, StructEnv},
-    ty::{TypeDisplayContext, Type as MoveModelType},
-    ast::{
-        Exp as MoveModelExp, ExpData as MoveModelExpData,
-        Operation as MoveModelOperation, ModuleName
-    }, symbol::Symbol,
+use crate::{
+    move_generate_spec_utils::{BinOPReason, SpecExpItem},
+    type_display_for_spec::TypeDisplayForSpec,
 };
-use crate::type_display_for_spec::TypeDisplayForSpec;
-use crate::move_generate_spec_utils::{SpecExpItem, BinOPReason};
+use move_model::{
+    ast::{
+        Exp as MoveModelExp, ExpData as MoveModelExpData, ModuleName,
+        Operation as MoveModelOperation,
+    },
+    model::{FunctionEnv, GlobalEnv, ModuleEnv, StructEnv},
+    symbol::Symbol,
+    ty::{Type as MoveModelType, TypeDisplayContext},
+};
+use std::{collections::HashMap, ops::Deref};
 
 #[derive(Default)]
 pub struct StructSpecGenerator {
@@ -22,13 +25,19 @@ impl StructSpecGenerator {
     pub(crate) fn new() -> Self {
         Self::default()
     }
+
     pub(crate) fn get_result_string(self) -> String {
         self.result
     }
+
     pub(crate) fn generate(&mut self, x: &StructEnv) {
-        self.result
-            .push_str(format!("{}spec {}", indent(1), 
-                                    x.get_name().display(x.symbol_pool())).as_str()
+        self.result.push_str(
+            format!(
+                "{}spec {}",
+                indent(1),
+                x.get_name().display(x.symbol_pool())
+            )
+            .as_str(),
         );
         self.result.push_str("{\n");
         self.result.push_str(format!("{}}}\n", indent(1)).as_str())
@@ -41,15 +50,14 @@ pub struct FunSpecGenerator {
 }
 
 pub fn generate_fun_spec_zx(
-    global_env: &GlobalEnv, 
+    global_env: &GlobalEnv,
     module_env: &ModuleEnv,
-    f: &FunctionEnv, 
+    f: &FunctionEnv,
     using_module_map: &HashMap<ModuleName, Vec<Symbol>>,
 ) -> String {
     let mut g = FunSpecGenerator::new();
     g.generate_zx(global_env, module_env, f, using_module_map);
     g.get_result_string()
-
 }
 
 pub fn genrate_struct_spec(s: &StructEnv) -> String {
@@ -62,19 +70,18 @@ impl FunSpecGenerator {
     pub(crate) fn new() -> Self {
         Self::default()
     }
+
     pub(crate) fn get_result_string(self) -> String {
         self.result
     }
 
     pub(crate) fn generate_zx(
-        &mut self, 
-        global_env: &GlobalEnv, 
+        &mut self,
+        global_env: &GlobalEnv,
         module_env: &ModuleEnv,
-        f: &FunctionEnv, 
+        f: &FunctionEnv,
         using_module_map: &HashMap<ModuleName, Vec<Symbol>>,
     ) {
-        
-        
         let display_context = f.get_type_display_ctx();
         self.result
             .push_str(format!("{}spec {}", indent(1), f.get_name_str()).as_str());
@@ -82,13 +89,12 @@ impl FunSpecGenerator {
         let generics = if !f.get_type_parameters().is_empty() {
             format!(
                 "<{}>",
-                    f.get_type_parameters()
+                f.get_type_parameters()
                     .iter()
                     .map(|p| p.0.display(f.symbol_pool()).to_string())
                     .collect::<Vec<_>>()
-
                     .join(",")
-            )   
+            )
         } else {
             "".to_owned()
         };
@@ -98,7 +104,8 @@ impl FunSpecGenerator {
         let para_len = f.get_parameter_count();
         if para_len > 0 {
             for (index, para) in f.get_parameters().iter().enumerate() {
-                self.result.push_str(para.0.display(f.symbol_pool()).to_string().as_str());
+                self.result
+                    .push_str(para.0.display(f.symbol_pool()).to_string().as_str());
                 self.result.push_str(": ");
                 let display_context_para = TypeDisplayForSpec {
                     type_: &para.1,
@@ -114,7 +121,7 @@ impl FunSpecGenerator {
             }
         }
         self.result.push(')');
-        
+
         let return_type = f.get_result_type();
         let display_context_return = TypeDisplayForSpec {
             type_: &return_type,
@@ -123,7 +130,7 @@ impl FunSpecGenerator {
             using_module_map,
         };
         let mut return_type_string = display_context_return.to_string();
-        
+
         return_type_string.insert_str(0, ": ");
         if let MoveModelType::Tuple(_) = return_type {
             // ": ()" len is 4
@@ -138,15 +145,10 @@ impl FunSpecGenerator {
         self.result.push_str(format!("{}}}\n", indent(1)).as_str());
     }
 
-    fn generate_body_zx(&self, f: &FunctionEnv, global_env: &GlobalEnv) -> String {        
+    fn generate_body_zx(&self, f: &FunctionEnv, global_env: &GlobalEnv) -> String {
         let mut statements = String::new();
         if let Some(exp) = f.get_def().deref() {
-            FunSpecGenerator::try_emit_exp_zx(
-                self, 
-                &mut statements,
-                exp,
-                global_env,
-            );
+            FunSpecGenerator::try_emit_exp_zx(self, &mut statements, exp, global_env);
         } else {
             log::trace!("body is none");
             return statements;
@@ -157,24 +159,23 @@ impl FunSpecGenerator {
 }
 
 impl FunSpecGenerator {
-    fn try_emit_exp_zx(
-        &self, 
-        statements: &mut String,
-        exp: &MoveModelExp,
-        env: &GlobalEnv,
-    ) {
-        let items = FunSpecGenerator::collect_spec_exp_zx(self, exp, env);        
+    fn try_emit_exp_zx(&self, statements: &mut String, exp: &MoveModelExp, env: &GlobalEnv) {
+        let items = FunSpecGenerator::collect_spec_exp_zx(self, exp, env);
         let display_context = &TypeDisplayContext::new(env);
         for item in items.iter() {
             match item {
-                SpecExpItem::BinOP { reason, left, right } => {
+                SpecExpItem::BinOP {
+                    reason,
+                    left,
+                    right,
+                } => {
                     let _left_node_id = left.as_ref().node_id();
                     let _right_node_id = right.as_ref().node_id();
                     let _left_node_loc = env.get_node_loc(_left_node_id);
                     let _right_node_loc = env.get_node_loc(_right_node_id);
                     let _left_node_type = env.get_node_type(_left_node_id);
                     let _right_node_type = env.get_node_type(_right_node_id);
-                    
+
                     let _left_exp_str = match env.get_source(&_left_node_loc) {
                         Ok(x) => x,
                         Err(_) => continue,
@@ -185,44 +186,46 @@ impl FunSpecGenerator {
                         Err(_) => continue,
                     };
 
-                    if *reason != BinOPReason::DivByZero 
-                        && !FunSpecGenerator::is_support_exp(left, env) 
+                    if *reason != BinOPReason::DivByZero
+                        && !FunSpecGenerator::is_support_exp(left, env)
                     {
-                            continue;
+                        continue;
                     }
 
-                    if !FunSpecGenerator::is_support_exp(right , env) {
+                    if !FunSpecGenerator::is_support_exp(right, env) {
                         continue;
                     }
 
                     match reason {
-                        BinOPReason::OverFlowADD 
-                        | BinOPReason::OverFlowMUL 
+                        BinOPReason::OverFlowADD
+                        | BinOPReason::OverFlowMUL
                         | BinOPReason::OverFlowSHL => {
-                            let over_type = format!("MAX_{}", _left_node_type.display(display_context).to_string().to_uppercase());
+                            let over_type = format!(
+                                "MAX_{}",
+                                _left_node_type
+                                    .display(display_context)
+                                    .to_string()
+                                    .to_uppercase()
+                            );
                             let statements_abort_if = format!(
-                                                                "{}aborts_if {} {} {} > {};\n",
-                                                                indent(2),
-                                                                _left_exp_str,
-                                                                match reason {
-                                                                    BinOPReason::OverFlowADD => "+",
-                                                                    BinOPReason::OverFlowMUL => "*",
-                                                                    BinOPReason::OverFlowSHL => "<<",
-                                                                    _ => unreachable!(),
-                                                                },
-                                                                _right_exp_str,
-                                                                over_type
-                                                            );
+                                "{}aborts_if {} {} {} > {};\n",
+                                indent(2),
+                                _left_exp_str,
+                                match reason {
+                                    BinOPReason::OverFlowADD => "+",
+                                    BinOPReason::OverFlowMUL => "*",
+                                    BinOPReason::OverFlowSHL => "<<",
+                                    _ => unreachable!(),
+                                },
+                                _right_exp_str,
+                                over_type
+                            );
                             statements.push_str(statements_abort_if.as_str());
                         },
                         BinOPReason::DivByZero => {
                             statements.push_str(
-                                format!(
-                                    "{}aborts_if {} == 0;\n",
-                                    indent(2),
-                                    _right_exp_str,
-                                )
-                                .as_str(),
+                                format!("{}aborts_if {} == 0;\n", indent(2), _right_exp_str,)
+                                    .as_str(),
                             );
                         },
                         BinOPReason::UnderFlow => {
@@ -238,19 +241,26 @@ impl FunSpecGenerator {
                         },
                     };
                 },
-                SpecExpItem::MarcoAbort{if_exp, abort_exp} => {
-                    if let MoveModelExpData::Call(_, op, _) = if_exp.as_ref() { 
+                SpecExpItem::MarcoAbort { if_exp, abort_exp } => {
+                    if let MoveModelExpData::Call(_, op, _) = if_exp.as_ref() {
                         match op {
-                            MoveModelOperation::Eq | MoveModelOperation::Neq | 
-                            MoveModelOperation::Lt | MoveModelOperation::Gt | 
-                            MoveModelOperation::Le | MoveModelOperation::Ge => {
-                                FunSpecGenerator::handle_binop_exp(statements, if_exp, op, abort_exp, env);
-                            }
+                            MoveModelOperation::Eq
+                            | MoveModelOperation::Neq
+                            | MoveModelOperation::Lt
+                            | MoveModelOperation::Gt
+                            | MoveModelOperation::Le
+                            | MoveModelOperation::Ge => {
+                                FunSpecGenerator::handle_binop_exp(
+                                    statements, if_exp, op, abort_exp, env,
+                                );
+                            },
                             MoveModelOperation::MoveFunction(_, _) => {
-                                FunSpecGenerator::handle_funcop_exp(statements, if_exp, abort_exp, env);
-                            }
-                            _ => {}
-                        } 
+                                FunSpecGenerator::handle_funcop_exp(
+                                    statements, if_exp, abort_exp, env,
+                                );
+                            },
+                            _ => {},
+                        }
                     }
                 },
                 SpecExpItem::PatternLet { left, right } => {
@@ -260,10 +270,10 @@ impl FunSpecGenerator {
                         Ok(x) => x,
                         Err(_) => continue,
                     };
-                    
+
                     statements.push_str(format!("{}let ", indent(2)).as_str());
                     statements.push_str(_left_exp_str);
-                    
+
                     statements.push_str(" = ");
                     let _right_node_id = right.as_ref().node_id();
                     let _right_node_loc = env.get_node_loc(_right_node_id);
@@ -273,16 +283,21 @@ impl FunSpecGenerator {
                     };
                     statements.push_str(_right_exp_str);
                     statements.push_str(";\n");
-                    
                 },
                 SpecExpItem::BorrowGlobalMut { .. } => {},
                 SpecExpItem::TypeName { .. } => {},
-                SpecExpItem::TypeOf { .. } => {}
+                SpecExpItem::TypeOf { .. } => {},
             }
         }
     }
 
-    fn handle_binop_exp(statements: &mut String, if_exp: &MoveModelExp, op: &MoveModelOperation, abort_exp: &MoveModelExp, env: &GlobalEnv) {
+    fn handle_binop_exp(
+        statements: &mut String,
+        if_exp: &MoveModelExp,
+        op: &MoveModelOperation,
+        abort_exp: &MoveModelExp,
+        env: &GlobalEnv,
+    ) {
         fn inverse_binop_zx(op: &MoveModelOperation) -> (String, String) {
             match op {
                 MoveModelOperation::Eq => (String::from("=="), String::from("!=")),
@@ -294,16 +309,16 @@ impl FunSpecGenerator {
                 _ => (String::from("_"), String::from("_")),
             }
         }
-        
+
         let op2 = inverse_binop_zx(op);
-                            
+
         let if_exp_node_id = if_exp.as_ref().node_id();
         let if_exp_node_loc = env.get_node_loc(if_exp_node_id);
         let if_exp_str = match env.get_source(&if_exp_node_loc) {
             Ok(x) => x,
             Err(_) => return,
         };
-        
+
         #[allow(unused_assignments)]
         let mut if_exp_inverse_str = String::new();
         if if_exp_str.contains(op2.0.as_str()) {
@@ -330,7 +345,12 @@ impl FunSpecGenerator {
         );
     }
 
-    fn handle_funcop_exp(statements: &mut String, if_exp: &MoveModelExp, abort_exp: &MoveModelExp, env: &GlobalEnv) {                  
+    fn handle_funcop_exp(
+        statements: &mut String,
+        if_exp: &MoveModelExp,
+        abort_exp: &MoveModelExp,
+        env: &GlobalEnv,
+    ) {
         let if_exp_node_id = if_exp.as_ref().node_id();
         let if_exp_node_loc = env.get_node_loc(if_exp_node_id);
         let if_exp_str = match env.get_source(&if_exp_node_loc) {
@@ -360,6 +380,3 @@ impl FunSpecGenerator {
 pub(crate) fn indent(num: usize) -> String {
     "    ".to_string().repeat(num)
 }
-
-
-

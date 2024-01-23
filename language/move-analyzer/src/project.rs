@@ -3,6 +3,7 @@
 
 use super::utils::*;
 use crate::analyzer_handler::*;
+use move_compiler::shared::PackagePaths;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -10,7 +11,6 @@ use std::{
     rc::Rc,
     time::SystemTime,
 };
-use move_compiler::shared::PackagePaths;
 
 /// Project
 pub struct Project {
@@ -30,23 +30,21 @@ pub struct Project {
     pub(crate) targets: Vec<PackagePaths<std::string::String, std::string::String>>,
     pub(crate) dependents: Vec<PackagePaths<std::string::String, std::string::String>>,
     pub(crate) addrname_2_addrnum: std::collections::HashMap<String, String>,
-    pub        err_diags: String,
+    pub err_diags: String,
 }
 
 impl Project {
     pub fn loc_to_range(&self, loc: &move_model::model::Loc) -> lsp_types::Range {
         let location_start = self.global_env.get_location(loc).unwrap();
-        let location_end = self.global_env.get_location(
-            &move_model::model::Loc::new(
-                loc.file_id(), 
-                codespan::Span::new(
-                    loc.span().end(), 
-                    loc.span().end()
-                )
-            )
-        ).unwrap();
+        let location_end = self
+            .global_env
+            .get_location(&move_model::model::Loc::new(
+                loc.file_id(),
+                codespan::Span::new(loc.span().end(), loc.span().end()),
+            ))
+            .unwrap();
         lsp_types::Range {
-                start: lsp_types::Position {
+            start: lsp_types::Position {
                 line: location_start.line.0,
                 character: location_start.column.0,
             },

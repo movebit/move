@@ -6,14 +6,13 @@ mod tests {
 
     use aptos_move_analyzer::{
         context::*,
-        utils::{path_concat,discover_manifest_and_kind},
         multiproject::MultiProject,
-        symbols::on_document_symbol_request
+        symbols::on_document_symbol_request,
+        utils::{discover_manifest_and_kind, path_concat},
     };
     use lsp_server::*;
-
-    use std::path::PathBuf;
     use serde_json::json;
+    use std::path::PathBuf;
     // use itertools::Itertools;
 
     fn prepare_project(context: &mut Context, fpath: PathBuf) {
@@ -67,7 +66,7 @@ mod tests {
             None => {
                 log::error!("project '{:?}' not found.", fpath.as_path());
                 return;
-            }
+            },
         };
 
         let params_json = json!({
@@ -115,7 +114,7 @@ mod tests {
                                 }
                             },
                             "tags": [
-                                
+
                             ]
                             }
                         ],
@@ -143,7 +142,7 @@ mod tests {
                             }
                         },
                         "tags": [
-                            
+
                         ]
                         }
                     ],
@@ -172,10 +171,10 @@ mod tests {
                         }
                     },
                     "tags": [
-                        
+
                     ]
                     }
-                ]  
+                ]
             ),
         );
         // // std::thread::sleep(Duration::new(1, 0));
@@ -186,7 +185,6 @@ mod tests {
         log::info!("\n------------------------------\n");
         assert_eq!(actual_r.result, expect_r.result);
     }
-    
 
     /// Document Symbol 2
     #[test]
@@ -209,7 +207,7 @@ mod tests {
             None => {
                 log::error!("project '{:?}' not found.", fpath.as_path());
                 return;
-            }
+            },
         };
 
         let params_json = json!({
@@ -383,7 +381,7 @@ mod tests {
                 }]
             ),
         );
-        
+
         assert_eq!(actual_r.result, expect_r.result);
     }
 }

@@ -6,13 +6,13 @@ mod tests {
 
     use aptos_move_analyzer::{
         context::*,
-        utils::{path_concat,discover_manifest_and_kind},
+        goto_definition::on_go_to_def_request,
         multiproject::MultiProject,
-        goto_definition::on_go_to_def_request
+        utils::{discover_manifest_and_kind, path_concat},
     };
     use lsp_server::*;
-    use std::path::PathBuf;
     use serde_json::json;
+    use std::path::PathBuf;
     // use itertools::Itertools;
 
     fn prepare_project(context: &mut Context, fpath: PathBuf) {
@@ -45,8 +45,7 @@ mod tests {
         context.projects.insert_project(p);
     }
 
-
-    /// Testing whether local variables in a test function 
+    /// Testing whether local variables in a test function
     /// can goto definition in this function
     #[test]
     fn test_on_go_to_def_request_001() {
@@ -68,7 +67,7 @@ mod tests {
             None => {
                 log::error!("project '{:?}' not found.", fpath.as_path());
                 return;
-            }
+            },
         };
 
         let params_json = json!({
@@ -102,7 +101,7 @@ mod tests {
                     }
                 },
                 "uri": "file://".to_string() + fpath.to_str().unwrap()
-                    
+
             }]),
         );
         // std::thread::sleep(Duration::new(1, 0));
@@ -113,7 +112,7 @@ mod tests {
         log::trace!("\n------------------------------\n");
         assert_eq!(actual_r.result, expect_r.result);
     }
-    
+
     /// Test whether references to structs in the same file can get definition.
     #[test]
     fn test_on_go_to_def_request_002() {
@@ -135,7 +134,7 @@ mod tests {
             None => {
                 log::error!("project '{:?}' not found.", fpath.as_path());
                 return;
-            }
+            },
         };
 
         let params_json = json!({
@@ -200,7 +199,7 @@ mod tests {
             None => {
                 log::error!("project '{:?}' not found.", fpath.as_path());
                 return;
-            }
+            },
         };
 
         let params_json = json!({
@@ -265,7 +264,7 @@ mod tests {
             None => {
                 log::error!("project '{:?}' not found.", fpath.as_path());
                 return;
-            }
+            },
         };
 
         let params_json = json!({
@@ -330,7 +329,7 @@ mod tests {
             None => {
                 log::error!("project '{:?}' not found.", fpath.as_path());
                 return;
-            }
+            },
         };
 
         let params_json = json!({
@@ -362,8 +361,8 @@ mod tests {
                         "character":42,
                     },
                 },
-                "uri": 
-                    "file://".to_string() 
+                "uri":
+                    "file://".to_string()
                     + path_concat(
                         std::env::current_dir().unwrap().as_path(),
                         PathBuf::from("tests/v1-core/Swap/sources/swap_library.move").as_path(),
@@ -379,7 +378,7 @@ mod tests {
         assert_eq!(actual_r.result, expect_r.result);
     }
 
-    /// Test goto definition for use decl 
+    /// Test goto definition for use decl
     #[test]
     fn test_on_go_to_def_request_006() {
         let (connection, _) = Connection::stdio();
@@ -400,7 +399,7 @@ mod tests {
             None => {
                 log::error!("project '{:?}' not found.", fpath.as_path());
                 return;
-            }
+            },
         };
 
         let params_json = json!({
@@ -432,8 +431,8 @@ mod tests {
                         "character":4,
                     },
                 },
-                "uri": 
-                    "file://".to_string() 
+                "uri":
+                    "file://".to_string()
                     + path_concat(
                         std::env::current_dir().unwrap().as_path(),
                         PathBuf::from("tests/v1-core/LPCoin/sources/LPCoin.move").as_path(),
