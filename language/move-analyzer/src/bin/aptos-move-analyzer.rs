@@ -126,11 +126,9 @@ fn main() {
             completion_item: None,
         }),
         definition_provider: Some(OneOf::Left(true)),
-        // type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(
-        //     true,
-        // )),
         references_provider: Some(OneOf::Left(true)),
         document_symbol_provider: Some(OneOf::Left(true)),
+        document_formatting_provider: Some(OneOf::Left(true)),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
@@ -204,6 +202,9 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             symbols::on_document_symbol_request(context, request);
         }
+        lsp_types::request::Formatting::METHOD => {
+            eprintln!("Formatting move code");
+        }
         "move/generate/spec/file" => {
             on_generate_spec_file(context, request, true);
         }
@@ -215,6 +216,12 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
                 .expect("could not deserialize inlay hints request");
             eprintln!("call inlay_hints config {:?}", parameters);
             *inlay_hints_config = parameters;
+        }
+        "move/lsp/movefmt/config" => {
+            // let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
+            //     .expect("could not deserialize movefmt request");
+            // eprintln!("call movefmt config {:?}", parameters);
+            log::info!("call movefmt config request.params = {:?}", request.params);
         }
         _ => {
             eprintln!("unsupported request: '{}' from client", request.method)

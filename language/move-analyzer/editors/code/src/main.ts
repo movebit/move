@@ -7,8 +7,6 @@ import { Context } from './context';
 import { Extension } from './extension';
 import { log } from './log';
 import { Reg } from './reg';
-import * as commands from './commands';
-
 import * as vscode from 'vscode';
 
 /**
@@ -46,11 +44,6 @@ export async function activate(
     return;
   }
 
-  // context.registerCommand('textDocumentDocumentSymbol', commands.textDocumentDocumentSymbol);
-  context.registerCommand('textDocumentHover', commands.textDocumentHover);
-  context.registerCommand('textDocumentCompletion', commands.textDocumentCompletion);
-  context.registerCommand('textDocumentDefinition', commands.textDocumentDefinition);
-
   const d = vscode.languages.registerInlayHintsProvider(
     { scheme: 'file', language: 'move' },
     {
@@ -76,16 +69,18 @@ export async function activate(
   // Regist all the aptos commands.
   Reg.regaptos(context);
 
-  // Send inlay hints
-  const reload_inlay_hints = function(): any {
+  const reload_cfg = function(): any {
     const client = context.getClient();
     if (client !== undefined) {
-      void client.sendRequest('move/lsp/client/inlay_hints/config', configuration.inlay_hints_config());
+      const new_configuration = new Configuration();
+      log.info(`new_configuration: ${new_configuration.toString()}`);
+      void client.sendRequest('move/lsp/client/inlay_hints/config', new_configuration.inlay_hints_config());
+      void client.sendRequest('move/lsp/movefmt/config', new_configuration.movefmt_config());
     }
   };
-  reload_inlay_hints();
+  reload_cfg();
   vscode.workspace.onDidChangeConfiguration(() => {
-    log.info('reload_inlay_hints ...  ');
-    reload_inlay_hints();
+    log.info('reload_cfg ...  ');
+    reload_cfg();
   });
 }
