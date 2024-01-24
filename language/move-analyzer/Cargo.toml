@@ -39,6 +39,7 @@ move-symbol-pool = { git = "https://github.com/aptos-labs/aptos-core.git", rev =
 move-core-types = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "0b5bb471418e36b5f5097f70b8c2cfd9e9b7767d", package = "move-core-types" }
 move-cli = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "0b5bb471418e36b5f5097f70b8c2cfd9e9b7767d", package = "move-cli" }
 movefmt = { git = "https://github.com/movebit/movefmt.git", branch = "develop" }
+commentfmt = { git = "https://github.com/movebit/movefmt.git", branch = "develop", package = "commentfmt" }
 itertools = "0.10.0"
 walkdir = "2"
 log = "0.4.14"

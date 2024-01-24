@@ -34,8 +34,23 @@ use aptos_move_analyzer::{
     symbols,
     move_generate_spec_file::on_generate_spec_file,
     move_generate_spec_sel::on_generate_spec_sel,
+    movefmt::*,
 };
 use url::Url;
+
+struct AnalyzerConfig {
+    pub inlay_hints_config: InlayHintsConfig,
+    pub movefmt_config: FmtConfig
+}
+
+impl Default for AnalyzerConfig {
+    fn default() -> Self {
+        Self {
+            inlay_hints_config: InlayHintsConfig::default(),
+            movefmt_config: FmtConfig::default(),
+        }
+    }
+}
 
 struct SimpleLogger;
 impl log::Log for SimpleLogger {
@@ -144,7 +159,7 @@ fn main() {
         .expect("could not finish connection initialization");
     let (diag_sender, diag_receiver) = bounded::<(PathBuf, Diagnostics)>(1);
     let diag_sender = Arc::new(Mutex::new(diag_sender));
-    let mut inlay_hints_config = InlayHintsConfig::default();
+    let mut analyzer_cfg = AnalyzerConfig::default();
     loop {
         select! {
             recv(diag_receiver) -> message => {
@@ -158,7 +173,7 @@ fn main() {
             recv(context.connection.receiver) -> message => {
                 context.projects.try_reload_projects(&context.connection);
                 match message {
-                    Ok(Message::Request(request)) => on_request(&mut context, &request , &mut inlay_hints_config),
+                    Ok(Message::Request(request)) => on_request(&mut context, &request , &mut analyzer_cfg),
                     Ok(Message::Response(response)) => on_response(&context, &response),
                     Ok(Message::Notification(notification)) => {
                         match notification.method.as_str() {
@@ -181,7 +196,7 @@ fn main() {
     eprintln!("Shut down language server '{}'.", exe);
 }
 
-fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut InlayHintsConfig) {
+fn on_request(context: &mut Context, request: &Request, analyzer_cfg: &mut AnalyzerConfig) {
     // log::info!("aptos receive method:{}", request.method.as_str());
     match request.method.as_str() {
         lsp_types::request::GotoDefinition::METHOD => {
@@ -203,7 +218,7 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
             symbols::on_document_symbol_request(context, request);
         }
         lsp_types::request::Formatting::METHOD => {
-            eprintln!("Formatting move code");
+            on_movefmt_request(context, request, &analyzer_cfg.movefmt_config);
         }
         "move/generate/spec/file" => {
             on_generate_spec_file(context, request, true);
@@ -214,14 +229,14 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
         "move/lsp/client/inlay_hints/config" => {
             let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
                 .expect("could not deserialize inlay hints request");
-            eprintln!("call inlay_hints config {:?}", parameters);
-            *inlay_hints_config = parameters;
+            log::info!("call inlay_hints config {:?}", parameters);
+            analyzer_cfg.inlay_hints_config = parameters;
         }
         "move/lsp/movefmt/config" => {
-            // let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
-            //     .expect("could not deserialize movefmt request");
-            // eprintln!("call movefmt config {:?}", parameters);
-            log::info!("call movefmt config request.params = {:?}", request.params);
+            let parameters = serde_json::from_value::<FmtConfig>(request.params.clone())
+                .expect("could not deserialize movefmt config request");
+            log::info!("call movefmt config {:?}", parameters);
+            analyzer_cfg.movefmt_config = parameters;
         }
         _ => {
             eprintln!("unsupported request: '{}' from client", request.method)
@@ -284,7 +299,7 @@ fn report_diag(context: &mut Context, fpath: PathBuf) {
             }
         }
 
-        if file_path.contains("aptos-move/") {
+        if file_path.contains("aptos-move/") || file_path.is_empty() {
             continue;
         }
 

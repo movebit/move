@@ -27,14 +27,10 @@ class FmtConfig {
 
     indent_size: number;
 
-    verbose: boolean;
-
     constructor(max_width: number,
-        indent_size: number,
-        verbose: boolean) {
+        indent_size: number) {
         this.max_width = max_width;
         this.indent_size = indent_size;
-        this.verbose = verbose;
     }
 }
 
@@ -98,8 +94,7 @@ class Configuration {
     movefmt_config(): FmtConfig {
         const max_width = this.configuration.get<number>('movefmt.max_width')!;
         const indent_size = this.configuration.get<number>('movefmt.indent_size')!;
-        const verbose = this.configuration.get<boolean>('movefmt.verbose')!;
-        return new FmtConfig(max_width, indent_size, verbose);
+        return new FmtConfig(max_width, indent_size);
     }
 }
 

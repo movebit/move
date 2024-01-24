@@ -52,3 +52,4 @@ pub mod move_generate_spec_utils;
 pub mod move_generate_spec_file;
 pub mod symbols;
 pub mod type_display_for_spec;
+pub mod movefmt;

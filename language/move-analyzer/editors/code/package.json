@@ -122,11 +122,6 @@
 					"enum": [2, 4],
 					"markdownDescription": "indent_size"
 				},
-				"aptos-move-analyzer.movefmt.verbose": {
-					"type": "boolean",
-					"default": true,
-					"markdownDescription": "verbose."
-				},
 				"aptos-move-analyzer.trace.server": {
 					"type": "string",
 					"scope": "window",
