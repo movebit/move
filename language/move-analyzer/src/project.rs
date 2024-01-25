@@ -123,6 +123,11 @@ impl Project {
             manifest.as_path(),
             layout
         );
+
+        let mut mani_file = manifest.clone();
+        mani_file.push(PROJECT_FILE_NAME);
+        self.manifest_mod_time.insert(mani_file.clone(), file_modify_time(mani_file.as_path()));
+    
         // delete old items.
         if let Some(defs) = old_defs.as_ref() {
             let x = VecDefAstProvider::new(defs, self, layout);
