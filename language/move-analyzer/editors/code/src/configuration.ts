@@ -13,6 +13,18 @@ class InlayHintsConfig {
     }
 }
 
+class FmtConfig {
+    max_width: number;
+
+    indent_size: number;
+
+    constructor(max_width: number,
+        indent_size: number) {
+        this.max_width = max_width;
+        this.indent_size = indent_size;
+    }
+}
+
 /**
  * User-defined configuration values, such as those specified in VS Code settings.
  *
@@ -65,6 +77,12 @@ class Configuration {
 
         return new InlayHintsConfig(enable === true);
     }
+
+    movefmt_config(): FmtConfig {
+        const max_width = this.configuration.get<number>('movefmt.max_width')!;
+        const indent_size = this.configuration.get<number>('movefmt.indent_size')!;
+        return new FmtConfig(max_width, indent_size);
+    }
 }
 
-export { InlayHintsConfig, Configuration };
+export { InlayHintsConfig, FmtConfig, Configuration };

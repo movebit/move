@@ -13,6 +13,7 @@ use aptos_move_analyzer::{
     multiproject::MultiProject,
     references, symbols,
     utils::*,
+    movefmt::*,
 };
 use clap::Parser;
 use crossbeam::channel::{bounded, select, Sender};
@@ -31,6 +32,20 @@ use std::{
     sync::{Arc, Mutex},
 };
 use url::Url;
+
+struct AnalyzerConfig {
+    pub inlay_hints_config: InlayHintsConfig,
+    pub movefmt_config: FmtConfig
+}
+
+impl Default for AnalyzerConfig {
+    fn default() -> Self {
+        Self {
+            inlay_hints_config: InlayHintsConfig::default(),
+            movefmt_config: FmtConfig::default(),
+        }
+    }
+}
 
 struct SimpleLogger;
 impl log::Log for SimpleLogger {
@@ -123,11 +138,9 @@ fn main() {
             completion_item: None,
         }),
         definition_provider: Some(OneOf::Left(true)),
-        // type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(
-        //     true,
-        // )),
         references_provider: Some(OneOf::Left(true)),
         document_symbol_provider: Some(OneOf::Left(true)),
+        document_formatting_provider: Some(OneOf::Left(true)),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
@@ -143,7 +156,7 @@ fn main() {
         .expect("could not finish connection initialization");
     let (diag_sender, diag_receiver) = bounded::<(PathBuf, Diagnostics)>(1);
     let diag_sender = Arc::new(Mutex::new(diag_sender));
-    let mut inlay_hints_config = InlayHintsConfig::default();
+    let mut analyzer_cfg = AnalyzerConfig::default();
     loop {
         select! {
             recv(diag_receiver) -> message => {
@@ -157,7 +170,7 @@ fn main() {
             recv(context.connection.receiver) -> message => {
                 context.projects.try_reload_projects(&context.connection);
                 match message {
-                    Ok(Message::Request(request)) => on_request(&mut context, &request , &mut inlay_hints_config),
+                    Ok(Message::Request(request)) => on_request(&mut context, &request , &mut analyzer_cfg),
                     Ok(Message::Response(response)) => on_response(&context, &response),
                     Ok(Message::Notification(notification)) => {
                         match notification.method.as_str() {
@@ -180,7 +193,8 @@ fn main() {
     log::error!("Shut down language server '{}'.", exe);
 }
 
-fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut InlayHintsConfig) {
+fn on_request(context: &mut Context, request: &Request, analyzer_cfg: &mut AnalyzerConfig) {
+    // log::info!("aptos receive method:{}", request.method.as_str());
     match request.method.as_str() {
         lsp_types::request::GotoDefinition::METHOD => {
             goto_definition::on_go_to_def_request(context, request);
@@ -195,11 +209,14 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
             completion::on_completion_request(context, request);
         },
         lsp_types::request::InlayHintRequest::METHOD => {
-            inlay_hints::on_inlay_hints(context, request, inlay_hints_config);
+            inlay_hints::on_inlay_hints(context, request, &analyzer_cfg.inlay_hints_config);
         },
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             symbols::on_document_symbol_request(context, request);
-        },
+        }
+        lsp_types::request::Formatting::METHOD => {
+            on_movefmt_request(context, request, &analyzer_cfg.movefmt_config);
+        }
         "move/generate/spec/file" => {
             on_generate_spec_file(context, request, true);
         },
@@ -210,7 +227,7 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
             let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
                 .expect("could not deserialize inlay hints request");
             log::info!("call inlay_hints config {:?}", parameters);
-            *inlay_hints_config = parameters;
+            analyzer_cfg.inlay_hints_config = parameters;
         },
         _ => {
             log::error!("unsupported request: '{}' from client", request.method)

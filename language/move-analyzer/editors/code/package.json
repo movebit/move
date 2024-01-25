@@ -5,7 +5,7 @@
 	"publisher": "MoveBit",
 	"icon": "images/move.png",
 	"license": "Apache-2.0",
-	"version": "0.1.6",
+	"version": "0.2.0",
 	"preview": true,
 	"homepage": "https://github.com/move-language/move",
 	"repository": {
@@ -26,7 +26,6 @@
 	],
 	"main": "./out/src/main.js",
 	"activationEvents": [
-		"onLanguage:move",
 		"workspaceContains:Move.toml"
 	],
 	"contributes": {
@@ -101,6 +100,18 @@
 					"default": true,
 					"markdownDescription": "inlay hints is enabled."
 				},
+				"aptos-move-analyzer.movefmt.max_width": {
+					"type": "number",
+					"default": 90,
+					"enum": [90, 100, 120],
+					"markdownDescription": "max length of code line."
+				},
+				"aptos-move-analyzer.movefmt.indent_size": {
+					"type": "number",
+					"default": 4,
+					"enum": [2, 4],
+					"markdownDescription": "indent_size"
+				},
 				"aptos-move-analyzer.trace.server": {
 					"type": "string",
 					"scope": "window",
@@ -170,8 +181,8 @@
 	],
 	"dependencies": {
 		"command-exists": "^1.2.9",
-		"vscode-languageclient": "6.1.4",
-		"lru-cache": "^4.1.3"
+		"lru-cache": "^4.1.3",
+		"vscode-languageclient": "6.1.4"
 	},
 	"devDependencies": {
 		"@types/command-exists": "^1.2.0",
@@ -192,7 +203,7 @@
 		"mocha": "^9.1.1",
 		"typescript": "^4.4.4",
 		"typescript-formatter": "^7.2.2",
-		"vsce": "^2.5.1",
+		"vsce": "^1.97.0",
 		"vscode-test": "^1.6.1"
 	},
 	"__metadata": {
