@@ -218,7 +218,7 @@ impl Project {
             },
         };
 
-        let new_project = match Project::new(root_dir, |msg| log::info!("{}", msg)) {
+        let new_project = match Project::new(root_dir.clone(), |msg| log::info!("{}", msg)) {
             Ok(x) => x,
             Err(_) => {
                 log::error!("reload project failed");
@@ -230,7 +230,6 @@ impl Project {
         self.targets = new_project.targets.clone();
         self.dependents = new_project.dependents.clone();
         self.global_env = new_project.global_env;
-
         log::info!(
             "env.get_module_count() = {:?}",
             &self.global_env.get_module_count()

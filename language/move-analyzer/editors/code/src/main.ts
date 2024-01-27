@@ -8,21 +8,56 @@ import { Extension } from './extension';
 import { log } from './log';
 import { Reg } from './reg';
 import * as vscode from 'vscode';
+// import * as lc from "vscode-languageclient/node";
 
-/**
- * The entry point to this VS Code extension.
- *
- * As per [the VS Code documentation on activation
- * events](https://code.visualstudio.com/api/references/activation-events), "an extension must
- * export an `activate()` function from its main module and it will be invoked only once by
- * VS Code when any of the specified activation events [are] emitted."
- *
- * Activation events for this extension are listed in its `package.json` file, under the key
- * `"activationEvents"`.
- *
- * In order to achieve synchronous activation, mark the function as an asynchronous function,
- * so that you can wait for the activation to complete by await
- */
+// class ExperimentalFeatures implements lc.StaticFeature {
+//   fillInitializeParams?: (params: lc.InitializeParams) => void;
+//   preInitialize?: (capabilities: lc.ServerCapabilities<any>, documentSelector: lc.DocumentSelector | undefined) => void;
+//   clear(): void {
+//     throw new Error('Method not implemented.');
+//   }
+//   getState(): lc.FeatureState {
+//       return { kind: "static" };
+//   }
+
+//   fillClientCapabilities(capabilities: lc.ClientCapabilities): void {
+//       capabilities.workspace = {
+//         inlayHint: {
+//           refreshSupport: true
+//         }
+//       };
+//       capabilities.textDocument = {
+//         formatting: {
+//           dynamicRegistration: true
+//         },
+//         inlayHint: {
+//           dynamicRegistration: true,
+//           resolveSupport: {
+//             properties: []
+//           },
+//         }
+//       };
+//       capabilities.experimental = {
+//           snippetTextEdit: true,
+//           codeActionGroup: true,
+//           hoverActions: true,
+//           serverStatusNotification: true,
+//           colorDiagnosticOutput: true,
+//           openServerLogs: true,
+//           commands: {
+//               commands: [
+//                   "editor.action.triggerParameterHints",
+//               ],
+//           },
+//           ...capabilities.experimental,
+//       };
+//   }
+//   initialize(
+//       _capabilities: lc.ServerCapabilities,
+//       _documentSelector: lc.DocumentSelector | undefined,
+//   ): void {}
+//   dispose(): void {}
+// }
 
 export async function activate(
   extensionContext: Readonly<vscode.ExtensionContext>,
@@ -44,30 +79,39 @@ export async function activate(
     return;
   }
 
-  const d = vscode.languages.registerInlayHintsProvider(
-    { scheme: 'file', language: 'move' },
-    {
-      provideInlayHints(document, range) {
-        const client = context.getClient();
-        if (client === undefined) {
-          return undefined;
-        }
-        const hints = client.sendRequest<vscode.InlayHint[]>('textDocument/inlayHint',
-          { range: range, textDocument: { uri: document.uri.toString() } });
-        return hints;
-      },
-    },
-  );
+  // const d = vscode.languages.registerInlayHintsProvider(
+  //   { scheme: 'file', language: 'move' },
+  //   {
+  //     provideInlayHints(document, range) {
+  //       const client = context.getClient();
+  //       if (client === undefined) {
+  //         return undefined;
+  //       }
+  //       const hints = client.sendRequest<vscode.InlayHint[]>('textDocument/inlayHint',
+  //         { range: range, textDocument: { uri: document.uri.toString() } });
+  //       return hints;
+  //     },
+  //   },
+  // );
 
-  extensionContext.subscriptions.push(d);
+
   // Configure other language features.
   context.configureLanguage();
 
   // All other utilities provided by this extension occur via the language server.
-  await context.startClient();
+  // await context.startClient();
+  context.startClient();
 
   // Regist all the aptos commands.
   Reg.regaptos(context);
+  // {
+  //   const client = context.getClient();
+  //   if (client != undefined) {
+  //     log.info("registerFeature ExperimentalFeatures");
+  //     client.registerFeature(new ExperimentalFeatures());
+  //   }
+  // }
+  // extensionContext.subscriptions.push(d);
 
   const reload_cfg = function(): any {
     const client = context.getClient();

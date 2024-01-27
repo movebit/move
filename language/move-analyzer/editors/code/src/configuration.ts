@@ -7,19 +7,22 @@ import * as vscode from 'vscode';
 import * as Path from 'path';
 
 class InlayHintsConfig {
-    enable: boolean;
+    public enable: boolean;
     constructor(enable: boolean) {
         this.enable = enable;
     }
 }
 
 class FmtConfig {
+    enable: boolean;
     max_width: number;
-
     indent_size: number;
 
-    constructor(max_width: number,
+    constructor(
+        enable: boolean,
+        max_width: number,
         indent_size: number) {
+        this.enable = enable;
         this.max_width = max_width;
         this.indent_size = indent_size;
     }
@@ -73,15 +76,15 @@ class Configuration {
     }
 
     inlay_hints_config(): InlayHintsConfig {
-        const enable = this.configuration.get<boolean>('inlay.hints.enable');
-
-        return new InlayHintsConfig(enable === true);
+        const enable = this.configuration.get<boolean>('inlay.hints.enable')!;
+        return new InlayHintsConfig(enable);
     }
 
     movefmt_config(): FmtConfig {
+        const enable = this.configuration.get<boolean>('movefmt.enable')!;
         const max_width = this.configuration.get<number>('movefmt.max_width')!;
         const indent_size = this.configuration.get<number>('movefmt.indent_size')!;
-        return new FmtConfig(max_width, indent_size);
+        return new FmtConfig(enable, max_width, indent_size);
     }
 }
 

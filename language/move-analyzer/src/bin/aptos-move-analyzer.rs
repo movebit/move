@@ -22,7 +22,7 @@ use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
     notification::Notification as _, request::Request as _, CompletionOptions,
     HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, WorkDoneProgressOptions,
+    TextDocumentSyncOptions, WorkDoneProgressOptions
 };
 use move_command_line_common::files::FileHash;
 use move_compiler::{diagnostics::Diagnostics, PASS_TYPING};
@@ -121,15 +121,8 @@ fn main() {
         )),
         selection_range_provider: None,
         hover_provider: Some(HoverProviderCapability::Simple(true)),
-        // The server provides completions as a user is typing.
         completion_provider: Some(CompletionOptions {
             resolve_provider: None,
-            // In Move, `foo::` and `foo.` should trigger completion suggestions for after
-            // the `:` or `.`
-            // (Trigger characters are just that: characters, such as `:`, and not sequences of
-            // characters, such as `::`. So when the language server encounters a completion
-            // request, it checks whether completions are being requested for `foo:`, and returns no
-            // completions in that case.)
             trigger_characters: Some(vec![":".to_string(), ".".to_string()]),
             all_commit_characters: None,
             work_done_progress_options: WorkDoneProgressOptions {
@@ -140,7 +133,6 @@ fn main() {
         definition_provider: Some(OneOf::Left(true)),
         references_provider: Some(OneOf::Left(true)),
         document_symbol_provider: Some(OneOf::Left(true)),
-        document_formatting_provider: Some(OneOf::Left(true)),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
@@ -225,10 +217,91 @@ fn on_request(context: &mut Context, request: &Request, analyzer_cfg: &mut Analy
         },
         "move/lsp/client/inlay_hints/config" => {
             let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
-                .expect("could not deserialize inlay hints request");
+                .expect("could not deserialize inlay hints config");
             log::info!("call inlay_hints config {:?}", parameters);
             analyzer_cfg.inlay_hints_config = parameters;
+            if !analyzer_cfg.inlay_hints_config.enable {
+                let params = lsp_types::UnregistrationParams { 
+                    unregisterations: vec![lsp_types::Unregistration {
+                        id: lsp_types::request::InlayHintRequest::METHOD.to_string(),
+                        method: lsp_types::request::InlayHintRequest::METHOD.to_string(),
+                    }] 
+                };
+                context
+                    .connection
+                    .sender
+                    .send(lsp_server::Message::Request(Request{
+                        id: "inlay_hints".to_string().into(),
+                        method: lsp_types::request::UnregisterCapability::METHOD.to_string(),
+                        params: serde_json::json!(params),
+                    })).unwrap();
+                eprintln!("--------------------- unregister inlay_hint ---------------------");
+                // context
+                //     .connection
+                //     .sender
+                //     .send(lsp_server::Message::Request(Request{
+                //         id: "inlay_hints".to_string().into(),
+                //         method: lsp_types::request::InlayHintRefreshRequest::METHOD.to_string(),
+                //         params: serde_json::json!({}),
+                //     })).unwrap();
+                // eprintln!("--------------------- refresh inlay_hint ---------------------");
+            } else {
+                let params = lsp_types::RegistrationParams { 
+                    registrations: vec![lsp_types::Registration {
+                        id: lsp_types::request::InlayHintRequest::METHOD.to_string(),
+                        method: lsp_types::request::InlayHintRequest::METHOD.to_string(),
+                        register_options: None,
+                    }] 
+                };
+                context
+                    .connection
+                    .sender
+                    .send(lsp_server::Message::Request(Request{
+                        id: "inlay_hints".to_string().into(),
+                        method: lsp_types::request::RegisterCapability::METHOD.to_string(),
+                        params: serde_json::json!(params),
+                    })).unwrap();
+            }
         },
+        "move/lsp/movefmt/config" => {
+            let parameters = serde_json::from_value::<FmtConfig>(request.params.clone())
+                .expect("could not deserialize movefmt config");
+            log::info!("call movefmt config {:?}", parameters);
+            analyzer_cfg.movefmt_config = parameters;
+            if !analyzer_cfg.movefmt_config.enable {
+                let params = lsp_types::UnregistrationParams { 
+                    unregisterations: vec![lsp_types::Unregistration {
+                        id: lsp_types::request::Formatting::METHOD.to_string(),
+                        method: lsp_types::request::Formatting::METHOD.to_string(),
+                    }] 
+                };
+                context
+                    .connection
+                    .sender
+                    .send(lsp_server::Message::Request(Request{
+                        id: "movefmt".to_string().into(),
+                        method: lsp_types::request::UnregisterCapability::METHOD.to_string(),
+                        params: serde_json::json!(params),
+                    })).unwrap();
+            } else {
+                let params = lsp_types::RegistrationParams { 
+                    registrations: vec![lsp_types::Registration {
+                        id: lsp_types::request::Formatting::METHOD.to_string(),
+                        method: lsp_types::request::Formatting::METHOD.to_string(),
+                        register_options: None,
+                    }] 
+                };
+                context
+                    .connection
+                    .sender
+                    .send(lsp_server::Message::Request(Request{
+                        id: "movefmt".to_string().into(),
+                        method: lsp_types::request::RegisterCapability::METHOD.to_string(),
+                        params: serde_json::json!(params),
+                    })).unwrap();
+            }
+            
+        }
         _ => {
             log::error!("unsupported request: '{}' from client", request.method)
         },
@@ -236,7 +309,7 @@ fn on_request(context: &mut Context, request: &Request, analyzer_cfg: &mut Analy
 }
 
 fn on_response(_context: &Context, _response: &Response) {
-    log::info!("handle response from client");
+    log::info!("handle response[{:?}] from client", _response);
 }
 
 type DiagSender = Arc<Mutex<Sender<(PathBuf, Diagnostics)>>>;

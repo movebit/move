@@ -8,13 +8,15 @@ use lsp_types::*;
 #[allow(unused)]
 #[derive(Clone, Copy, serde::Deserialize, Debug)]
 pub struct FmtConfig {
-    max_width: u8,
-    indent_size: u8, 
+    pub enable: bool,
+    pub max_width: u8,
+    pub indent_size: u8, 
 }
 
 impl Default for FmtConfig {
     fn default() -> Self {
         Self {
+            enable: false,
             max_width: 90,
             indent_size: 4,
         }
@@ -24,6 +26,15 @@ impl Default for FmtConfig {
 /// Handles on_movefmt_request of the language server.
 pub fn on_movefmt_request(context: &Context, request: &Request, fmt_cfg: &FmtConfig) -> lsp_server::Response {
     log::info!("on_movefmt_request request = {:?}, fmt_cfg = {:?}", request, fmt_cfg);
+    if !fmt_cfg.enable {
+        log::info!("movefmt disenabled.");
+        return Response {
+            id: "".to_string().into(),
+            result: Some(serde_json::json!({"msg": "movefmt disenabled."})),
+            error: None,
+        };
+    }
+
     let parameters = serde_json::from_value::<DocumentFormattingParams>(request.params.clone())
         .expect("could not deserialize Reference request");
     let fpath = parameters
