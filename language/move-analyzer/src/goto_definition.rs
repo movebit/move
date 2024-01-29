@@ -10,7 +10,7 @@ use lsp_server::*;
 use lsp_types::*;
 use move_model::{
     ast::{ExpData::*, Operation::*, Pattern as MoveModelPattern, Spec, SpecBlockTarget},
-    model::{FunId, GlobalEnv, ModuleEnv, ModuleId, NodeId, StructId},
+    model::{FunId, GlobalEnv, ModuleEnv, ModuleId, NodeId, Parameter, StructId},
     symbol::Symbol,
 };
 use std::{
@@ -422,7 +422,7 @@ impl Handler {
         let target_fun = target_module.get_function(target_fun_id);
         let target_fun_loc: move_model::model::Loc = target_fun.get_loc();
         self.get_mouse_loc(env, &target_fun_loc);
-        self.process_parameter();
+        self.process_parameter(env, &target_fun.get_parameters());
         self.process_return_type();
 
         if let Some(exp) = target_fun.get_def().deref() {
@@ -433,7 +433,16 @@ impl Handler {
     /// MoveModel currently lacks support for obtaining the Span and Loc of function parameters and return type.
     /// As a result, it is unable to compare positions with user-clicked addresses.
     /// Parameters and return types in function signatures are currently not supported for navigation.
-    fn process_parameter(&mut self) {}
+    #[allow(unused)]
+    fn process_parameter(&mut self, env: &GlobalEnv,fun_paras: &Vec<Parameter>) {
+        // for para in fun_paras {
+        //     eprintln!("para :{}", para.0.display(env.symbol_pool()).to_string());
+        //     if !self.check_move_model_loc_contains_mouse_pos(env, &para.2) {
+        //         continue;
+        //     }
+        //     self.process_type(env, &para.2, &para.1);
+        // }
+    }
 
     fn process_return_type(&mut self) {}
 

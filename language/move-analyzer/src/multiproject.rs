@@ -204,7 +204,9 @@ impl MultiProject {
             all.push((k, x));
         }
         for (k, v) in all.into_iter() {
-            debug_assert!(self.projects.remove(&k).is_some());
+            if let Some(_) = self.projects.remove(&k) {
+                self.projects.remove(&k);
+            }
             self.insert_project(v);
         }
     }

@@ -261,6 +261,25 @@ impl Handler {
         }
     }
 
+    fn process_const(&mut self, env: &GlobalEnv) {
+        
+        let target_module = env.get_module(self.target_module_id);
+        for const_env in target_module.get_named_constants() {
+            let this_const_loc = const_env.get_loc();
+            let (_, const_start_pos) = env.get_file_and_location(&this_const_loc).unwrap();
+            let (_, const_end_pos) = env
+                .get_file_and_location(&move_model::model::Loc::new(
+                    this_const_loc.file_id(),
+                    codespan::Span::new(this_const_loc.span().end(), this_const_loc.span().end()),
+                ))
+                .unwrap();
+            if const_start_pos.line.0 <= self.line && self.line <= const_end_pos.line.0 {
+                self.process_type(env, &const_env.get_loc(), &const_env.get_type());
+            }
+        }
+    }
+
+
     fn process_func(&mut self, env: &GlobalEnv) {
         let mut found_target_fun = false;
         let mut target_fun_id = FunId::new(env.symbol_pool().make("name"));
@@ -662,6 +681,7 @@ impl Handler {
                     self.process_spec_struct(env);
                 } else {
                     self.process_use_decl(env);
+                    self.process_const(env);
                     self.process_func(env);
                     self.process_struct(env);
                 }
