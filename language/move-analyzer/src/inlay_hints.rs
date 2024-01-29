@@ -77,7 +77,7 @@ pub struct InlayHintsConfig {
 
 impl Default for InlayHintsConfig {
     fn default() -> Self {
-        Self { enable: true }
+        Self { enable: false }
     }
 }
 

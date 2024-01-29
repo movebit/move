@@ -219,6 +219,9 @@ fn on_request(context: &mut Context, request: &Request, analyzer_cfg: &mut Analy
             let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
                 .expect("could not deserialize inlay hints config");
             log::info!("call inlay_hints config {:?}", parameters);
+            if analyzer_cfg.inlay_hints_config.enable == parameters.enable && parameters.enable == true {
+                return;
+            }
             analyzer_cfg.inlay_hints_config = parameters;
             if !analyzer_cfg.inlay_hints_config.enable {
                 let params = lsp_types::UnregistrationParams { 
@@ -267,6 +270,9 @@ fn on_request(context: &mut Context, request: &Request, analyzer_cfg: &mut Analy
             let parameters = serde_json::from_value::<FmtConfig>(request.params.clone())
                 .expect("could not deserialize movefmt config");
             log::info!("call movefmt config {:?}", parameters);
+            if analyzer_cfg.movefmt_config.enable == parameters.enable && parameters.enable == true {
+                return;
+            }
             analyzer_cfg.movefmt_config = parameters;
             if !analyzer_cfg.movefmt_config.enable {
                 let params = lsp_types::UnregistrationParams { 
