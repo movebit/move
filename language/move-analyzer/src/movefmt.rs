@@ -48,10 +48,18 @@ pub fn on_movefmt_request(context: &Context, request: &Request, fmt_cfg: &FmtCon
     movefmt_cfg.set().max_width(fmt_cfg.max_width as usize);
     movefmt_cfg.set().indent_size(fmt_cfg.indent_size as usize);
     let content_format = movefmt::core::fmt::format_entry(content_origin.clone(), movefmt_cfg).unwrap();
+
+    let result_line = 
+        if content_format.clone().lines().count() >= content_origin.clone().lines().count() {
+            content_format.clone().lines().count()
+        } else {
+            content_origin.clone().lines().count()
+        };
+
     let result = Some(vec![TextEdit {
         range: lsp_types::Range {
             start: Position { line: 0, character: 0 },
-            end: Position { line: content_format.clone().lines().count() as u32, character: 0 },
+            end: Position { line: result_line as u32, character: 0 },
         },
         new_text: content_format,
     }]);
