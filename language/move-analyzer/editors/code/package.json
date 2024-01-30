@@ -16,7 +16,7 @@
 		"url": "https://github.com/move-language/move/issues"
 	},
 	"engines": {
-		"vscode": "^1.67.1"
+		"vscode": "^1.85.0"
 	},
 	"categories": [
 		"Programming Languages"
