@@ -6,6 +6,7 @@
 .idea/
 **/.vscode
 Cargo.lock
+language/move-analyzer/editors/code/package-lock.json
 
 # Ignore wallet mnemonic files used for deterministic key derivation
 *.mnemonic
