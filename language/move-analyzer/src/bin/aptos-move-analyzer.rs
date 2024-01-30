@@ -13,6 +13,7 @@ use aptos_move_analyzer::{
     multiproject::MultiProject,
     references, symbols,
     utils::*,
+    movefmt::*,
 };
 use clap::Parser;
 use crossbeam::channel::{bounded, select, Sender};
@@ -21,7 +22,7 @@ use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
     notification::Notification as _, request::Request as _, CompletionOptions,
     HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, WorkDoneProgressOptions,
+    TextDocumentSyncOptions, WorkDoneProgressOptions
 };
 use move_command_line_common::files::FileHash;
 use move_compiler::{diagnostics::Diagnostics, PASS_TYPING};
@@ -31,6 +32,20 @@ use std::{
     sync::{Arc, Mutex},
 };
 use url::Url;
+
+struct AnalyzerConfig {
+    pub inlay_hints_config: InlayHintsConfig,
+    pub movefmt_config: FmtConfig
+}
+
+impl Default for AnalyzerConfig {
+    fn default() -> Self {
+        Self {
+            inlay_hints_config: InlayHintsConfig::default(),
+            movefmt_config: FmtConfig::default(),
+        }
+    }
+}
 
 struct SimpleLogger;
 impl log::Log for SimpleLogger {
@@ -106,15 +121,8 @@ fn main() {
         )),
         selection_range_provider: None,
         hover_provider: Some(HoverProviderCapability::Simple(true)),
-        // The server provides completions as a user is typing.
         completion_provider: Some(CompletionOptions {
             resolve_provider: None,
-            // In Move, `foo::` and `foo.` should trigger completion suggestions for after
-            // the `:` or `.`
-            // (Trigger characters are just that: characters, such as `:`, and not sequences of
-            // characters, such as `::`. So when the language server encounters a completion
-            // request, it checks whether completions are being requested for `foo:`, and returns no
-            // completions in that case.)
             trigger_characters: Some(vec![":".to_string(), ".".to_string()]),
             all_commit_characters: None,
             work_done_progress_options: WorkDoneProgressOptions {
@@ -123,9 +131,6 @@ fn main() {
             completion_item: None,
         }),
         definition_provider: Some(OneOf::Left(true)),
-        // type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(
-        //     true,
-        // )),
         references_provider: Some(OneOf::Left(true)),
         document_symbol_provider: Some(OneOf::Left(true)),
         ..Default::default()
@@ -143,7 +148,7 @@ fn main() {
         .expect("could not finish connection initialization");
     let (diag_sender, diag_receiver) = bounded::<(PathBuf, Diagnostics)>(1);
     let diag_sender = Arc::new(Mutex::new(diag_sender));
-    let mut inlay_hints_config = InlayHintsConfig::default();
+    let mut analyzer_cfg = AnalyzerConfig::default();
     loop {
         select! {
             recv(diag_receiver) -> message => {
@@ -157,7 +162,7 @@ fn main() {
             recv(context.connection.receiver) -> message => {
                 context.projects.try_reload_projects(&context.connection);
                 match message {
-                    Ok(Message::Request(request)) => on_request(&mut context, &request , &mut inlay_hints_config),
+                    Ok(Message::Request(request)) => on_request(&mut context, &request , &mut analyzer_cfg),
                     Ok(Message::Response(response)) => on_response(&context, &response),
                     Ok(Message::Notification(notification)) => {
                         match notification.method.as_str() {
@@ -180,7 +185,8 @@ fn main() {
     log::error!("Shut down language server '{}'.", exe);
 }
 
-fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut InlayHintsConfig) {
+fn on_request(context: &mut Context, request: &Request, analyzer_cfg: &mut AnalyzerConfig) {
+    // log::info!("aptos receive method:{}", request.method.as_str());
     match request.method.as_str() {
         lsp_types::request::GotoDefinition::METHOD => {
             goto_definition::on_go_to_def_request(context, request);
@@ -195,11 +201,14 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
             completion::on_completion_request(context, request);
         },
         lsp_types::request::InlayHintRequest::METHOD => {
-            inlay_hints::on_inlay_hints(context, request, inlay_hints_config);
+            inlay_hints::on_inlay_hints(context, request, &analyzer_cfg.inlay_hints_config);
         },
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             symbols::on_document_symbol_request(context, request);
-        },
+        }
+        lsp_types::request::Formatting::METHOD => {
+            on_movefmt_request(context, request, &analyzer_cfg.movefmt_config);
+        }
         "move/generate/spec/file" => {
             on_generate_spec_file(context, request, true);
         },
@@ -208,10 +217,97 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
         },
         "move/lsp/client/inlay_hints/config" => {
             let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
-                .expect("could not deserialize inlay hints request");
+                .expect("could not deserialize inlay hints config");
             log::info!("call inlay_hints config {:?}", parameters);
-            *inlay_hints_config = parameters;
+            if analyzer_cfg.inlay_hints_config.enable == parameters.enable && parameters.enable == true {
+                return;
+            }
+            analyzer_cfg.inlay_hints_config = parameters;
+            if !analyzer_cfg.inlay_hints_config.enable {
+                let params = lsp_types::UnregistrationParams { 
+                    unregisterations: vec![lsp_types::Unregistration {
+                        id: lsp_types::request::InlayHintRequest::METHOD.to_string(),
+                        method: lsp_types::request::InlayHintRequest::METHOD.to_string(),
+                    }] 
+                };
+                context
+                    .connection
+                    .sender
+                    .send(lsp_server::Message::Request(Request{
+                        id: "inlay_hints".to_string().into(),
+                        method: lsp_types::request::UnregisterCapability::METHOD.to_string(),
+                        params: serde_json::json!(params),
+                    })).unwrap();
+                eprintln!("--------------------- unregister inlay_hint ---------------------");
+                // context
+                //     .connection
+                //     .sender
+                //     .send(lsp_server::Message::Request(Request{
+                //         id: "inlay_hints".to_string().into(),
+                //         method: lsp_types::request::InlayHintRefreshRequest::METHOD.to_string(),
+                //         params: serde_json::json!({}),
+                //     })).unwrap();
+                // eprintln!("--------------------- refresh inlay_hint ---------------------");
+            } else {
+                let params = lsp_types::RegistrationParams { 
+                    registrations: vec![lsp_types::Registration {
+                        id: lsp_types::request::InlayHintRequest::METHOD.to_string(),
+                        method: lsp_types::request::InlayHintRequest::METHOD.to_string(),
+                        register_options: None,
+                    }] 
+                };
+                context
+                    .connection
+                    .sender
+                    .send(lsp_server::Message::Request(Request{
+                        id: "inlay_hints".to_string().into(),
+                        method: lsp_types::request::RegisterCapability::METHOD.to_string(),
+                        params: serde_json::json!(params),
+                    })).unwrap();
+            }
         },
+        "move/lsp/movefmt/config" => {
+            let parameters = serde_json::from_value::<FmtConfig>(request.params.clone())
+                .expect("could not deserialize movefmt config");
+            log::info!("call movefmt config {:?}", parameters);
+            if analyzer_cfg.movefmt_config.enable == parameters.enable && parameters.enable == true {
+                return;
+            }
+            analyzer_cfg.movefmt_config = parameters;
+            if !analyzer_cfg.movefmt_config.enable {
+                let params = lsp_types::UnregistrationParams { 
+                    unregisterations: vec![lsp_types::Unregistration {
+                        id: lsp_types::request::Formatting::METHOD.to_string(),
+                        method: lsp_types::request::Formatting::METHOD.to_string(),
+                    }] 
+                };
+                context
+                    .connection
+                    .sender
+                    .send(lsp_server::Message::Request(Request{
+                        id: "movefmt".to_string().into(),
+                        method: lsp_types::request::UnregisterCapability::METHOD.to_string(),
+                        params: serde_json::json!(params),
+                    })).unwrap();
+            } else {
+                let params = lsp_types::RegistrationParams { 
+                    registrations: vec![lsp_types::Registration {
+                        id: lsp_types::request::Formatting::METHOD.to_string(),
+                        method: lsp_types::request::Formatting::METHOD.to_string(),
+                        register_options: None,
+                    }] 
+                };
+                context
+                    .connection
+                    .sender
+                    .send(lsp_server::Message::Request(Request{
+                        id: "movefmt".to_string().into(),
+                        method: lsp_types::request::RegisterCapability::METHOD.to_string(),
+                        params: serde_json::json!(params),
+                    })).unwrap();
+            }
+            
+        }
         _ => {
             log::error!("unsupported request: '{}' from client", request.method)
         },
@@ -219,7 +315,7 @@ fn on_request(context: &mut Context, request: &Request, inlay_hints_config: &mut
 }
 
 fn on_response(_context: &Context, _response: &Response) {
-    log::info!("handle response from client");
+    log::info!("handle response[{:?}] from client", _response);
 }
 
 type DiagSender = Arc<Mutex<Sender<(PathBuf, Diagnostics)>>>;

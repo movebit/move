@@ -4,7 +4,8 @@
 
 import type { Configuration } from './configuration';
 import * as vscode from 'vscode';
-import * as lc from 'vscode-languageclient';
+// import * as lc from 'vscode-languageclient';
+import * as lc from "vscode-languageclient/node";
 import { log } from './log';
 import { sync as commandExistsSync } from 'command-exists';
 import { IndentAction } from 'vscode';
@@ -12,7 +13,6 @@ import { IndentAction } from 'vscode';
 /** Information passed along to each VS Code command defined by this extension. */
 export class Context {
     private client: lc.LanguageClient | undefined;
-
     private constructor(
         private readonly extensionContext: Readonly<vscode.ExtensionContext>,
         readonly configuration: Readonly<Configuration>,
@@ -133,13 +133,12 @@ export class Context {
             clientOptions,
         );
         log.info('Starting client...');
-        const disposable = client.start();
-        this.extensionContext.subscriptions.push(disposable);
+        client.start();
         this.client = client;
 
         // Wait for the Move Language Server initialization to complete,
         // especially the first symbol table parsing is completed
-        await this.client.onReady();
+        // await this.client.onReady();
     }
 
     /**

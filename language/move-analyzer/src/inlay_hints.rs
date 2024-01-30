@@ -25,14 +25,14 @@ pub fn on_inlay_hints(
     let fpath = parameters.text_document.uri.to_file_path().unwrap();
     let fpath = path_concat(std::env::current_dir().unwrap().as_path(), fpath.as_path());
 
-    if !inlay_hints_config.enable {
-        log::info!("inlay-hints is not enabled.");
-        return Response {
-            id: "".to_string().into(),
-            result: Some(serde_json::json!({"msg": "Inlay-hints is not enabled."})),
-            error: None,
-        };
-    }
+    // if !inlay_hints_config.enable {
+    //     log::info!("inlay-hints is not enabled.");
+    //     return Response {
+    //         id: "".to_string().into(),
+    //         result: Some(serde_json::json!({"msg": "Inlay-hints is not enabled."})),
+    //         error: None,
+    //     };
+    // }
 
     let mut handler = Handler::new(fpath.clone(), parameters.range);
     match context.projects.get_project(&fpath) {
@@ -48,7 +48,18 @@ pub fn on_inlay_hints(
     }
     .run_visitor_for_file(&mut handler, &fpath, String::default());
 
-    let hints = Some(handler.reuslts);
+    let mut hints = Some(handler.reuslts);
+    if !inlay_hints_config.enable {
+        log::info!("inlay-hints is not enabled.");
+        if let Some(ref mut hint_vec) = hints {
+            for hint in hint_vec.iter_mut() {
+                hint.text_edits = None;
+                hint.padding_left = None;
+                hint.padding_right = None;
+            }
+        }
+    }
+
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(hints).unwrap());
     let ret_response = r.clone();
     context
@@ -66,7 +77,7 @@ pub struct InlayHintsConfig {
 
 impl Default for InlayHintsConfig {
     fn default() -> Self {
-        Self { enable: true }
+        Self { enable: false }
     }
 }
 
