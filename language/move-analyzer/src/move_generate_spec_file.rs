@@ -56,13 +56,14 @@ where
             };
         },
     };
+    let env = &project.global_env;
 
     let addrname_2_addrnum = &project.addrname_2_addrnum;
     let mut result = ModuleSpecBuilder::new();
     // project.global_env
     eprintln!("");
     // project.global_env.get_file_alias();
-    let file_id = match get_file_id_by_fpath_in_all_modules(&project.global_env, &fpath) {
+    let file_id = match get_file_id_by_fpath_in_all_modules(env, &fpath) {
         Some(x) => x,
         None => {
             log::error!("cound not found fileId by filePath: {:?}", parameters.fpath.as_str());
@@ -73,8 +74,8 @@ where
             };
         },
     };
-
-    let file_alias = match project.global_env.get_file_alias(&file_id) {
+    
+    let file_alias = match env.get_file_alias(&file_id) {
         Some(x) => x,
         None => {
             log::error!("cound not found fileAliasMap by filePath: {:?}", parameters.fpath.as_str());
@@ -85,6 +86,10 @@ where
             };
         },
     };
+
+    for module_ident in env.get_module_idents() {
+        
+    }
 
     let mut addrnum_2_addrname: HashMap<String, Vec<String>> = Default::default();
     file_alias.iter().for_each(|(sym, num_addr)| {
