@@ -502,3 +502,16 @@ pub fn collect_use_decl(
     }
     result
 }
+
+pub fn get_module_addrname_by_addrnum(addrnum: &String, addr_map: &HashMap<String, Vec<String>>) -> Option<String> {
+    if !addr_map.contains_key(addrnum) {
+        return None;
+    }
+
+    let addr_names = addr_map.get(addrnum).unwrap();
+    if addr_names.len() > 1 {
+        return None;
+    }
+
+    Some(addr_names[0].clone())
+}
