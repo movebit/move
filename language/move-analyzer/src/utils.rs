@@ -10,6 +10,8 @@ use move_model::{ast::ModuleName, symbol::Symbol as SpecSymbol};
 use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;
 use std::{collections::HashMap, path::*, vec};
+use move_compiler::parser::lexer::{Lexer, Tok};
+
 
 /// Converts a location from the byte index format to the line/character (Position) format, where
 /// line/character are 0-based.
@@ -480,7 +482,7 @@ pub fn collect_use_decl(
         }
 
         let addr_name = before_after[0];
-        log::info!("full module name {}", using_decl_name);
+        log::trace!("full module name {}", using_decl_name);
         let addr_num = match addrname_2_addrnum.get(addr_name) {
             Some(x) => x,
             None => {
@@ -514,4 +516,33 @@ pub fn get_module_addrname_by_addrnum(addrnum: &String, addr_map: &HashMap<Strin
     }
 
     Some(addr_names[0].clone())
+}
+
+/// return (Tok,(Tok.start, Tok.end))
+pub fn lexer_for_buffer(buffer: &str) -> Vec<(Tok, (usize, usize))> {
+    let mut ids = vec![];
+    let mut lexer = Lexer::new(buffer, FileHash::new(buffer));
+    if lexer.advance().is_err() {
+        return ids;
+    }
+
+    while lexer.peek() != Tok::EOF {
+        // Some tokens, such as "phantom", are contextual keywords that are only reserved in
+        // certain contexts. Since for now this language server doesn't analyze semantic context,
+        // tokens such as "phantom" are always present in keyword suggestions. To avoid displaying
+        // these keywords to the user twice in the case that the token "phantom" is present in the
+        // source program (once as a keyword, and once as an identifier), we filter out any
+        // identifier token that has the same text as a keyword.
+        ids.push((
+            lexer.peek(), 
+            (
+                lexer.start_loc(),
+                (lexer.start_loc() + lexer.content().len())
+            )
+        ));
+        if lexer.advance().is_err() {
+            break;
+        }
+    }
+    ids
 }

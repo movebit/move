@@ -4,8 +4,7 @@
 use super::move_generate_spec::*;
 use crate::{
     context::Context,
-    utils::{collect_use_decl, get_modules_by_fpath_in_target_modules, 
-            get_file_id_by_fpath_in_all_modules, get_module_addrname_by_addrnum},
+    utils::{collect_use_decl, get_modules_by_fpath_in_target_modules},
 };
 use lsp_server::*;
 use move_model::model::{FunctionEnv, StructEnv};
@@ -15,6 +14,7 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
+use move_compiler::expansion::ast::Address;
 
 pub fn on_generate_spec_file<'a>(
     context: &Context,
@@ -58,80 +58,47 @@ where
     };
     let env = &project.global_env;
 
-    let addrname_2_addrnum = &project.addrname_2_addrnum;
     let mut result = ModuleSpecBuilder::new();
-    // project.global_env
-    eprintln!("");
-    // project.global_env.get_file_alias();
-    let file_id = match get_file_id_by_fpath_in_all_modules(env, &fpath) {
-        Some(x) => x,
-        None => {
-            log::error!("cound not found fileId by filePath: {:?}", parameters.fpath.as_str());
-            return lsp_server::Response {
-                id: "".to_string().into(),
-                result: Some(serde_json::json!({"msg": "fileId not found."})),
-                error: None,
-            };
-        },
-    };
-    
-    let file_alias = match env.get_file_alias(&file_id) {
-        Some(x) => x,
-        None => {
-            log::error!("cound not found fileAliasMap by filePath: {:?}", parameters.fpath.as_str());
-            return lsp_server::Response {
-                id: "".to_string().into(),
-                result: Some(serde_json::json!({"msg": "fileAliasMap not found."})),
-                error: None,
-            };
-        },
-    };
 
-    for module_ident in env.get_module_idents() {
-        
-    }
-
-    let mut addrnum_2_addrname: HashMap<String, Vec<String>> = Default::default();
-    file_alias.iter().for_each(|(sym, num_addr)| {
-        let num_addr_str = num_addr.to_string();
-
-        addrnum_2_addrname
-            .entry(num_addr_str)
-            .or_insert_with(Vec::new)
-            .push(sym.display(project.global_env.symbol_pool()).to_string());
+    let mut addr_num_and_module_name_to_addr_name: HashMap<(String, String), String> = Default::default();
+    env.get_module_idents().iter().for_each(|module_ident| {
+        match module_ident.address {
+            Address::Numerical(may_addr_symbol, addr_num) => {
+                if let Some(addr_symbol) = may_addr_symbol {
+                    let k = (addr_num.value.to_string().to_uppercase(), module_ident.module.to_string());
+                    eprintln!("{:?} : {}", k.clone(), addr_symbol.value.to_string());
+                    addr_num_and_module_name_to_addr_name.insert(k, addr_symbol.value.to_string());
+                }   
+            }
+            Address::NamedUnassigned(_) => {},
+        }
     });
 
-    eprintln!("");
-
     for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &fpath) {
-        eprintln!("macth module_env name");
-        match module_env.get_name().addr() {
-            move_model::ast::Address::Symbolic(x) => eprintln!("    addr_sym: {}", x.display(project.global_env.symbol_pool())),
-            move_model::ast::Address::Numerical(x) => eprintln!("    addr_num: {}", x),
-        }
-        eprintln!("");
-
         let using_module_map = collect_use_decl(
             &project.addrname_2_addrnum,
             &module_env,
             &project.global_env,
         );
 
-        let module_addr_num = module_env.env.display(module_env.get_name().addr()).to_string();
-
-        let addr_name = match get_module_addrname_by_addrnum(&module_addr_num, &addrnum_2_addrname) {
-            Some(x) => x,
-            None => module_addr_num,
-        };
-
         log::info!("generate spec module: {}", module_env.get_full_name_str());
         // find module_env's namespace
         let module_env_full_name = module_env.get_full_name_str();
-        let addr_end = module_env_full_name.find("::").unwrap_or_default();
-        let addr = module_env_full_name[0..addr_end].to_string();
-        let addr_name_default = String::from("0x0");
-        let addr_name = addrname_2_addrnum.get(&addr).unwrap_or(&addr_name_default);
-        let module_name = module_env_full_name[addr_end + 2..].to_string();
+        let mut split_iter = module_env_full_name.split("::");
+        if split_iter.clone().count() != 2 {
+            log::error!("module full name's len should be 2");
+            continue;
+        }
+
+        let a = split_iter.next().unwrap();
+        let b = split_iter.next().unwrap();
+        let c = (a.to_string().to_uppercase(), b.to_string());
+        if addr_num_and_module_name_to_addr_name.get(&c).is_none() {
+            log::error!("cound not found address number for {:?}", c);
+            continue;
+        }
+        let addr_name = addr_num_and_module_name_to_addr_name.get(&c).unwrap();
+        let module_name = module_env.get_name().display(env).to_string();
 
         // find all available StructEnv and FunctionEnv
         let mut env_item_list: Vec<EnvItem> = module_env

@@ -2,16 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{analyzer_handler::*, context::*, utils::path_concat};
+use codespan::Span;
 use lsp_server::*;
 use lsp_types::*;
 use move_model::{
-    ast::{ExpData::*, Operation::*, SpecBlockTarget},
+    ast::{ExpData::*, Operation::*, Pattern, SpecBlockTarget},
     model::{FunId, GlobalEnv, ModuleId, StructId},
 };
 use std::{
-    ops::Deref,
-    path::{Path, PathBuf},
+    ops::Deref, path::{Path, PathBuf}
 };
+use move_compiler::parser::lexer::Tok;
+
 
 /// Handles on_hover_request of the language server.
 pub fn on_hover_request(context: &Context, request: &Request) -> lsp_server::Response {
@@ -70,6 +72,7 @@ pub(crate) struct Handler {
     pub(crate) capture_items_span: Vec<codespan::Span>,
     pub(crate) result_candidates: Vec<String>,
     pub(crate) target_module_id: ModuleId,
+    pub(crate) target_function_id: Option<FunId>,
 }
 
 impl Handler {
@@ -82,6 +85,7 @@ impl Handler {
             capture_items_span: vec![],
             result_candidates: vec![],
             target_module_id: ModuleId::new(0),
+            target_function_id: None,
         }
     }
 
@@ -246,16 +250,18 @@ impl Handler {
         }
         for stct in target_module.get_structs() {
             if stct.get_full_name_str().contains(&target_stct_or_fn) {
-                self.capture_items_span.push(capture_items_loc.span());
-                self.result_candidates.push(stct.get_full_name_str());
+                if self.capture_items_span_push(&capture_items_loc.span()) {
+                    self.result_candidates.push(stct.get_full_name_str());
+                }
                 return;
             }
         }
         for func in target_module.get_functions() {
             if func.get_name_str().contains(&target_stct_or_fn) {
                 log::info!("<on hover> func.get_name_str() = {:?}", func.get_name_str());
-                self.capture_items_span.push(capture_items_loc.span());
-                self.result_candidates.push(func.get_header_string());
+                if self.capture_items_span_push(&capture_items_loc.span()) {
+                    self.result_candidates.push(func.get_header_string());
+                }
                 return;
             }
         }
@@ -278,7 +284,6 @@ impl Handler {
             }
         }
     }
-
 
     fn process_func(&mut self, env: &GlobalEnv) {
         let mut found_target_fun = false;
@@ -304,13 +309,15 @@ impl Handler {
             return;
         }
 
-        let target_module = env.get_module(self.target_module_id);
+        let target_module =  env.get_module(self.target_module_id);
         let target_fun = target_module.get_function(target_fun_id);
         let target_fun_loc = target_fun.get_loc();
+        self.target_function_id = Some(target_fun.get_id());
         self.get_mouse_loc(env, &target_fun_loc);
         if let Some(exp) = target_fun.get_def().deref() {
             self.process_expr(env, exp);
         };
+        self.target_function_id = None;
     }
 
     fn process_spec_func(&mut self, env: &GlobalEnv) {
@@ -505,9 +512,11 @@ impl Handler {
                             let spool = env.symbol_pool();
                             let named_const_str = named_const.get_name().display(spool).to_string();
                             if value_str.contains(&named_const_str) {
-                                self.capture_items_span.push(value_loc.span());
-                                self.result_candidates
+                                if self.capture_items_span_push(&value_loc.span()) {
+                                    self.result_candidates
                                     .push(env.display(&named_const.get_value()).to_string());
+                                }
+                                
                             }
                         }
                     }
@@ -560,25 +569,106 @@ impl Handler {
                     true
                 },
                 Block(_, pattern, _, _) => {
-                    for (sym_node_id, _) in pattern.vars() {
-                        let sym_loc = env.get_node_loc(sym_node_id);
-                        if sym_loc.span().start() > self.mouse_span.end()
-                            || self.mouse_span.end() > sym_loc.span().end()
-                        {
-                            return true;
-                        }
-
-                        if let Some(node_type) = env.get_node_type_opt(sym_node_id) {
-                            self.process_type(env, &sym_loc, &node_type);
-                        }
-                    }
+                    self.match_pattern(env, pattern);
                     true
                 },
+                Assign(_, pattern, _) => {
+                    self.match_pattern(env, pattern);
+                    true    
+                }
                 _ => true,
             }
         });
     }
 
+    fn match_pattern(&mut self, env: &GlobalEnv, pattern: &Pattern) {
+        match pattern {
+            Pattern::Struct(node_id, q_sid, vec_p) => {
+                let this_loc = env.get_node_loc(*node_id);
+                if this_loc.span().start() > self.mouse_span.end()
+                    || self.mouse_span.end() > this_loc.span().end()
+                {
+                    return;
+                }
+
+                // handle struct val
+                for p in vec_p.iter() {
+                    self.match_pattern(env, p);
+                }
+                // handle struct field
+                self.process_struct_field(env, &this_loc, &q_sid.module_id, &q_sid.id);
+            },
+            Pattern::Tuple(nid, vec_p) => {
+                let this_loc = env.get_node_loc(*nid);
+                if this_loc.span().start() > self.mouse_span.end()
+                    || self.mouse_span.end() > this_loc.span().end()
+                {
+                    return;
+                }
+
+                for p in vec_p.iter() {
+                    self.match_pattern(env, p);
+                }
+            }
+            Pattern::Var(nid,_) => {
+                let this_loc = env.get_node_loc(*nid);
+                if this_loc.span().start() > self.mouse_span.end()
+                    || self.mouse_span.end() > this_loc.span().end()
+                {
+                    return;
+                }
+
+                if let Some(node_type) = env.get_node_type_opt(*nid) {
+                    self.process_type(env, &this_loc, &node_type);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn process_struct_field(
+        &mut self, 
+        env :&GlobalEnv, 
+        this_loc: &move_model::model::Loc, 
+        module_id: &ModuleId,
+        struct_id: &StructId
+    ) {
+        let pattern_struct_source = env.get_source(this_loc).unwrap();
+        let tok_vec = crate::utils::lexer_for_buffer(pattern_struct_source);
+        for (_, pair) in tok_vec.windows(2).enumerate() {
+            // search field(identifier), such as "identifier: val"
+            if pair[0].0 != Tok::Identifier || pair[1].0 != Tok::Colon {
+                continue;
+            }
+
+            let field_loc = move_model::model::Loc::new(
+                this_loc.file_id(), 
+                Span::new(
+                    this_loc.span().start() + codespan::ByteOffset(pair[0].1.0 as i64),
+                        this_loc.span().start() + codespan::ByteOffset(pair[0].1.1 as i64)
+                )
+            );
+
+            if field_loc.span().start() > self.mouse_span.end()
+            || self.mouse_span.end() > field_loc.span().end()
+            {
+                continue;
+            }
+
+            // find right field loc
+            let field_source = env.get_source(&field_loc).unwrap_or("").to_string();
+            let module_env = env.get_module(*module_id);
+            let struct_env = module_env.get_struct(*struct_id);
+            
+            for field_env in struct_env.get_fields() {
+                let field_name = field_env.get_name().display(env.symbol_pool()).to_string();
+                if field_name == field_source {
+                    self.process_type(env, &field_loc, &field_env.get_type());
+                }
+            }
+        }
+    }
+    
     fn process_call(&mut self, env: &GlobalEnv, expdata: &move_model::ast::ExpData) {
         if let Call(node_id, MoveFunction(mid, fid), _) = expdata {
             let this_call_loc = env.get_node_loc(*node_id);
@@ -588,8 +678,9 @@ impl Handler {
             {
                 let called_module = env.get_module(*mid);
                 let called_fun = called_module.get_function(*fid);
-                self.capture_items_span.push(this_call_loc.span());
-                self.result_candidates.push(called_fun.get_header_string());
+                if self.capture_items_span_push(&this_call_loc.span()) {
+                    self.result_candidates.push(called_fun.get_header_string());
+                }
             }
         }
 
@@ -615,10 +706,11 @@ impl Handler {
             {
                 let called_module = env.get_module(*mid);
                 let spec_fun = called_module.get_spec_fun(*fid);
-                self.capture_items_span.push(this_call_loc.span());
-                self.result_candidates
+                if self.capture_items_span_push(&this_call_loc.span()) {
+                    self.result_candidates
                     .push(spec_fun.name.display(env.symbol_pool()).to_string());
-
+                }
+                
                 let inst_vec = &env.get_node_instantiation(*node_id);
                 for inst in inst_vec {
                     let mut generic_ty_loc = this_call_loc.clone();
@@ -641,15 +733,17 @@ impl Handler {
             }
         }
 
-        if let Call(node_id, Pack(_, _), _) = expdata {
+        if let Call(node_id, Pack(mid, sid), _) = expdata {
             let op_loc = env.get_node_loc(*node_id);
-            if op_loc.span().start() < self.mouse_span.end()
-                && self.mouse_span.end() < op_loc.span().end()
-            {
-                if let Some(node_type) = env.get_node_type_opt(*node_id) {
-                    self.process_type(env, &op_loc, &node_type);
-                }
+            if op_loc.span().start() > self.mouse_span.end()
+            || self.mouse_span.end() > op_loc.span().end() {
+                return;
             }
+            if let Some(node_type) = env.get_node_type_opt(*node_id) {
+                self.process_type(env, &op_loc, &node_type);
+            }
+
+            self.process_struct_field(env, &op_loc, mid, sid);
         }
     }
 
@@ -662,8 +756,9 @@ impl Handler {
         use move_model::ty::TypeDisplayContext;
         let display_context = TypeDisplayContext::new(env);
         let type_display = ty.display(&display_context);
-        self.capture_items_span.push((*capture_items_loc).span());
-        self.result_candidates.push(type_display.to_string());
+        if self.capture_items_span_push(&(*capture_items_loc).span()) {
+            self.result_candidates.push(type_display.to_string());
+        }
     }
 
     fn run_move_model_visitor_internal(&mut self, env: &GlobalEnv, move_file_path: &Path) {
@@ -687,6 +782,14 @@ impl Handler {
                 }
             }
         }
+    }
+
+    fn capture_items_span_push(&mut self, span: &Span) -> bool {
+        if self.capture_items_span.contains(span) {
+            return false;
+        }
+        self.capture_items_span.push(*span);
+        true
     }
 }
 

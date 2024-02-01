@@ -10,13 +10,16 @@ use lsp_server::*;
 use lsp_types::*;
 use move_model::{
     ast::{ExpData::*, Operation::*, SpecBlockTarget},
-    model::{FunId, GlobalEnv, ModuleEnv, ModuleId, StructId},
+    model::{FunId, GlobalEnv, ModuleEnv, FunctionEnv, ModuleId, StructId},
 };
 use std::{
     collections::BTreeSet,
     ops::Deref,
     path::{Path, PathBuf},
 };
+use move_compiler::parser::lexer::{Lexer, Tok};
+use move_command_line_common::files::FileHash;
+
 
 /// Handles on_references_request of the language server.
 pub fn on_references_request(context: &Context, request: &Request) -> lsp_server::Response {
@@ -220,7 +223,7 @@ impl Handler {
                     codespan::Span::new(this_fun_loc.span().end(), this_fun_loc.span().end()),
                 ))
                 .unwrap();
-            if func_start_pos.line.0 < self.line && self.line < func_end_pos.line.0 {
+            if func_start_pos.line.0 <= self.line && self.line < func_end_pos.line.0 {
                 target_fun_id = fun.get_id();
                 found_target_fun = true;
                 break;
@@ -236,10 +239,151 @@ impl Handler {
         let target_fun = target_module.get_function(target_fun_id);
         let target_fun_loc = target_fun.get_loc();
         self.get_mouse_loc(env, &target_fun_loc);
+        self.process_parameter(env, &target_fun);
+        self.process_return_type_and_specifiers(env, &target_fun);
 
         if let Some(exp) = target_fun.get_def().deref() {
             self.process_expr(env, exp);
         };
+    }
+
+    fn process_parameter(&mut self, env: &GlobalEnv, target_fun: &FunctionEnv) {
+        let fun_paras = target_fun.get_parameters();
+        for (para_idx, para) in fun_paras.iter().enumerate() {
+            let cur_para_name = para.0.display(env.symbol_pool()).to_string();
+            eprintln!("para: {}", cur_para_name);
+            if para_idx < fun_paras.len() - 1 {
+                let next_para = &fun_paras[para_idx + 1];
+                let capture_ty_start = para.2.span().end();
+                let capture_ty_end = next_para.2.span().start();
+                let capture_ty_loc = move_model::model::Loc::new(
+                    para.2.file_id(),
+                    codespan::Span::new(
+                        capture_ty_start,
+                        capture_ty_end,
+                    ),
+                );
+                self.process_type(env, &capture_ty_loc, &para.1);
+            } else {
+                let capture_ty_start = para.2.span().end();
+                let capture_ty_end = target_fun.get_loc().span().end();
+                let capture_ty_loc = move_model::model::Loc::new(
+                    para.2.file_id(),
+                    codespan::Span::new(
+                        capture_ty_start,
+                        capture_ty_end,
+                    ),
+                );
+                let ty_source = env.get_source(&capture_ty_loc);
+                if let Ok(ty_str) = ty_source {
+                    let mut colon_vec = vec![];
+                    let mut r_paren_vec = vec![];
+                    let mut l_brace_vec = vec![];
+                    let mut lexer = Lexer::new(ty_str, FileHash::new(ty_str));
+                    let mut capture_ty_end_pos = 0;
+                    if !lexer.advance().is_err() {
+                        while lexer.peek() != Tok::EOF {
+                            if lexer.peek() == Tok::Colon {
+                                if !colon_vec.is_empty() {
+                                    capture_ty_end_pos = lexer.start_loc();
+                                    break;
+                                }
+                                colon_vec.push(lexer.content());
+                            }
+                            if lexer.peek() == Tok::RParen {
+                                r_paren_vec.push(lexer.content());
+                            }
+                            if lexer.peek() == Tok::LBrace {
+                                if !r_paren_vec.is_empty() {
+                                    capture_ty_end_pos = lexer.start_loc();
+                                    break;
+                                }
+                                l_brace_vec.push(lexer.content());
+                            }
+                            if lexer.advance().is_err() {
+                                break;
+                            }
+                        }
+                    }
+                    let capture_ty_loc = move_model::model::Loc::new(
+                        para.2.file_id(),
+                        codespan::Span::new(
+                            capture_ty_start,
+                            capture_ty_start + codespan::ByteOffset(capture_ty_end_pos as i64),
+                        ),
+                    );
+                    self.process_type(env, &capture_ty_loc, &para.1);
+                }
+            }
+
+            self.process_type(env, &para.2, &para.1);
+        }
+    }
+
+    fn process_return_type_and_specifiers(&mut self, env: &GlobalEnv, target_fun: &FunctionEnv) {
+        eprintln!("dump_fun = {}", env.dump_fun(target_fun));
+        let ret_ty_vec = target_fun.get_result_type();
+        let specifier_vec = target_fun.get_access_specifiers();
+        let require_vec = target_fun.get_acquires_global_resources();
+
+        let fn_source = env.get_source(&target_fun.get_loc());
+        if let Ok(fn_str) = fn_source {
+            let mut r_paren_vec = vec![];
+            let mut l_brace_vec = vec![];
+            let mut lexer = Lexer::new(fn_str, FileHash::new(fn_str));
+            let mut capture_ty_start_pos = 0;
+            let mut capture_ty_end_pos = 0;
+            if !lexer.advance().is_err() {
+                while lexer.peek() != Tok::EOF {
+                    if lexer.peek() == Tok::Colon {
+                        if !r_paren_vec.is_empty() {
+                            capture_ty_start_pos = lexer.start_loc();
+                        }
+                    }
+                    if lexer.peek() == Tok::RParen {
+                        r_paren_vec.push(lexer.content());
+                    }
+                    if lexer.peek() == Tok::LBrace {
+                        if !r_paren_vec.is_empty() {
+                            capture_ty_end_pos = lexer.start_loc();
+                            break;
+                        }
+                        l_brace_vec.push(lexer.content());
+                    }
+                    if lexer.advance().is_err() {
+                        break;
+                    }
+                }
+            }
+            let capture_ty_loc = move_model::model::Loc::new(
+                target_fun.get_loc().file_id(),
+                codespan::Span::new(
+                    target_fun.get_loc().span().start() + codespan::ByteOffset(capture_ty_start_pos as i64),
+                    target_fun.get_loc().span().start() + codespan::ByteOffset(capture_ty_end_pos as i64),
+                ),
+            );
+            self.process_type(env, &capture_ty_loc, &ret_ty_vec);
+
+            if let Some(specifiers) = specifier_vec {
+                eprintln!("specifier = {:?}", specifiers);
+                for specifier in specifiers {
+                    if let move_model::ast::ResourceSpecifier::Resource(struct_id) 
+                        = &specifier.resource.1 {
+                        self.process_type(env, &specifier.resource.0, &struct_id.to_type());
+                    }
+                }
+            }
+            if let Some(requires) = require_vec {
+                eprintln!("requires = {:?}", requires);
+                for strct_id in requires {
+                    eprintln!("strct_id = {:?}", target_fun.module_env.get_struct(strct_id).get_full_name_str());
+                    // if let move_model::ast::ResourceSpecifier::Resource(struct_id) 
+                    //     = &specifier.resource.1 {
+                    //     self.process_type(env, &specifier.resource.0, &struct_id.to_type());
+                    // }
+                }
+            }
+        }
     }
 
     fn process_spec_func(&mut self, env: &GlobalEnv) {

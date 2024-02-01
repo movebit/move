@@ -464,7 +464,6 @@ impl FunSpecGenerator {
     }
 
     fn handle_unused_pattern(items: &[SpecExpItem], env: &GlobalEnv) -> (Vec<SpecExpItem>, bool) {
-        log::info!("handle unused pattern");
         let mut is_change = false;
         let mut ret = items.to_owned();
         let mut used_local_var: HashSet<Symbol> = HashSet::new();
