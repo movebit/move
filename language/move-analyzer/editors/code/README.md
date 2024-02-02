@@ -18,6 +18,8 @@ The **aptos-move-analyzer** is a Visual Studio Code plugin for **Aptos Move** la
 
 2.You need to install Aptos CLI refer as https://aptos.web3doc.top/cli-tools/aptos-cli-tool/install-aptos-cli before install `aptos-move-analyzer`.
 
+3.If you are unable to install versions 0.3 and above, for example, if you see version 0.3.0 but after installation, only version 0.2.0 is available, it may be due to an outdated version of Visual Studio Code. Versions 0.3 and above require Visual Studio Code version 1.85 or higher. You can check the current version of Visual Studio Code by navigating to "Help" and then selecting "About."
+
 ### How to Install (Must Read)
 The `aptos-move-analyzer` Visual Studio Code extension works via two components: the `aptos-move-analyzer language server` and the extension itself. Below are two steps that describe how to install all of them.
 
