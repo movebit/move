@@ -1,6 +1,6 @@
 [package]
 name = "aptos-move-analyzer"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["BitsLab/MoveBit"]
 description = "A language server for Move"
 repository = "https://github.com/movebit/move"
