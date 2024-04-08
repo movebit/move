@@ -797,12 +797,9 @@ impl ProjectContext {
 
     pub(crate) fn resolve_type(&self, ty: &Type, name_to_addr: &impl Name2Addr) -> ResolvedType {
         let r = match &ty.value {
-            Type_::Apply(ref chain, types) => {
+            Type_::Apply(ref chain) => {
                 // Special handle for vector.
-                let types: Vec<_> = types
-                    .iter()
-                    .map(|ty| self.resolve_type(ty, name_to_addr))
-                    .collect();
+    
                 if let NameAccessChain_::One(name) = &chain.value {
                     if name.value.as_str() == "vector" {
                         let e_ty = types.get(0).unwrap_or(&UNKNOWN_TYPE).clone();

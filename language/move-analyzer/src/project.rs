@@ -639,7 +639,7 @@ impl Project {
                 }
             }
 
-            Exp_::Pack(name, type_args, fields) => {
+            Exp_::Pack(name, fields) => {
                 let (struct_item, _) = project_context.find_name_chain_item(name, self);
                 let struct_item = match struct_item {
                     Some(x) => match x {
@@ -655,48 +655,36 @@ impl Project {
                 };
 
                 let mut types = HashMap::new();
-                let type_args: Option<Vec<ResolvedType>> = type_args.as_ref().map(|type_args| {
-                    type_args
-                        .iter()
-                        .map(|x| project_context.resolve_type(x, self))
-                        .collect()
-                });
 
-                if type_args.is_none() {
-                    // try infer on field.
-                    let fields_exprs: Vec<_> = fields
-                        .iter()
-                        .map(|(field, expr)| (*field, self.get_expr_type(expr, project_context)))
-                        .collect();
-                    let fields_exp_map = {
-                        let mut m = HashMap::new();
-                        fields_exprs.iter().for_each(|(f, t)| {
-                            m.insert(f.0.value, t.clone());
-                        });
-                        m
-                    };
-                    let parameters: Vec<_> = struct_item
-                        .fields
-                        .iter()
-                        .map(|(_, ty)| ty.clone())
-                        .collect();
-                    let expression_types: Vec<_> = fields
-                        .iter()
-                        .map(|(f, _)| {
-                            fields_exp_map
-                                .get(&f.0.value)
-                                .unwrap_or(&UNKNOWN_TYPE)
-                                .clone()
-                        })
-                        .collect();
-                    infer_type_parameter_on_expression(&mut types, &parameters, &expression_types)
-                }
-
-                if let Some(ref ts) = type_args {
-                    for (para, args) in struct_item.type_parameters.iter().zip(ts.iter()) {
-                        types.insert(para.name.value, args.clone());
-                    }
-                }
+                
+                // try infer on field.
+                let fields_exprs: Vec<_> = fields
+                    .iter()
+                    .map(|(field, expr)| (*field, self.get_expr_type(expr, project_context)))
+                    .collect();
+                let fields_exp_map = {
+                    let mut m = HashMap::new();
+                    fields_exprs.iter().for_each(|(f, t)| {
+                        m.insert(f.0.value, t.clone());
+                    });
+                    m
+                };
+                let parameters: Vec<_> = struct_item
+                    .fields
+                    .iter()
+                    .map(|(_, ty)| ty.clone())
+                    .collect();
+                let expression_types: Vec<_> = fields
+                    .iter()
+                    .map(|(f, _)| {
+                        fields_exp_map
+                            .get(&f.0.value)
+                            .unwrap_or(&UNKNOWN_TYPE)
+                            .clone()
+                    })
+                    .collect();
+                infer_type_parameter_on_expression(&mut types, &parameters, &expression_types)
+                
                 ResolvedType::Struct(
                     struct_item.to_struct_ref(),
                     struct_item
@@ -888,7 +876,7 @@ impl Project {
                 return;
             }
         }
-        for (v, t) in signature.parameters.iter() {
+        for (_, v, t) in signature.parameters.iter() {
             self.visit_type_apply(t, project_context, visitor);
             let t = project_context.resolve_type(t, self);
             let item = ItemOrAccess::Item(Item::Parameter(*v, t));
@@ -1260,7 +1248,6 @@ pub trait AstProvider: Clone {
             }
         });
     }
-
     fn with_use_decl(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &UseDecl, bool)) {
         self.with_module_member(|addr, module_name, member, is_spec| {
             if let ModuleMember::Use(c) = member {

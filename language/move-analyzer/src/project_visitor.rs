@@ -134,11 +134,6 @@ impl Project {
             if visitor.finished() {
                 return;
             }
-            self.visit_scripts(
-                &self.project_context,
-                visitor,
-                ModulesAstProvider::new(self, m.clone(), SourcePackageLayout::Scripts),
-            );
         }
     }
 
@@ -368,7 +363,7 @@ impl Project {
                 let params: Vec<_> = s
                     .parameters
                     .iter()
-                    .map(|(var, ty)| (*var, scopes.resolve_type(ty, self)))
+                    .map(|(_, var, ty)| (*var, scopes.resolve_type(ty, self)))
                     .collect();
                 let ret = scopes.resolve_type(&s.return_type, self);
                 let item = Item::Fun(ItemFun {
@@ -499,13 +494,13 @@ impl Project {
     ) {
         log::info!("visit_bind:{:?}", bind);
         match &bind.value {
-            Bind_::Var(var) => {
+            Bind_::Var(_, var) => {
                 let item = ItemOrAccess::Item(Item::Var {
                     has_decl_ty,
                     var: *var,
                     ty: infer_ty.clone(),
                     lambda: expr.and_then(|x| match &x.value {
-                        Exp_::Lambda(b, e) => Some(LambdaExp {
+                        Exp_::Lambda(b, _, e) => Some(LambdaExp {
                             bind_list: b.clone(),
                             exp: e.as_ref().clone(),
                         }),
@@ -518,77 +513,55 @@ impl Project {
                 }
                 project_context.enter_item(self, var.0.value, item);
             }
-            Bind_::Unpack(chain, tys, field_binds) => {
+            Bind_::Unpack(chain, field_binds) => {
                 self.visit_type_apply(
                     &Spanned {
                         loc: chain.loc,
-                        value: Type_::Apply(chain.clone(), vec![]),
+                        value: Type_::Apply(chain.clone()),
                     },
                     project_context,
                     visitor,
                 );
                 let (struct_ty, _) = project_context.find_name_chain_item(chain, self);
                 let struct_ty = struct_ty.unwrap_or_default().to_type().unwrap_or_default();
-                if let Some(tys) = tys {
-                    for t in tys.iter() {
-                        self.visit_type_apply(t, project_context, visitor);
-                        if visitor.finished() {
-                            return;
-                        }
-                    }
-                }
+ 
                 let mut struct_item = struct_ty.struct_ref_to_struct(project_context);
-                let struct_item = if let Some(tys) = tys {
-                    let tys: Vec<_> = tys
-                        .iter()
-                        .map(|x| project_context.resolve_type(x, self))
-                        .collect();
-                    let mut m = HashMap::new();
-                    struct_item
-                        .type_parameters
-                        .iter()
-                        .zip(tys.iter())
-                        .for_each(|(t, ty)| {
-                            m.insert(t.name.value, ty.clone());
-                        });
-                    struct_item.bind_type_parameter(Some(&m));
-                    struct_item
-                } else {
-                    // use
-                    infer_ty.clone().struct_ref_to_struct(project_context)
-                };
+               
 
                 if let FieldBindings::Named(named_bindings) = field_binds {
-                    for (field, bind) in named_bindings.iter() {
-                        let field_and_ty = struct_item.find_filed_by_name(field.0.value);
-                        let field_ty = if let Some(x) = field_and_ty {
-                            if infer_ty.is_ref() {
-                                ResolvedType::new_ref(false, x.1.clone())
-                            } else {
-                                x.1.clone()
-                            }
-                        } else {
-                            ResolvedType::UnKnown
-                        };
-                        {
-                            let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
-                                from: *field,
-                                to: if let Some(x) = field_and_ty {
-                                    x.0
+                    for ellipsis in named_bindings.iter() {
+                        if let Ellipsis::Binder((field, bind)) = ellipsis {
+                        
+                            let field_and_ty = struct_item.find_filed_by_name(field.0.value);
+                            let field_ty = if let Some(x) = field_and_ty {
+                                if infer_ty.is_ref() {
+                                    ResolvedType::new_ref(false, x.1.clone())
                                 } else {
-                                    *field
-                                },
-                                ty: field_ty.clone(),
-                                all_fields: struct_item.all_fields(),
-                                item: None,
-                                has_ref: None,
-                            }));
-                            visitor.handle_item_or_access(self, project_context, &item);
-                            if visitor.finished() {
-                                return;
+                                    x.1.clone()
+                                }
+                            } else {
+                                ResolvedType::UnKnown
+                            };
+                            {
+                                let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
+                                    from: *field,
+                                    to: if let Some(x) = field_and_ty {
+                                        x.0
+                                    } else {
+                                        *field
+                                    },
+                                    ty: field_ty.clone(),
+                                    all_fields: struct_item.all_fields(),
+                                    item: None,
+                                    has_ref: None,
+                                }));
+                                visitor.handle_item_or_access(self, project_context, &item);
+                                if visitor.finished() {
+                                    return;
+                                }
                             }
+                            self.visit_bind(bind, &field_ty, project_context, visitor, None, true);
                         }
-                        self.visit_bind(bind, &field_ty, project_context, visitor, None, true);
                     }
                 }
             }
