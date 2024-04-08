@@ -338,6 +338,14 @@ fn type_to_ide_string(sp!(_, t): &Type) -> String {
                 )
             }
         },
+        Type_::Fun(vec_ty, box_ty) => {
+            let mut result_string = String::new();
+            for ty in vec_ty.iter() {
+                result_string = format!("{} + {}", result_string, type_to_ide_string(ty));
+            }
+            format!("{} + {}", result_string, type_to_ide_string(box_ty.as_ref()));
+            result_string
+        },
         Type_::Anything => "_".to_string(),
         Type_::Var(_) => "invalid type (var)".to_string(),
         Type_::UnresolvedError => "invalid type (unresolved)".to_string(),
@@ -682,7 +690,7 @@ impl Symbolicator {
             let (files, compilation_result) = compiler.run::<PASS_TYPING>()?;
             let (_, compiler) = match compilation_result {
                 Ok(v) => v,
-                Err(diags) => {
+                Err((_, diags)) => {
                     let failure = true;
                     diagnostics = Some((diags, failure));
                     eprintln!("typed AST compilation failed");
@@ -696,7 +704,7 @@ impl Symbolicator {
             let compilation_result = compiler.at_typing(typed_program).build();
             let (units, diags) = match compilation_result {
                 Ok(v) => v,
-                Err(diags) => {
+                Err((_, diags)) => {
                     let failure = false;
                     diagnostics = Some((diags, failure));
                     eprintln!("bytecode compilation failed");
@@ -1205,7 +1213,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request, symbols:
 fn handle_struct_fields(project: &Project, struct_def: StructDefinition, fields: &mut Vec<DocumentSymbol>) {
     let clonded_fileds = struct_def.fields;
     match clonded_fileds {
-        StructFields::Defined(x) => {
+        StructFields::Named(x) => {
             for (struct_field,spanned_type) in x.iter() {
                 let file_range = match project.convert_loc_range(&spanned_type.loc) {
                     Some(x) => x,

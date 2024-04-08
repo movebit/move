@@ -23,75 +23,28 @@ impl FunSpecGenerator {
         let mut ret = Vec::new();
         fn collect_spec_exp_(ret: &mut Vec<SpecExpItem>, e: &Exp) {
             match &e.value {
-                Exp_::Call(n, _, tys, es) => {
-                    let first_ty = tys.as_ref().map(|x| x.get(0)).flatten();
-                    let first_e = es.value.get(0);
-                    match &n.value {
-                        NameAccessChain_::One(name) => match name.value.as_str() {
-                            "borrow_global_mut" if first_ty.is_some() && first_e.is_some() => {
-                                let ty = first_ty.clone().unwrap().clone();
-                                ret.push(SpecExpItem::BorrowGlobalMut {
-                                    ty,
-                                    addr: first_e.clone().unwrap().clone(),
-                                });
-                            }
-                            TYPE_OF if first_ty.is_some() => {
-                                let ty = first_ty.clone().unwrap().clone();
-                                ret.push(SpecExpItem::TypeOf { ty });
-                            }
-                            TYPE_NAME if first_ty.is_some() => {
-                                let ty = first_ty.clone().unwrap().clone();
-                                ret.push(SpecExpItem::TypeName { ty });
-                            }
-                            _ => {}
-                        },
-                        NameAccessChain_::Two(chain, name) => {
-                            if match &chain.value {
-                                LeadingNameAccess_::AnonymousAddress(_) => false,
-                                LeadingNameAccess_::Name(name) => name.value.as_str() == TYPE_INFO,
-                            } && first_ty.is_some()
-                            {
-                                if name.value.as_str() == TYPE_OF {
-                                    let ty = first_ty.clone().unwrap().clone();
-                                    ret.push(SpecExpItem::TypeOf { ty });
-                                } else if name.value.as_str() == TYPE_NAME {
-                                    let ty = first_ty.clone().unwrap().clone();
-                                    ret.push(SpecExpItem::TypeName { ty });
-                                };
-                            }
-                        }
-                        NameAccessChain_::Three(x, name)
-                            if x.value.1.value.as_str() == TYPE_INFO && first_ty.is_some() =>
-                        {
-                            if name.value.as_str() == TYPE_OF {
-                                let ty = first_ty.clone().unwrap().clone();
-                                ret.push(SpecExpItem::TypeOf { ty });
-                            } else if name.value.as_str() == TYPE_NAME {
-                                let ty = first_ty.clone().unwrap().clone();
-                                ret.push(SpecExpItem::TypeName { ty });
-                            };
-                        }
-                        _ => {}
-                    }
+                Exp_::Call(n, es) => {
                     for e in es.value.iter() {
                         collect_spec_exp_(ret, e)
                     }
                 }
-                Exp_::Pack(_, _, e_exp) => {
+                Exp_::Pack(_, e_exp) => {
                     for e in e_exp.iter() {
                         collect_spec_exp_(ret, &e.1)
                     }
                 }
                 Exp_::Vector(_, _, e_exp) => {
                     for e in e_exp.value.iter() {
-                        collect_spec_exp_(ret, &e)
+                        collect_spec_exp_(ret, &e);
                     }
                 }
                 Exp_::IfElse(_, _, _) => {}
                 Exp_::While(_, _) => {}
                 Exp_::Loop(_) => {}
                 Exp_::Block(_) => {}
-                Exp_::Lambda(_, _) => {}
+                Exp_::Lambda(_, _, e) => {
+                    collect_spec_exp_(ret, e.as_ref())
+                }
                 Exp_::Quant(_, _, _, _, _) => {}
                 Exp_::ExpList(es) => {
                     for e in es.iter() {
@@ -121,7 +74,9 @@ impl FunSpecGenerator {
                 Exp_::Dot(e, _) => collect_spec_exp_(ret, &e.as_ref()),
                 Exp_::Index(a, b) => {
                     collect_spec_exp_(ret, &a.as_ref());
-                    collect_spec_exp_(ret, &b.as_ref())
+                    for e in b.value.iter() {
+                        collect_spec_exp_(ret, e);
+                    }
                 }
                 Exp_::Cast(e, _) => collect_spec_exp_(ret, &e.as_ref()),
                 Exp_::Annotate(_, _) => {}

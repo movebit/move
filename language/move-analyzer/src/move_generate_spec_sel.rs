@@ -118,7 +118,6 @@ pub fn on_generate_spec_sel(context: &Context, request: &Request) {
                     }
                 }
             }
-            Definition::Script(_) => {}
         };
     };
     let _ = project.get_defs(&parameters.fpath, |x| x.with_definition(call_back));

@@ -45,7 +45,7 @@ pub mod project_visitor;
 pub mod references;
 pub mod scope;
 pub mod symbols;
-pub mod syntax;
+// pub mod syntax;
 pub mod types;
 pub mod utils;
 pub mod vfs;

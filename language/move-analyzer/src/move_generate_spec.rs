@@ -65,7 +65,7 @@ impl FunSpecGenerator {
         let para_len = f.signature.parameters.len();
         self.result.push_str("(");
         if para_len > 0 {
-            for (index, (var, ty)) in f.signature.parameters.iter().enumerate() {
+            for (index, (_, var, ty)) in f.signature.parameters.iter().enumerate() {
                 self.result.push_str(var.0.value.as_str());
                 self.result.push_str(": ");
                 self.result.push_str(format_xxx(ty, false).as_str());
@@ -101,14 +101,14 @@ impl FunSpecGenerator {
         let mut local_emited = HashSet::new();
         fn insert_bind(r: &mut ShadowItems, bind: &Bind, index: usize) {
             match &bind.value {
-                Bind_::Var(var) => {
+                Bind_::Var(_, var) => {
                     if var.0.value.as_str() != "_" {
                         r.insert(var.0.value, ShadowItem::Local(ShadowItemLocal { index }));
                     }
                 }
-                Bind_::Unpack(_, _, xs) => {
+                Bind_::Unpack(_, xs) => {
                     if let FieldBindings::Named(named_bindings) = xs {
-                        for (_, b) in named_bindings.iter() {
+                        for ellipsis in named_bindings.iter() {
                             insert_bind(r, b, index);
                         }
                     }
@@ -181,10 +181,8 @@ impl FunSpecGenerator {
         get_expr_type: &dyn GetExprType,
     ) {
         match &e.value {
-            Exp_::Call(_call, is_macro, should_be_none, es) => {
+            Exp_::Call(_call, es) => {
                 if MacroCall::from_chain(_call).is_some()
-                    && *is_macro
-                    && should_be_none.is_none()
                     && es.value.len() > 0
                     && FunSpecGenerator::expr_has_spec_unsupprted(es.value.get(0).unwrap()) == false
                 {
@@ -355,11 +353,8 @@ impl FunSpecGenerator {
         }
         match &e.value {
             Exp_::Value(_) => false,
-            Exp_::Move(_) => false,
-            Exp_::Copy(_) => false,
-            Exp_::Name(_, _) => false,
-            Exp_::Call(_, _, _, es) => exprs_has_spec_unsupprted(&es.value),
-            Exp_::Pack(_, _, es) => es
+            Exp_::Call(_, es) => exprs_has_spec_unsupprted(&es.value),
+            Exp_::Pack(_, es) => es
                 .iter()
                 .any(|e| FunSpecGenerator::expr_has_spec_unsupprted(&e.1)),
             Exp_::Vector(_, _, es) => exprs_has_spec_unsupprted(&es.value),
@@ -381,7 +376,6 @@ impl FunSpecGenerator {
                 // TODO
                 false
             }
-            Exp_::Lambda(_, _) => false,
             Exp_::Quant(_, _, _, _, _) => false,
             Exp_::ExpList(es) => exprs_has_spec_unsupprted(es),
             Exp_::Unit => false,
@@ -389,10 +383,7 @@ impl FunSpecGenerator {
                 FunSpecGenerator::expr_has_spec_unsupprted(l.as_ref())
                     || FunSpecGenerator::expr_has_spec_unsupprted(r.as_ref())
             }
-            Exp_::Return(_) => false,
             Exp_::Abort(_) => false,
-            Exp_::Break => false,
-            Exp_::Continue => false,
             Exp_::Dereference(_) => true,
             Exp_::UnaryExp(_, e) => FunSpecGenerator::expr_has_spec_unsupprted(e),
             Exp_::BinopExp(l, _, r) => {
@@ -402,8 +393,12 @@ impl FunSpecGenerator {
             Exp_::Borrow(_, _) => true,
             Exp_::Dot(l, _) => FunSpecGenerator::expr_has_spec_unsupprted(l.as_ref()),
             Exp_::Index(l, r) => {
-                FunSpecGenerator::expr_has_spec_unsupprted(l.as_ref())
-                    || FunSpecGenerator::expr_has_spec_unsupprted(r.as_ref())
+                let bool_result = true;
+                bool_result |= FunSpecGenerator::expr_has_spec_unsupprted(l.as_ref());
+                for e in r.value.iter() {
+                    bool_result |= FunSpecGenerator::expr_has_spec_unsupprted(e);
+                }
+                bool_result
             }
             Exp_::Cast(e, _) => FunSpecGenerator::expr_has_spec_unsupprted(e.as_ref()),
             Exp_::Annotate(_, _) => false,
@@ -516,32 +511,18 @@ impl FunSpecGenerator {
         }
         match &e.value {
             Exp_::Value(_) => Err(()),
-            Exp_::Move(_) => Err(()),
-            Exp_::Copy(_) => Err(()),
-            Exp_::Name(_, x) => {
-                if x.is_none() {
-                    r()
-                } else {
-                    Err(())
-                }
-            }
-            Exp_::Call(_, _, _, _) => r(),
-            Exp_::Pack(_, _, _) => Err(()),
+            Exp_::Name(_) => {r()}
             Exp_::Vector(_, _, _) => Err(()),
             // TODO
             Exp_::IfElse(_, _, _) => Err(()),
             Exp_::While(_, _) => Err(()),
             Exp_::Loop(_) => Err(()),
             Exp_::Block(_) => Err(()),
-            Exp_::Lambda(_, _) => Err(()),
             Exp_::Quant(_, _, _, _, _) => Err(()),
             Exp_::ExpList(_) => Err(()),
             Exp_::Unit => Err(()),
             Exp_::Assign(_, _) => Err(()),
-            Exp_::Return(_) => Err(()),
             Exp_::Abort(_) => Err(()),
-            Exp_::Break => Err(()),
-            Exp_::Continue => Err(()),
             Exp_::Dereference(_) => r(),
             Exp_::UnaryExp(_, e) => Ok(e.as_ref().clone()),
             Exp_::BinopExp(l, op, r) => {
@@ -631,8 +612,7 @@ fn names_and_modules_in_expr(
         }
         fn handle_ty(names: &mut HashSet<Symbol>, modules: &mut HashSet<Symbol>, ty: &Type) {
             match &ty.value {
-                Type_::Apply(chain, tys) => {
-                    handle_tys(names, modules, tys);
+                Type_::Apply(chain) => {
                     handle_name_access_chain(names, modules, chain);
                 }
                 Type_::Ref(_, ty) => {
@@ -661,30 +641,21 @@ fn names_and_modules_in_expr(
         }
         match &e.value {
             Exp_::Value(_) => {}
-            Exp_::Move(var) => {
-                names.insert(var.0.value);
+            Exp_::Move(_, e) => {
+                names_and_modules_in_expr_(names, modules, e.as_ref());
             }
-            Exp_::Copy(var) => {
-                names.insert(var.0.value);
+            Exp_::Copy(_, e) => {
+                names_and_modules_in_expr_(names, modules, e.as_ref());
             }
-            Exp_::Name(name, tys) => {
+            Exp_::Name(name, ) => {
                 handle_name_access_chain(names, modules, name);
-                if let Some(tys) = tys {
-                    handle_tys(names, modules, tys);
-                };
             }
-            Exp_::Call(chain, _, tys, exprs) => {
+            Exp_::Call(chain,  exprs) => {
                 handle_name_access_chain(names, modules, chain);
-                if let Some(tys) = tys {
-                    handle_tys(names, modules, tys);
-                };
                 handle_exprs(names, modules, &exprs.value);
             }
-            Exp_::Pack(chain, tys, exprs) => {
+            Exp_::Pack(chain, exprs) => {
                 handle_name_access_chain(names, modules, chain);
-                if let Some(tys) = tys {
-                    handle_tys(names, modules, tys);
-                };
                 for (_, e) in exprs.iter() {
                     names_and_modules_in_expr_(names, modules, e);
                 }
@@ -705,17 +676,17 @@ fn names_and_modules_in_expr(
             Exp_::While(_, _) => {}
             Exp_::Loop(_) => {}
             Exp_::Block(_b) => {}
-            Exp_::Lambda(_, _) => {}
+            Exp_::Lambda(_, _, _) => {}
             Exp_::Quant(_, _, _, _, _) => {}
             Exp_::ExpList(exprs) => {
                 handle_exprs(names, modules, exprs);
             }
             Exp_::Unit => {}
             Exp_::Assign(_, _) => {}
-            Exp_::Return(_) => {}
+            Exp_::Return(_, _) => {}
             Exp_::Abort(_) => {}
-            Exp_::Break => {}
-            Exp_::Continue => {}
+            Exp_::Break(_, _) => {}
+            Exp_::Continue(_) => {}
             Exp_::Dereference(e) => {
                 names_and_modules_in_expr_(names, modules, e.as_ref());
             }
@@ -734,7 +705,10 @@ fn names_and_modules_in_expr(
             }
             Exp_::Index(a, b) => {
                 names_and_modules_in_expr_(names, modules, a.as_ref());
-                names_and_modules_in_expr_(names, modules, b.as_ref());
+                for e in b.value.iter() {
+                    names_and_modules_in_expr_(names, modules, e);
+                }
+                
             }
             Exp_::Cast(a, _) => {
                 names_and_modules_in_expr_(names, modules, a.as_ref());
@@ -851,10 +825,9 @@ enum ShadowItem {
     Local(ShadowItemLocal),
 }
 
-fn use_2_shadow_items(u: &Use) -> HashMap<Symbol, Vec<ShadowItem>> {
-    let mut ret: HashMap<Symbol, Vec<ShadowItem>> = HashMap::new();
-    match u {
-        Use::Module(addr_module, alias) => {
+fn match_module_use(ret: &mut HashMap<Symbol, Vec<ShadowItem>>, addr_module: &ModuleIdent, module_use: &ModuleUse) {
+    match module_use {
+        ModuleUse::Module(alias) => {
             let name = if let Some(alias) = alias {
                 alias.0.value
             } else {
@@ -871,7 +844,7 @@ fn use_2_shadow_items(u: &Use) -> HashMap<Symbol, Vec<ShadowItem>> {
                 ret.insert(name, vec![item]);
             }
         }
-        Use::Members(addr_module, imports) => {
+        ModuleUse::Members(imports) => {
             for (item, alias) in imports.iter() {
                 let name = if let Some(alias) = alias {
                     alias.value
@@ -899,6 +872,16 @@ fn use_2_shadow_items(u: &Use) -> HashMap<Symbol, Vec<ShadowItem>> {
                     ret.insert(name, vec![item]);
                 }
             }
+        }
+        _ => {}
+    };
+}
+
+fn use_2_shadow_items(u: &Use) -> HashMap<Symbol, Vec<ShadowItem>> {
+    let mut ret: HashMap<Symbol, Vec<ShadowItem>> = HashMap::new();
+    match u {
+        Use::ModuleUse(addr_module, module_use) => {
+            match_module_use(&mut ret, addr_module, module_use);
         }
         _ => {}
     };

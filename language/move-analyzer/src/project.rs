@@ -1260,13 +1260,7 @@ pub trait AstProvider: Clone {
             }
         });
     }
-    fn with_script(&self, mut call_back: impl FnMut(&Script)) {
-        self.with_definition(|x| {
-            if let Definition::Script(x) = x {
-                call_back(x);
-            }
-        })
-    }
+
     fn with_use_decl(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &UseDecl, bool)) {
         self.with_module_member(|addr, module_name, member, is_spec| {
             if let ModuleMember::Use(c) = member {
@@ -1288,25 +1282,14 @@ pub trait AstProvider: Clone {
             }
         });
     }
-    fn with_spec(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &SpecBlock, bool)) {
+    fn with_spec(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &String, bool)) {
         self.with_module_member(|addr, module_name, member, is_spec_module| {
             if let ModuleMember::Spec(c) = member {
-                call_back(addr, module_name, c, is_spec_module)
+                call_back(addr, module_name, &c.value, is_spec_module)
             }
         });
     }
-    fn with_spec_schema(
-        &self,
-        mut call_back: impl FnMut(AccountAddress, Symbol, Name, &SpecBlock, bool),
-    ) {
-        self.with_module_member(|addr, module_name, member, is_spec_module| {
-            if let ModuleMember::Spec(c) = member {
-                if let SpecBlockTarget_::Schema(name, _) = &c.value.target.value {
-                    call_back(addr, module_name, *name, c, is_spec_module);
-                }
-            }
-        });
-    }
+    
 }
 
 #[derive(Clone)]

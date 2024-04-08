@@ -83,7 +83,6 @@ pub fn on_generate_spec_file(context: &Context, request: &Request) {
                     }
                 }
             }
-            Definition::Script(_) => {}
         };
     };
     let mut found_in_tests_or_scripts = false;

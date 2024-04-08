@@ -21,33 +21,33 @@ use std::{
 };
 
 impl Project {
-    /// Collect field name like a in  spec schema IncrementAborts {
-    ///                   a: address;
-    /// }
-    pub(crate) fn collect_spec_schema_fields(
-        &self,
-        project_context: &ProjectContext,
-        members: &[SpecBlockMember],
-    ) -> HashMap<Symbol, (Name, ResolvedType)> {
-        let mut ret = HashMap::new();
-        for member in members.iter() {
-            if let SpecBlockMember_::Variable {
-                is_global: _is_global,
-                name,
-                type_parameters: _type_parameters,
-                type_,
-                init,
-            } = &member.value
-            {
-                let mut ty = project_context.resolve_type(type_, self);
-                if ty.is_err() && init.is_some() {
-                    ty = self.get_expr_type(init.as_ref().unwrap(), project_context);
-                }
-                ret.insert(name.value, (*name, ty));
-            }
-        }
-        ret
-    }
+    // /// Collect field name like a in  spec schema IncrementAborts {
+    // ///                   a: address;
+    // /// }
+    // pub(crate) fn collect_spec_schema_fields(
+    //     &self,
+    //     project_context: &ProjectContext,
+    //     members: &[SpecBlockMember],
+    // ) -> HashMap<Symbol, (Name, ResolvedType)> {
+    //     let mut ret = HashMap::new();
+    //     for member in members.iter() {
+    //         if let SpecBlockMember_::Variable {
+    //             is_global: _is_global,
+    //             name,
+    //             type_parameters: _type_parameters,
+    //             type_,
+    //             init,
+    //         } = &member.value
+    //         {
+    //             let mut ty = project_context.resolve_type(type_, self);
+    //             if ty.is_err() && init.is_some() {
+    //                 ty = self.get_expr_type(init.as_ref().unwrap(), project_context);
+    //             }
+    //             ret.insert(name.value, (*name, ty));
+    //         }
+    //     }
+    //     ret
+    // }
 
     pub(crate) fn get_defs(
         &self,
@@ -156,7 +156,6 @@ impl Project {
                 provider.clone(),
                 enter_import,
             );
-            self.visit_scripts(&self.project_context, visitor, provider);
         })
     }
 
@@ -168,14 +167,14 @@ impl Project {
     ) {
         let u_ty = ResolvedType::UnKnown;
         let x = match &value.value {
-            Exp_::Name(name, _) => match &name.value {
+            Exp_::Name(name) => match &name.value {
                 NameAccessChain_::One(name) => {
                     self.project_context.try_fix_local_var_ty(name.value, ty)
                 }
                 NameAccessChain_::Two(_, _) => None,
                 NameAccessChain_::Three(_, _) => None,
             },
-            Exp_::Lambda(b, e) => Some(LambdaExp {
+            Exp_::Lambda(b, t, e) => Some(LambdaExp {
                 bind_list: b.clone(),
                 exp: e.as_ref().clone(),
             }),
@@ -300,7 +299,7 @@ impl Project {
                     self.visit_struct_tparam(t, scopes, visitor);
                 }
                 let fields = match &s.fields {
-                    StructFields::Defined(x) => {
+                    StructFields::Named(x) => {
                         let mut fields = Vec::with_capacity(x.len());
                         for (f, ty) in x.iter() {
                             self.visit_type_apply(ty, scopes, visitor);
@@ -417,25 +416,6 @@ impl Project {
             );
         });
 
-        // enter schema.
-        provider.with_spec_schema(|addr, module_name, name, spec, is_spec_module| {
-            project_context.set_current_addr_and_module_name(addr, module_name);
-            project_context.set_access_env(AccessEnv::Spec);
-            let item = ItemOrAccess::Item(Item::SpecSchema(
-                name,
-                self.collect_spec_schema_fields(project_context, &spec.value.members),
-            ));
-
-            visitor.handle_item_or_access(self, project_context, &item);
-            project_context.enter_top_item(
-                self,
-                addr,
-                module_name,
-                name.value,
-                item,
-                is_spec_module,
-            );
-        });
 
         // visit use decl again.
         provider.with_use_decl(|addr, module_name, u, is_spec_module| {
@@ -468,40 +448,6 @@ impl Project {
         provider.with_spec(|addr, module_name, spec, is_spec_module| {
             project_context.set_current_addr_and_module_name(addr, module_name);
             project_context.set_access_env(AccessEnv::Spec);
-            match &spec.value.target.value {
-                SpecBlockTarget_::Module => {}
-                _ => return,
-            };
-            for m in spec.value.members.iter() {
-                if let SpecBlockMember_::Function {
-                    uninterpreted: _uninterpreted,
-                    name,
-                    signature,
-                    body,
-                } = &m.value
-                {
-                    let f = Function {
-                        attributes: vec![],
-                        loc: m.loc,
-                        visibility: Visibility::Internal,
-                        entry: None,
-                        signature: signature.clone(),
-                        acquires: vec![],
-                        name: *name,
-                        body: body.clone(),
-                    };
-                    enter_function(
-                        self,
-                        &f,
-                        project_context,
-                        visitor,
-                        addr,
-                        module_name,
-                        is_spec_module,
-                        true,
-                    );
-                }
-            }
         });
 
         if !visitor.visit_fun_or_spec_body() {
@@ -539,15 +485,6 @@ impl Project {
         provider.with_spec(|addr, module_name, spec, _is_spec_module| {
             project_context.set_current_addr_and_module_name(addr, module_name);
             project_context.set_access_env(AccessEnv::Spec);
-            let range = self.convert_loc_range(&spec.loc);
-            if range.is_none() {
-                return;
-            }
-            if !visitor.function_or_spec_body_should_visit(range.as_ref().unwrap()) {
-                return;
-            }
-            let _guard = project_context.clone_scope_and_enter(addr, module_name, true);
-            self.visit_spec(spec, project_context, visitor);
         });
     }
 
@@ -827,23 +764,11 @@ impl Project {
                     visitor.handle_item_or_access(self, project_context, &item);
                 }
             }
-            Exp_::Move(var) | Exp_::Copy(var) => {
-                let item = project_context.find_var(var.value());
-                let item =
-                    ItemOrAccess::Access(Access::ExprVar(*var, Box::new(item.unwrap_or_default())));
-                visitor.handle_item_or_access(self, project_context, &item);
+            Exp_::Move(_, expr) | Exp_::Copy(_, expr) => {
+                log::trace!("process Exp_::Move|Copy, expr = {:?}", expr);
+                self.visit_expr(expr.as_ref(), project_context, visitor);
             }
-            Exp_::Name(chain, tys) => {
-                // let's try.
-                if let Some(tys) = tys {
-                    for ty in tys.iter() {
-                        log::trace!("process Exp_::Name, ty = {:?}", ty);
-                        self.visit_type_apply(ty, project_context, visitor);
-                        if visitor.finished() {
-                            return;
-                        }
-                    }
-                }
+            Exp_::Name(chain) => {
                 log::trace!("process Exp_::Name, chain = {}", chain);
                 let (item, module) = project_context.find_name_chain_item(chain, self);
                 let item = ItemOrAccess::Access(Access::ExprAccessChain(
@@ -856,77 +781,64 @@ impl Project {
                 if visitor.finished() {}
             }
 
-            Exp_::Call(ref chain, is_macro, ref types, ref exprs) => {
-                if *is_macro {
-                    let c = MacroCall::from_chain(chain).unwrap_or_default();
-                    let item = ItemOrAccess::Access(Access::MacroCall(c, chain.clone()));
-                    visitor.handle_item_or_access(self, project_context, &item);
-                } else {
-                    let (item, module) = project_context.find_name_chain_item(chain, self);
-                    if visitor.need_call_pair() {
-                        if let Item::Fun(_f) = item.clone().unwrap_or_default() {
-                            let addr = project_context.get_current_addr_and_module_name();
-                            visitor.handle_call_pair(
-                                FunID {
-                                    addr: addr.addr,
-                                    addr_name: "".to_string(), // TODO
-                                    module_name: addr.name.0.value,
-                                    function_name: get_name_chain_last_name(chain).value,
-                                },
-                                FunID {
-                                    addr: _f.addr_and_name.addr,
-                                    addr_name: "".to_string(), // TODO
-                                    module_name: _f.addr_and_name.name.0.value,
-                                    function_name: _f.name.0.value,
-                                },
-                            );
-                        }
-                    }
-
-                    // try visit lambda expr.
-                    if let ResolvedType::Fun(x) = self
-                        .initialize_fun_call(project_context, chain, types, exprs)
-                        .unwrap_or_default()
-                    {
-                        // TODO we maybe need infer type parameter first.
-                        let unkown = (
-                            Var(Spanned {
-                                loc: Loc::new(FileHash::empty(), 0, 0),
-                                value: Symbol::from(""),
-                            }),
-                            ResolvedType::UnKnown,
+            Exp_::Call(ref chain, ref exprs) => {
+                
+                let (item, module) = project_context.find_name_chain_item(chain, self);
+                if visitor.need_call_pair() {
+                    if let Item::Fun(_f) = item.clone().unwrap_or_default() {
+                        let addr = project_context.get_current_addr_and_module_name();
+                        visitor.handle_call_pair(
+                            FunID {
+                                addr: addr.addr,
+                                addr_name: "".to_string(), // TODO
+                                module_name: addr.name.0.value,
+                                function_name: get_name_chain_last_name(chain).value,
+                            },
+                            FunID {
+                                addr: _f.addr_and_name.addr,
+                                addr_name: "".to_string(), // TODO
+                                module_name: _f.addr_and_name.name.0.value,
+                                function_name: _f.name.0.value,
+                            },
                         );
-                        for (index, e) in exprs.value.iter().enumerate() {
-                            let ty = x.parameters.get(index).unwrap_or(&unkown);
-                            self.try_fix_local_var_and_visit_lambda(e, &ty.1, visitor);
-                            if visitor.need_para_arg_pair() {
-                                visitor.handle_para_arg_pair(self, ty.0 .0, e);
-                            }
-                        }
-                    }
-                    let item = ItemOrAccess::Access(Access::ExprAccessChain(
-                        chain.clone(),
-                        module,
-                        Box::new(item.unwrap_or_default()),
-                    ));
-                    if visitor.current_vistor_handler_is_inlay_hints() {
-                        return;
-                    }
-                    log::trace!("process Exp_::Call, item = {}", item);
-                    visitor.handle_item_or_access(self, project_context, &item);
-                    if visitor.finished() {
-                        return;
                     }
                 }
-                if let Some(ref types) = types {
-                    for t in types.iter() {
-                        log::trace!("process Exp_::Call, t = {:?}", t);
-                        self.visit_type_apply(t, project_context, visitor);
-                        if visitor.finished() {
-                            return;
+
+                // try visit lambda expr.
+                if let ResolvedType::Fun(x) = self
+                    .initialize_fun_call(project_context, chain, types, exprs)
+                    .unwrap_or_default()
+                {
+                    // TODO we maybe need infer type parameter first.
+                    let unkown = (
+                        Var(Spanned {
+                            loc: Loc::new(FileHash::empty(), 0, 0),
+                            value: Symbol::from(""),
+                        }),
+                        ResolvedType::UnKnown,
+                    );
+                    for (index, e) in exprs.value.iter().enumerate() {
+                        let ty = x.parameters.get(index).unwrap_or(&unkown);
+                        self.try_fix_local_var_and_visit_lambda(e, &ty.1, visitor);
+                        if visitor.need_para_arg_pair() {
+                            visitor.handle_para_arg_pair(self, ty.0 .0, e);
                         }
                     }
                 }
+                let item = ItemOrAccess::Access(Access::ExprAccessChain(
+                    chain.clone(),
+                    module,
+                    Box::new(item.unwrap_or_default()),
+                ));
+                if visitor.current_vistor_handler_is_inlay_hints() {
+                    return;
+                }
+                log::trace!("process Exp_::Call, item = {}", item);
+                visitor.handle_item_or_access(self, project_context, &item);
+                if visitor.finished() {
+                    return;
+                }
+                
                 for expr in exprs.value.iter() {
                     log::trace!("process Exp_::Call, expr = {:?}", expr);
                     self.visit_expr(expr, project_context, visitor);
@@ -935,11 +847,11 @@ impl Project {
                     }
                 }
             }
-            Exp_::Pack(ref chain, ref types, fields) => {
+            Exp_::Pack(ref chain, fields) => {
                 self.visit_type_apply(
                     &Spanned {
                         loc: chain.loc,
-                        value: Type_::Apply(Box::new(chain.clone()), vec![]),
+                        value: Type_::Apply(Box::new(chain.clone())),
                     },
                     project_context,
                     visitor,
@@ -954,25 +866,12 @@ impl Project {
                         return;
                     }
                 };
-                if let Some(types) = types {
-                    for t in types.iter() {
-                        self.visit_type_apply(t, project_context, visitor);
-                        if visitor.finished() {
-                            return;
-                        }
-                    }
-                    let types: Vec<_> = types
-                        .iter()
-                        .map(|ty| project_context.resolve_type(ty, self))
-                        .collect();
-                    struct_item.type_parameters_ins = types;
-                    struct_item.bind_type_parameter(None);
-                }
+                
                 for f in fields.iter() {
                     let field_type = struct_item.find_filed_by_name(f.0.value());
                     let all_fields = struct_item.all_fields();
                     let item = match &f.1.value {
-                        Exp_::Name(chain, _) => match &chain.value {
+                        Exp_::Name(chain) => match &chain.value {
                             NameAccessChain_::One(x) => {
                                 if x.value == f.0.value() && x.loc == f.0.loc() {
                                     let (item, _) =
@@ -1058,7 +957,7 @@ impl Project {
                 self.visit_expr(e.as_ref(), project_context, visitor);
             }
             Exp_::Block(b) => self.visit_block(b, project_context, visitor),
-            Exp_::Lambda(_, _) => {
+            Exp_::Lambda(_, _, _) => {
                 // TODO have lambda expression in ast structure.
                 // But I don't find in msl spec.
                 log::error!("lambda expression in ast.");
@@ -1073,14 +972,14 @@ impl Project {
                         let expr = &bind_expr.value.1;
                         let ty = self.get_expr_type(expr, scopes);
                         let is_spec_domain: bool = match &expr.value {
-                            Exp_::Call(chain, _, _, _) => match &chain.value {
+                            Exp_::Call(chain, _) => match &chain.value {
                                 NameAccessChain_::One(name) => name.value.as_str() == SPEC_DOMAIN,
                                 NameAccessChain_::Two(_, _) => false,
                                 NameAccessChain_::Three(_, _) => false,
                             },
                             _ => false,
                         };
-                        if let Bind_::Var(var) = &bind.value {
+                        if let Bind_::Var(_, var) = &bind.value {
                             let ty = if is_spec_domain {
                                 ty
                             } else if let Some(vec_ty) = ty.is_vector() {
@@ -1136,17 +1035,17 @@ impl Project {
                 let ty = self.get_expr_type(right.as_ref(), project_context);
                 self.try_fix_local_var_and_visit_lambda(left, &ty, visitor);
             }
-            Exp_::Return(e) => {
+            Exp_::Return(_, e) => {
                 if let Some(e) = e {
                     self.visit_expr(e, project_context, visitor);
                 }
             }
             Exp_::Abort(e) => self.visit_expr(e.as_ref(), project_context, visitor),
-            Exp_::Break => {
+            Exp_::Break(_, _) => {
                 let item = ItemOrAccess::Access(Access::KeyWords("break"));
                 visitor.handle_item_or_access(self, project_context, &item);
             }
-            Exp_::Continue => {
+            Exp_::Continue(_) => {
                 let item = ItemOrAccess::Access(Access::KeyWords("continue"));
                 visitor.handle_item_or_access(self, project_context, &item);
             }
@@ -1177,7 +1076,10 @@ impl Project {
             }
             Exp_::Index(e, index) => {
                 self.visit_expr(e.as_ref(), project_context, visitor);
-                self.visit_expr(index.as_ref(), project_context, visitor)
+                for v in index.value.iter() {
+                    self.visit_expr(v, project_context, visitor)
+                }
+                
             }
             Exp_::Cast(e, ty) => {
                 self.visit_expr(e.as_ref(), project_context, visitor);
@@ -1195,7 +1097,6 @@ impl Project {
             }
             Exp_::Spec(spec) => {
                 let old = project_context.set_access_env(AccessEnv::Spec);
-                self.visit_spec(spec, project_context, visitor);
                 project_context.set_access_env(old);
             }
             _ => {
@@ -1259,17 +1160,6 @@ impl Project {
             if visitor.finished() {
                 return;
             }
-            for v in function.acquires.iter() {
-                let ty = &Spanned {
-                    loc: v.loc,
-                    value: Type_::Apply(Box::new(v.clone()), vec![]),
-                };
-                log::trace!("visit_function, ty = {:?}", ty);
-                self.visit_type_apply(ty, project_context, visitor);
-                if visitor.finished() {
-                    return;
-                }
-            }
             log::info!(
                 "visit_function, function.body.value = {:?}",
                 function.body.value
@@ -1279,38 +1169,6 @@ impl Project {
                 FunctionBody_::Defined(ref seq) => self.visit_block(seq, project_context, visitor),
             }
         })
-    }
-
-    pub(crate) fn visit_scripts(
-        &self,
-        project_context: &ProjectContext,
-        visitor: &mut dyn ItemOrAccessHandler,
-        provider: impl AstProvider,
-    ) {
-        provider.with_script(|script| {
-            project_context.enter_scope(|scopes| {
-                scopes.set_access_env(AccessEnv::default());
-                for u in script.uses.iter() {
-                    self.visit_use_decl(None, u, scopes, Some(visitor), false, true);
-                    if visitor.finished() {
-                        return;
-                    }
-                }
-                for c in script.constants.iter() {
-                    self.visit_const(None, c, scopes, visitor);
-                    if visitor.finished() {
-                        return;
-                    }
-                }
-                for c in script.specs.iter() {
-                    self.visit_spec(c, scopes, visitor);
-                    if visitor.finished() {
-                        return;
-                    }
-                }
-                self.visit_function(&script.function, scopes, visitor);
-            })
-        });
     }
 
     pub(crate) fn visit_sequence_item(
@@ -1335,470 +1193,6 @@ impl Project {
         }
     }
 
-    pub fn visit_spec(
-        &self,
-        spec: &SpecBlock,
-        project_context: &ProjectContext,
-        visitor: &mut dyn ItemOrAccessHandler,
-    ) {
-        let _guard = project_context.enter_scope_guard(Scope::default());
-        match &spec.value.target.value {
-            SpecBlockTarget_::Code => {
-                // Nothing to do here.
-            }
-            SpecBlockTarget_::Module => {
-                // TODO
-                // here should to jump to module definition.
-                // But We don't have the loc to the `module` key words.
-            }
-            SpecBlockTarget_::Member(m, signature) => {
-                let chain = Spanned {
-                    loc: m.loc,
-                    value: NameAccessChain_::One(Spanned {
-                        loc: m.loc,
-                        value: m.value,
-                    }),
-                };
-                let (item_ret, _) = project_context.find_name_chain_item(&chain, self);
-                {
-                    // TODO this may not be expr.
-                    // You can write spec for struct.
-                    let item = ItemOrAccess::Access(Access::SpecFor(
-                        *m,
-                        Box::new(item_ret.clone().unwrap_or_default()),
-                    ));
-                    visitor.handle_item_or_access(self, project_context, &item);
-                    if visitor.finished() {
-                        return;
-                    }
-                }
-
-                if let Some(item_ret) = item_ret.as_ref() {
-                    match &item_ret {
-                        Item::Fun(x) => {
-                            for (var, ty) in x.parameters.iter() {
-                                project_context.enter_item(
-                                    self,
-                                    var.0.value,
-                                    Item::Parameter(*var, ty.clone()),
-                                );
-                            }
-                            for (var, ty) in x.type_parameters.iter() {
-                                project_context.enter_types(
-                                    self,
-                                    var.value,
-                                    Item::TParam(*var, ty.clone()),
-                                );
-                            }
-                            // enter result.
-                            let false_multi = vec![x.ret_type_unresolved.clone()];
-                            match x.ret_type.as_ref() {
-                                ResolvedType::Multiple(tys) => {
-                                    let mut index = 1;
-                                    for (ty1, ty2) in tys.iter().zip(
-                                        match &x.ret_type_unresolved.value {
-                                            Type_::Multiple(tys2) => tys2,
-                                            _ => &false_multi,
-                                        }
-                                        .iter(),
-                                    ) {
-                                        let s = Symbol::from(format!("result_{}", index).as_str());
-                                        project_context.enter_item(
-                                            self,
-                                            s,
-                                            Item::Var {
-                                                var: Var(Spanned {
-                                                    loc: ty2.loc,
-                                                    value: s,
-                                                }),
-                                                ty: ty1.clone(),
-                                                lambda: None,
-                                                has_decl_ty: true,
-                                            },
-                                        );
-                                        index += 1;
-                                    }
-                                }
-
-                                _ => {
-                                    project_context.enter_item(
-                                        self,
-                                        Symbol::from("result"),
-                                        Item::Var {
-                                            var: Var(Spanned {
-                                                loc: x.ret_type_unresolved.loc,
-                                                value: Symbol::from("result"),
-                                            }),
-                                            ty: *x.ret_type.clone(),
-                                            lambda: None,
-                                            has_decl_ty: true,
-                                        },
-                                    );
-                                }
-                            }
-                        }
-                        Item::Struct(x) => {
-                            for f in x.fields.iter() {
-                                project_context.enter_item(
-                                    self,
-                                    f.0.value(),
-                                    Item::Var {
-                                        var: Var(f.0 .0),
-                                        ty: f.1.clone(),
-                                        lambda: None,
-                                        has_decl_ty: true,
-                                    },
-                                );
-                            }
-                        }
-                        Item::StructNameRef(ItemStructNameRef {
-                            addr,
-                            module_name,
-                            name,
-                            ..
-                        }) => {
-                            log::error!(
-                                "struct name ref not handle:{} {} {}",
-                                addr,
-                                module_name.as_str(),
-                                name.0.value.as_str()
-                            );
-                        }
-                        _ => {}
-                    }
-                }
-                // TODO why spec have function signature.
-                if let Some(signature) = signature {
-                    self.visit_signature(signature.as_ref(), project_context, visitor);
-                    if visitor.finished() {
-                        return;
-                    }
-                }
-            }
-            SpecBlockTarget_::Schema(_, type_parameters) => {
-                for t in type_parameters.iter() {
-                    self.visit_tparam(t, project_context, visitor);
-                    if visitor.finished() {
-                        return;
-                    }
-                }
-            } // enter parameter and ret.
-        }
-
-        for u in spec.value.uses.iter() {
-            self.visit_use_decl(
-                None,
-                u,
-                project_context,
-                Some(visitor),
-                true, /*  here false or true doesn't matter. */
-                true,
-            );
-            if visitor.finished() {
-                return;
-            }
-        }
-        for m in spec.value.members.iter() {
-            self.visit_spec_member(m, project_context, visitor);
-            if visitor.finished() {
-                return;
-            }
-        }
-    }
-
-    pub fn visit_spec_member(
-        &self,
-        member: &SpecBlockMember,
-        project_context: &ProjectContext,
-        visitor: &mut dyn ItemOrAccessHandler,
-    ) {
-        log::trace!("visit spec member:{:?}", member);
-        match &member.value {
-            SpecBlockMember_::Condition {
-                kind,
-                properties: _properties,
-                exp,
-                additional_exps,
-            } => {
-                let empty = vec![];
-                let type_parameters = get_spec_condition_type_parameters(kind).unwrap_or(&empty);
-                project_context.enter_scope(|project_context: &ProjectContext| {
-                    // enter type parameters.
-                    for (name, ab) in type_parameters.iter() {
-                        let item = ItemOrAccess::Item(Item::TParam(*name, ab.clone()));
-                        visitor.handle_item_or_access(self, project_context, &item);
-                        project_context.enter_item(self, name.value, item);
-                    }
-                    self.visit_expr(exp, project_context, visitor);
-                    if visitor.finished() {
-                        return;
-                    }
-                    for exp in additional_exps.iter() {
-                        self.visit_expr(exp, project_context, visitor);
-                        if visitor.finished() {
-                            return;
-                        }
-                    }
-                });
-            }
-            SpecBlockMember_::Function {
-                uninterpreted: _uninterpreted,
-                name,
-                signature,
-                body,
-            } => {
-                self.visit_signature(signature, project_context, visitor);
-                if visitor.finished() {
-                    return;
-                }
-                let _guard = project_context.enter_scope_guard(Scope::default());
-                for t in signature.type_parameters.iter() {
-                    self.visit_tparam(t, project_context, visitor);
-                    if visitor.finished() {
-                        return;
-                    }
-                }
-                let parameter: Vec<_> = signature
-                    .parameters
-                    .iter()
-                    .map(|(var, ty)| (*var, project_context.resolve_type(ty, self)))
-                    .collect();
-
-                let ret_ty = project_context.resolve_type(&signature.return_type, self);
-                let item = Item::Fun(ItemFun {
-                    name: *name,
-                    type_parameters: signature.type_parameters.clone(),
-                    parameters: parameter.clone(),
-                    ret_type: Box::new(ret_ty),
-                    ret_type_unresolved: signature.return_type.clone(),
-                    is_spec: true,
-                    vis: Visibility::Internal,
-                    addr_and_name: project_context.get_current_addr_and_module_name(),
-                    is_test: AttrTest::No,
-                });
-                project_context.enter_item(self, name.value(), item);
-                for (var, ty) in parameter {
-                    project_context.enter_item(self, var.value(), Item::Parameter(var, ty));
-                }
-                // visit function body.
-                match &body.value {
-                    FunctionBody_::Defined(s) => self.visit_block(s, project_context, visitor),
-                    FunctionBody_::Native => {}
-                }
-            }
-
-            SpecBlockMember_::Variable {
-                is_global: _is_global,
-                name,
-                type_parameters: _type_parameters,
-                type_: ty,
-                init,
-            } => {
-                self.visit_type_apply(ty, project_context, visitor);
-                if visitor.finished() {
-                    return;
-                }
-                let ty = project_context.resolve_type(ty, self);
-                let item = ItemOrAccess::Item(Item::Var {
-                    var: Var(*name),
-                    ty,
-                    lambda: None,
-                    has_decl_ty: true,
-                });
-                visitor.handle_item_or_access(self, project_context, &item);
-                project_context.enter_item(self, name.value, item);
-                if let Some(init) = init {
-                    self.visit_expr(init, project_context, visitor);
-                }
-            }
-
-            SpecBlockMember_::Let {
-                name,
-                post_state: _post_state,
-                def,
-            } => {
-                let ty = self.get_expr_type(def, project_context);
-                let item = ItemOrAccess::Item(Item::Var {
-                    var: Var(*name),
-                    ty,
-                    lambda: None,
-                    has_decl_ty: true,
-                });
-                visitor.handle_item_or_access(self, project_context, &item);
-                project_context.enter_item(self, name.value, item);
-                self.visit_expr(def, project_context, visitor);
-            }
-
-            SpecBlockMember_::Update { lhs, rhs } => {
-                self.visit_expr(lhs, project_context, visitor);
-                self.visit_expr(rhs, project_context, visitor);
-            }
-            SpecBlockMember_::Include {
-                properties: _properties,
-                exp,
-            } => {
-                // TODO handle _properties
-                // TODO.
-                match &exp.value {
-                    Exp_::Name(chain, type_args) => {
-                        let (item_ret, _module_ret) =
-                            project_context.find_name_chain_item(chain, self);
-                        let item = ItemOrAccess::Access(Access::IncludeSchema(
-                            chain.clone(),
-                            Box::new(item_ret.unwrap_or_default()),
-                        ));
-                        visitor.handle_item_or_access(self, project_context, &item);
-                        if visitor.finished() {
-                            return;
-                        }
-                        if let Some(type_args) = type_args {
-                            for t in type_args.iter() {
-                                self.visit_type_apply(t, project_context, visitor);
-                                if visitor.finished() {
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                    Exp_::Pack(chain, type_args, fields) => {
-                        let (item_ret, _module_ret) =
-                            project_context.find_name_chain_item(chain, self);
-                        let item = ItemOrAccess::Access(Access::IncludeSchema(
-                            chain.clone(),
-                            Box::new(item_ret.clone().unwrap_or_default()),
-                        ));
-                        visitor.handle_item_or_access(self, project_context, &item);
-                        if visitor.finished() {
-                            return;
-                        }
-                        if let Some(type_args) = type_args {
-                            for t in type_args.iter() {
-                                self.visit_type_apply(t, project_context, visitor);
-                                if visitor.finished() {
-                                    return;
-                                }
-                            }
-                        }
-                        {
-                            let all_fields = item_ret
-                                .as_ref()
-                                .and_then(|x| match x {
-                                    Item::SpecSchema(_, x) => Some(x.clone()),
-                                    _ => None,
-                                })
-                                .unwrap_or_default();
-
-                            for (f, e) in fields.iter() {
-                                // TODO can jump to the schema where define this field??.
-                                self.visit_expr(e, project_context, visitor);
-                                if visitor.finished() {
-                                    return;
-                                }
-
-                                if let Some((f2, ty)) = all_fields.get(&f.value()) {
-                                    let item =
-                                        ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
-                                            from: *f,
-                                            to: Field(*f2),
-                                            ty: ty.clone(),
-                                            all_fields: all_fields.clone(),
-                                            item: None,
-                                            has_ref: None,
-                                        }));
-                                    visitor.handle_item_or_access(self, project_context, &item);
-                                    if visitor.finished() {
-                                        return;
-                                    }
-                                } else {
-                                    let item =
-                                        ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
-                                            from: *f,
-                                            to: *f,
-                                            ty: ResolvedType::UnKnown,
-                                            all_fields: all_fields.clone(),
-                                            item: None,
-                                            has_ref: None,
-                                        }));
-                                    visitor.handle_item_or_access(self, project_context, &item);
-                                    if visitor.finished() {
-                                        return;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    _ => {}
-                };
-            }
-
-            SpecBlockMember_::Apply {
-                exp,
-                patterns,
-                exclusion_patterns,
-            } => {
-                // TODO.
-                let rule = match &exp.value {
-                    Exp_::Name(chain, t) => {
-                        if let Some(ts) = t {
-                            for ty in ts.iter() {
-                                self.visit_type_apply(ty, project_context, visitor);
-                                if visitor.finished() {
-                                    return;
-                                }
-                            }
-                        };
-                        Some(chain)
-                    }
-                    _ => None,
-                };
-                if let Some(rule) = rule {
-                    let (item_ret, _) = project_context.find_name_chain_item(rule, self);
-                    let item_ret = item_ret.unwrap_or_default();
-                    let item = ItemOrAccess::Access(Access::IncludeSchema(
-                        rule.clone(),
-                        Box::new(item_ret),
-                    ));
-                    visitor.handle_item_or_access(self, project_context, &item);
-                }
-                for x in patterns.iter().chain(exclusion_patterns.iter()) {
-                    for x in x.value.name_pattern.iter() {
-                        match &x.value {
-                            SpecApplyFragment_::Wildcard => {}
-                            SpecApplyFragment_::NamePart(name) => {
-                                let chain = Spanned {
-                                    loc: name.loc,
-                                    value: NameAccessChain_::One(*name),
-                                };
-                                let (item_ret, _module_ret) =
-                                    project_context.find_name_chain_item(&chain, self);
-                                let item_ret = item_ret.unwrap_or_default();
-                                let item = ItemOrAccess::Access(Access::ApplySchemaTo(
-                                    chain.clone(),
-                                    Box::new(item_ret),
-                                ));
-                                visitor.handle_item_or_access(self, project_context, &item);
-                                if visitor.finished() {
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            SpecBlockMember_::Pragma { properties } => {
-                // https://github.com/move-language/move/blob/main/language/move-prover/doc/user/spec-lang.md#pragmas-and-properties
-                for p in properties.iter() {
-                    let item = ItemOrAccess::Access(Access::PragmaProperty(p.clone()));
-                    visitor.handle_item_or_access(self, project_context, &item);
-                    if visitor.finished() {
-                        return;
-                    }
-                }
-            }
-        }
-    }
-
     pub(crate) fn visit_type_apply(
         &self,
         ty: &Type,
@@ -1806,7 +1200,7 @@ impl Project {
         visitor: &mut dyn ItemOrAccessHandler,
     ) {
         match &ty.value {
-            Type_::Apply(chain, types) => {
+            Type_::Apply(chain) => {
                 let ty = project_context.resolve_type(ty, self);
                 let (_, module) = project_context.find_name_chain_item(chain, self);
                 let item = ItemOrAccess::Access(Access::ApplyType(
@@ -1817,12 +1211,6 @@ impl Project {
                 visitor.handle_item_or_access(self, project_context, &item);
                 if visitor.finished() {
                     return;
-                }
-                for t in types.iter() {
-                    self.visit_type_apply(t, project_context, visitor);
-                    if visitor.finished() {
-                        return;
-                    }
                 }
             }
             Type_::Ref(_, ty) => self.visit_type_apply(ty, project_context, visitor),
@@ -1880,127 +1268,133 @@ impl Project {
         };
 
         match &use_decl.use_ {
-            Use::Module(module, alias) => {
-                let module_scope = get_module(module);
-                let module_scope = module_scope.unwrap_or_else(|| {
-                    ModuleScope::new_module_name(get_addr(module), module.value.module)
-                });
-                let item = ItemOrAccess::Item(Item::Use(vec![ItemUse::Module(ItemUseModule {
-                    module_ident: *module,
-                    alias: *alias,
-                    members: module_scope,
-                    s: None,
-                    is_test: attributes_has_test(&use_decl.attributes) == AttrTest::TestOnly,
-                })]));
-                visitor.handle_item_or_access(self, project_context, &item);
-                if visitor.finished() {
-                    return;
-                }
-                let name = if let Some(alias) = alias {
-                    alias.value()
-                } else {
-                    module.value.module.value()
-                };
-                if enter_import {
-                    if let Some((addr, module_name)) = is_global {
-                        project_context.enter_top_use_item(
-                            self,
-                            addr,
-                            module_name,
-                            name,
-                            item,
-                            is_spec_module,
-                        );
-                    } else {
-                        project_context.enter_use_item(self, name, item);
-                    }
-                }
-            }
-
-            Use::Members(module, members) => {
-                let module_scope = get_module(module);
-                let module_scope = module_scope.unwrap_or_else(|| {
-                    ModuleScope::new_module_name(get_addr(module), module.value.module)
-                });
-                let garbage = vec![(
-                    Name {
-                        loc: module.loc,
-                        value: Symbol::from("BRKuUAoEna"),
-                    },
-                    None,
-                )];
-                for (member, alias) in if !members.is_empty() {
-                    members.iter()
-                } else {
-                    // So can find module definition in statement like this.
-                    // use std::vector::{}
-                    garbage.iter()
-                } {
-                    if member.value.as_str() == "Self" {
-                        // Special handle for Self.
-                        let item =
-                            ItemOrAccess::Item(Item::Use(vec![ItemUse::Module(ItemUseModule {
-                                module_ident: *module,
-                                alias: alias.map(ModuleName),
-                                members: module_scope.clone(),
-                                s: Some(*member),
-                                is_test: attributes_has_test(&use_decl.attributes)
-                                    == AttrTest::TestOnly,
-                            })]));
+            Use::ModuleUse(module, module_use) => {
+                match module_use {
+                    ModuleUse::Module(alias) => {
+                        let module_scope = get_module(module);
+                        let module_scope = module_scope.unwrap_or_else(|| {
+                            ModuleScope::new_module_name(get_addr(module), module.value.module)
+                        });
+                        let item = ItemOrAccess::Item(Item::Use(vec![ItemUse::Module(ItemUseModule {
+                            module_ident: *module,
+                            alias: *alias,
+                            members: module_scope,
+                            s: None,
+                            is_test: attributes_has_test(&use_decl.attributes) == AttrTest::TestOnly,
+                        })]));
                         visitor.handle_item_or_access(self, project_context, &item);
                         if visitor.finished() {
                             return;
                         }
                         let name = if let Some(alias) = alias {
-                            alias.value
+                            alias.value()
                         } else {
                             module.value.module.value()
                         };
-                        if let Some((addr, module_name)) = is_global {
-                            project_context.enter_top_use_item(
-                                self,
-                                addr,
-                                module_name,
-                                name,
-                                item,
-                                is_spec_module,
-                            );
-                        } else {
-                            project_context.enter_use_item(self, name, item);
-                        }
-                        continue;
-                    }
-                    let name = if let Some(alias) = alias {
-                        *alias
-                    } else {
-                        *member
-                    };
-                    let item = ItemOrAccess::Item(Item::Use(vec![ItemUse::Item(ItemUseItem {
-                        module_ident: *module,
-                        name: *member,
-                        alias: *alias,
-                        members: module_scope.clone(),
-                        is_test: attributes_has_test(&use_decl.attributes) == AttrTest::TestOnly,
-                    })]));
-                    visitor.handle_item_or_access(self, project_context, &item);
-                    if visitor.finished() {
-                        return;
-                    }
-                    if enter_import {
-                        if let Some((addr, module_name)) = is_global {
-                            project_context.enter_top_use_item(
-                                self,
-                                addr,
-                                module_name,
-                                name.value,
-                                item,
-                                is_spec_module,
-                            );
-                        } else {
-                            project_context.enter_use_item(self, name.value, item);
+                        if enter_import {
+                            if let Some((addr, module_name)) = is_global {
+                                project_context.enter_top_use_item(
+                                    self,
+                                    addr,
+                                    module_name,
+                                    name,
+                                    item,
+                                    is_spec_module,
+                                );
+                            } else {
+                                project_context.enter_use_item(self, name, item);
+                            }
                         }
                     }
+        
+                    ModuleUse::Members(members) => {
+                        let module_scope = get_module(module);
+                        let module_scope = module_scope.unwrap_or_else(|| {
+                            ModuleScope::new_module_name(get_addr(module), module.value.module)
+                        });
+                        let garbage = vec![(
+                            Name {
+                                loc: module.loc,
+                                value: Symbol::from("BRKuUAoEna"),
+                            },
+                            None,
+                        )];
+                        for (member, alias) in if !members.is_empty() {
+                            members.iter()
+                        } else {
+                            // So can find module definition in statement like this.
+                            // use std::vector::{}
+                            garbage.iter()
+                        } {
+                            if member.value.as_str() == "Self" {
+                                // Special handle for Self.
+                                let item =
+                                    ItemOrAccess::Item(Item::Use(vec![ItemUse::Module(ItemUseModule {
+                                        module_ident: *module,
+                                        alias: alias.map(ModuleName),
+                                        members: module_scope.clone(),
+                                        s: Some(*member),
+                                        is_test: attributes_has_test(&use_decl.attributes)
+                                            == AttrTest::TestOnly,
+                                    })]));
+                                visitor.handle_item_or_access(self, project_context, &item);
+                                if visitor.finished() {
+                                    return;
+                                }
+                                let name = if let Some(alias) = alias {
+                                    alias.value
+                                } else {
+                                    module.value.module.value()
+                                };
+                                if let Some((addr, module_name)) = is_global {
+                                    project_context.enter_top_use_item(
+                                        self,
+                                        addr,
+                                        module_name,
+                                        name,
+                                        item,
+                                        is_spec_module,
+                                    );
+                                } else {
+                                    project_context.enter_use_item(self, name, item);
+                                }
+                                continue;
+                            }
+                            let name = if let Some(alias) = alias {
+                                *alias
+                            } else {
+                                *member
+                            };
+                            let item = ItemOrAccess::Item(Item::Use(vec![ItemUse::Item(ItemUseItem {
+                                module_ident: *module,
+                                name: *member,
+                                alias: *alias,
+                                members: module_scope.clone(),
+                                is_test: attributes_has_test(&use_decl.attributes) == AttrTest::TestOnly,
+                            })]));
+                            visitor.handle_item_or_access(self, project_context, &item);
+                            if visitor.finished() {
+                                return;
+                            }
+                            if enter_import {
+                                if let Some((addr, module_name)) = is_global {
+                                    project_context.enter_top_use_item(
+                                        self,
+                                        addr,
+                                        module_name,
+                                        name.value,
+                                        item,
+                                        is_spec_module,
+                                    );
+                                } else {
+                                    project_context.enter_use_item(self, name.value, item);
+                                }
+                            }
+                        }
+                    }
+        
                 }
+
             }
 
             _ => {}
@@ -2009,11 +1403,11 @@ impl Project {
 }
 
 pub(crate) const SPEC_DOMAIN: &str = "$spec_domain";
-fn get_spec_condition_type_parameters(x: &SpecConditionKind) -> Option<&Vec<(Name, Vec<Ability>)>> {
-    match &x.value {
-        SpecConditionKind_::Invariant(x)
-        | SpecConditionKind_::InvariantUpdate(x)
-        | SpecConditionKind_::Axiom(x) => Some(x),
-        _ => None,
-    }
-}
+// fn get_spec_condition_type_parameters(x: &SpecConditionKind) -> Option<&Vec<(Name, Vec<Ability>)>> {
+//     match &x.value {
+//         SpecConditionKind_::Invariant(x)
+//         | SpecConditionKind_::InvariantUpdate(x)
+//         | SpecConditionKind_::Axiom(x) => Some(x),
+//         _ => None,
+//     }
+// }
