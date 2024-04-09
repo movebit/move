@@ -338,7 +338,7 @@ impl Project {
                             ),
                         );
                         let buffer =
-                            move_compiler::diagnostics::report_diagnostics_to_buffer(&m, diags);
+                            move_compiler::diagnostics::report_diagnostics_to_buffer(&m, diags, false);
                         let s = String::from_utf8_lossy(buffer.as_slice());
                         log::error!("{}", s);
                         continue;
@@ -595,13 +595,7 @@ impl Project {
                 let (item, _) = project_context.find_name_chain_item(name, self);
                 item.unwrap_or_default().to_type().unwrap_or_default()
             }
-            Exp_::Call(name, is_macro, ref type_args, exprs) => {
-                if *is_macro {
-                    let c = MacroCall::from_chain(name).unwrap_or_default();
-                    match c {
-                        MacroCall::Assert => return ResolvedType::new_unit(),
-                    }
-                }
+            Exp_::Call(name, exprs) => {
                 if let NameAccessChain_::One(name) = &name.value {
                     if name.value.as_str() == crate::project_visitor::SPEC_DOMAIN {
                         return exprs
@@ -617,7 +611,7 @@ impl Project {
                         return self.get_spec_build_in_call_type(
                             project_context,
                             b,
-                            type_args,
+                            None,
                             exprs,
                         )
                     }
@@ -683,7 +677,7 @@ impl Project {
                             .clone()
                     })
                     .collect();
-                infer_type_parameter_on_expression(&mut types, &parameters, &expression_types)
+                infer_type_parameter_on_expression(&mut types, &parameters, &expression_types);
                 
                 ResolvedType::Struct(
                     struct_item.to_struct_ref(),
@@ -732,7 +726,7 @@ impl Project {
                     ResolvedType::new_unit()
                 }
             }
-            Exp_::Lambda(_, _) => {
+            Exp_::Lambda(_, _, _) => {
                 // TODO.
                 ResolvedType::UnKnown
             }
@@ -747,10 +741,10 @@ impl Project {
 
             Exp_::Unit => ResolvedType::new_unit(),
             Exp_::Assign(_, _) => ResolvedType::new_unit(),
-            Exp_::Return(_) => ResolvedType::new_unit(),
+            Exp_::Return(_, _) => ResolvedType::new_unit(),
             Exp_::Abort(_) => ResolvedType::new_unit(),
-            Exp_::Break => ResolvedType::new_unit(),
-            Exp_::Continue => ResolvedType::new_unit(),
+            Exp_::Break(_, _) => ResolvedType::new_unit(),
+            Exp_::Continue(_) => ResolvedType::new_unit(),
             Exp_::Dereference(e) => {
                 let ty = self.get_expr_type(e, project_context);
                 match &ty {
