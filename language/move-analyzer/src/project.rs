@@ -527,7 +527,6 @@ impl Project {
         &self,
         project_context: &ProjectContext,
         name: &NameAccessChain,
-        type_args: &Option<Vec<Type>>,
         exprs: &Spanned<Vec<Exp>>,
     ) -> Option<ResolvedType> {
         let (fun_type, _) = project_context.find_name_chain_item(name, self);
@@ -537,12 +536,7 @@ impl Project {
             ResolvedType::Fun(x) => {
                 let type_parameters = &x.type_parameters;
                 let parameters = &x.parameters;
-                let type_args: Option<Vec<ResolvedType>> = type_args.as_ref().map(|type_args| {
-                    type_args
-                        .iter()
-                        .map(|x| project_context.resolve_type(x, self))
-                        .collect()
-                });
+                let type_args: Option<Vec<ResolvedType>> = None;
                 let mut fun_type = fun_type.clone();
                 let mut types = HashMap::new();
                 if let Some(ref ts) = type_args {
@@ -590,8 +584,8 @@ impl Project {
                 Value_::HexString(_) => ResolvedType::new_build_in(BuildInType::NumType),
                 Value_::ByteString(_) => ResolvedType::new_build_in(BuildInType::String),
             },
-            Exp_::Move(x) | Exp_::Copy(x) => project_context.find_var_type(x.0.value),
-            Exp_::Name(name, _ /*  TODO this is a error. */) => {
+            Exp_::Move(_, x) | Exp_::Copy(_, x) => project_context.find_var_type(x.0.value),
+            Exp_::Name(name) => {
                 let (item, _) = project_context.find_name_chain_item(name, self);
                 item.unwrap_or_default().to_type().unwrap_or_default()
             }

@@ -779,7 +779,7 @@ impl Project {
 
                 // try visit lambda expr.
                 if let ResolvedType::Fun(x) = self
-                    .initialize_fun_call(project_context, chain, types, exprs)
+                    .initialize_fun_call(project_context, chain, exprs)
                     .unwrap_or_default()
                 {
                     // TODO we maybe need infer type parameter first.
