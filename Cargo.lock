@@ -9162,7 +9162,7 @@ dependencies = [
 
 [[package]]
 name = "sui-move-analyzer"
-version = "1.1.2"
+version = "1.1.3"
 dependencies = [
  "anyhow",
  "bisection",
@@ -9180,6 +9180,7 @@ dependencies = [
  "log",
  "lsp-server",
  "lsp-types",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
  "move-cli 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
  "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
  "move-compiler 0.0.1 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
@@ -9188,6 +9189,7 @@ dependencies = [
  "move-model 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
  "move-package 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
  "move-symbol-pool 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "num-bigint 0.4.4",
  "once_cell",
  "petgraph 0.5.1",
  "pprof",

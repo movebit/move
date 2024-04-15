@@ -447,3 +447,176 @@ fn run_tests(path: &Path) -> Option<String> {
     let rendered_diags = std::str::from_utf8(&diag_buffer).ok()?;
     Some(rendered_diags.to_string())
 }
+
+
+
+// -------------------------------------------------
+
+
+// Determines the base of the number literal, depending on the prefix
+use move_core_types::account_address::*;
+use num_bigint::BigUint;
+pub(crate) fn determine_num_text_and_base(s: &str) -> (&str, move_compiler::shared::NumberFormat) {
+    for c in s.chars() {
+        if c.is_alphabetic() {
+            return (s, move_compiler::shared::NumberFormat::Hex);
+        }
+    }
+    (s, move_compiler::shared::NumberFormat::Decimal)
+}
+
+// Parse an address from a decimal or hex encoding
+pub fn parse_addr_str_to_number(
+    s: &str,
+) -> Option<(
+    [u8; AccountAddress::LENGTH],
+    move_compiler::shared::NumberFormat,
+)> {
+    let (txt, base) = determine_num_text_and_base(s);
+
+    let parsed = match base {
+        move_compiler::shared::NumberFormat::Hex => BigUint::parse_bytes(txt.as_bytes(), 16),
+        move_compiler::shared::NumberFormat::Decimal => BigUint::parse_bytes(txt.as_bytes(), 10),
+    }?;
+    
+    let bytes = parsed.to_bytes_be();
+    if bytes.len() > AccountAddress::LENGTH {
+        return None;
+    }
+    let mut result = [0u8; AccountAddress::LENGTH];
+    result[(AccountAddress::LENGTH - bytes.len())..].clone_from_slice(&bytes);
+    Some((result, base))
+}
+
+pub fn parse_addr_str(s: &str) -> Option<NumericalAddress> {
+    parse_addr_str_to_number(s).map(|(n, format)| NumericalAddress::new(n, format))
+}
+
+pub fn parse_named_address_item(s: &str) -> anyhow::Result<(String, NumericalAddress)> {
+    let before_after = s.split('=').collect::<Vec<_>>();
+
+    if before_after.len() != 2 {
+        anyhow::bail!(
+            "Invalid named address assignment. Must be of the form <address_name>=<address>, but \
+             found '{}'",
+            s
+        );
+    }
+    let name = before_after[0].parse()?;
+    if let Some(addr) = parse_addr_str(before_after[1]) {
+        Ok((name, addr))
+    } else {
+        Ok((
+            name,
+            NumericalAddress::new(
+                AccountAddress::from_hex_literal("0x0")
+                    .unwrap()
+                    .into_bytes(),
+                move_compiler::shared::NumberFormat::Hex,
+            ),
+        ))
+    }
+}
+
+pub fn parse_addresses_from_optionsxxx(
+    named_addr_strings: Vec<String>,
+) -> anyhow::Result<BTreeMap<String, NumericalAddress>> {
+    named_addr_strings
+        .iter()
+        .map(|x| parse_named_address_item(x))
+        .collect()
+}
+
+
+use move_compiler::compiled_unit::CompiledUnitEnum;
+use crate::project::Project;
+use crate::project_context::ProjectContext;
+use crate::context::MultiProject;
+fn move_stdlib_named_addresses() -> BTreeMap<String, NumericalAddress> {
+    let mapping = [("std", "0x1")];
+    mapping
+        .iter()
+        .map(|(name, addr)| (name.to_string(), NumericalAddress::parse_str(addr).unwrap()))
+        .collect()
+}
+
+// Compile `bench.move` and its dependencies
+fn compile_modules() {
+    // let src_files = vec!["/Users/edy/workspace/movebit/move-js/examples/my-counter/public/data/sources/c.move"];
+    let src_files = vec!["/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2/sources/launchpad/auth_request.move"];
+
+    // get deps
+    let working_dir = std::path::Path::new("/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2");
+    let report_err = |msg| {};
+    let mut multi = MultiProject::default();
+    let mut modules = Project {
+        modules: Default::default(),
+        manifests: Default::default(),
+        hash_file: multi.hash_file.clone(),
+        file_line_mapping: multi.file_line_mapping.clone(),
+        manifest_paths: Default::default(),
+        project_context: ProjectContext::new(),
+        manifest_not_exists: Default::default(),
+        manifest_load_failures: Default::default(),
+        manifest_mod_time: Default::default(),
+        dependents: vec![],
+    };
+    let mut dependents_paths: Vec<PathBuf> = Vec::new();
+    modules.load_project(&working_dir, &mut multi, report_err, true, &mut dependents_paths);
+    let deps = dependents_paths
+        .into_iter()
+        .map(|p| p.to_string_lossy().to_string())
+        .collect::<Vec<_>>()
+        .clone();
+    let vec_str: Vec<&str> = deps.iter().map(|s| s.as_str()).collect();
+
+    // get named_address_map
+    let build_config = move_package::BuildConfig {
+        test_mode: true,
+        install_dir: Some(tempfile::tempdir().unwrap().path().to_path_buf()),
+        skip_fetch_latest_git_deps: true,
+        ..Default::default()
+    };
+    let resolution_graph =
+        build_config.resolution_graph_for_package(&working_dir, &mut Vec::new()).ok().unwrap();
+    let named_address_mapping: Vec<_> = resolution_graph
+        .extract_named_address_mapping()
+        .map(|(name, addr)| format!("{}={}", name.as_str(), addr))
+        .collect();
+    eprintln!("named_address_mapping = {:?}", named_address_mapping);
+    use move_model::parse_addresses_from_options;
+    let addrs = match parse_addresses_from_optionsxxx(named_address_mapping.clone()) {
+        Ok(x) => Some(x),
+        Err(e) => {
+            eprintln!("error = {:?}", e);
+            None
+        }
+    };
+    eprintln!("addrs = {:?}", addrs);
+
+    // Compiler::from_files
+    let (files, compiled_units) = Compiler::from_files(
+        src_files,
+        vec_str,
+        addrs.unwrap(),
+    )
+    .build_and_report()
+    .expect("Error compiling...");
+
+    use move_compiler::output_compiled_units;
+    output_compiled_units(
+        None,
+        true,
+        files,
+        compiled_units,
+        "/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2/build"
+    );
+
+
+}
+
+
+#[test]
+fn test_get_package_compile_diagnostics() {
+    compile_modules();
+}
