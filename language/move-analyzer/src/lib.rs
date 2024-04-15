@@ -31,7 +31,7 @@ macro_rules! impl_convert_loc {
     };
 }
 
-pub mod completion;
+// pub mod completion;
 pub mod context;
 pub mod code_lens;
 pub mod diagnostics;

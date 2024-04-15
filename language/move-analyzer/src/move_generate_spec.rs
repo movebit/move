@@ -598,16 +598,16 @@ fn names_and_modules_in_expr(
             chain: &NameAccessChain,
         ) {
             match &chain.value {
-                NameAccessChain_::One(x) => {
-                    names.insert(x.value);
+                NameAccessChain_::Single(x) => {
+                    names.insert(x.name.value);
                 }
-                NameAccessChain_::Two(name, _) => match &name.value {
+                NameAccessChain_::Path(name_path) => match &name_path.root.name.value {
                     LeadingNameAccess_::AnonymousAddress(_) => {}
-                    LeadingNameAccess_::Name(name) => {
+                    LeadingNameAccess_::Name(name) | LeadingNameAccess_::GlobalAddress(name) => {
                         modules.insert(name.value);
                     }
                 },
-                NameAccessChain_::Three(_, _) => {}
+                
             }
         }
         fn handle_ty(names: &mut HashSet<Symbol>, modules: &mut HashSet<Symbol>, ty: &Type) {

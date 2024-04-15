@@ -306,7 +306,7 @@ impl ResolvedType {
                     }
                 }) .expect("You are looking for a struct which can't be found,It is possible But should not happen.")
             }
-            _ => { ItemStruct { name: StructName(Spanned { loc : Loc::new(FileHash::empty(), 0, 0) , value  :Symbol::from("")}), type_parameters: vec![ ], type_parameters_ins: vec![ ], fields: vec![ ], is_test: false , addr:  * ERR_ADDRESS, module_name: Symbol::from("") } },
+            _ => { ItemStruct { name: DatatypeName(Spanned { loc : Loc::new(FileHash::empty(), 0, 0) , value  :Symbol::from("")}), type_parameters: vec![ ], type_parameters_ins: vec![ ], fields: vec![ ], is_test: false , addr:  * ERR_ADDRESS, module_name: Symbol::from("") } },
         }
     }
 }

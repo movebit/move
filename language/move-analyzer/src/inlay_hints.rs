@@ -115,15 +115,14 @@ impl ItemOrAccessHandler for Handler {
         if !self.config.parameter {
             return;
         }
-        if let Exp_::Name(x, _) = &exp.value {
+        if let Exp_::Name(x) = &exp.value {
             match &x.value {
-                move_compiler::parser::ast::NameAccessChain_::One(x) => {
-                    if x.value.as_str() == para.value.as_str() {
+                move_compiler::parser::ast::NameAccessChain_::Single(path_entry) => {
+                    if path_entry.name.value.as_str() == para.value.as_str() {
                         return;
                     }
                 }
-                move_compiler::parser::ast::NameAccessChain_::Two(_, _) => {}
-                move_compiler::parser::ast::NameAccessChain_::Three(_, _) => {}
+                _ => {}
             }
         }
         let l = services.convert_loc_range(&exp.loc);

@@ -545,7 +545,8 @@ impl ProjectContext {
         let mut item_ret = None;
         let mut module_scope = None;
         match &chain.value {
-            NameAccessChain_::One(name) => {
+            NameAccessChain_::Single(path_entry) => {
+                let name = path_entry.name;
                 self.inner_first_visit(|s| {
                     if let Some(v) = if let Some(x) = s.items.get(&name.value) {
                         Some(x)
@@ -573,9 +574,10 @@ impl ProjectContext {
                     false
                 });
             }
-            NameAccessChain_::Two(name, member) => {
+            NameAccessChain_::Path(name_path) => {
+                let name = name_path.root.name;
                 match name.value {
-                    LeadingNameAccess_::Name(name) => {
+                    LeadingNameAccess_::Name(name) | LeadingNameAccess_::GlobalAddress(name)=> {
                         self.inner_first_visit(|s| {
                             if let Some(Item::Use(x)) = s.uses.get(&name.value) {
                                 for x in x.iter() {
@@ -623,7 +625,7 @@ impl ProjectContext {
                                 x.address
                                     .get(&addr.into_inner())?
                                     .modules
-                                    .get(&member.value)?
+                                    .get(&name_path.entries.last().unwrap().name.value)?
                                     .as_ref()
                                     .borrow()
                                     .name_and_addr
@@ -634,27 +636,6 @@ impl ProjectContext {
                     }
                 }
             }
-            NameAccessChain_::Three(chain_two, member) => self.visit_address(|top| {
-                let modules = top.address.get(&match &chain_two.value.0.value {
-                    LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
-                    LeadingNameAccess_::Name(name) => name_to_addr.name_2_addr(name.value),
-                });
-                if modules.is_none() {
-                    return;
-                }
-                let modules = modules.unwrap();
-                let module = modules.modules.get(&chain_two.value.1.value);
-                if module.is_none() {
-                    return;
-                }
-                let module = module.unwrap();
-                module_scope = Some(module.as_ref().borrow().name_and_addr.clone());
-                if let Some(item) = module.as_ref().borrow().module.items.get(&member.value) {
-                    item_ret = Some(item.clone());
-                } else if let Some(item) = module.as_ref().borrow().spec.items.get(&member.value) {
-                    item_ret = Some(item.clone());
-                }
-            }),
         }
         (item_ret, module_scope)
     }

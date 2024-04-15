@@ -14,8 +14,8 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc, str::FromStr};
 
 #[derive(Clone)]
 pub struct ItemStruct {
-    pub(crate) name: StructName,
-    pub(crate) type_parameters: Vec<StructTypeParameter>,
+    pub(crate) name: DatatypeName,
+    pub(crate) type_parameters: Vec<DatatypeTypeParameter>,
     pub(crate) type_parameters_ins: Vec<ResolvedType>,
     pub(crate) fields: Vec<(Field, ResolvedType)>, /* TODO If this length is zero,maybe a native. */
     pub(crate) is_test: bool,
@@ -120,7 +120,7 @@ pub enum Item {
 
 #[derive(Clone)]
 pub struct LambdaExp {
-    pub(crate) bind_list: BindList,
+    pub(crate) bind_list: LambdaBindings,
     pub(crate) exp: Exp,
 }
 
@@ -174,8 +174,8 @@ impl Item {
 pub struct ItemStructNameRef {
     pub(crate) addr: AccountAddress,
     pub(crate) module_name: Symbol,
-    pub(crate) name: StructName,
-    pub(crate) type_parameters: Vec<StructTypeParameter>,
+    pub(crate) name: DatatypeName,
+    pub(crate) type_parameters: Vec<DatatypeTypeParameter>,
     pub(crate) is_test: bool,
 }
 
@@ -391,11 +391,12 @@ pub enum MacroCall {
 
 impl MacroCall {
     pub(crate) fn from_chain(chain: &NameAccessChain) -> Option<Self> {
-        match &chain.value {
-            NameAccessChain_::One(name) => Self::from_symbol(name.value),
-            NameAccessChain_::Two(_, _) => None,
-            NameAccessChain_::Three(_, _) => None,
-        }
+        // match &chain.value {
+        //     NameAccessChain_::One(name) => Self::from_symbol(name.value),
+        //     NameAccessChain_::Two(_, _) => None,
+        //     NameAccessChain_::Three(_, _) => None,
+        // }
+        None
     }
     pub(crate) fn from_symbol(s: Symbol) -> Option<Self> {
         match s.as_str() {
@@ -419,10 +420,15 @@ impl Default for MacroCall {
 /// Get the last name of a access chain.
 pub(crate) fn get_name_chain_last_name(x: &NameAccessChain) -> &Name {
     match &x.value {
-        move_compiler::parser::ast::NameAccessChain_::One(name)
-        | move_compiler::parser::ast::NameAccessChain_::Two(_, name)
-        | move_compiler::parser::ast::NameAccessChain_::Three(_, name) => name,
+        move_compiler::parser::ast::NameAccessChain_::Single(path_entry) => {
+            &path_entry.name
+        }
+        move_compiler::parser::ast::NameAccessChain_::Path(name_path) => {
+            &name_path.entries.last().unwrap().name
+        }
+        
     }
+    
 }
 
 impl std::fmt::Display for Item {
@@ -527,7 +533,6 @@ pub enum Access {
         Box<Item>,
     ),
     IncludeSchema(NameAccessChain, Box<Item>),
-    PragmaProperty(PragmaProperty),
     SpecFor(Name, Box<Item>),
 }
 
@@ -590,19 +595,6 @@ impl std::fmt::Display for Access {
             Access::SpecFor(name, _) => {
                 write!(f, "spec for {}", name.value.as_str())
             }
-            Access::PragmaProperty(x) => {
-                write!(
-                    f,
-                    "{}{}",
-                    x.value.name.value.as_str(),
-                    if let Some(_value) = &x.value.value {
-                        // TODO. actual.ame
-                        String::from("...")
-                    } else {
-                        String::from("...")
-                    }
-                )
-            }
             Access::IncludeSchema(name, _def) => {
                 write!(
                     f,
@@ -637,7 +629,6 @@ impl Access {
             Access::MacroCall(_, chain) => (chain.loc, chain.loc),
             Access::Friend(name, item) => (get_name_chain_last_name(name).loc, item.loc()),
             Access::ApplySchemaTo(chain, x) => (get_name_chain_last_name(chain).loc, x.def_loc()),
-            Access::PragmaProperty(x) => (x.loc, x.loc),
             Access::SpecFor(name, item) => (name.loc, item.as_ref().def_loc()),
             Access::IncludeSchema(a, d) => (get_name_chain_last_name(a).loc, d.def_loc()),
         }
@@ -647,15 +638,13 @@ impl Access {
     pub(crate) fn access_module(&self) -> Option<(Loc, Loc)> {
         match self {
             Self::ExprAccessChain(chain, Option::Some(module), _) => match &chain.value {
-                NameAccessChain_::One(_) => None,
-                NameAccessChain_::Two(m, _) => Some((m.loc, module.name.loc())),
-                NameAccessChain_::Three(x, _) => Some((x.value.1.loc, module.name.loc())),
+                NameAccessChain_::Single(_) => None,
+                NameAccessChain_::Path(name_path) => Some((name_path.root.name.loc, module.name.loc())),
             },
 
             Self::ApplyType(chain, Option::Some(module), _) => match &chain.value {
-                NameAccessChain_::One(_) => None,
-                NameAccessChain_::Two(m, _) => Some((m.loc, module.loc())),
-                NameAccessChain_::Three(x, _) => Some((x.value.1.loc, module.loc())),
+                NameAccessChain_::Single(_) => None,
+                NameAccessChain_::Path(name_path) => Some((name_path.root.name.loc, module.loc())),
             },
 
             _ => None,

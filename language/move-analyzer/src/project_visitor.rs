@@ -97,11 +97,13 @@ impl Project {
             Some(x) => match x.value {
                 LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
                 LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
+                LeadingNameAccess_::GlobalAddress(name) => self.name_to_addr_impl(name.value),
             },
             None => match m.address {
                 Some(x) => match x.value {
                     LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
                     LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
+                    LeadingNameAccess_::GlobalAddress(name) => self.name_to_addr_impl(name.value),
                 },
                 None => *ERR_ADDRESS,
             },
@@ -163,11 +165,10 @@ impl Project {
         let u_ty = ResolvedType::UnKnown;
         let x = match &value.value {
             Exp_::Name(name) => match &name.value {
-                NameAccessChain_::One(name) => {
-                    self.project_context.try_fix_local_var_ty(name.value, ty)
+                NameAccessChain_::Single(path_entry) => {
+                    self.project_context.try_fix_local_var_ty(path_entry.name.value, ty)
                 }
-                NameAccessChain_::Two(_, _) => None,
-                NameAccessChain_::Three(_, _) => None,
+                NameAccessChain_::Path(_) => None,
             },
             Exp_::Lambda(b, t, e) => Some(LambdaExp {
                 bind_list: b.clone(),
@@ -183,20 +184,23 @@ impl Project {
             {
                 let _guard = self.project_context.enter_scope_guard(Scope::default());
                 for (index, b) in lambda.bind_list.value.iter().enumerate() {
-                    self.visit_bind(
-                        b,
-                        match args.get(index) {
-                            Some(x) => x,
-                            None => &u_ty,
-                        },
-                        &self.project_context,
-                        visitor,
-                        None,
-                        false,
-                    );
-                    if visitor.finished() {
-                        return;
+                    for bind in b.0.value.iter() {
+                        self.visit_bind(
+                            bind,
+                            match args.get(index) {
+                                Some(x) => x,
+                                None => &u_ty,
+                            },
+                            &self.project_context,
+                            visitor,
+                            None,
+                            false,
+                        );
+                        if visitor.finished() {
+                            return;
+                        }
                     }
+                    
                 }
                 // visit expr body
                 self.visit_expr(&lambda.exp, &self.project_context, visitor);
@@ -845,8 +849,8 @@ impl Project {
                     let all_fields = struct_item.all_fields();
                     let item = match &f.1.value {
                         Exp_::Name(chain) => match &chain.value {
-                            NameAccessChain_::One(x) => {
-                                if x.value == f.0.value() && x.loc == f.0.loc() {
+                            NameAccessChain_::Single(path_entry) => {
+                                if path_entry.name.value == f.0.value() && path_entry.name.loc == f.0.loc() {
                                     let (item, _) =
                                         project_context.find_name_chain_item(chain, self);
                                     item
@@ -946,9 +950,8 @@ impl Project {
                         let ty = self.get_expr_type(expr, scopes);
                         let is_spec_domain: bool = match &expr.value {
                             Exp_::Call(chain, _) => match &chain.value {
-                                NameAccessChain_::One(name) => name.value.as_str() == SPEC_DOMAIN,
-                                NameAccessChain_::Two(_, _) => false,
-                                NameAccessChain_::Three(_, _) => false,
+                                NameAccessChain_::Single(path_entry) => path_entry.name.value.as_str() == SPEC_DOMAIN,
+                                _ => false
                             },
                             _ => false,
                         };
@@ -1087,37 +1090,38 @@ impl Project {
         visitor: &mut dyn ItemOrAccessHandler,
     ) {
         match &friend_decl.friend.value {
-            NameAccessChain_::One(x) => {
+            NameAccessChain_::Single(path_entry) => {
                 // This is absolute wrong syntax,But can be use for completion.
                 let item = ItemOrAccess::Access(Access::Friend(
                     friend_decl.friend.clone(),
                     ModuleName(Spanned {
-                        loc: x.loc,
+                        loc: path_entry.name.loc,
                         value: Symbol::from("uOZKbQXVWi"),
                     }),
                 ));
                 visitor.handle_item_or_access(self, project_context, &item);
             }
 
-            NameAccessChain_::Two(x, name) => {
-                let addr_friend = match &x.value {
-                    LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
-                    LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
-                };
-                let m = project_context.resolve_friend(addr_friend, name.value);
-                let m = match m {
-                    Some(x) => x,
-                    None => ModuleName(*name),
-                };
-                let item = ItemOrAccess::Access(Access::Friend(friend_decl.friend.clone(), m));
-                visitor.handle_item_or_access(self, project_context, &item);
-                project_context.insert_friend(addr, module_name, (addr_friend, name.value));
+            NameAccessChain_::Path(name_path) => {
+                let x = name_path.root.name;
+                for path_entry in name_path.entries.iter() {
+                    let name = path_entry.name;
+                    let addr_friend = match &x.value {
+                        LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
+                        LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
+                        LeadingNameAccess_::GlobalAddress(name) => self.name_to_addr_impl(name.value),
+                    };
+                    let m = project_context.resolve_friend(addr_friend, name.value);
+                    let m = match m {
+                        Some(x) => x,
+                        None => ModuleName(name),
+                    };
+                    let item = ItemOrAccess::Access(Access::Friend(friend_decl.friend.clone(), m));
+                    visitor.handle_item_or_access(self, project_context, &item);
+                    project_context.insert_friend(addr, module_name, (addr_friend, name.value));
+                }
+                
             }
-
-            NameAccessChain_::Three(_, _) => {
-                log::error!("access friend three")
-            }
-
             _ => {}
         }
     }
@@ -1220,6 +1224,7 @@ impl Project {
             match &module.value.address.value {
                 LeadingNameAccess_::AnonymousAddress(num) => num.into_inner(),
                 LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
+                LeadingNameAccess_::GlobalAddress(name) => self.name_to_addr_impl(name.value),
             }
         };
         let get_module = |module: &ModuleIdent| -> Option<Rc<RefCell<ModuleScope>>> {
