@@ -8,15 +8,7 @@ use crate::{
 };
 use move_command_line_common::testing::EXP_EXT;
 use move_compiler::{
-    cfgir::visitor::AbstractInterpreterVisitor,
-    command_line::compiler::move_check_for_errors,
-    diagnostics::codes::{self, WarningFilter},
-    editions::Flavor,
-    expansion::ast as E,
-    shared::{NumericalAddress, PackageConfig},
-    typing::visitor::TypingVisitor,
-    Compiler, PASS_PARSER,
-    diagnostics::Diagnostics,
+    cfgir::visitor::AbstractInterpreterVisitor, command_line::compiler::move_check_for_errors, diagnostics::{codes::{self, WarningFilter}, Diagnostics}, editions::Flavor, expansion::ast as E, shared::{NumericalAddress, PackageConfig}, sui_mode, typing::visitor::TypingVisitor, Compiler, PASS_PARSER
 };
 use sui_move_build::linters::{
     coin_field::CoinFieldVisitor, collection_equality::CollectionEqualityVisitor,
@@ -543,7 +535,8 @@ fn move_stdlib_named_addresses() -> BTreeMap<String, NumericalAddress> {
 // Compile `bench.move` and its dependencies
 fn compile_modules() {
     // let src_files = vec!["/Users/edy/workspace/movebit/move-js/examples/my-counter/public/data/sources/c.move"];
-    let src_files = vec!["/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2/sources/launchpad/auth_request.move"];
+    let src_files = visit_dirs();
+    let src_files: Vec<&str> = src_files.iter().map(|s| s.as_str()).collect();
 
     // get deps
     let working_dir = std::path::Path::new("/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2");
@@ -572,51 +565,260 @@ fn compile_modules() {
 
     // get named_address_map
     let build_config = move_package::BuildConfig {
-        test_mode: true,
-        install_dir: Some(tempfile::tempdir().unwrap().path().to_path_buf()),
-        skip_fetch_latest_git_deps: true,
         ..Default::default()
     };
+    
     let resolution_graph =
         build_config.resolution_graph_for_package(&working_dir, &mut Vec::new()).ok().unwrap();
-    let named_address_mapping: Vec<_> = resolution_graph
-        .extract_named_address_mapping()
-        .map(|(name, addr)| format!("{}={}", name.as_str(), addr))
-        .collect();
-    eprintln!("named_address_mapping = {:?}", named_address_mapping);
-    use move_model::parse_addresses_from_options;
-    let addrs = match parse_addresses_from_optionsxxx(named_address_mapping.clone()) {
-        Ok(x) => Some(x),
-        Err(e) => {
-            eprintln!("error = {:?}", e);
-            None
-        }
-    };
-    eprintln!("addrs = {:?}", addrs);
 
-    // Compiler::from_files
-    let (files, compiled_units) = Compiler::from_files(
-        src_files,
-        vec_str,
-        addrs.unwrap(),
-    )
-    .build_and_report()
-    .expect("Error compiling...");
+    let build_plan = move_package::compilation::build_plan::BuildPlan::create(resolution_graph).ok().unwrap();
 
-    use move_compiler::output_compiled_units;
-    output_compiled_units(
-        None,
-        true,
-        files,
-        compiled_units,
-        "/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2/build"
-    );
+    let writer = &mut std::io::sink();
+    let _ = build_plan.compile_with_driver(writer, |compiler| {
+        let (files, units_res) = compiler.build_and_report().ok().unwrap();
+        let _ = move_compiler::output_compiled_units(
+            move_command_line_common::env::get_bytecode_version_from_env(),
+            true,
+            files.clone(),
+            units_res.clone(),
+            "/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2/build2"
+        );
+        Ok((files, units_res))
+        // match units_res {
+        //     Ok((units, warning_diags)) => {
+        //         let _ = move_compiler::output_compiled_units(
+        //             move_command_line_common::env::get_bytecode_version_from_env(),
+        //             true,
+        //             files.clone(),
+        //             units.clone(),
+        //             "/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2/build2"
+        //         );
 
+        //         let any_linter_warnings = warning_diags.any_with_prefix(LINT_WARNING_PREFIX);
+        //         let (filtered_diags_num, filtered_categories) =
+        //             warning_diags.filtered_source_diags_with_prefix(LINT_WARNING_PREFIX);
+        //         move_compiler::diagnostics::report_warnings(&files, warning_diags);
+        //         if any_linter_warnings {
+        //             eprintln!("Please report feedback on the linter warnings at https://forums.sui.io\n");
+        //         }
+        //         if filtered_diags_num > 0 {
+        //             eprintln!("Total number of linter warnings suppressed: {filtered_diags_num} (filtered categories: {filtered_categories})");
+        //         }
+        //         Ok((files, units))
+        //     }
+        //     Err(error_diags) => {
+        //         anyhow::bail!("Compilation error");
+        //     }
+        // }
+    });
+
+    // let named_address_mapping: Vec<_> = resolution_graph
+    //     .extract_named_address_mapping()
+    //     .map(|(name, addr)| format!("{}={}", name.as_str(), addr))
+    //     .collect();
+    // eprintln!("named_address_mapping = {:?}", named_address_mapping);
+    // use move_model::parse_addresses_from_options;
+    // let addrs = match parse_addresses_from_optionsxxx(named_address_mapping.clone()) {
+    //     Ok(x) => Some(x),
+    //     Err(e) => {
+    //         eprintln!("error = {:?}", e);
+    //         None
+    //     }
+    // };
+    // eprintln!("addrs = {:?}", addrs);
+
+    // // // Compiler::from_files
+    // let (files, compiled_units) = Compiler::from_files(
+    //     src_files,
+    //     vec_str,
+    //     addrs.unwrap(),
+    // )
+    // .build_and_report()
+    // .expect("Error compiling...");
+
+    // use move_compiler::output_compiled_units;
+    // if let Some(x) = move_command_line_common::env::get_bytecode_version_from_env() {
+    //     eprintln!("get_bytecode_version_from_env = {}", x);
+    // }
+    // output_compiled_units(
+    //     move_command_line_common::env::get_bytecode_version_from_env(),
+    //     true,
+    //     files,
+    //     compiled_units,
+    //     "/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2/build2"
+    // );
+
+    // let file_btree = resolution_graph.file_sources();
+    // for (file_hash, (sym, str)) in file_btree.iter() {
+    //     eprintln!("file: {:?}", sym);
+    // }
 
 }
 
 
+fn visit_dirs() -> Vec<String> {
+    let mut all_move_files = vec![];
+    use walkdir::WalkDir;
+    for entry in WalkDir::new("/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2/sources") {
+        if let Ok(entry) = entry {
+            if let Some(ext) = entry.path().extension() {
+                if ext == "move" {
+                    all_move_files.push(entry.path().to_string_lossy().to_string());
+                }
+            }
+        }
+    }
+    all_move_files
+}
+
+fn compare_build_and_fromfiles() -> std::io::Result<()> {
+    
+    use std::fs::File;
+    use std::io::{self, Read};
+    // 打开第一个文件夹
+    let move_compiler_entries = 
+        std::fs::read_dir("/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2/build2/modules")
+        .expect("Failed to read directory");
+
+    let mut move_compiler_files_mvsm = vec![];
+    let mut move_compiler_files_mv = vec![];
+    for entry in move_compiler_entries {
+        if let Ok(entry) = entry {
+            if let Some(ext) = entry.path().extension() {
+                if ext == "mv" {
+                    move_compiler_files_mv.push(entry);
+                }
+                else if ext == "mvsm" {
+                    move_compiler_files_mvsm.push(entry);
+                }
+            }
+            
+        }
+    }
+    eprintln!("====== {}", move_compiler_files_mv.len());
+
+    // 打开第二个文件夹
+    let move_build_entries = 
+        std::fs::read_dir("/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2/build/LaunchpadV2/bytecode_modules")
+        .expect("Failed to read directory");
+
+    let mut move_build_files_mv = vec![];
+    for entry in move_build_entries {
+        if let Ok(entry) = entry {
+            if let Some(ext) = entry.path().extension() {
+                if ext == "mv" {
+                    move_build_files_mv.push(entry);
+                }
+            }
+        }
+    }
+
+    let move_build_entries = 
+        std::fs::read_dir("/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2/build/LaunchpadV2/source_maps")
+        .expect("Failed to read directory");
+
+    let mut move_build_files_mvsm = vec![];
+    for entry in move_build_entries {
+        if let Ok(entry) = entry {
+            if let Some(ext) = entry.path().extension() {
+                if ext == "mvsm" {
+                    move_build_files_mvsm.push(entry);
+                }
+            }
+        }
+    }
+    eprintln!("====== {:?}", move_compiler_files_mv[0].path());
+    let mut diff_count = 0;
+    for i in 0..move_compiler_files_mv.len() {
+        let file_mv_dir = "/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2/build/LaunchpadV2/bytecode_modules/";
+        
+        let compiler_mv = move_compiler_files_mv[i].file_name().to_str().unwrap()[4..].to_string();
+        // let Compiler_mvsm = move_compiler_files_mvsm[i].file_name().to_str().unwrap().to_string()[3..].to_string();
+        let mut file1 = File::open(move_compiler_files_mv[i].path())?;
+        
+        let mut file2 = match File::open( format!("{}{}", file_mv_dir, compiler_mv)) {
+            Ok(x) => x,
+            Err(_) => continue,
+        };
+        
+        // 读取文件内容到缓冲区
+        let mut buffer1 = Vec::new();
+        let mut buffer2 = Vec::new();
+        file1.read_to_end(&mut buffer1)?;
+        file2.read_to_end(&mut buffer2)?;
+
+        eprintln!("===================================");
+        eprintln!("{}th: {}", i, compiler_mv);
+        // 比较两个文件的内容是否相同
+        eprintln!("{:?}. {:?}", buffer1.len(), buffer2.len());
+        if buffer1 == buffer2 {
+            eprintln!("文件内容相同");
+        } else {
+            eprintln!("文件内容不同");
+            diff_count = diff_count + 1;
+        }
+
+        for j in 0..buffer1.len() {
+            if buffer1[j] != buffer2[j] {
+                eprintln!("{:?}: {:?} != {:?}", j, buffer1[j], buffer2[j]);
+            }
+        }   
+    }
+    eprintln!("diff_count: {}", diff_count);
+    // eprintln!("|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+
+    // for i in 0..move_compiler_files_mvsm.len() {
+    //     let file_mv_dir = "/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2/build2/LaunchpadV2/source_maps/";
+    //     let compiler_mvsm = move_compiler_files_mvsm[i].file_name().to_str().unwrap()[3..].to_string();
+    //     // eprintln!("{}  ==  {}", move_compiler_files_mvsm[i].path().display(), format!("{}{}", file_mv_dir, compiler_mvsm));
+        
+    //     // let Compiler_mvsm = move_compiler_files_mvsm[i].file_name().to_str().unwrap().to_string()[3..].to_string();
+    //     let mut file1 = File::open(move_compiler_files_mvsm[i].path())?;
+    //     let mut file2 = File::open(
+    //         format!("{}{}", file_mv_dir, compiler_mvsm)
+    //     )?;
+
+    //     // 读取文件内容到缓冲区
+    //     let mut buffer1 = Vec::new();
+    //     let mut buffer2 = Vec::new();
+    //     file1.read_to_end(&mut buffer1)?;
+    //     file2.read_to_end(&mut buffer2)?;
+
+    //     eprintln!("===================================");
+    //     eprintln!("{}th: {}", i, compiler_mvsm);
+    //     // 比较两个文件的内容是否相同
+    //     eprintln!("{:?}. {:?}", buffer1.len(), buffer2.len());
+    //     if buffer1 == buffer2 {
+    //         eprintln!("文件内容相同");
+    //     } else {
+    //         eprintln!("文件内容不同");
+    //     }
+
+    //     for j in 0..buffer1.len() {
+    //         if buffer1[j] != buffer2[j] {
+    //             eprintln!("{:?}: {:?} != {:?}", j, buffer1[j], buffer2[j]);
+    //         }
+    //     }   
+    // }
+
+
+    // // let mut file2 = File::open("/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2/build22222/LaunchpadV2/bytecode_modules/auth_request.mv")?;
+    // let mut file2 = File::open("/data/zhangxiao/project/nft-protocol/contracts/launchpad_v2/build22222/LaunchpadV2/bytecode_modules/frozen_pub.mv")?;
+
+
+    // // 读取文件内容到缓冲区
+    // let mut buffer1 = Vec::new();
+    // let mut buffer2 = Vec::new();
+    // file1.read_to_end(&mut buffer1)?;
+    // file2.read_to_end(&mut buffer2)?;
+
+   
+
+    Ok(())
+}
+
 #[test]
 fn test_get_package_compile_diagnostics() {
     compile_modules();
+    compare_build_and_fromfiles();
 }

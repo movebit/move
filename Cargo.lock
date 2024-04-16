@@ -1588,6 +1588,7 @@ dependencies = [
  "anstyle",
  "clap_lex 0.5.1",
  "strsim 0.10.0",
+ "terminal_size",
 ]
 
 [[package]]
@@ -1746,6 +1747,12 @@ name = "const-oid"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28c122c3980598d243d63d9a704629a2d748d101f278052ff068be5a4423ab6f"
+
+[[package]]
+name = "const-str"
+version = "0.5.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3618cccc083bb987a415d85c02ca6c9994ea5b44731ec28b9ecf09658655fba9"
 
 [[package]]
 name = "constant_time_eq"
@@ -1972,6 +1979,22 @@ dependencies = [
  "libc",
  "mio 0.7.14",
  "parking_lot 0.11.2",
+ "signal-hook",
+ "signal-hook-mio",
+ "winapi",
+]
+
+[[package]]
+name = "crossterm"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e64e6c0fbe2c17357405f7c758c1ef960fce08bdfb2c03d88d2a18d7e09c4b67"
+dependencies = [
+ "bitflags 1.3.2",
+ "crossterm_winapi 0.9.1",
+ "libc",
+ "mio 0.8.8",
+ "parking_lot 0.12.1",
  "signal-hook",
  "signal-hook-mio",
  "winapi",
@@ -3438,6 +3461,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6fb8d784f27acf97159b40fc4db5ecd8aa23b9ad5ef69cdd136d3bc80665f0c0"
 
 [[package]]
+name = "git-version"
+version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ad568aa3db0fcbc81f2f116137f263d7304f512a1209b35b85150d3ef88ad19"
+dependencies = [
+ "git-version-macro",
+]
+
+[[package]]
+name = "git-version-macro"
+version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53010ccb100b96a67bc32c0175f0ed1426b31b655d562898e57325f81c023ac0"
+dependencies = [
+ "proc-macro2 1.0.68",
+ "quote 1.0.33",
+ "syn 2.0.38",
+]
+
+[[package]]
 name = "glob"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4178,6 +4221,27 @@ name = "itoa"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af150ab688ff2122fcef229be89cb50dd66af9e01a4ff320cc137eecc9bacc38"
+
+[[package]]
+name = "jemalloc-ctl"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cffc705424a344c054e135d12ee591402f4539245e8bbd64e6c9eaa9458b63c"
+dependencies = [
+ "jemalloc-sys",
+ "libc",
+ "paste",
+]
+
+[[package]]
+name = "jemalloc-sys"
+version = "0.5.4+5.3.0-patched"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac6c1946e1cea1788cbfde01c993b52a10e2da07f4bac608228d1bed20bfebf2"
+dependencies = [
+ "cc",
+ "libc",
+]
 
 [[package]]
 name = "jobserver"
@@ -6163,7 +6227,7 @@ dependencies = [
  "tokio-util 0.7.7",
  "toml",
  "tracing",
- "tracing-subscriber 0.3.17",
+ "tracing-subscriber 0.3.18",
 ]
 
 [[package]]
@@ -8814,6 +8878,7 @@ checksum = "29ad2e15f37ec9a6cc544097b78a1ec90001e9f71b81338ca39f430adaca99af"
 dependencies = [
  "libc",
  "mio 0.7.14",
+ "mio 0.8.8",
  "signal-hook",
 ]
 
@@ -9161,6 +9226,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "sui-move"
+version = "1.12.0"
+source = "git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "clap 4.4.6",
+ "colored",
+ "const-str",
+ "git-version",
+ "jemalloc-ctl",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-cli 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-disassembler 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-ir-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-package 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-prover 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-prover-boogie-backend 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-unit-test 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-runtime 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "prometheus",
+ "serde_json",
+ "serde_yaml",
+ "sui-move-build",
+ "sui-move-natives-latest",
+ "sui-protocol-config",
+ "sui-types",
+ "telemetry-subscribers",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "sui-move-analyzer"
 version = "1.1.3"
 dependencies = [
@@ -9197,6 +9294,7 @@ dependencies = [
  "serde 1.0.188",
  "serde_json",
  "stderrlog",
+ "sui-move",
  "sui-move-build",
  "tempfile",
  "url",
@@ -9224,6 +9322,27 @@ dependencies = [
  "sui-types",
  "sui-verifier-latest",
  "tempfile",
+ "workspace-hack",
+]
+
+[[package]]
+name = "sui-move-natives-latest"
+version = "0.1.0"
+source = "git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "bcs",
+ "better_any",
+ "fastcrypto",
+ "fastcrypto-zkp",
+ "linked-hash-map",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-stdlib 0.1.1 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-runtime 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "smallvec",
+ "sui-protocol-config",
+ "sui-types",
  "workspace-hack",
 ]
 
@@ -9468,6 +9587,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "telemetry-subscribers"
+version = "0.2.0"
+source = "git+https://github.com/MystenLabs/sui.git?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "crossterm 0.25.0",
+ "once_cell",
+ "prometheus",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber 0.3.18",
+ "workspace-hack",
+]
+
+[[package]]
 name = "tempfile"
 version = "3.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9534,6 +9667,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "terminal_size"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "21bebf2b7c9e0a515f6e0f8c51dc0f8e4696391e6f1ff30379559f8365fb0df7"
+dependencies = [
+ "rustix 0.38.17",
+ "windows-sys 0.48.0",
+]
+
+[[package]]
 name = "test-generation"
 version = "0.1.0"
 dependencies = [
@@ -9555,7 +9698,7 @@ dependencies = [
  "once_cell",
  "rand 0.8.5",
  "tracing",
- "tracing-subscriber 0.3.17",
+ "tracing-subscriber 0.3.18",
 ]
 
 [[package]]
@@ -9956,6 +10099,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-appender"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3566e8ce28cc0a3fe42519fc80e6b4c943cc4c8cef275620eb8dac2d3d4e06cf"
+dependencies = [
+ "crossbeam-channel",
+ "thiserror",
+ "time",
+ "tracing-subscriber 0.3.18",
+]
+
+[[package]]
 name = "tracing-attributes"
 version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9988,12 +10143,22 @@ dependencies = [
 
 [[package]]
 name = "tracing-log"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee855f1f400bd0e5c02d150ae5de3840039a3f54b025156404e34c23c03f47c3"
+dependencies = [
+ "log",
+ "once_cell",
+ "tracing-core",
+]
+
+[[package]]
+name = "tracing-serde"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78ddad33d2d10b1ed7eb9d1f518a5674713876e97e5bb9b7345a7984fbb4f922"
+checksum = "bc6b213177105856957181934e4920de57730fc69bf42c37ee5bb664d406d9e1"
 dependencies = [
- "lazy_static 1.4.0",
- "log",
+ "serde 1.0.188",
  "tracing-core",
 ]
 
@@ -10008,20 +10173,24 @@ dependencies = [
 
 [[package]]
 name = "tracing-subscriber"
-version = "0.3.17"
+version = "0.3.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30a651bc37f915e81f087d86e62a18eec5f79550c7faff886f7090b4ea757c77"
+checksum = "ad0f048c97dbd9faa9b7df56362b8ebcaa52adb06b498c050d2f4e32f90a7a8b"
 dependencies = [
  "matchers",
  "nu-ansi-term",
  "once_cell",
  "regex",
+ "serde 1.0.188",
+ "serde_json",
  "sharded-slab",
  "smallvec",
  "thread_local",
+ "time",
  "tracing",
  "tracing-core",
  "tracing-log",
+ "tracing-serde",
 ]
 
 [[package]]
