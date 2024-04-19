@@ -21,7 +21,7 @@ use std::{
     thread,
 };
 
-use sui_move_analyzer::{
+use beta_2024::{
     code_lens,
     completion::on_completion_request,
     context::{Context, FileDiags, MultiProject},
@@ -330,7 +330,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
         let file_hash = FileHash::new(content);
         let mut env = CompilationEnv::new(Flags::testing(), Default::default(), 
             Default::default(), Default::default());
-        let defs = parse_file_string(&mut env, file_hash, content);
+        let defs = parse_file_string(&mut env, file_hash, content, None);
         let defs = match defs {
             std::result::Result::Ok(x) => x,
             std::result::Result::Err(d) => {
@@ -474,7 +474,7 @@ fn get_package_compile_diagnostics(
         Ok(Default::default())
     })?;
     match diagnostics {
-        Some(x) => Ok(x),
+        Some(x) => Ok(x.1),
         None => Ok(Default::default()),
     }
 }

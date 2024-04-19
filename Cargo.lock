@@ -682,6 +682,50 @@ dependencies = [
 ]
 
 [[package]]
+name = "beta-2024"
+version = "1.1.4"
+dependencies = [
+ "anyhow",
+ "bisection",
+ "cfg-if",
+ "clap 3.2.25",
+ "codespan",
+ "codespan-reporting",
+ "crossbeam",
+ "datatest-stable",
+ "derivative",
+ "dirs-next",
+ "dunce",
+ "enum-iterator",
+ "im",
+ "log",
+ "lsp-server",
+ "lsp-types",
+ "move-cli",
+ "move-command-line-common",
+ "move-compiler",
+ "move-core-types",
+ "move-ir-types",
+ "move-model",
+ "move-package",
+ "move-proc-macros",
+ "move-symbol-pool",
+ "once_cell",
+ "petgraph",
+ "pprof",
+ "regex",
+ "serde",
+ "serde_json",
+ "stacker",
+ "stderrlog",
+ "sui-move-build",
+ "tempfile",
+ "url",
+ "wait-timeout",
+ "walkdir",
+]
+
+[[package]]
 name = "better_any"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5528,9 +5572,10 @@ dependencies = [
 
 [[package]]
 name = "sui-move-analyzer"
-version = "1.1.3"
+version = "1.1.4"
 dependencies = [
  "anyhow",
+ "beta-2024",
  "bisection",
  "cfg-if",
  "clap 3.2.25",
@@ -5553,6 +5598,7 @@ dependencies = [
  "move-ir-types",
  "move-model",
  "move-package",
+ "move-proc-macros",
  "move-symbol-pool",
  "once_cell",
  "petgraph",
@@ -5560,6 +5606,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "stacker",
  "stderrlog",
  "sui-move-build",
  "tempfile",

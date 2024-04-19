@@ -1,6 +1,6 @@
 [package]
 name = "sui-move-analyzer"
-version = "1.1.3"
+version = "1.1.4"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "A language server for Move"
 repository = "https://github.com/move-language/move"
@@ -39,11 +39,16 @@ move-core-types = { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7
 move-cli = { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "move-cli" }
 move-model = { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "move-model" }
 sui-move-build= { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "sui-move-build" }
-
+move-proc-macros= { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "move-proc-macros" }
 walkdir = "2"
 log = "0.4.14"
 stderrlog = "0.5.4"
 enum-iterator = "1.2.0"
+stacker = "0.1.15"
+
+# different version of sui compliler
+beta-2024 = {path = "src/beta-2024"}
+
 
 [target.'cfg(not(target_os= "windows"))'.dependencies]
 pprof = { version = "0.11.0" , features = ["flamegraph" , "protobuf"]}
