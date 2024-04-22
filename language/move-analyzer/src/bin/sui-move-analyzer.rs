@@ -8,37 +8,50 @@ use lsp_types::{
     HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
     TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
-use move_command_line_common::files::FileHash;
-use move_compiler::{diagnostics::Diagnostics, shared::*, PASS_TYPING};
+
+// use move_compiler::{diagnostics::Diagnostics, shared::*};
 use std::{
     collections::{BTreeMap, HashMap},
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     thread,
 };
+// use move_symbol_pool_alpha_2024::symbol::Symbol;
 
-use beta_2024::{context::{Context as Context_beta_2024, FileDiags, MultiProject}, inlay_hints::InlayHintsConfig, symbols, vfs::VirtualFileSystem};
+// use beta_2024::{context::{Context as Context_beta_2024, FileDiags, MultiProject}, inlay_hints::InlayHintsConfig, symbols, vfs::VirtualFileSystem};
 
 
-use move_symbol_pool::Symbol;
 use url::Url;
 
 
-use sui_move_analyzer::sui_move_analyzer_beta_2024::{
-    send_diag as send_diag_beta_2024,
-    try_reload_projects as try_reload_projects_beta_2024,
-    on_request as on_request_beta_2024,
-    on_notification as on_notification_beta_2024,
-    on_response as on_response_beta_2024
+// use sui_move_analyzer::sui_move_analyzer_beta_2024::{
+//     send_diag as send_diag_beta_2024,
+//     try_reload_projects as try_reload_projects_beta_2024,
+//     on_request as on_request_beta_2024,
+//     on_notification as on_notification_beta_2024,
+//     on_response as on_response_beta_2024
+// };
+
+use alpha_2024::{
+    context::{
+        FileDiags,
+        Context as Context_alpha_2024, 
+        MultiProject
+    },
+    inlay_hints::InlayHintsConfig, 
+    symbols as symbols_alpha_2024, 
+    symbols::SymbolicatorRunner as SymbolicatorRunner_alpha_2024,
+    vfs::VirtualFileSystem,
+    sui_move_analyzer_alpha_2024::{
+        on_notification as on_notification_alpha_2024,
+        on_request as on_request_alpha_2024, 
+        on_response as on_response_alpha_2024, 
+        send_diag as send_diag_alpha_2024, 
+        try_reload_projects as try_reload_projects_alpha_2024
+    }
 };
 
-// use sui_move_analyzer::sui_move_analyzer_alpha_2024::{
-//     send_diag as send_diag_alpha_2024,
-//     try_reload_projects as try_reload_projects_alpha_2024,
-//     on_request as on_request_alpha_2024,
-//     on_notification as on_notification_alpha_2024,
-//     on_response as on_response_alpha_2024
-// };
+
 
 #[derive(Parser)]
 #[clap(author, version, about)]
@@ -86,8 +99,8 @@ fn main() {
     );
 
     let (connection, io_threads) = Connection::stdio();
-    let symbols = Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols()));
-    let mut context = Context_beta_2024 {
+    let symbols = Arc::new(Mutex::new(symbols_alpha_2024::Symbolicator::empty_symbols()));
+    let mut context = Context_alpha_2024 {
         projects: MultiProject::new(),
         connection,
         files: VirtualFileSystem::default(),
@@ -142,25 +155,25 @@ fn main() {
             },
             completion_item: None,
         }),
-        definition_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
+        definition_provider: Some(OneOf::Left(symbols_alpha_2024::DEFS_AND_REFS_SUPPORT)),
         type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(
-            symbols::DEFS_AND_REFS_SUPPORT,
+            symbols_alpha_2024::DEFS_AND_REFS_SUPPORT,
         )),
-        references_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
+        references_provider: Some(OneOf::Left(symbols_alpha_2024::DEFS_AND_REFS_SUPPORT)),
         document_symbol_provider: Some(OneOf::Left(true)),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
 
     let (diag_sender_symbol, diag_receiver_symbol) =
-        bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
-    let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
-    if symbols::DEFS_AND_REFS_SUPPORT {
+        bounded::<Result<BTreeMap<move_symbol_pool_alpha_2024::symbol::Symbol, Vec<lsp_types::Diagnostic>>>>(0);
+    let mut symbolicator_runner = symbols_alpha_2024::SymbolicatorRunner::idle();
+    if symbols_alpha_2024::DEFS_AND_REFS_SUPPORT {
         let initialize_params: lsp_types::InitializeParams =
             serde_json::from_value(_client_response)
                 .expect("could not deserialize client capabilities");
 
-        symbolicator_runner = symbols::SymbolicatorRunner::new(symbols.clone(), diag_sender_symbol);
+        symbolicator_runner = symbols_alpha_2024::SymbolicatorRunner::new(symbols.clone(), diag_sender_symbol);
 
         // If initialization information from the client contains a path to the directory being
         // opened, try to initialize symbols before sending response to the client. Do not bother
@@ -168,14 +181,14 @@ fn main() {
         // main reason for this is to enable unit tests that rely on the symbolication information
         // to be available right after the client is initialized.
         if let Some(uri) = initialize_params.root_uri {
-            if let Some(p) = symbols::SymbolicatorRunner::root_dir(&uri.to_file_path().unwrap()) {
+            if let Some(p) = symbols_alpha_2024::SymbolicatorRunner::root_dir(&uri.to_file_path().unwrap()) {
                 // need to evaluate in a separate thread to allow for a larger stack size (needed on
                 // Windows)
                 thread::Builder::new()
-                    .stack_size(symbols::STACK_SIZE_BYTES)
+                    .stack_size(symbols_alpha_2024::STACK_SIZE_BYTES)
                     .spawn(move || {
                         if let Ok((Some(new_symbols), _)) =
-                            symbols::Symbolicator::get_symbols(p.as_path())
+                        symbols_alpha_2024::Symbolicator::get_symbols(p.as_path())
                         {
                             let mut old_symbols = symbols.lock().unwrap();
                             (*old_symbols).merge(new_symbols);
@@ -197,7 +210,8 @@ fn main() {
             }),
         )
         .expect("could not finish connection initialization");
-    let (diag_sender, diag_receiver) = bounded::<(PathBuf, Diagnostics)>(1);
+    let (diag_sender, diag_receiver) 
+        = bounded::<(PathBuf, move_compiler_alpha_2024::diagnostics::Diagnostics)>(1);
     let diag_sender = Arc::new(Mutex::new(diag_sender));
     let mut inlay_hints_config = InlayHintsConfig::default();
 
@@ -206,7 +220,7 @@ fn main() {
             recv(diag_receiver) -> message => {
                 match message {
                     Ok ((mani ,x)) => {
-                        send_diag_beta_2024(&mut context,mani,x);
+                        send_diag_alpha_2024(&mut context,mani,x);
                     }
                     Err(error) => log::error!("IDE diag message error: {:?}", error),
                 }
@@ -249,10 +263,10 @@ fn main() {
                 }
             },
             recv(context.connection.receiver) -> message => {
-                try_reload_projects_beta_2024(&mut context);
+                try_reload_projects_alpha_2024(&mut context);
                 match message {
-                    Ok(Message::Request(request)) => on_request_beta_2024(&mut context, &request , &mut inlay_hints_config),
-                    Ok(Message::Response(response)) => on_response_beta_2024(&context, &response),
+                    Ok(Message::Request(request)) => on_request_alpha_2024(&mut context, &request , &mut inlay_hints_config),
+                    Ok(Message::Response(response)) => on_response_alpha_2024(&context, &response),
                     Ok(Message::Notification(notification)) => {
                         match notification.method.as_str() {
                             lsp_types::notification::Exit::METHOD => break,
@@ -261,7 +275,7 @@ fn main() {
                                 // It ought to, especially once it begins processing requests that may
                                 // take a long time to respond to.
                             }
-                            _ => on_notification_beta_2024(&mut context, &notification, diag_sender.clone()),
+                            _ => on_notification_alpha_2024(&mut context, &notification, diag_sender.clone()),
                         }
                     }
                     Err(error) => eprintln!("IDE message error: {:?}", error),

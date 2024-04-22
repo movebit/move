@@ -117,6 +117,48 @@ dependencies = [
 ]
 
 [[package]]
+name = "alpha-2024"
+version = "1.1.3"
+dependencies = [
+ "anyhow",
+ "bisection",
+ "cfg-if",
+ "clap 3.2.25",
+ "codespan",
+ "codespan-reporting",
+ "crossbeam",
+ "datatest-stable",
+ "derivative",
+ "dirs-next",
+ "dunce",
+ "enum-iterator",
+ "im",
+ "log",
+ "lsp-server",
+ "lsp-types",
+ "move-cli 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-compiler 0.0.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-ir-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-model 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-package 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "once_cell",
+ "petgraph",
+ "pprof",
+ "regex",
+ "serde",
+ "serde_json",
+ "stderrlog",
+ "sui-move-build 0.0.0",
+ "tempfile",
+ "url",
+ "wait-timeout",
+ "walkdir",
+]
+
+[[package]]
 name = "android-tzdata"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -129,6 +171,41 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "819e7219dbd41043ac279b19830f2efc897156490d7fd6ea916720117ee66311"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "anemo"
+version = "0.0.0"
+source = "git+https://github.com/mystenlabs/anemo.git?rev=1169850e6af127397068cd86764c29b1d49dbe35#1169850e6af127397068cd86764c29b1d49dbe35"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bincode",
+ "bytes",
+ "ed25519",
+ "futures",
+ "hex",
+ "http",
+ "matchit 0.5.0",
+ "pin-project-lite",
+ "pkcs8 0.9.0",
+ "quinn",
+ "quinn-proto",
+ "rand 0.8.5",
+ "rcgen",
+ "ring 0.16.20",
+ "rustls 0.21.7",
+ "rustls-webpki 0.101.6",
+ "serde",
+ "serde_json",
+ "socket2 0.5.6",
+ "tap",
+ "thiserror",
+ "tokio",
+ "tokio-util 0.7.9",
+ "tower",
+ "tracing",
+ "x509-parser",
 ]
 
 [[package]]
@@ -160,7 +237,7 @@ dependencies = [
  "tap",
  "thiserror",
  "tokio",
- "tokio-util",
+ "tokio-util 0.7.9",
  "tower",
  "tracing",
  "x509-parser",
@@ -251,6 +328,7 @@ checksum = "1f3a13b34da09176a8baba701233fdffbaa7c1b1192ce031a3da4e55ce1f1a56"
 dependencies = [
  "ark-ec",
  "ark-ff",
+ "ark-r1cs-std",
  "ark-relations",
  "ark-serialize",
  "ark-snark",
@@ -258,7 +336,9 @@ dependencies = [
  "blake2",
  "derivative",
  "digest 0.10.7",
+ "rayon",
  "sha2 0.10.8",
+ "tracing",
 ]
 
 [[package]]
@@ -275,6 +355,7 @@ dependencies = [
  "hashbrown 0.13.2",
  "itertools 0.10.5",
  "num-traits",
+ "rayon",
  "zeroize",
 ]
 
@@ -294,6 +375,7 @@ dependencies = [
  "num-bigint 0.4.4",
  "num-traits",
  "paste",
+ "rayon",
  "rustc_version",
  "zeroize",
 ]
@@ -334,6 +416,7 @@ dependencies = [
  "ark-relations",
  "ark-serialize",
  "ark-std",
+ "rayon",
 ]
 
 [[package]]
@@ -347,6 +430,24 @@ dependencies = [
  "ark-std",
  "derivative",
  "hashbrown 0.13.2",
+ "rayon",
+]
+
+[[package]]
+name = "ark-r1cs-std"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de1d1472e5cb020cb3405ce2567c91c8d43f21b674aef37b0202f5c3304761db"
+dependencies = [
+ "ark-ec",
+ "ark-ff",
+ "ark-relations",
+ "ark-std",
+ "derivative",
+ "num-bigint 0.4.4",
+ "num-integer",
+ "num-traits",
+ "tracing",
 ]
 
 [[package]]
@@ -358,6 +459,7 @@ dependencies = [
  "ark-ff",
  "ark-std",
  "tracing",
+ "tracing-subscriber 0.2.25",
 ]
 
 [[package]]
@@ -414,6 +516,7 @@ checksum = "94893f1e0c6eeab764ade8dc4c0db24caf4fe7cbbaafc0eba0a9030f447b5185"
 dependencies = [
  "num-traits",
  "rand 0.8.5",
+ "rayon",
 ]
 
 [[package]]
@@ -421,6 +524,12 @@ name = "arrayref"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b4930d2cb77ce62f89ee5d5289b4ac049559b1c45539271f5ed4fdc7db34545"
+
+[[package]]
+name = "arrayvec"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
 
 [[package]]
 name = "arrayvec"
@@ -502,6 +611,11 @@ dependencies = [
  "quote 1.0.33",
  "syn 2.0.38",
 ]
+
+[[package]]
+name = "async-task"
+version = "4.3.0"
+source = "git+https://github.com/mystenmark/async-task?rev=4e45b26e11126b191701b9b2ce5e2346b8d7682f#4e45b26e11126b191701b9b2ce5e2346b8d7682f"
 
 [[package]]
 name = "async-trait"
@@ -701,15 +815,15 @@ dependencies = [
  "log",
  "lsp-server",
  "lsp-types",
- "move-cli",
- "move-command-line-common",
- "move-compiler",
- "move-core-types",
- "move-ir-types",
- "move-model",
- "move-package",
- "move-proc-macros",
- "move-symbol-pool",
+ "move-cli 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-compiler 0.0.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-ir-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-model 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-package 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-proc-macros 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "once_cell",
  "petgraph",
  "pprof",
@@ -718,7 +832,7 @@ dependencies = [
  "serde_json",
  "stacker",
  "stderrlog",
- "sui-move-build",
+ "sui-move-build 1.23.0",
  "tempfile",
  "url",
  "wait-timeout",
@@ -752,6 +866,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "bindgen"
+version = "0.65.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfdf7b466f9a4903edc73f95d6d2bcd5baf8ae620638762244d3f60143643cc5"
+dependencies = [
+ "bitflags 1.3.2",
+ "cexpr",
+ "clang-sys",
+ "lazy_static",
+ "lazycell",
+ "peeking_take_while",
+ "prettyplease",
+ "proc-macro2 1.0.68",
+ "quote 1.0.33",
+ "regex",
+ "rustc-hash",
+ "shlex",
+ "syn 2.0.38",
 ]
 
 [[package]]
@@ -851,7 +986,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23285ad32269793932e830392f2fe2f83e26488fd3ec778883a93c8323735780"
 dependencies = [
  "arrayref",
- "arrayvec",
+ "arrayvec 0.7.4",
  "constant_time_eq",
 ]
 
@@ -862,7 +997,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94230421e395b9920d23df13ea5d77a20e1725331f90fbbf6df6040b33f756ae"
 dependencies = [
  "arrayref",
- "arrayvec",
+ "arrayvec 0.7.4",
+ "constant_time_eq",
+]
+
+[[package]]
+name = "blake3"
+version = "1.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30cca6d3674597c30ddf2c587bf8d9d65c9a84d2326d941cc79c9842dfe0ef52"
+dependencies = [
+ "arrayref",
+ "arrayvec 0.7.4",
+ "cc",
+ "cfg-if",
  "constant_time_eq",
 ]
 
@@ -957,6 +1105,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "771fe0050b883fcc3ea2359b1a96bcfbc090b7116eae7c3c512c7a083fdf23d3"
 
 [[package]]
+name = "bstr"
+version = "1.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "542f33a8835a0884b006a0c3df3dadd99c0c3f296ed26c2fdc8028e01ad6230c"
+dependencies = [
+ "memchr",
+ "serde",
+]
+
+[[package]]
+name = "bulletproofs"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "40e698f1df446cc6246afd823afbe2d121134d089c9102c1dd26d1264991ba32"
+dependencies = [
+ "byteorder",
+ "clear_on_drop",
+ "curve25519-dalek-ng",
+ "digest 0.9.0",
+ "merlin",
+ "rand 0.8.5",
+ "rand_core 0.6.4",
+ "serde",
+ "serde_derive",
+ "sha3 0.9.1",
+ "subtle-ng",
+ "thiserror",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -967,6 +1145,18 @@ name = "byte-slice-cast"
 version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3ac9f8b63eca6fd385229b3675f6cc0dc5c8a5c8a54a59d4f52ffd670d87b0c"
+
+[[package]]
+name = "bytecode-interpreter-crypto"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "curve25519-dalek-fiat",
+ "ed25519-dalek-fiat",
+ "sha2 0.9.9",
+ "sha3 0.9.1",
+]
 
 [[package]]
 name = "bytecode-interpreter-crypto"
@@ -1002,6 +1192,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bzip2-sys"
+version = "0.1.11+1.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "736a955f3fa7875102d57c82b8cac37ec45224a07fd32d58f9f7a186b6cd4cdc"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
+]
+
+[[package]]
 name = "cassowary"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1022,7 +1223,17 @@ version = "1.0.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1174fb0b6ec23863f8b971027804a42614e347eafb0a95bf0b12cdae21fc4d0"
 dependencies = [
+ "jobserver",
  "libc",
+]
+
+[[package]]
+name = "cexpr"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6fac387a98bb7c37292057cffc56d62ecb629900026402633ae9160df93a8766"
+dependencies = [
+ "nom",
 ]
 
 [[package]]
@@ -1047,6 +1258,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "chrono-tz"
+version = "0.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d59ae0466b83e838b81a54256c39d5d7c20b9d7daa10510a242d9b75abd5936e"
+dependencies = [
+ "chrono",
+ "chrono-tz-build",
+ "phf",
+]
+
+[[package]]
+name = "chrono-tz-build"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "433e39f13c9a060046954e0592a8d0a4bcb1040125cbf91cb8ee58964cfb350f"
+dependencies = [
+ "parse-zoneinfo",
+ "phf",
+ "phf_codegen",
+]
+
+[[package]]
 name = "cipher"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1054,6 +1287,17 @@ checksum = "773f3b9af64447d2ce9850330c473515014aa235e6a783b02db81ff39e4a3dad"
 dependencies = [
  "crypto-common",
  "inout",
+]
+
+[[package]]
+name = "clang-sys"
+version = "1.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67523a3b4be3ce1989d607a828d036249522dd9c1c8de7f4dd2dae43a37369d1"
+dependencies = [
+ "glob",
+ "libc",
+ "libloading",
 ]
 
 [[package]]
@@ -1102,7 +1346,7 @@ version = "3.2.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae6371b8bdc8b7d3959e9cf7b22d4435ef3e79e138688421ec654acf8c81b008"
 dependencies = [
- "heck",
+ "heck 0.4.1",
  "proc-macro-error",
  "proc-macro2 1.0.68",
  "quote 1.0.33",
@@ -1115,7 +1359,7 @@ version = "4.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0862016ff20d69b84ef8247369fabf5c008a7417002411897d40ee1f4532b873"
 dependencies = [
- "heck",
+ "heck 0.4.1",
  "proc-macro2 1.0.68",
  "quote 1.0.33",
  "syn 2.0.38",
@@ -1137,6 +1381,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd7cc57abe963c6d3b9d8be5b06ba7c8957a930305ca90304f24ef040aa6f961"
 
 [[package]]
+name = "clear_on_drop"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38508a63f4979f0048febc9966fadbd48e5dab31fd0ec6a3f151bbf4a74f7423"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "codespan"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1156,6 +1409,12 @@ dependencies = [
  "termcolor",
  "unicode-width",
 ]
+
+[[package]]
+name = "collectable"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08abddbaad209601e53c7dd4308d8c04c06f17bb7df006434e586a22b83be45a"
 
 [[package]]
 name = "colorchoice"
@@ -1189,11 +1448,11 @@ name = "consensus-config"
 version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
- "fastcrypto",
- "mysten-network",
+ "fastcrypto 0.1.7",
+ "mysten-network 0.2.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "rand 0.8.5",
  "serde",
- "shared-crypto",
+ "shared-crypto 0.0.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
 ]
 
 [[package]]
@@ -1225,6 +1484,15 @@ name = "convert_case"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
+
+[[package]]
+name = "convert_case"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
+dependencies = [
+ "unicode-segmentation",
+]
 
 [[package]]
 name = "core-foundation"
@@ -1347,17 +1615,58 @@ dependencies = [
 
 [[package]]
 name = "crossterm"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "486d44227f71a1ef39554c0dc47e44b9f4139927c75043312690c3f476d1d788"
+dependencies = [
+ "bitflags 1.3.2",
+ "crossterm_winapi 0.8.0",
+ "libc",
+ "mio 0.7.14",
+ "parking_lot 0.11.2",
+ "signal-hook",
+ "signal-hook-mio",
+ "winapi",
+]
+
+[[package]]
+name = "crossterm"
+version = "0.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c85525306c4291d1b73ce93c8acf9c339f9b213aef6c1d85c3830cbf1c16325c"
+dependencies = [
+ "bitflags 1.3.2",
+ "crossterm_winapi 0.9.1",
+ "libc",
+ "mio 0.7.14",
+ "parking_lot 0.11.2",
+ "signal-hook",
+ "signal-hook-mio",
+ "winapi",
+]
+
+[[package]]
+name = "crossterm"
 version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e64e6c0fbe2c17357405f7c758c1ef960fce08bdfb2c03d88d2a18d7e09c4b67"
 dependencies = [
  "bitflags 1.3.2",
- "crossterm_winapi",
+ "crossterm_winapi 0.9.1",
  "libc",
- "mio",
+ "mio 0.8.11",
  "parking_lot 0.12.1",
  "signal-hook",
  "signal-hook-mio",
+ "winapi",
+]
+
+[[package]]
+name = "crossterm_winapi"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a6966607622438301997d3dac0d2f6e9a90c68bb6bc1785ea98456ab93c0507"
+dependencies = [
  "winapi",
 ]
 
@@ -1416,6 +1725,7 @@ checksum = "44339b9ecede7f72a0d3b012bf9bb5a616dc8bfde23ce544e42da075c87198f0"
 dependencies = [
  "byteorder",
  "digest 0.9.0",
+ "fiat-crypto",
  "rand_core 0.6.4",
  "subtle",
  "zeroize",
@@ -1430,6 +1740,7 @@ dependencies = [
  "byteorder",
  "digest 0.9.0",
  "rand_core 0.6.4",
+ "serde",
  "subtle-ng",
  "zeroize",
 ]
@@ -1624,12 +1935,18 @@ version = "0.99.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fb810d30a7c1953f91334de7244731fc3f3c10d7fe163338a35b9f640960321"
 dependencies = [
- "convert_case",
+ "convert_case 0.4.0",
  "proc-macro2 1.0.68",
  "quote 1.0.33",
  "rustc_version",
  "syn 1.0.109",
 ]
+
+[[package]]
+name = "deunicode"
+version = "1.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "322ef0094744e63628e6f0eb2295517f79276a5b342a4c2ff3042566ca181d4e"
 
 [[package]]
 name = "difference"
@@ -1689,6 +2006,12 @@ dependencies = [
  "quote 1.0.33",
  "syn 2.0.38",
 ]
+
+[[package]]
+name = "downcast-rs"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 
 [[package]]
 name = "dunce"
@@ -1808,6 +2131,14 @@ dependencies = [
 [[package]]
 name = "enum-compat-util"
 version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "serde_yaml",
+]
+
+[[package]]
+name = "enum-compat-util"
+version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "serde_yaml",
@@ -1850,6 +2181,16 @@ name = "equivalent"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
+
+[[package]]
+name = "erasable"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f11890ce181d47a64e5d1eb4b6caba0e7bae911a356723740d058a5d0340b7d"
+dependencies = [
+ "autocfg",
+ "scopeguard",
+]
 
 [[package]]
 name = "errno"
@@ -1901,6 +2242,62 @@ dependencies = [
 
 [[package]]
 name = "fastcrypto"
+version = "0.1.6"
+source = "git+https://github.com/MystenLabs/fastcrypto?rev=59e15ab83999b464a6da37b6cdf0910fedd1216c#59e15ab83999b464a6da37b6cdf0910fedd1216c"
+dependencies = [
+ "aes",
+ "aes-gcm",
+ "ark-ec",
+ "ark-ff",
+ "ark-secp256r1",
+ "ark-serialize",
+ "auto_ops",
+ "base64ct",
+ "bincode",
+ "blake2",
+ "blake3",
+ "blst",
+ "bs58",
+ "bulletproofs",
+ "cbc",
+ "ctr",
+ "curve25519-dalek-ng",
+ "derive_more",
+ "digest 0.10.7",
+ "ecdsa",
+ "ed25519-consensus",
+ "elliptic-curve",
+ "eyre",
+ "fastcrypto-derive 0.1.3 (git+https://github.com/MystenLabs/fastcrypto?rev=59e15ab83999b464a6da37b6cdf0910fedd1216c)",
+ "generic-array",
+ "hex",
+ "hkdf",
+ "lazy_static",
+ "merlin",
+ "once_cell",
+ "p256",
+ "rand 0.8.5",
+ "readonly",
+ "rfc6979",
+ "rsa",
+ "schemars",
+ "secp256k1",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "serde_with",
+ "sha2 0.10.8",
+ "sha3 0.10.8",
+ "signature 2.1.0",
+ "static_assertions",
+ "thiserror",
+ "tokio",
+ "typenum",
+ "zeroize",
+]
+
+[[package]]
+name = "fastcrypto"
 version = "0.1.7"
 source = "git+https://github.com/MystenLabs/fastcrypto?rev=d7a33a9f79271bfc19fc4c8816ea5467e4205e17#d7a33a9f79271bfc19fc4c8816ea5467e4205e17"
 dependencies = [
@@ -1926,7 +2323,7 @@ dependencies = [
  "ed25519-consensus",
  "elliptic-curve",
  "eyre",
- "fastcrypto-derive",
+ "fastcrypto-derive 0.1.3 (git+https://github.com/MystenLabs/fastcrypto?rev=d7a33a9f79271bfc19fc4c8816ea5467e4205e17)",
  "generic-array",
  "hex",
  "hex-literal",
@@ -1957,6 +2354,17 @@ dependencies = [
 [[package]]
 name = "fastcrypto-derive"
 version = "0.1.3"
+source = "git+https://github.com/MystenLabs/fastcrypto?rev=59e15ab83999b464a6da37b6cdf0910fedd1216c#59e15ab83999b464a6da37b6cdf0910fedd1216c"
+dependencies = [
+ "convert_case 0.6.0",
+ "proc-macro2 1.0.68",
+ "quote 1.0.33",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "fastcrypto-derive"
+version = "0.1.3"
 source = "git+https://github.com/MystenLabs/fastcrypto?rev=d7a33a9f79271bfc19fc4c8816ea5467e4205e17#d7a33a9f79271bfc19fc4c8816ea5467e4205e17"
 dependencies = [
  "quote 1.0.33",
@@ -1970,7 +2378,7 @@ source = "git+https://github.com/MystenLabs/fastcrypto?rev=d7a33a9f79271bfc19fc4
 dependencies = [
  "bcs",
  "digest 0.10.7",
- "fastcrypto",
+ "fastcrypto 0.1.7",
  "hex",
  "itertools 0.10.5",
  "rand 0.8.5",
@@ -1979,6 +2387,36 @@ dependencies = [
  "tap",
  "tracing",
  "typenum",
+]
+
+[[package]]
+name = "fastcrypto-zkp"
+version = "0.1.1"
+source = "git+https://github.com/MystenLabs/fastcrypto?rev=59e15ab83999b464a6da37b6cdf0910fedd1216c#59e15ab83999b464a6da37b6cdf0910fedd1216c"
+dependencies = [
+ "ark-bls12-381",
+ "ark-bn254",
+ "ark-crypto-primitives",
+ "ark-ec",
+ "ark-ff",
+ "ark-groth16",
+ "ark-relations",
+ "ark-serialize",
+ "bcs",
+ "blst",
+ "byte-slice-cast",
+ "derive_more",
+ "fastcrypto 0.1.6",
+ "im",
+ "num-bigint 0.4.4",
+ "once_cell",
+ "poseidon-ark",
+ "regex",
+ "reqwest",
+ "rustls-webpki 0.101.6",
+ "schemars",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1997,7 +2435,7 @@ dependencies = [
  "blst",
  "byte-slice-cast",
  "derive_more",
- "fastcrypto",
+ "fastcrypto 0.1.7",
  "ff",
  "im",
  "itertools 0.12.1",
@@ -2017,6 +2455,15 @@ name = "fastrand"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25cbce373ec4653f1a01a31e8a5e5ec0c622dc27ff9c4e6606eefef5cbbed4a5"
+
+[[package]]
+name = "fdlimit"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c4c9e43643f5a3be4ca5b67d26b98031ff9db6806c3440ae32e02e3ceac3f1b"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "ff"
@@ -2046,6 +2493,12 @@ dependencies = [
  "quote 1.0.33",
  "syn 1.0.109",
 ]
+
+[[package]]
+name = "fiat-crypto"
+version = "0.1.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e825f6987101665dea6ec934c09ec6d721de7bc1bf92248e1d5810c8cd636b77"
 
 [[package]]
 name = "findshlibs"
@@ -2260,6 +2713,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 
 [[package]]
+name = "globset"
+version = "0.4.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57da3b9b5b85bd66f31093f8c408b90a74431672542466497dcbdfdc02034be1"
+dependencies = [
+ "aho-corasick",
+ "bstr",
+ "log",
+ "regex-automata 0.4.6",
+ "regex-syntax 0.8.3",
+]
+
+[[package]]
+name = "globwalk"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93e3af942408868f6934a7b85134a3230832b9977cf66125df2f9edcfce4ddcc"
+dependencies = [
+ "bitflags 1.3.2",
+ "ignore",
+ "walkdir",
+]
+
+[[package]]
 name = "group"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2287,7 +2764,7 @@ dependencies = [
  "indexmap 2.2.6",
  "slab",
  "tokio",
- "tokio-util",
+ "tokio-util 0.7.9",
  "tracing",
 ]
 
@@ -2321,7 +2798,11 @@ version = "7.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f19b9f54f7c7f55e31401bb647626ce0cf0f67b0004982ce815b3ee72a02aa8"
 dependencies = [
+ "base64 0.13.1",
  "byteorder",
+ "crossbeam-channel",
+ "flate2",
+ "nom",
  "num-traits",
 ]
 
@@ -2347,6 +2828,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7f66481bfee273957b1f20485a4ff3362987f85b2c236580d81b4eb7a326429"
 dependencies = [
  "http",
+]
+
+[[package]]
+name = "heck"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d621efb26863f0e9924c6ac577e8275e5e6b77455db64ffa6c65c904e9e132c"
+dependencies = [
+ "unicode-segmentation",
 ]
 
 [[package]]
@@ -2444,6 +2934,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df3b46402a9d5adb4c86a0cf463f42e19994e3ee891101b1841f30a545cb49a9"
 
 [[package]]
+name = "humansize"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6cb51c9a029ddc91b07a787f1d86b53ccfa49b0e86688c946ebe8d3555685dd7"
+dependencies = [
+ "libm",
+]
+
+[[package]]
 name = "hyper"
 version = "0.14.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2530,6 +3029,22 @@ checksum = "7d20d6b07bfbc108882d88ed8e37d39636dcc260e15e30c45e6ba089610b917c"
 dependencies = [
  "unicode-bidi",
  "unicode-normalization",
+]
+
+[[package]]
+name = "ignore"
+version = "0.4.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b46810df39e66e925525d6e38ce1e7f6e1d208f72dc39757880fcb66e2c58af1"
+dependencies = [
+ "crossbeam-deque",
+ "globset",
+ "log",
+ "memchr",
+ "regex-automata 0.4.6",
+ "same-file",
+ "walkdir",
+ "winapi-util",
 ]
 
 [[package]]
@@ -2720,6 +3235,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af150ab688ff2122fcef229be89cb50dd66af9e01a4ff320cc137eecc9bacc38"
 
 [[package]]
+name = "jobserver"
+version = "0.1.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "685a7d121ee3f65ae4fddd72b25a04bb36b6af81bc0828f7d5434c0fe60fa3a2"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "js-sys"
 version = "0.3.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2747,6 +3271,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "lazycell"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
+
+[[package]]
 name = "leb128"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2759,10 +3289,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c198f91728a82281a64e1f4f9eeb25d82cb32a5de251c6bd1b5154d63a8e7bd"
 
 [[package]]
+name = "libloading"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c2a198fb6b0eada2a8df47933734e6d35d350665a33a3593d7164fa52c75c19"
+dependencies = [
+ "cfg-if",
+ "windows-targets 0.48.5",
+]
+
+[[package]]
 name = "libm"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ec2a862134d2a7d32d7983ddcdd1c4923530833c9f2ea1a44fc5fa473989058"
+
+[[package]]
+name = "librocksdb-sys"
+version = "0.11.0+8.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3386f101bcb4bd252d8e9d2fb41ec3b0862a15a62b478c355b2982efa469e3e"
+dependencies = [
+ "bindgen",
+ "bzip2-sys",
+ "cc",
+ "glob",
+ "libc",
+ "libz-sys",
+ "lz4-sys",
+ "zstd-sys",
+]
 
 [[package]]
 name = "libtest-mimic"
@@ -2773,6 +3329,17 @@ dependencies = [
  "clap 4.4.6",
  "termcolor",
  "threadpool",
+]
+
+[[package]]
+name = "libz-sys"
+version = "1.1.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e143b5e666b2695d28f6bca6497720813f699c9602dd7f5cac91008b8ada7f9"
+dependencies = [
+ "cc",
+ "pkg-config",
+ "vcpkg",
 ]
 
 [[package]]
@@ -2832,6 +3399,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "lz4-sys"
+version = "1.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57d27b317e207b10f69f5e75494119e391a96f48861ae870d1da6edac98ca900"
+dependencies = [
+ "cc",
+ "libc",
+]
+
+[[package]]
 name = "match_opt"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2874,6 +3451,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "merlin"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "58c38e2799fc0978b65dfff8023ec7843e2330bb462f19198840b34b6582397d"
+dependencies = [
+ "byteorder",
+ "keccak",
+ "rand_core 0.6.4",
+ "zeroize",
+]
+
+[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2906,6 +3495,19 @@ dependencies = [
 
 [[package]]
 name = "mio"
+version = "0.7.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8067b404fe97c70829f082dec8bcf4f71225d7eaea1d8645349cb76fa06205cc"
+dependencies = [
+ "libc",
+ "log",
+ "miow",
+ "ntapi",
+ "winapi",
+]
+
+[[package]]
+name = "mio"
 version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4a650543ca06a924e8b371db273b2756685faae30f8487da1b56505a8f78b0c"
@@ -2917,6 +3519,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "miow"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9f1c5b025cda876f66ef43a113f91ebc9f4ccef34843000e0adf6ebbab84e21"
+dependencies = [
+ "winapi",
+]
+
+[[package]]
+name = "move-abigen"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "heck 0.3.3",
+ "log",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-verifier 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-model 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "serde",
+]
+
+[[package]]
+name = "move-abstract-stack"
+version = "0.0.1"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+
+[[package]]
 name = "move-abstract-stack"
 version = "0.0.1"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
@@ -2924,16 +3557,35 @@ source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e
 [[package]]
 name = "move-binary-format"
 version = "0.0.3"
-source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
 dependencies = [
  "anyhow",
- "enum-compat-util",
- "move-core-types",
- "move-proc-macros",
+ "enum-compat-util 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-proc-macros 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
  "ref-cast",
  "serde",
  "variant_count",
 ]
+
+[[package]]
+name = "move-binary-format"
+version = "0.0.3"
+source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
+dependencies = [
+ "anyhow",
+ "enum-compat-util 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-proc-macros 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "ref-cast",
+ "serde",
+ "variant_count",
+]
+
+[[package]]
+name = "move-borrow-graph"
+version = "0.0.1"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
 
 [[package]]
 name = "move-borrow-graph"
@@ -2943,16 +3595,43 @@ source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e
 [[package]]
 name = "move-bytecode-source-map"
 version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-ir-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "serde",
+]
+
+[[package]]
+name = "move-bytecode-source-map"
+version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "anyhow",
  "bcs",
- "move-binary-format",
- "move-command-line-common",
- "move-core-types",
- "move-ir-types",
- "move-symbol-pool",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-ir-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "serde",
+]
+
+[[package]]
+name = "move-bytecode-utils"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "petgraph",
+ "serde-reflection",
 ]
 
 [[package]]
@@ -2961,8 +3640,8 @@ version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "anyhow",
- "move-binary-format",
- "move-core-types",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "petgraph",
  "serde-reflection",
 ]
@@ -2970,14 +3649,27 @@ dependencies = [
 [[package]]
 name = "move-bytecode-verifier"
 version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "move-abstract-stack 0.0.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-borrow-graph 0.0.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-config 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "petgraph",
+]
+
+[[package]]
+name = "move-bytecode-verifier"
+version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
- "move-abstract-stack",
- "move-binary-format",
- "move-borrow-graph",
+ "move-abstract-stack 0.0.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-borrow-graph 0.0.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "move-bytecode-verifier-meter",
- "move-core-types",
- "move-vm-config",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-config 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "petgraph",
 ]
 
@@ -2986,9 +3678,24 @@ name = "move-bytecode-verifier-meter"
 version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
- "move-binary-format",
- "move-core-types",
- "move-vm-config",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-config 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+]
+
+[[package]]
+name = "move-bytecode-viewer"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "clap 4.4.6",
+ "crossterm 0.21.0",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-source-map 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-disassembler 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "regex",
+ "tui 0.17.0",
 ]
 
 [[package]]
@@ -2998,12 +3705,51 @@ source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e
 dependencies = [
  "anyhow",
  "clap 4.4.6",
- "crossterm",
- "move-binary-format",
- "move-bytecode-source-map",
- "move-disassembler",
+ "crossterm 0.25.0",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-source-map 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-disassembler 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "regex",
- "tui",
+ "tui 0.19.0",
+]
+
+[[package]]
+name = "move-cli"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "clap 4.4.6",
+ "codespan-reporting",
+ "colored",
+ "difference",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-verifier 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-viewer 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-compiler 0.0.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-coverage 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-disassembler 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-docgen 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-errmapgen 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-ir-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-package 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-prover 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-resource-viewer",
+ "move-stdlib 0.1.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-unit-test 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-profiler 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-runtime 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-test-utils 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "read-write-set",
+ "serde_yaml",
+ "tempfile",
+ "toml_edit",
+ "walkdir",
 ]
 
 [[package]]
@@ -3017,30 +3763,47 @@ dependencies = [
  "codespan-reporting",
  "colored",
  "difference",
- "move-binary-format",
- "move-bytecode-utils",
- "move-bytecode-verifier",
- "move-bytecode-viewer",
- "move-command-line-common",
- "move-compiler",
- "move-core-types",
- "move-coverage",
- "move-disassembler",
- "move-docgen",
- "move-errmapgen",
- "move-ir-types",
- "move-package",
- "move-prover",
- "move-read-write-set-types",
- "move-stdlib",
- "move-unit-test",
- "move-vm-profiler",
- "move-vm-runtime",
- "move-vm-test-utils",
- "move-vm-types",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-verifier 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-viewer 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-compiler 0.0.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-coverage 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-disassembler 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-docgen 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-errmapgen 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-ir-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-package 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-prover 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-read-write-set-types 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-stdlib 0.1.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-unit-test 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-profiler 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-runtime 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-test-utils 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "serde_yaml",
  "tempfile",
  "toml_edit",
+ "walkdir",
+]
+
+[[package]]
+name = "move-command-line-common"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "difference",
+ "dirs-next",
+ "hex",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "num-bigint 0.4.4",
+ "once_cell",
+ "serde",
+ "sha2 0.9.9",
  "walkdir",
 ]
 
@@ -3053,13 +3816,39 @@ dependencies = [
  "difference",
  "dirs-next",
  "hex",
- "move-core-types",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "num-bigint 0.4.4",
  "once_cell",
  "serde",
  "sha2 0.9.9",
  "vfs",
  "walkdir",
+]
+
+[[package]]
+name = "move-compiler"
+version = "0.0.1"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "clap 4.4.6",
+ "codespan-reporting",
+ "hex",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-borrow-graph 0.0.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-source-map 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-verifier 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-ir-to-bytecode 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-ir-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "once_cell",
+ "petgraph",
+ "regex",
+ "serde",
+ "tempfile",
 ]
 
 [[package]]
@@ -3073,16 +3862,16 @@ dependencies = [
  "codespan-reporting",
  "dunce",
  "hex",
- "move-binary-format",
- "move-borrow-graph",
- "move-bytecode-source-map",
- "move-bytecode-verifier",
- "move-command-line-common",
- "move-core-types",
- "move-ir-to-bytecode",
- "move-ir-types",
- "move-proc-macros",
- "move-symbol-pool",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-borrow-graph 0.0.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-source-map 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-verifier 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-ir-to-bytecode 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-ir-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-proc-macros 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "once_cell",
  "petgraph",
  "regex",
@@ -3096,15 +3885,36 @@ dependencies = [
 [[package]]
 name = "move-core-types"
 version = "0.0.4"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "enum-compat-util 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "ethnum",
+ "hex",
+ "move-proc-macros 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "num",
+ "once_cell",
+ "primitive-types",
+ "rand 0.8.5",
+ "ref-cast",
+ "serde",
+ "serde_bytes",
+ "uint",
+]
+
+[[package]]
+name = "move-core-types"
+version = "0.0.4"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "anyhow",
  "bcs",
- "enum-compat-util",
+ "enum-compat-util 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "ethnum",
  "hex",
  "leb128",
- "move-proc-macros",
+ "move-proc-macros 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "num",
  "once_cell",
  "primitive-types",
@@ -3119,6 +3929,25 @@ dependencies = [
 [[package]]
 name = "move-coverage"
 version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "clap 4.4.6",
+ "codespan",
+ "colored",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-source-map 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-ir-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "petgraph",
+ "serde",
+]
+
+[[package]]
+name = "move-coverage"
+version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "anyhow",
@@ -3126,13 +3955,32 @@ dependencies = [
  "clap 4.4.6",
  "codespan",
  "colored",
- "move-binary-format",
- "move-bytecode-source-map",
- "move-command-line-common",
- "move-core-types",
- "move-ir-types",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-source-map 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-ir-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "petgraph",
  "serde",
+]
+
+[[package]]
+name = "move-disassembler"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "clap 4.4.6",
+ "colored",
+ "hex",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-source-map 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-compiler 0.0.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-coverage 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-ir-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
 ]
 
 [[package]]
@@ -3145,13 +3993,31 @@ dependencies = [
  "clap 4.4.6",
  "colored",
  "hex",
- "move-binary-format",
- "move-bytecode-source-map",
- "move-command-line-common",
- "move-compiler",
- "move-core-types",
- "move-coverage",
- "move-ir-types",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-source-map 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-compiler 0.0.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-coverage 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-ir-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+]
+
+[[package]]
+name = "move-docgen"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "codespan",
+ "codespan-reporting",
+ "itertools 0.10.5",
+ "log",
+ "move-compiler 0.0.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-model 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "num",
+ "once_cell",
+ "regex",
+ "serde",
 ]
 
 [[package]]
@@ -3164,8 +4030,8 @@ dependencies = [
  "codespan-reporting",
  "itertools 0.10.5",
  "log",
- "move-compiler",
- "move-model",
+ "move-compiler 0.0.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-model 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "num",
  "once_cell",
  "regex",
@@ -3175,13 +4041,43 @@ dependencies = [
 [[package]]
 name = "move-errmapgen"
 version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-model 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "serde",
+]
+
+[[package]]
+name = "move-errmapgen"
+version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "anyhow",
- "move-command-line-common",
- "move-core-types",
- "move-model",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-model 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "serde",
+]
+
+[[package]]
+name = "move-ir-to-bytecode"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "codespan-reporting",
+ "log",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-source-map 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-ir-to-bytecode-syntax 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-ir-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "ouroboros",
 ]
 
 [[package]]
@@ -3192,14 +4088,27 @@ dependencies = [
  "anyhow",
  "codespan-reporting",
  "log",
- "move-binary-format",
- "move-bytecode-source-map",
- "move-command-line-common",
- "move-core-types",
- "move-ir-to-bytecode-syntax",
- "move-ir-types",
- "move-symbol-pool",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-source-map 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-ir-to-bytecode-syntax 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-ir-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "ouroboros",
+]
+
+[[package]]
+name = "move-ir-to-bytecode-syntax"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "hex",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-ir-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
 ]
 
 [[package]]
@@ -3209,10 +4118,23 @@ source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e
 dependencies = [
  "anyhow",
  "hex",
- "move-command-line-common",
- "move-core-types",
- "move-ir-types",
- "move-symbol-pool",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-ir-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+]
+
+[[package]]
+name = "move-ir-types"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "hex",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "once_cell",
+ "serde",
 ]
 
 [[package]]
@@ -3221,10 +4143,35 @@ version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "hex",
- "move-command-line-common",
- "move-core-types",
- "move-symbol-pool",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "once_cell",
+ "serde",
+]
+
+[[package]]
+name = "move-model"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "codespan",
+ "codespan-reporting",
+ "internment",
+ "itertools 0.10.5",
+ "log",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-source-map 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-compiler 0.0.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-disassembler 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-ir-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "num",
+ "once_cell",
+ "regex",
  "serde",
 ]
 
@@ -3239,18 +4186,50 @@ dependencies = [
  "internment",
  "itertools 0.10.5",
  "log",
- "move-binary-format",
- "move-bytecode-source-map",
- "move-command-line-common",
- "move-compiler",
- "move-core-types",
- "move-disassembler",
- "move-ir-types",
- "move-symbol-pool",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-source-map 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-compiler 0.0.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-disassembler 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-ir-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "num",
  "once_cell",
  "regex",
  "serde",
+]
+
+[[package]]
+name = "move-package"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "clap 4.4.6",
+ "colored",
+ "move-abigen",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-source-map 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-compiler 0.0.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-docgen 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-model 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "named-lock",
+ "once_cell",
+ "petgraph",
+ "regex",
+ "serde",
+ "serde_yaml",
+ "sha2 0.9.9",
+ "tempfile",
+ "toml",
+ "treeline",
+ "walkdir",
+ "whoami",
 ]
 
 [[package]]
@@ -3262,15 +4241,15 @@ dependencies = [
  "clap 4.4.6",
  "colored",
  "itertools 0.10.5",
- "move-binary-format",
- "move-bytecode-source-map",
- "move-bytecode-utils",
- "move-command-line-common",
- "move-compiler",
- "move-core-types",
- "move-docgen",
- "move-model",
- "move-symbol-pool",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-source-map 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-compiler 0.0.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-docgen 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-model 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "named-lock",
  "once_cell",
  "petgraph",
@@ -3290,11 +4269,45 @@ dependencies = [
 [[package]]
 name = "move-proc-macros"
 version = "0.1.0"
-source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
 dependencies = [
- "enum-compat-util",
+ "enum-compat-util 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
  "quote 1.0.33",
  "syn 2.0.38",
+]
+
+[[package]]
+name = "move-proc-macros"
+version = "0.1.0"
+source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
+dependencies = [
+ "enum-compat-util 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "quote 1.0.33",
+ "syn 2.0.38",
+]
+
+[[package]]
+name = "move-prover"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "clap 4.4.6",
+ "codespan-reporting",
+ "itertools 0.10.5",
+ "log",
+ "move-abigen",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-compiler 0.0.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-docgen 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-errmapgen 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-model 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-prover-boogie-backend",
+ "move-stackless-bytecode 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "once_cell",
+ "serde",
+ "simplelog",
+ "toml",
 ]
 
 [[package]]
@@ -3307,12 +4320,12 @@ dependencies = [
  "codespan-reporting",
  "itertools 0.10.5",
  "log",
- "move-command-line-common",
- "move-compiler",
- "move-docgen",
- "move-errmapgen",
- "move-model",
- "move-stackless-bytecode",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-compiler 0.0.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-docgen 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-errmapgen 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-model 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-stackless-bytecode 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "once_cell",
  "serde",
  "simplelog",
@@ -3320,12 +4333,87 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-prover-boogie-backend"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "codespan",
+ "codespan-reporting",
+ "futures",
+ "itertools 0.10.5",
+ "log",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-model 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-stackless-bytecode 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "num",
+ "once_cell",
+ "pretty",
+ "rand 0.8.5",
+ "regex",
+ "serde",
+ "tera",
+ "tokio",
+]
+
+[[package]]
+name = "move-read-write-set-types"
+version = "0.0.3"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "serde",
+]
+
+[[package]]
 name = "move-read-write-set-types"
 version = "0.0.3"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
- "move-binary-format",
- "move-core-types",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "serde",
+]
+
+[[package]]
+name = "move-resource-viewer"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "enum-compat-util 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "hex",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-proc-macros 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "serde",
+]
+
+[[package]]
+name = "move-stackless-bytecode"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "codespan",
+ "codespan-reporting",
+ "ethnum",
+ "im",
+ "itertools 0.10.5",
+ "log",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-compiler 0.0.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-model 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-read-write-set-types 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "num",
+ "paste",
+ "petgraph",
  "serde",
 ]
 
@@ -3340,12 +4428,12 @@ dependencies = [
  "im",
  "itertools 0.10.5",
  "log",
- "move-binary-format",
- "move-command-line-common",
- "move-compiler",
- "move-core-types",
- "move-model",
- "move-read-write-set-types",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-compiler 0.0.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-model 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-read-write-set-types 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "num",
  "paste",
  "petgraph",
@@ -3355,18 +4443,57 @@ dependencies = [
 [[package]]
 name = "move-stackless-bytecode-interpreter"
 version = "0.1.0"
-source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
 dependencies = [
  "anyhow",
- "bytecode-interpreter-crypto",
+ "bytecode-interpreter-crypto 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
  "clap 4.4.6",
  "codespan-reporting",
  "itertools 0.10.5",
- "move-binary-format",
- "move-core-types",
- "move-model",
- "move-stackless-bytecode",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-model 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-stackless-bytecode 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
  "num",
+]
+
+[[package]]
+name = "move-stackless-bytecode-interpreter"
+version = "0.1.0"
+source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
+dependencies = [
+ "anyhow",
+ "bytecode-interpreter-crypto 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "clap 4.4.6",
+ "codespan-reporting",
+ "itertools 0.10.5",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-model 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-stackless-bytecode 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "num",
+]
+
+[[package]]
+name = "move-stdlib"
+version = "0.1.1"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "hex",
+ "log",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-docgen 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-errmapgen 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-prover 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-runtime 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "sha2 0.9.9",
+ "sha3 0.9.1",
+ "smallvec",
+ "walkdir",
 ]
 
 [[package]]
@@ -3377,18 +4504,28 @@ dependencies = [
  "anyhow",
  "hex",
  "log",
- "move-binary-format",
- "move-command-line-common",
- "move-core-types",
- "move-docgen",
- "move-errmapgen",
- "move-prover",
- "move-vm-runtime",
- "move-vm-types",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-docgen 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-errmapgen 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-prover 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-runtime 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "sha2 0.9.9",
  "sha3 0.9.1",
  "smallvec",
  "walkdir",
+]
+
+[[package]]
+name = "move-symbol-pool"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "once_cell",
+ "phf",
+ "serde",
 ]
 
 [[package]]
@@ -3404,6 +4541,37 @@ dependencies = [
 [[package]]
 name = "move-unit-test"
 version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "better_any",
+ "clap 4.4.6",
+ "codespan-reporting",
+ "colored",
+ "itertools 0.10.5",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-compiler 0.0.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-ir-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-model 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-resource-viewer",
+ "move-stackless-bytecode-interpreter 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-stdlib 0.1.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-profiler 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-runtime 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-test-utils 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "once_cell",
+ "rayon",
+ "regex",
+]
+
+[[package]]
+name = "move-unit-test"
+version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "anyhow",
@@ -3413,20 +4581,20 @@ dependencies = [
  "codespan-reporting",
  "colored",
  "itertools 0.10.5",
- "move-binary-format",
- "move-bytecode-utils",
- "move-command-line-common",
- "move-compiler",
- "move-core-types",
- "move-ir-types",
- "move-model",
- "move-stackless-bytecode-interpreter",
- "move-stdlib",
- "move-symbol-pool",
- "move-vm-profiler",
- "move-vm-runtime",
- "move-vm-test-utils",
- "move-vm-types",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-compiler 0.0.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-ir-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-model 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-stackless-bytecode-interpreter 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-stdlib 0.1.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-profiler 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-runtime 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-test-utils 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "once_cell",
  "rayon",
  "regex",
@@ -3435,10 +4603,29 @@ dependencies = [
 [[package]]
 name = "move-vm-config"
 version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+]
+
+[[package]]
+name = "move-vm-config"
+version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
- "move-binary-format",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "once_cell",
+]
+
+[[package]]
+name = "move-vm-profiler"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "move-vm-config 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "once_cell",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -3446,10 +4633,30 @@ name = "move-vm-profiler"
 version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
- "move-vm-config",
+ "move-vm-config 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "once_cell",
  "serde",
  "serde_json",
+ "tracing",
+]
+
+[[package]]
+name = "move-vm-runtime"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "better_any",
+ "fail",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-verifier 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-config 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-profiler 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "once_cell",
+ "parking_lot 0.11.2",
+ "sha3 0.9.1",
+ "smallvec",
  "tracing",
 ]
 
@@ -3460,12 +4667,12 @@ source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e
 dependencies = [
  "better_any",
  "fail",
- "move-binary-format",
- "move-bytecode-verifier",
- "move-core-types",
- "move-vm-config",
- "move-vm-profiler",
- "move-vm-types",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-verifier 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-config 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-profiler 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "once_cell",
  "parking_lot 0.11.2",
  "sha3 0.9.1",
@@ -3476,15 +4683,42 @@ dependencies = [
 [[package]]
 name = "move-vm-test-utils"
 version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-profiler 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "once_cell",
+ "serde",
+]
+
+[[package]]
+name = "move-vm-test-utils"
+version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "anyhow",
- "move-binary-format",
- "move-core-types",
- "move-vm-profiler",
- "move-vm-types",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-profiler 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "once_cell",
  "serde",
+]
+
+[[package]]
+name = "move-vm-types"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "bcs",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-profiler 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "serde",
+ "smallvec",
 ]
 
 [[package]]
@@ -3493,11 +4727,51 @@ version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "bcs",
- "move-binary-format",
- "move-core-types",
- "move-vm-profiler",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-profiler 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "serde",
  "smallvec",
+]
+
+[[package]]
+name = "msim"
+version = "0.1.0"
+source = "git+https://github.com/MystenLabs/mysten-sim.git?rev=03b22b1576b5b81fd76fc9aa85009b22ddbfd5b6#03b22b1576b5b81fd76fc9aa85009b22ddbfd5b6"
+dependencies = [
+ "ahash 0.7.6",
+ "async-task",
+ "bincode",
+ "bytes",
+ "cc",
+ "downcast-rs",
+ "erasable",
+ "futures",
+ "lazy_static",
+ "libc",
+ "msim-macros 0.1.0 (git+https://github.com/MystenLabs/mysten-sim.git?rev=03b22b1576b5b81fd76fc9aa85009b22ddbfd5b6)",
+ "naive-timer",
+ "pin-project-lite",
+ "rand 0.8.5",
+ "real_tokio",
+ "serde",
+ "socket2 0.4.9",
+ "tap",
+ "tokio-util 0.7.7",
+ "toml",
+ "tracing",
+ "tracing-subscriber 0.3.18",
+]
+
+[[package]]
+name = "msim-macros"
+version = "0.1.0"
+source = "git+https://github.com/MystenLabs/mysten-sim.git?rev=03b22b1576b5b81fd76fc9aa85009b22ddbfd5b6#03b22b1576b5b81fd76fc9aa85009b22ddbfd5b6"
+dependencies = [
+ "darling 0.14.4",
+ "proc-macro2 1.0.68",
+ "quote 1.0.33",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -3569,6 +4843,27 @@ dependencies = [
 [[package]]
 name = "mysten-metrics"
 version = "0.7.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "async-trait",
+ "axum",
+ "dashmap",
+ "futures",
+ "once_cell",
+ "parking_lot 0.12.1",
+ "prometheus",
+ "prometheus-closure-metric 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "scopeguard",
+ "tap",
+ "tokio",
+ "tracing",
+ "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "mysten-metrics"
+version = "0.7.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "async-trait",
@@ -3578,7 +4873,7 @@ dependencies = [
  "once_cell",
  "parking_lot 0.12.1",
  "prometheus",
- "prometheus-closure-metric",
+ "prometheus-closure-metric 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "scopeguard",
  "tap",
  "tokio",
@@ -3589,9 +4884,33 @@ dependencies = [
 [[package]]
 name = "mysten-network"
 version = "0.2.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anemo 0.0.0 (git+https://github.com/mystenlabs/anemo.git?rev=1169850e6af127397068cd86764c29b1d49dbe35)",
+ "bcs",
+ "bytes",
+ "eyre",
+ "futures",
+ "http",
+ "multiaddr",
+ "serde",
+ "snap",
+ "tokio",
+ "tokio-stream",
+ "tonic 0.8.3",
+ "tonic-health 0.8.0",
+ "tower",
+ "tower-http",
+ "tracing",
+ "workspace-hack",
+]
+
+[[package]]
+name = "mysten-network"
+version = "0.2.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
- "anemo",
+ "anemo 0.0.0 (git+https://github.com/mystenlabs/anemo.git?rev=26d415eb9aa6a2417be3c03c57d6e93c30bd1ad7)",
  "bcs",
  "bytes",
  "eyre",
@@ -3603,11 +4922,30 @@ dependencies = [
  "snap",
  "tokio",
  "tokio-stream",
- "tonic",
- "tonic-health",
+ "tonic 0.11.0",
+ "tonic-health 0.11.0",
  "tower",
  "tower-http",
  "tracing",
+]
+
+[[package]]
+name = "mysten-util-mem"
+version = "0.11.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "cfg-if",
+ "ed25519-consensus",
+ "fastcrypto 0.1.6",
+ "hashbrown 0.12.3",
+ "impl-trait-for-tuples",
+ "indexmap 1.9.3",
+ "mysten-util-mem-derive 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "once_cell",
+ "parking_lot 0.12.1",
+ "roaring",
+ "smallvec",
+ "workspace-hack",
 ]
 
 [[package]]
@@ -3617,16 +4955,27 @@ source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e
 dependencies = [
  "cfg-if",
  "ed25519-consensus",
- "fastcrypto",
+ "fastcrypto 0.1.7",
  "fastcrypto-tbls",
  "hashbrown 0.12.3",
  "impl-trait-for-tuples",
  "indexmap 2.2.6",
- "mysten-util-mem-derive",
+ "mysten-util-mem-derive 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "once_cell",
  "parking_lot 0.12.1",
  "roaring",
  "smallvec",
+]
+
+[[package]]
+name = "mysten-util-mem-derive"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "proc-macro2 1.0.68",
+ "syn 1.0.109",
+ "synstructure",
+ "workspace-hack",
 ]
 
 [[package]]
@@ -3638,6 +4987,12 @@ dependencies = [
  "syn 1.0.109",
  "synstructure",
 ]
+
+[[package]]
+name = "naive-timer"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "034a0ad7deebf0c2abcf2435950a6666c3c15ea9d8fad0c0f48efa8a7f843fed"
 
 [[package]]
 name = "named-lock"
@@ -3656,13 +5011,31 @@ dependencies = [
 [[package]]
 name = "narwhal-config"
 version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "fastcrypto 0.1.6",
+ "match_opt",
+ "mysten-network 0.2.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "mysten-util-mem 0.11.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "narwhal-crypto 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tracing",
+ "workspace-hack",
+]
+
+[[package]]
+name = "narwhal-config"
+version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
- "fastcrypto",
+ "fastcrypto 0.1.7",
  "match_opt",
- "mysten-network",
- "mysten-util-mem",
- "narwhal-crypto",
+ "mysten-network 0.2.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "mysten-util-mem 0.11.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "narwhal-crypto 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "rand 0.8.5",
  "serde",
  "serde_json",
@@ -3673,12 +5046,24 @@ dependencies = [
 [[package]]
 name = "narwhal-crypto"
 version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "bcs",
+ "fastcrypto 0.1.6",
+ "serde",
+ "shared-crypto 0.0.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "workspace-hack",
+]
+
+[[package]]
+name = "narwhal-crypto"
+version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "bcs",
- "fastcrypto",
+ "fastcrypto 0.1.7",
  "serde",
- "shared-crypto",
+ "shared-crypto 0.0.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
 ]
 
 [[package]]
@@ -3726,6 +5111,25 @@ name = "nonempty"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "995defdca0a589acfdd1bd2e8e3b896b4d4f7675a31fd14c32611440c7f608e6"
+
+[[package]]
+name = "ntapi"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c28774a7fd2fbb4f0babd8237ce554b73af68021b5f695a3cebd6c59bac0980f"
+dependencies = [
+ "winapi",
+]
+
+[[package]]
+name = "nu-ansi-term"
+version = "0.46.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77a8165726e8236064dbb45459242600304b42a5ea24ee2948e18e023bf7ba84"
+dependencies = [
+ "overload",
+ "winapi",
+]
 
 [[package]]
 name = "num"
@@ -3796,7 +5200,7 @@ version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a652d9771a63711fd3c3deb670acfbe5c30a4072e664d7a3bf5a9e1056ac72c3"
 dependencies = [
- "arrayvec",
+ "arrayvec 0.7.4",
  "itoa",
 ]
 
@@ -3906,12 +5310,18 @@ version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec4c6225c69b4ca778c0aea097321a64c421cf4577b331c61b229267edabb6f8"
 dependencies = [
- "heck",
+ "heck 0.4.1",
  "proc-macro-error",
  "proc-macro2 1.0.68",
  "quote 1.0.33",
  "syn 2.0.38",
 ]
+
+[[package]]
+name = "overload"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 
 [[package]]
 name = "p256"
@@ -3940,7 +5350,7 @@ version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "373b1a4c1338d9cd3d1fa53b3a11bdab5ab6bd80a20f7f7becd76953ae2be909"
 dependencies = [
- "arrayvec",
+ "arrayvec 0.7.4",
  "bitvec 0.20.4",
  "byte-slice-cast",
  "impl-trait-for-tuples",
@@ -4009,6 +5419,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "parse-zoneinfo"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c705f256449c60da65e11ff6626e0c16a0a0b96aaa348de61376b249bc340f41"
+dependencies = [
+ "regex",
+]
+
+[[package]]
 name = "pasta_curves"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4031,6 +5450,12 @@ name = "paste"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de3145af08024dea9fa9914f381a17b8fc6034dfb00f3a84013f7ff43f29ed4c"
+
+[[package]]
+name = "peeking_take_while"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
 
 [[package]]
 name = "pem"
@@ -4131,6 +5556,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "phf_codegen"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8d39688d359e6b34654d328e262234662d16cc0f60ec8dcbe5e718709342a5a"
+dependencies = [
+ "phf_generator",
+ "phf_shared",
+]
+
+[[package]]
 name = "phf_generator"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4227,6 +5662,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "pkg-config"
+version = "0.3.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d231b230927b5e4ad203db57bbcbee2802f6bce620b1e4a9024a07d94e2907ec"
+
+[[package]]
 name = "polyval"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4236,6 +5677,16 @@ dependencies = [
  "cpufeatures",
  "opaque-debug",
  "universal-hash",
+]
+
+[[package]]
+name = "poseidon-ark"
+version = "0.0.1"
+source = "git+https://github.com/arnaucube/poseidon-ark.git?rev=ff7f5e05d55667b4ffba129b837da780c4c5c849#ff7f5e05d55667b4ffba129b837da780c4c5c849"
+dependencies = [
+ "ark-bn254",
+ "ark-ff",
+ "ark-std",
 ]
 
 [[package]]
@@ -4265,6 +5716,26 @@ name = "ppv-lite86"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
+
+[[package]]
+name = "pretty"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad9940b913ee56ddd94aec2d3cd179dd47068236f42a1a6415ccf9d880ce2a61"
+dependencies = [
+ "arrayvec 0.5.2",
+ "typed-arena",
+]
+
+[[package]]
+name = "prettyplease"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae005bd773ab59b4725093fd7df83fd7892f7d8eafb48dbd7de6e024e4215f9d"
+dependencies = [
+ "proc-macro2 1.0.68",
+ "syn 2.0.38",
+]
 
 [[package]]
 name = "primeorder"
@@ -4357,6 +5828,17 @@ dependencies = [
 [[package]]
 name = "prometheus-closure-metric"
 version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "prometheus",
+ "protobuf",
+ "workspace-hack",
+]
+
+[[package]]
+name = "prometheus-closure-metric"
+version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "anyhow",
@@ -4378,7 +5860,7 @@ dependencies = [
  "rand 0.8.5",
  "rand_chacha 0.3.1",
  "rand_xorshift",
- "regex-syntax",
+ "regex-syntax 0.7.5",
  "rusty-fork",
  "tempfile",
  "unarray",
@@ -4397,12 +5879,35 @@ dependencies = [
 
 [[package]]
 name = "prost"
+version = "0.11.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b82eaa1d779e9a4bc1c3217db8ffbeabaae1dca241bf70183242128d48681cd"
+dependencies = [
+ "bytes",
+ "prost-derive 0.11.9",
+]
+
+[[package]]
+name = "prost"
 version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0f5d036824e4761737860779c906171497f6d55681139d8312388f8fe398922"
 dependencies = [
  "bytes",
- "prost-derive",
+ "prost-derive 0.12.4",
+]
+
+[[package]]
+name = "prost-derive"
+version = "0.11.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5d2d8d10f3c6ded6da8b05b5fb3b8a5082514344d56c9f871412d29b4e075b4"
+dependencies = [
+ "anyhow",
+ "itertools 0.10.5",
+ "proc-macro2 1.0.68",
+ "quote 1.0.33",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -4651,6 +6156,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "read-write-set"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-model 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-read-write-set-types 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-stackless-bytecode 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "read-write-set-dynamic",
+]
+
+[[package]]
+name = "read-write-set-dynamic"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-read-write-set-types 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+]
+
+[[package]]
 name = "readonly"
 version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4659,6 +6191,24 @@ dependencies = [
  "proc-macro2 1.0.68",
  "quote 1.0.33",
  "syn 2.0.38",
+]
+
+[[package]]
+name = "real_tokio"
+version = "1.28.1"
+source = "git+https://github.com/mystenmark/tokio-madsim-fork.git?rev=e4693500118d5e79ce098ee6dfc2c48f3ef19e45#e4693500118d5e79ce098ee6dfc2c48f3ef19e45"
+dependencies = [
+ "autocfg",
+ "bytes",
+ "libc",
+ "mio 0.8.11",
+ "num_cpus",
+ "parking_lot 0.12.1",
+ "pin-project-lite",
+ "signal-hook-registry",
+ "socket2 0.4.9",
+ "tokio-macros 2.1.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -4718,8 +6268,8 @@ checksum = "ebee201405406dbf528b8b672104ae6d6d63e6d118cb10e4d51abbc7b58044ff"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-automata",
- "regex-syntax",
+ "regex-automata 0.3.9",
+ "regex-syntax 0.7.5",
 ]
 
 [[package]]
@@ -4730,7 +6280,18 @@ checksum = "59b23e92ee4318893fa3fe3e6fb365258efbfe6ac6ab30f090cdcbb7aa37efa9"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-syntax",
+ "regex-syntax 0.7.5",
+]
+
+[[package]]
+name = "regex-automata"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86b83b8b9847f9bf95ef68afb0b8e6cdb80f498442f5179a29fad448fcc1eaea"
+dependencies = [
+ "aho-corasick",
+ "memchr",
+ "regex-syntax 0.8.3",
 ]
 
 [[package]]
@@ -4738,6 +6299,12 @@ name = "regex-syntax"
 version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dbb5fb1acd8a1a18b3dd5be62d25485eb770e05afb408a9627d14d451bae12da"
+
+[[package]]
+name = "regex-syntax"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "adad44e29e4c806119491a7f06f03de4d1af22c3a680dd47f1e6e179439d1f56"
 
 [[package]]
 name = "reqwest"
@@ -4845,6 +6412,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rocksdb"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb6f170a4041d50a0ce04b0d2e14916d6ca863ea2e422689a5b694395d299ffe"
+dependencies = [
+ "libc",
+ "librocksdb-sys",
+]
+
+[[package]]
 name = "rsa"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4916,6 +6493,18 @@ dependencies = [
 
 [[package]]
 name = "rustls"
+version = "0.20.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b80e3dec595989ea8510028f30c408a4630db12c9cbb8de34203b89d6577e99"
+dependencies = [
+ "log",
+ "ring 0.16.20",
+ "sct",
+ "webpki",
+]
+
+[[package]]
+name = "rustls"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd8d6c9f025a446bc4d18ad9632e69aec8f287aa84499ee335599fabd20c3fd8"
@@ -4928,9 +6517,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.22.3"
+version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99008d7ad0bbbea527ec27bddbc0e432c5b87d8175178cee68d2eec9c4a1813c"
+checksum = "bf4ef73721ac7bcd79b2b315da7779d8fc09718c6b3d2d1b2d94850eb8c18432"
 dependencies = [
  "log",
  "ring 0.17.4",
@@ -5304,16 +6893,44 @@ dependencies = [
 ]
 
 [[package]]
+name = "sharded-slab"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
+dependencies = [
+ "lazy_static",
+]
+
+[[package]]
+name = "shared-crypto"
+version = "0.0.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "bcs",
+ "eyre",
+ "fastcrypto 0.1.6",
+ "serde",
+ "serde_repr",
+ "workspace-hack",
+]
+
+[[package]]
 name = "shared-crypto"
 version = "0.0.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "bcs",
  "eyre",
- "fastcrypto",
+ "fastcrypto 0.1.7",
  "serde",
  "serde_repr",
 ]
+
+[[package]]
+name = "shlex"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
 name = "signal-hook"
@@ -5332,7 +6949,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29ad2e15f37ec9a6cc544097b78a1ec90001e9f71b81338ca39f430adaca99af"
 dependencies = [
  "libc",
- "mio",
+ "mio 0.7.14",
+ "mio 0.8.11",
  "signal-hook",
 ]
 
@@ -5401,6 +7019,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f92a496fb766b417c996b9c5e57daf2f7ad3b0bebe1ccfca4856390e3d3bb67"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "slug"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bd94acec9c8da640005f8e135a39fc0372e74535e6b368b7a04b875f784c8c4"
+dependencies = [
+ "deunicode",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -5532,7 +7160,7 @@ version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e385be0d24f186b4ce2f9982191e7101bb737312ad61c1f2f984f34bcf85d59"
 dependencies = [
- "heck",
+ "heck 0.4.1",
  "proc-macro2 1.0.68",
  "quote 1.0.33",
  "rustversion",
@@ -5554,9 +7182,30 @@ checksum = "734676eb262c623cec13c3155096e08d1f8f29adce39ba17948b18dad1e54142"
 [[package]]
 name = "sui-enum-compat-util"
 version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "serde_yaml",
+ "workspace-hack",
+]
+
+[[package]]
+name = "sui-enum-compat-util"
+version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "serde_yaml",
+]
+
+[[package]]
+name = "sui-macros"
+version = "0.7.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "futures",
+ "once_cell",
+ "sui-proc-macros 0.7.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "tracing",
+ "workspace-hack",
 ]
 
 [[package]]
@@ -5566,7 +7215,7 @@ source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e
 dependencies = [
  "futures",
  "once_cell",
- "sui-proc-macros",
+ "sui-proc-macros 0.7.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "tracing",
 ]
 
@@ -5574,6 +7223,7 @@ dependencies = [
 name = "sui-move-analyzer"
 version = "1.1.4"
 dependencies = [
+ "alpha-2024",
  "anyhow",
  "beta-2024",
  "bisection",
@@ -5591,15 +7241,6 @@ dependencies = [
  "log",
  "lsp-server",
  "lsp-types",
- "move-cli",
- "move-command-line-common",
- "move-compiler",
- "move-core-types",
- "move-ir-types",
- "move-model",
- "move-package",
- "move-proc-macros",
- "move-symbol-pool",
  "once_cell",
  "petgraph",
  "pprof",
@@ -5608,7 +7249,6 @@ dependencies = [
  "serde_json",
  "stacker",
  "stderrlog",
- "sui-move-build",
  "tempfile",
  "url",
  "wait-timeout",
@@ -5617,25 +7257,61 @@ dependencies = [
 
 [[package]]
 name = "sui-move-build"
+version = "0.0.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anyhow",
+ "fastcrypto 0.1.6",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-verifier 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-compiler 0.0.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-ir-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-package 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "serde-reflection",
+ "sui-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "sui-verifier-latest 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "tempfile",
+ "workspace-hack",
+]
+
+[[package]]
+name = "sui-move-build"
 version = "1.23.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
  "anyhow",
- "fastcrypto",
- "move-binary-format",
- "move-bytecode-utils",
- "move-bytecode-verifier",
- "move-command-line-common",
- "move-compiler",
- "move-core-types",
- "move-ir-types",
- "move-package",
- "move-symbol-pool",
+ "fastcrypto 0.1.7",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-verifier 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-compiler 0.0.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-ir-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-package 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-symbol-pool 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "serde-reflection",
- "sui-protocol-config",
- "sui-types",
- "sui-verifier-latest",
+ "sui-protocol-config 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "sui-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "sui-verifier-latest 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "tempfile",
+]
+
+[[package]]
+name = "sui-proc-macros"
+version = "0.7.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "msim-macros 0.1.0 (git+https://github.com/MystenLabs/mysten-sim.git?rev=03b22b1576b5b81fd76fc9aa85009b22ddbfd5b6)",
+ "proc-macro2 1.0.68",
+ "quote 1.0.33",
+ "sui-enum-compat-util 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "syn 2.0.38",
+ "workspace-hack",
 ]
 
 [[package]]
@@ -5643,11 +7319,25 @@ name = "sui-proc-macros"
 version = "0.7.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
- "msim-macros",
+ "msim-macros 0.1.0 (git+https://github.com/MystenLabs/mysten-sim.git?rev=6f88ec84644cb1a6809c010f1f534d0d09e0cd89)",
  "proc-macro2 1.0.68",
  "quote 1.0.33",
- "sui-enum-compat-util",
+ "sui-enum-compat-util 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "syn 2.0.38",
+]
+
+[[package]]
+name = "sui-protocol-config"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "insta",
+ "schemars",
+ "serde",
+ "serde_with",
+ "sui-protocol-config-macros 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "tracing",
+ "workspace-hack",
 ]
 
 [[package]]
@@ -5657,12 +7347,23 @@ source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e
 dependencies = [
  "clap 4.4.6",
  "insta",
- "move-vm-config",
+ "move-vm-config 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "schemars",
  "serde",
  "serde_with",
- "sui-protocol-config-macros",
+ "sui-protocol-config-macros 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "tracing",
+]
+
+[[package]]
+name = "sui-protocol-config-macros"
+version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "proc-macro2 1.0.68",
+ "quote 1.0.33",
+ "syn 1.0.109",
+ "workspace-hack",
 ]
 
 [[package]]
@@ -5678,9 +7379,68 @@ dependencies = [
 [[package]]
 name = "sui-types"
 version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "anemo 0.0.0 (git+https://github.com/mystenlabs/anemo.git?rev=1169850e6af127397068cd86764c29b1d49dbe35)",
+ "anyhow",
+ "bcs",
+ "bincode",
+ "byteorder",
+ "derivative",
+ "derive_more",
+ "enum_dispatch",
+ "eyre",
+ "fastcrypto 0.1.6",
+ "fastcrypto-zkp 0.1.1",
+ "im",
+ "indexmap 1.9.3",
+ "itertools 0.10.5",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-command-line-common 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-disassembler 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-ir-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-profiler 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-test-utils 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "mysten-metrics 0.7.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "mysten-network 0.2.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "narwhal-config 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "narwhal-crypto 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "once_cell",
+ "prometheus",
+ "proptest",
+ "proptest-derive",
+ "rand 0.8.5",
+ "roaring",
+ "schemars",
+ "serde",
+ "serde-name",
+ "serde_json",
+ "serde_with",
+ "shared-crypto 0.0.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "signature 1.6.4",
+ "static_assertions",
+ "strum",
+ "strum_macros",
+ "sui-enum-compat-util 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "sui-macros 0.7.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "sui-protocol-config 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "tap",
+ "thiserror",
+ "tonic 0.8.3",
+ "tracing",
+ "typed-store",
+ "workspace-hack",
+]
+
+[[package]]
+name = "sui-types"
+version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
- "anemo",
+ "anemo 0.0.0 (git+https://github.com/mystenlabs/anemo.git?rev=26d415eb9aa6a2417be3c03c57d6e93c30bd1ad7)",
  "anyhow",
  "bcs",
  "bincode",
@@ -5690,25 +7450,25 @@ dependencies = [
  "derive_more",
  "enum_dispatch",
  "eyre",
- "fastcrypto",
+ "fastcrypto 0.1.7",
  "fastcrypto-tbls",
- "fastcrypto-zkp",
+ "fastcrypto-zkp 0.1.2",
  "im",
  "indexmap 2.2.6",
  "itertools 0.10.5",
- "move-binary-format",
- "move-bytecode-utils",
- "move-command-line-common",
- "move-core-types",
- "move-disassembler",
- "move-ir-types",
- "move-vm-profiler",
- "move-vm-test-utils",
- "move-vm-types",
- "mysten-metrics",
- "mysten-network",
- "narwhal-config",
- "narwhal-crypto",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-command-line-common 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-disassembler 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-ir-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-profiler 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-test-utils 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "mysten-metrics 0.7.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "mysten-network 0.2.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "narwhal-config 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "narwhal-crypto 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "nonempty",
  "num-bigint 0.4.4",
  "num-traits",
@@ -5723,17 +7483,17 @@ dependencies = [
  "serde-name",
  "serde_json",
  "serde_with",
- "shared-crypto",
+ "shared-crypto 0.0.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "signature 1.6.4",
  "static_assertions",
  "strum",
  "strum_macros",
- "sui-enum-compat-util",
- "sui-macros",
- "sui-protocol-config",
+ "sui-enum-compat-util 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "sui-macros 0.7.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "sui-protocol-config 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "tap",
  "thiserror",
- "tonic",
+ "tonic 0.11.0",
  "tracing",
  "typed-store-error",
 ]
@@ -5741,17 +7501,32 @@ dependencies = [
 [[package]]
 name = "sui-verifier-latest"
 version = "0.1.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "move-abstract-stack 0.0.1 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-binary-format 0.0.3 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-bytecode-verifier 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-core-types 0.0.4 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "move-vm-config 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "sui-types 0.1.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "workspace-hack",
+]
+
+[[package]]
+name = "sui-verifier-latest"
+version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a#6e1cf7a1a9971fedd8b7830e586029d6c2cf801a"
 dependencies = [
- "move-abstract-stack",
- "move-binary-format",
- "move-bytecode-utils",
- "move-bytecode-verifier",
+ "move-abstract-stack 0.0.1 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-binary-format 0.0.3 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-utils 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-bytecode-verifier 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
  "move-bytecode-verifier-meter",
- "move-core-types",
- "move-vm-config",
- "sui-protocol-config",
- "sui-types",
+ "move-core-types 0.0.4 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "move-vm-config 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "sui-protocol-config 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
+ "sui-types 0.1.0 (git+https://github.com/MystenLabs/sui.git?rev=6e1cf7a1a9971fedd8b7830e586029d6c2cf801a)",
 ]
 
 [[package]]
@@ -5866,6 +7641,28 @@ dependencies = [
  "redox_syscall 0.3.5",
  "rustix",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "tera"
+version = "1.19.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "970dff17c11e884a4a09bc76e3a17ef71e01bb13447a11e85226e254fe6d10b8"
+dependencies = [
+ "chrono",
+ "chrono-tz",
+ "globwalk",
+ "humansize",
+ "lazy_static",
+ "percent-encoding",
+ "pest",
+ "pest_derive",
+ "rand 0.8.5",
+ "regex",
+ "serde",
+ "serde_json",
+ "slug",
+ "unic-segment",
 ]
 
 [[package]]
@@ -5984,11 +7781,13 @@ dependencies = [
  "backtrace",
  "bytes",
  "libc",
- "mio",
+ "mio 0.8.11",
  "num_cpus",
+ "parking_lot 0.12.1",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2 0.5.6",
- "tokio-macros",
+ "tokio-macros 2.2.0",
  "windows-sys 0.48.0",
 ]
 
@@ -6004,6 +7803,16 @@ dependencies = [
 
 [[package]]
 name = "tokio-macros"
+version = "2.1.0"
+source = "git+https://github.com/mystenmark/tokio-madsim-fork.git?rev=e4693500118d5e79ce098ee6dfc2c48f3ef19e45#e4693500118d5e79ce098ee6dfc2c48f3ef19e45"
+dependencies = [
+ "proc-macro2 1.0.68",
+ "quote 1.0.33",
+ "syn 2.0.38",
+]
+
+[[package]]
+name = "tokio-macros"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b8a1e28f2deaa14e508979454cb3a223b10b938b45af148bc0986de36f1923b"
@@ -6011,6 +7820,17 @@ dependencies = [
  "proc-macro2 1.0.68",
  "quote 1.0.33",
  "syn 2.0.38",
+]
+
+[[package]]
+name = "tokio-rustls"
+version = "0.23.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c43ee83903113e03984cb9e5cebe6c04a5116269e900e3ddba8f068a62adda59"
+dependencies = [
+ "rustls 0.20.9",
+ "tokio",
+ "webpki",
 ]
 
 [[package]]
@@ -6029,7 +7849,7 @@ version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "775e0c0f0adb3a2f22a00c4745d728b479985fc15ee7ca6a2608388c5569860f"
 dependencies = [
- "rustls 0.22.3",
+ "rustls 0.22.4",
  "rustls-pki-types",
  "tokio",
 ]
@@ -6043,7 +7863,7 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
- "tokio-util",
+ "tokio-util 0.7.9",
 ]
 
 [[package]]
@@ -6056,6 +7876,23 @@ dependencies = [
  "log",
  "tokio",
  "tungstenite",
+]
+
+[[package]]
+name = "tokio-util"
+version = "0.7.7"
+source = "git+https://github.com/mystenmark/tokio-madsim-fork.git?rev=e4693500118d5e79ce098ee6dfc2c48f3ef19e45#e4693500118d5e79ce098ee6dfc2c48f3ef19e45"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "futures-io",
+ "futures-sink",
+ "futures-util",
+ "hashbrown 0.12.3",
+ "pin-project-lite",
+ "real_tokio",
+ "slab",
+ "tracing",
 ]
 
 [[package]]
@@ -6095,6 +7932,40 @@ dependencies = [
 
 [[package]]
 name = "tonic"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f219fad3b929bef19b1f86fbc0358d35daed8f2cac972037ac0dc10bbb8d5fb"
+dependencies = [
+ "async-stream",
+ "async-trait",
+ "axum",
+ "base64 0.13.1",
+ "bytes",
+ "futures-core",
+ "futures-util",
+ "h2",
+ "http",
+ "http-body",
+ "hyper",
+ "hyper-timeout",
+ "percent-encoding",
+ "pin-project",
+ "prost 0.11.9",
+ "prost-derive 0.11.9",
+ "rustls-pemfile 1.0.3",
+ "tokio",
+ "tokio-rustls 0.23.4",
+ "tokio-stream",
+ "tokio-util 0.7.9",
+ "tower",
+ "tower-layer",
+ "tower-service",
+ "tracing",
+ "tracing-futures",
+]
+
+[[package]]
+name = "tonic"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "76c4eb7a4e9ef9d4763600161f12f5070b92a578e1b634db88a6887844c91a13"
@@ -6111,7 +7982,7 @@ dependencies = [
  "hyper-timeout",
  "percent-encoding",
  "pin-project",
- "prost",
+ "prost 0.12.4",
  "rustls-pemfile 2.1.2",
  "rustls-pki-types",
  "tokio",
@@ -6125,15 +7996,29 @@ dependencies = [
 
 [[package]]
 name = "tonic-health"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a88aee666ef3a4d1ee46218bbc8e5f69bcf9cc27bf2e871d6b724d83f56d179f"
+dependencies = [
+ "async-stream",
+ "bytes",
+ "prost 0.11.9",
+ "tokio",
+ "tokio-stream",
+ "tonic 0.8.3",
+]
+
+[[package]]
+name = "tonic-health"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2cef6e24bc96871001a7e48e820ab240b3de2201e59b517cf52835df2f1d2350"
 dependencies = [
  "async-stream",
- "prost",
+ "prost 0.12.4",
  "tokio",
  "tokio-stream",
- "tonic",
+ "tonic 0.11.0",
 ]
 
 [[package]]
@@ -6151,7 +8036,7 @@ dependencies = [
  "rand 0.8.5",
  "slab",
  "tokio",
- "tokio-util",
+ "tokio-util 0.7.9",
  "tower-layer",
  "tower-service",
  "tracing",
@@ -6179,7 +8064,7 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "tokio",
- "tokio-util",
+ "tokio-util 0.7.9",
  "tower",
  "tower-layer",
  "tower-service",
@@ -6230,6 +8115,51 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0955b8137a1df6f1a2e9a37d8a6656291ff0297c1a97c24e0d8425fe2312f79a"
 dependencies = [
  "once_cell",
+ "valuable",
+]
+
+[[package]]
+name = "tracing-futures"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97d095ae15e245a057c8e8451bab9b3ee1e1f68e9ba2b4fbc18d0ac5237835f2"
+dependencies = [
+ "pin-project",
+ "tracing",
+]
+
+[[package]]
+name = "tracing-log"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee855f1f400bd0e5c02d150ae5de3840039a3f54b025156404e34c23c03f47c3"
+dependencies = [
+ "log",
+ "once_cell",
+ "tracing-core",
+]
+
+[[package]]
+name = "tracing-subscriber"
+version = "0.2.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e0d2eaa99c3c2e41547cfa109e910a68ea03823cccad4a0525dcbc9b01e8c71"
+dependencies = [
+ "tracing-core",
+]
+
+[[package]]
+name = "tracing-subscriber"
+version = "0.3.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad0f048c97dbd9faa9b7df56362b8ebcaa52adb06b498c050d2f4e32f90a7a8b"
+dependencies = [
+ "nu-ansi-term",
+ "sharded-slab",
+ "smallvec",
+ "thread_local",
+ "tracing-core",
+ "tracing-log",
 ]
 
 [[package]]
@@ -6257,13 +8187,26 @@ checksum = "3528ecfd12c466c6f163363caf2d02a71161dd5e1cc6ae7b34207ea2d42d81ed"
 
 [[package]]
 name = "tui"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23ed0a32c88b039b73f1b6c5acbd0554bfa5b6be94467375fd947c4de3a02271"
+dependencies = [
+ "bitflags 1.3.2",
+ "cassowary",
+ "crossterm 0.22.1",
+ "unicode-segmentation",
+ "unicode-width",
+]
+
+[[package]]
+name = "tui"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ccdd26cbd674007e649a272da4475fb666d3aa0ad0531da7136db6fab0e5bad1"
 dependencies = [
  "bitflags 1.3.2",
  "cassowary",
- "crossterm",
+ "crossterm 0.25.0",
  "unicode-segmentation",
  "unicode-width",
 ]
@@ -6285,6 +8228,40 @@ dependencies = [
  "thiserror",
  "url",
  "utf-8",
+]
+
+[[package]]
+name = "typed-arena"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6af6ae20167a9ece4bcb41af5b80f8a1f1df981f6391189ce00fd257af04126a"
+
+[[package]]
+name = "typed-store"
+version = "0.4.0"
+source = "git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213#6b2e1bcd6d569b2d689fab3379d093b0cc451213"
+dependencies = [
+ "async-trait",
+ "bcs",
+ "bincode",
+ "collectable",
+ "eyre",
+ "fdlimit",
+ "hdrhistogram",
+ "itertools 0.10.5",
+ "msim",
+ "once_cell",
+ "ouroboros",
+ "prometheus",
+ "rand 0.8.5",
+ "rocksdb",
+ "serde",
+ "sui-macros 0.7.0 (git+https://github.com/movebit/sui?rev=6b2e1bcd6d569b2d689fab3379d093b0cc451213)",
+ "tap",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "workspace-hack",
 ]
 
 [[package]]
@@ -6325,6 +8302,56 @@ name = "unarray"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eaea85b334db583fe3274d12b4cd1880032beab409c0d774be044d4480ab9a94"
+
+[[package]]
+name = "unic-char-property"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8c57a407d9b6fa02b4795eb81c5b6652060a15a7903ea981f3d723e6c0be221"
+dependencies = [
+ "unic-char-range",
+]
+
+[[package]]
+name = "unic-char-range"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0398022d5f700414f6b899e10b8348231abf9173fa93144cbc1a43b9793c1fbc"
+
+[[package]]
+name = "unic-common"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "80d7ff825a6a654ee85a63e80f92f054f904f21e7d12da4e22f9834a4aaa35bc"
+
+[[package]]
+name = "unic-segment"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4ed5d26be57f84f176157270c112ef57b86debac9cd21daaabbe56db0f88f23"
+dependencies = [
+ "unic-ucd-segment",
+]
+
+[[package]]
+name = "unic-ucd-segment"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2079c122a62205b421f499da10f3ee0f7697f012f55b675e002483c73ea34700"
+dependencies = [
+ "unic-char-property",
+ "unic-char-range",
+ "unic-ucd-version",
+]
+
+[[package]]
+name = "unic-ucd-version"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96bd2f2237fe450fcd0a1d2f5f4e91711124f7857ba2e964247776ebeeb7b0c4"
+dependencies = [
+ "unic-common",
+]
 
 [[package]]
 name = "unicase"
@@ -6443,6 +8470,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "valuable"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
+
+[[package]]
 name = "variant_count"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6451,6 +8484,12 @@ dependencies = [
  "quote 1.0.33",
  "syn 1.0.109",
 ]
+
+[[package]]
+name = "vcpkg"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 
 [[package]]
 name = "version_check"
@@ -6578,6 +8617,16 @@ checksum = "9b85cbef8c220a6abc02aefd892dfc0fc23afb1c6a426316ec33253a3877249b"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "webpki"
+version = "0.22.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed63aea5ce73d0ff405984102c42de94fc55a6b75765d621c65262469b3c9b53"
+dependencies = [
+ "ring 0.17.4",
+ "untrusted 0.9.0",
 ]
 
 [[package]]
@@ -6851,6 +8900,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "workspace-hack"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "beffa227304dbaea3ad6a06ac674f9bc83a3dec3b7f63eeb442de37e7cb6bb01"
+
+[[package]]
 name = "wyz"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6919,4 +8974,14 @@ dependencies = [
  "proc-macro2 1.0.68",
  "quote 1.0.33",
  "syn 2.0.38",
+]
+
+[[package]]
+name = "zstd-sys"
+version = "2.0.10+zstd.1.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c253a4914af5bafc8fa8c86ee400827e83cf6ec01195ec1f1ed8441bf00d65aa"
+dependencies = [
+ "cc",
+ "pkg-config",
 ]

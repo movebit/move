@@ -30,16 +30,6 @@ tempfile = "3.2.0"
 url = "2.2.2"
 clap = { version = "3.1.8", features = ["derive"] }
 crossbeam = "0.8"
-move-command-line-common = { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "move-command-line-common" }
-move-ir-types = { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "move-ir-types" }
-move-compiler = { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "move-compiler" }
-move-package = { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "move-package" }
-move-symbol-pool = { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "move-symbol-pool" }
-move-core-types = { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "move-core-types" }
-move-cli = { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "move-cli" }
-move-model = { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "move-model" }
-sui-move-build= { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "sui-move-build" }
-move-proc-macros= { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "move-proc-macros" }
 walkdir = "2"
 log = "0.4.14"
 stderrlog = "0.5.4"
@@ -48,7 +38,15 @@ stacker = "0.1.15"
 
 # different version of sui compliler
 beta-2024 = {path = "src/beta-2024"}
-# alpha-2024 = {path = "src/alpha-2024"}
+# move-symbol-pool-beta-2024 = { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "move-symbol-pool" }
+# move-compiler-beta-2024 = { git = "https://github.com/MystenLabs/sui.git", rev = "6e1cf7a1a9971fedd8b7830e586029d6c2cf801a", package = "move-compiler" }
+
+alpha-2024 = {path = "src/alpha-2024"}
+# move-symbol-pool-alpha-2024 = { git = "https://github.com/movebit/sui", rev = "6b2e1bcd6d569b2d689fab3379d093b0cc451213", package = "move-symbol-pool" }
+# move-compiler-alpha-2024 = { git = "https://github.com/movebit/sui", rev = "6b2e1bcd6d569b2d689fab3379d093b0cc451213", package = "move-compiler" }
+
+
+
 
 [target.'cfg(not(target_os= "windows"))'.dependencies]
 pprof = { version = "0.11.0" , features = ["flamegraph" , "protobuf"]}
