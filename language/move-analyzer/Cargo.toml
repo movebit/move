@@ -48,7 +48,7 @@ stacker = "0.1.15"
 
 # different version of sui compliler
 beta-2024 = {path = "src/beta-2024"}
-
+# alpha-2024 = {path = "src/alpha-2024"}
 
 [target.'cfg(not(target_os= "windows"))'.dependencies]
 pprof = { version = "0.11.0" , features = ["flamegraph" , "protobuf"]}
