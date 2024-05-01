@@ -2,13 +2,48 @@
 # aptos-move-analyzer
 **Table of Contents**
 * [Introduction](#Introduction)
-* [Installation](#Installation)
 * [Features](#Features)
+* [Installation](#Installation)
 * [Support](#Support)
 
 
 ## Introduction <span id="Introduction">
 The **aptos-move-analyzer** is a Visual Studio Code plugin for **Aptos Move** language developed by [MoveBit](https://movebit.xyz). Although this is an alpha release, it has many useful features, such as **highlight, autocomplete, go to definition/references**, and so on.
+
+## Features <span id="Features">
+
+Here are some of the features of the aptos-move-analyzer Visual Studio Code extension. To see them, open a
+Move source file (a file with a `.move` file extension) and:
+
+- See Move keywords and types highlighted in appropriate colors.
+- As you type, Move keywords will appear as completion suggestions.
+- If the opened Move source file is located within a buildable project (a `Move.toml` file can be
+  found in one of its parent directories), the following advanced features will also be available:
+  - compiler diagnostics
+  - aptos commands line tool(you need install Aptos Client CLI locally)
+  - aptos project template
+  - go to definition
+  - go to references
+  - type on hover
+  - inlay hints
+  - linter for move file
+  - formatter for move file
+  - ...
+
+### Mandatory reading, regarding the use of formatting
+1. After installing this vscode plugin, you still need to install the latest language server by following the method described in the subsequent section 1.B, which essentially boils down to one command:
+```
+cargo install --git https://github.com/movebit/move --branch aptos-move-analyzer aptos-move-analyzer
+```
+
+2. Once both the language server and the aptos-move-analyzer plugin from the vscode plugin marketplace are installed, the formatting feature is not enabled by default. You will need to enable the corresponding feature in the settings(Preferences > Settings*. Search for the `aptos-move-analyzer` setting).
+
+
+3. To format a .move file, simply open it and right-click to select '**Format Document**' for a one-click formatting.
+
+
+4. If you wish to study or raise an issue regarding the formatting feature, you can visit the repository at https://github.com/movebit/movefmt/tree/develop.
+
 
 ## Installation <span id="Installation">
 
@@ -117,25 +152,6 @@ In addition, if you have already opened the move project before, the installed p
 ##### B. Need Compile Project with Move.toml
 
 When you first open a project, there will be some dependencies (configured in Move.toml) that need to be downloaded, so you need to run `aptos move compile` command first to build the project. During the build process, the dependencies will be downloaded. Once all the dependencies for the project have been downloaded, aptos-move-analyzer can properly parse the dependencies and project source code.
-
-## Features <span id="Features">
-
-Here are some of the features of the aptos-move-analyzer Visual Studio Code extension. To see them, open a
-Move source file (a file with a `.move` file extension) and:
-
-- See Move keywords and types highlighted in appropriate colors.
-- As you type, Move keywords will appear as completion suggestions.
-- If the opened Move source file is located within a buildable project (a `Move.toml` file can be
-  found in one of its parent directories), the following advanced features will also be available:
-  - compiler diagnostics
-  - aptos commands line tool(you need install Aptos Client CLI locally)
-  - aptos project template
-  - go to definition
-  - go to references
-  - type on hover
-  - inlay hints
-  - linter for move file
-  - ...
 
 ## Support <span id="Support">
 
