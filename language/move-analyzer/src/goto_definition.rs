@@ -10,10 +10,10 @@ use codespan::Span;
 use lsp_server::*;
 use lsp_types::*;
 use move_model::{
-    ast::{ExpData::*, Operation::*, Pattern as MoveModelPattern, Spec, SpecBlockTarget}, model::{FunId, FunctionEnv, GlobalEnv, ModuleEnv, ModuleId, NodeId, StructId}, symbol::Symbol, well_known::TYPE_NAME_MOVE
+    ast::{ExpData::*, Operation::*, Pattern as MoveModelPattern, Spec, SpecBlockTarget}, model::{FunId, FunctionEnv, GlobalEnv, ModuleEnv, ModuleId, NodeId, StructId}, symbol::Symbol
 };
 use std::{
-    collections::HashMap, ops::Deref, path::{Path, PathBuf}
+    collections::HashMap, path::{Path, PathBuf}
 };
 use move_compiler::parser::lexer::{Lexer, Tok};
 use move_command_line_common::files::FileHash;
@@ -401,7 +401,7 @@ impl Handler {
         self.process_parameter(env, &target_fun);
         self.process_return_type_and_specifiers(env, &target_fun);
 
-        if let Some(exp) = target_fun.get_def().deref() {
+        if let Some(exp) = target_fun.get_def().as_deref() {
             self.process_expr(env, exp);
         };
         self.target_function_id = None;
@@ -410,7 +410,7 @@ impl Handler {
     fn process_parameter(&mut self, env: &GlobalEnv, target_fun: &FunctionEnv) {
         let fun_paras = target_fun.get_parameters();
         for (para_idx, para) in fun_paras.iter().enumerate() {
-            let cur_para_name = para.0.display(env.symbol_pool()).to_string();
+            // let cur_para_name = para.0.display(env.symbol_pool()).to_string();
             if para_idx < fun_paras.len() - 1 {
                 let next_para = &fun_paras[para_idx + 1]; 
                 let capture_ty_start = para.2.span().end();
@@ -712,7 +712,7 @@ impl Handler {
 
         let target_stct = target_module.get_struct(target_stct_id);
         let target_stct_spec = target_stct.get_spec();
-        log::info!("target_stct's spec = {}", env.display(target_stct_spec));
+        log::info!("target_stct's spec = {}", env.display(&*target_stct_spec));
         self.get_mouse_loc(env, &spec_stct_span_loc);
         for cond in target_stct_spec.conditions.clone() {
             for exp in cond.all_exps() {

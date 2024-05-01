@@ -30,21 +30,6 @@ Move source file (a file with a `.move` file extension) and:
   - formatter for move file
   - ...
 
-### Mandatory reading, regarding the use of formatting
-1. After installing this vscode plugin, you still need to install the latest language server by following the method described in the subsequent section 1.B, which essentially boils down to one command:
-```
-cargo install --git https://github.com/movebit/move --branch aptos-move-analyzer aptos-move-analyzer
-```
-
-2. Once both the language server and the aptos-move-analyzer plugin from the vscode plugin marketplace are installed, the formatting feature is not enabled by default. You will need to enable the corresponding feature in the settings(Preferences > Settings*. Search for the `aptos-move-analyzer` setting).
-
-
-3. To format a .move file, simply open it and right-click to select '**Format Document**' for a one-click formatting.
-
-
-4. If you wish to study or raise an issue regarding the formatting feature, you can visit the repository at https://github.com/movebit/movefmt/tree/develop.
-
-
 ## Installation <span id="Installation">
 
 **Note**:
@@ -100,6 +85,19 @@ After completing the above steps, **restart** VSCode.
 4. Open any Aptos Move project directory(where the Move.toml is located), and open or create files that end in `.move`, you should see that keywords and types appear in different colors, and you can try other features.
 
 After completing the above steps, **restart** VSCode.
+
+At this point, the entire plugin is ready to use. The plugin offers a variety of settings that you can access by going to (Preferences > Settings*). Search for the aptos-move-analyzer setting.
+
+
+### 3. Mandatory reading, regarding the use of formatting
+1. Once both the language server and the aptos-move-analyzer plugin from the vscode plugin marketplace are installed, the formatting feature is not enabled by default. You will need to enable the corresponding feature in the settings(Preferences > Settings*. Search for the `aptos-move-analyzer` setting).
+
+
+2. To format a .move file, simply open it and right-click to select '**Format Document**' for a one-click formatting.
+
+
+3. If you wish to study or raise an issue regarding the formatting feature, you can visit the repository at https://github.com/movebit/movefmt/tree/develop.
+
 
 ### Troubleshooting
 Please note: If you don't see the version number, you can refer to the troubleshooting section."

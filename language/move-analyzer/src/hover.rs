@@ -9,9 +9,7 @@ use move_model::{
     ast::{ExpData::*, Operation::*, Pattern, SpecBlockTarget},
     model::{FunId, GlobalEnv, ModuleId, StructId},
 };
-use std::{
-    ops::Deref, path::{Path, PathBuf}
-};
+use std::path::{Path, PathBuf};
 use move_compiler::parser::lexer::Tok;
 
 
@@ -314,7 +312,7 @@ impl Handler {
         let target_fun_loc = target_fun.get_loc();
         self.target_function_id = Some(target_fun.get_id());
         self.get_mouse_loc(env, &target_fun_loc);
-        if let Some(exp) = target_fun.get_def().deref() {
+        if let Some(exp) = target_fun.get_def().as_deref() {
             self.process_expr(env, exp);
         };
         self.target_function_id = None;
@@ -486,7 +484,7 @@ impl Handler {
 
         let target_stct = target_module.get_struct(target_stct_id);
         let target_stct_spec = target_stct.get_spec();
-        log::info!("target_stct's spec = {}", env.display(target_stct_spec));
+        log::info!("target_stct's spec = {}", env.display(&*target_stct_spec));
         self.get_mouse_loc(env, &spec_stct_span_loc);
         for cond in target_stct_spec.conditions.clone() {
             for exp in cond.all_exps() {

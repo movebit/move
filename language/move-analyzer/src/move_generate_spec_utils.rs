@@ -130,6 +130,7 @@ pub fn handle_expdata_value(v: &MoveModelValue, env: &GlobalEnv) {
                 handle_expdata_value(y, env);
             }
         },
+        _ => {}
     }
 }
 
@@ -655,7 +656,7 @@ impl FunSpecGenerator {
                 | Operation::Deref
                 | Operation::MoveTo
                 | Operation::MoveFrom
-                | Operation::Freeze
+                | Operation::Freeze(_)
                 | Operation::Vector
         )
     }

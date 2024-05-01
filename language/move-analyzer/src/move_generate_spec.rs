@@ -14,7 +14,7 @@ use move_model::{
     symbol::Symbol,
     ty::{Type as MoveModelType, TypeDisplayContext},
 };
-use std::{collections::HashMap, ops::Deref};
+use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct StructSpecGenerator {
@@ -147,7 +147,7 @@ impl FunSpecGenerator {
 
     fn generate_body_zx(&self, f: &FunctionEnv, global_env: &GlobalEnv) -> String {
         let mut statements = String::new();
-        if let Some(exp) = f.get_def().deref() {
+        if let Some(exp) = f.get_def().as_deref() {
             FunSpecGenerator::try_emit_exp_zx(self, &mut statements, exp, global_env);
         } else {
             log::trace!("body is none");

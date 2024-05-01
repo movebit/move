@@ -8,10 +8,7 @@ use move_model::{
     ast::{ExpData::*, Operation::*, SpecBlockTarget},
     model::{FunctionEnv, GlobalEnv, ModuleId},
 };
-use std::{
-    ops::Deref,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 /// Handles inlay_hints request of the language server.
 pub fn on_inlay_hints(
@@ -117,7 +114,7 @@ impl Handler {
             if self.range.line_start <= func_start_pos.line.0
                 && func_end_pos.line.0 <= self.range.line_end
             {
-                if let Some(exp) = fun.get_def().deref() {
+                if let Some(exp) = fun.get_def().as_deref() {
                     log::trace!("process funcation: {}", fun.get_name_string());
                     self.process_expr(env, &fun, exp);
                 }
