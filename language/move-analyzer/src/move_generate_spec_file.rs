@@ -7,6 +7,7 @@ use crate::{
     utils::{collect_use_decl, get_modules_by_fpath_in_target_modules},
 };
 use lsp_server::*;
+use move_compiler::expansion::ast::Address;
 use move_model::model::{FunctionEnv, StructEnv};
 use serde::Deserialize;
 use std::{
@@ -14,7 +15,6 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
-use move_compiler::expansion::ast::Address;
 
 pub fn on_generate_spec_file<'a>(
     context: &Context,
@@ -60,19 +60,23 @@ where
 
     let mut result = ModuleSpecBuilder::new();
 
-    let mut addr_num_and_module_name_to_addr_name: HashMap<(String, String), String> = Default::default();
-    env.get_module_idents().iter().for_each(|module_ident| {
-        match module_ident.address {
+    let mut addr_num_and_module_name_to_addr_name: HashMap<(String, String), String> =
+        Default::default();
+    env.get_module_idents()
+        .iter()
+        .for_each(|module_ident| match module_ident.address {
             Address::Numerical(may_addr_symbol, addr_num) => {
                 if let Some(addr_symbol) = may_addr_symbol {
-                    let k = (addr_num.value.to_string().to_uppercase(), module_ident.module.to_string());
+                    let k = (
+                        addr_num.value.to_string().to_uppercase(),
+                        module_ident.module.to_string(),
+                    );
                     eprintln!("{:?} : {}", k.clone(), addr_symbol.value.to_string());
                     addr_num_and_module_name_to_addr_name.insert(k, addr_symbol.value.to_string());
-                }   
-            }
+                }
+            },
             Address::NamedUnassigned(_) => {},
-        }
-    });
+        });
 
     for module_env in get_modules_by_fpath_in_target_modules(&project.global_env, &fpath) {
         let using_module_map = collect_use_decl(

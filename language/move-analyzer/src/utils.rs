@@ -5,13 +5,12 @@ use codespan::FileId;
 use codespan_reporting::files::{Files, SimpleFiles};
 use lsp_types::{Command, Location, Position};
 use move_command_line_common::files::FileHash;
+use move_compiler::parser::lexer::{Lexer, Tok};
 use move_ir_types::location::*;
 use move_model::{ast::ModuleName, symbol::Symbol as SpecSymbol};
 use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;
 use std::{collections::HashMap, path::*, vec};
-use move_compiler::parser::lexer::{Lexer, Tok};
-
 
 /// Converts a location from the byte index format to the line/character (Position) format, where
 /// line/character are 0-based.
@@ -188,16 +187,14 @@ pub fn path_concat(p1: &Path, p2: &Path) -> PathBuf {
         Component::RootDir | Component::Prefix(_)
     );
     let mut p1: Vec<_> = p1.components().collect();
-    normal_path_components(
-        if is_abs {
-            &p2
-        } else {
-            {
-                p1.extend(p2);
-                &p1
-            }
-        },
-    )
+    normal_path_components(if is_abs {
+        &p2
+    } else {
+        {
+            p1.extend(p2);
+            &p1
+        }
+    })
 }
 
 /// concat Move.toml file.
@@ -505,7 +502,10 @@ pub fn collect_use_decl(
     result
 }
 
-pub fn get_module_addrname_by_addrnum(addrnum: &String, addr_map: &HashMap<String, Vec<String>>) -> Option<String> {
+pub fn get_module_addrname_by_addrnum(
+    addrnum: &String,
+    addr_map: &HashMap<String, Vec<String>>,
+) -> Option<String> {
     if !addr_map.contains_key(addrnum) {
         return None;
     }
@@ -534,11 +534,11 @@ pub fn lexer_for_buffer(buffer: &str) -> Vec<(Tok, (usize, usize))> {
         // source program (once as a keyword, and once as an identifier), we filter out any
         // identifier token that has the same text as a keyword.
         ids.push((
-            lexer.peek(), 
+            lexer.peek(),
             (
                 lexer.start_loc(),
-                (lexer.start_loc() + lexer.content().len())
-            )
+                (lexer.start_loc() + lexer.content().len()),
+            ),
         ));
         if lexer.advance().is_err() {
             break;

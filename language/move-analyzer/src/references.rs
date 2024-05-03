@@ -8,18 +8,17 @@ use crate::{
 };
 use lsp_server::*;
 use lsp_types::*;
+use move_command_line_common::files::FileHash;
+use move_compiler::parser::lexer::{Lexer, Tok};
 use move_model::{
     ast::{ExpData::*, Operation::*, SpecBlockTarget},
-    model::{FunId, GlobalEnv, ModuleEnv, FunctionEnv, ModuleId, StructId},
+    model::{FunId, FunctionEnv, GlobalEnv, ModuleEnv, ModuleId, StructId},
 };
 use std::{
     collections::BTreeSet,
     // ops::Deref,
     path::{Path, PathBuf},
 };
-use move_compiler::parser::lexer::{Lexer, Tok};
-use move_command_line_common::files::FileHash;
-
 
 /// Handles on_references_request of the language server.
 pub fn on_references_request(context: &Context, request: &Request) -> lsp_server::Response {
@@ -258,10 +257,7 @@ impl Handler {
                 let capture_ty_end = next_para.2.span().start();
                 let capture_ty_loc = move_model::model::Loc::new(
                     para.2.file_id(),
-                    codespan::Span::new(
-                        capture_ty_start,
-                        capture_ty_end,
-                    ),
+                    codespan::Span::new(capture_ty_start, capture_ty_end),
                 );
                 self.process_type(env, &capture_ty_loc, &para.1);
             } else {
@@ -269,10 +265,7 @@ impl Handler {
                 let capture_ty_end = target_fun.get_loc().span().end();
                 let capture_ty_loc = move_model::model::Loc::new(
                     para.2.file_id(),
-                    codespan::Span::new(
-                        capture_ty_start,
-                        capture_ty_end,
-                    ),
+                    codespan::Span::new(capture_ty_start, capture_ty_end),
                 );
                 let ty_source = env.get_source(&capture_ty_loc);
                 if let Ok(ty_str) = ty_source {
@@ -358,8 +351,10 @@ impl Handler {
             let capture_ty_loc = move_model::model::Loc::new(
                 target_fun.get_loc().file_id(),
                 codespan::Span::new(
-                    target_fun.get_loc().span().start() + codespan::ByteOffset(capture_ty_start_pos as i64),
-                    target_fun.get_loc().span().start() + codespan::ByteOffset(capture_ty_end_pos as i64),
+                    target_fun.get_loc().span().start()
+                        + codespan::ByteOffset(capture_ty_start_pos as i64),
+                    target_fun.get_loc().span().start()
+                        + codespan::ByteOffset(capture_ty_end_pos as i64),
                 ),
             );
             self.process_type(env, &capture_ty_loc, &ret_ty_vec);
@@ -367,8 +362,9 @@ impl Handler {
             if let Some(specifiers) = specifier_vec {
                 eprintln!("specifier = {:?}", specifiers);
                 for specifier in specifiers {
-                    if let move_model::ast::ResourceSpecifier::Resource(struct_id) 
-                        = &specifier.resource.1 {
+                    if let move_model::ast::ResourceSpecifier::Resource(struct_id) =
+                        &specifier.resource.1
+                    {
                         self.process_type(env, &specifier.resource.0, &struct_id.to_type());
                     }
                 }
@@ -376,8 +372,14 @@ impl Handler {
             if let Some(requires) = require_vec {
                 eprintln!("requires = {:?}", requires);
                 for strct_id in requires {
-                    eprintln!("strct_id = {:?}", target_fun.module_env.get_struct(strct_id).get_full_name_str());
-                    // if let move_model::ast::ResourceSpecifier::Resource(struct_id) 
+                    eprintln!(
+                        "strct_id = {:?}",
+                        target_fun
+                            .module_env
+                            .get_struct(strct_id)
+                            .get_full_name_str()
+                    );
+                    // if let move_model::ast::ResourceSpecifier::Resource(struct_id)
                     //     = &specifier.resource.1 {
                     //     self.process_type(env, &specifier.resource.0, &struct_id.to_type());
                     // }

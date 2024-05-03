@@ -130,7 +130,7 @@ pub fn handle_expdata_value(v: &MoveModelValue, env: &GlobalEnv) {
                 handle_expdata_value(y, env);
             }
         },
-        _ => {}
+        _ => {},
     }
 }
 

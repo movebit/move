@@ -67,7 +67,7 @@ The `aptos-move-analyzer` language server is a Rust program, so we suggest insta
 
 **Execute the below command to install `aptos_move_analyzer`**
 ```
-cargo install --git https://github.com/movebit/move --branch aptos-move-analyzer aptos-move-analyzer
+cargo install --git https://github.com/movebit/move --branch release/aptos-move-analyzer aptos-move-analyzer
 ```
 The installation may take some time, often several minutes. After installation, the `aptos-move-analyzer` program is in your `cargo` binary directory. On macOS and Linux, this directory is usually `~/.cargo/bin`. You should make sure this location is in your `PATH` environment variable via `export PATH="$PATH:~/.cargo/bin"` .
 

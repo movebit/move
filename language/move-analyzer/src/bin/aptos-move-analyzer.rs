@@ -10,10 +10,10 @@ use aptos_move_analyzer::{
     inlay_hints::*,
     move_generate_spec_file::on_generate_spec_file,
     move_generate_spec_sel::on_generate_spec_sel,
+    movefmt::*,
     multiproject::MultiProject,
     references, symbols,
     utils::*,
-    movefmt::*,
 };
 use clap::Parser;
 use crossbeam::channel::{bounded, select, Sender};
@@ -22,7 +22,7 @@ use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
     notification::Notification as _, request::Request as _, CompletionOptions,
     HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, WorkDoneProgressOptions
+    TextDocumentSyncOptions, WorkDoneProgressOptions,
 };
 use move_command_line_common::files::FileHash;
 use move_compiler::{diagnostics::Diagnostics, PASS_TYPING};
@@ -35,7 +35,7 @@ use url::Url;
 
 struct AnalyzerConfig {
     pub inlay_hints_config: InlayHintsConfig,
-    pub movefmt_config: FmtConfig
+    pub movefmt_config: FmtConfig,
 }
 
 impl Default for AnalyzerConfig {
@@ -205,10 +205,10 @@ fn on_request(context: &mut Context, request: &Request, analyzer_cfg: &mut Analy
         },
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             symbols::on_document_symbol_request(context, request);
-        }
+        },
         lsp_types::request::Formatting::METHOD => {
             on_movefmt_request(context, request, &analyzer_cfg.movefmt_config);
-        }
+        },
         "move/generate/spec/file" => {
             on_generate_spec_file(context, request, true);
         },
@@ -219,25 +219,28 @@ fn on_request(context: &mut Context, request: &Request, analyzer_cfg: &mut Analy
             let parameters = serde_json::from_value::<InlayHintsConfig>(request.params.clone())
                 .expect("could not deserialize inlay hints config");
             log::info!("call inlay_hints config {:?}", parameters);
-            if analyzer_cfg.inlay_hints_config.enable == parameters.enable && parameters.enable == true {
+            if analyzer_cfg.inlay_hints_config.enable == parameters.enable
+                && parameters.enable == true
+            {
                 return;
             }
             analyzer_cfg.inlay_hints_config = parameters;
             if !analyzer_cfg.inlay_hints_config.enable {
-                let params = lsp_types::UnregistrationParams { 
+                let params = lsp_types::UnregistrationParams {
                     unregisterations: vec![lsp_types::Unregistration {
                         id: lsp_types::request::InlayHintRequest::METHOD.to_string(),
                         method: lsp_types::request::InlayHintRequest::METHOD.to_string(),
-                    }] 
+                    }],
                 };
                 context
                     .connection
                     .sender
-                    .send(lsp_server::Message::Request(Request{
+                    .send(lsp_server::Message::Request(Request {
                         id: "inlay_hints".to_string().into(),
                         method: lsp_types::request::UnregisterCapability::METHOD.to_string(),
                         params: serde_json::json!(params),
-                    })).unwrap();
+                    }))
+                    .unwrap();
                 eprintln!("--------------------- unregister inlay_hint ---------------------");
                 // context
                 //     .connection
@@ -249,21 +252,22 @@ fn on_request(context: &mut Context, request: &Request, analyzer_cfg: &mut Analy
                 //     })).unwrap();
                 // eprintln!("--------------------- refresh inlay_hint ---------------------");
             } else {
-                let params = lsp_types::RegistrationParams { 
+                let params = lsp_types::RegistrationParams {
                     registrations: vec![lsp_types::Registration {
                         id: lsp_types::request::InlayHintRequest::METHOD.to_string(),
                         method: lsp_types::request::InlayHintRequest::METHOD.to_string(),
                         register_options: None,
-                    }] 
+                    }],
                 };
                 context
                     .connection
                     .sender
-                    .send(lsp_server::Message::Request(Request{
+                    .send(lsp_server::Message::Request(Request {
                         id: "inlay_hints".to_string().into(),
                         method: lsp_types::request::RegisterCapability::METHOD.to_string(),
                         params: serde_json::json!(params),
-                    })).unwrap();
+                    }))
+                    .unwrap();
             }
         },
         "move/lsp/movefmt/config" => {
@@ -271,45 +275,47 @@ fn on_request(context: &mut Context, request: &Request, analyzer_cfg: &mut Analy
                 .expect("could not deserialize movefmt config");
             log::info!("call movefmt config {:?}", parameters);
 
-            if analyzer_cfg.movefmt_config.enable == parameters.enable && parameters.enable == true {
+            if analyzer_cfg.movefmt_config.enable == parameters.enable && parameters.enable == true
+            {
                 return;
             }
 
             analyzer_cfg.movefmt_config = parameters;
             if !analyzer_cfg.movefmt_config.enable {
-                let params = lsp_types::UnregistrationParams { 
+                let params = lsp_types::UnregistrationParams {
                     unregisterations: vec![lsp_types::Unregistration {
                         id: lsp_types::request::Formatting::METHOD.to_string(),
                         method: lsp_types::request::Formatting::METHOD.to_string(),
-                    }] 
+                    }],
                 };
                 context
                     .connection
                     .sender
-                    .send(lsp_server::Message::Request(Request{
+                    .send(lsp_server::Message::Request(Request {
                         id: "movefmt".to_string().into(),
                         method: lsp_types::request::UnregisterCapability::METHOD.to_string(),
                         params: serde_json::json!(params),
-                    })).unwrap();
+                    }))
+                    .unwrap();
             } else {
-                let params = lsp_types::RegistrationParams { 
+                let params = lsp_types::RegistrationParams {
                     registrations: vec![lsp_types::Registration {
                         id: lsp_types::request::Formatting::METHOD.to_string(),
                         method: lsp_types::request::Formatting::METHOD.to_string(),
                         register_options: None,
-                    }] 
+                    }],
                 };
                 context
                     .connection
                     .sender
-                    .send(lsp_server::Message::Request(Request{
+                    .send(lsp_server::Message::Request(Request {
                         id: "movefmt".to_string().into(),
                         method: lsp_types::request::RegisterCapability::METHOD.to_string(),
                         params: serde_json::json!(params),
-                    })).unwrap();
+                    }))
+                    .unwrap();
             }
-            
-        }
+        },
         _ => {
             log::error!("unsupported request: '{}' from client", request.method)
         },
