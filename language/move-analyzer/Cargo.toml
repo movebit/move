@@ -1,6 +1,6 @@
 [package]
 name = "aptos-move-analyzer"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["BitsLab/MoveBit"]
 description = "A language server for Move"
 repository = "https://github.com/movebit/move"
@@ -38,8 +38,8 @@ move-package = { git = "https://github.com/movebit/aptos-core.git", branch = "im
 move-symbol-pool = { git = "https://github.com/movebit/aptos-core.git", branch = "improve-move-model", package = "move-symbol-pool" }
 move-core-types = { git = "https://github.com/movebit/aptos-core.git", branch = "improve-move-model", package = "move-core-types" }
 move-cli = { git = "https://github.com/movebit/aptos-core.git", branch = "improve-move-model", package = "move-cli" }
-movefmt = { git = "https://github.com/movebit/movefmt.git", branch = "develop" }
-commentfmt = { git = "https://github.com/movebit/movefmt.git", branch = "develop", package = "commentfmt" }
+movefmt = { git = "https://github.com/movebit/movefmt.git", rev = "4c69626cdc365b8ceb6813b7367bcbaef6548d41" }
+commentfmt = { git = "https://github.com/movebit/movefmt.git", rev = "4c69626cdc365b8ceb6813b7367bcbaef6548d41", package = "commentfmt" }
 itertools = "0.10.0"
 walkdir = "2"
 log = "0.4.14"
